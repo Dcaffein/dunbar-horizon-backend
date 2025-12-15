@@ -1,10 +1,10 @@
 package com.example.GooRoomBe.social.label.domain;
 
-import com.example.GooRoomBe.social.common.exception.SocialUserNotFoundException;
+import com.example.GooRoomBe.social.socialUser.SocialUserNotFoundException;
 import com.example.GooRoomBe.social.label.domain.service.LabelNameService;
 import com.example.GooRoomBe.social.label.exception.LabelNameDuplicateException;
 import com.example.GooRoomBe.social.socialUser.SocialUser;
-import com.example.GooRoomBe.social.socialUser.SocialUserRepository;
+import com.example.GooRoomBe.social.socialUser.SocialUserPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +20,7 @@ import static org.mockito.Mockito.*;
 class LabelFactoryTest {
 
     @Mock
-    private SocialUserRepository socialUserRepository;
+    private SocialUserPort socialUserPort;
 
     @Mock
     private LabelNameService labelNameService;
@@ -38,7 +38,7 @@ class LabelFactoryTest {
         SocialUser owner = mock(SocialUser.class);
 
         //  유저 조회 성공 설정
-        when(socialUserRepository.getUser(OWNER_ID)).thenReturn(owner);
+        when(socialUserPort.getUser(OWNER_ID)).thenReturn(owner);
 
         // 이름 검증 성공 설정 (void 메서드이므로 아무 일도 안 일어나면 성공임 - doNothing이 기본값)
 
@@ -56,7 +56,7 @@ class LabelFactoryTest {
 
         //  협력 객체들이 제대로 호출되었는지 확인 (
         verify(labelNameService).validateLabelNameUniqueness(OWNER_ID, LABEL_NAME);
-        verify(socialUserRepository).getUser(OWNER_ID);
+        verify(socialUserPort).getUser(OWNER_ID);
     }
 
     @Test
@@ -72,7 +72,7 @@ class LabelFactoryTest {
                 .isInstanceOf(LabelNameDuplicateException.class);
 
         // 이름 검증에서 실패했으므로, 유저 조회 로직은 실행되지 않아야 함 (Fail-Fast)
-        verify(socialUserRepository, never()).getUser(anyString());
+        verify(socialUserPort, never()).getUser(anyString());
     }
 
     @Test
@@ -80,7 +80,7 @@ class LabelFactoryTest {
     void createLabel_Fail_UserNotFound() {
         // given
         // 유저 조회 시 예외 발생 설정
-        when(socialUserRepository.getUser(OWNER_ID))
+        when(socialUserPort.getUser(OWNER_ID))
                 .thenThrow(new SocialUserNotFoundException(OWNER_ID));
 
         // when & then

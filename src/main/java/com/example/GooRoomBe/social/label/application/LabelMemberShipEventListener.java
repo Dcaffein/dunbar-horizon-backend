@@ -1,7 +1,7 @@
 package com.example.GooRoomBe.social.label.application;
 
 import com.example.GooRoomBe.social.socialUser.SocialUser;
-import com.example.GooRoomBe.social.socialUser.SocialUserRepository;
+import com.example.GooRoomBe.social.socialUser.SocialUserPort;
 import com.example.GooRoomBe.social.label.domain.Label;
 import com.example.GooRoomBe.social.friend.domain.event.FriendShipDeletedEvent;
 import com.example.GooRoomBe.social.label.repository.LabelRepository;
@@ -19,7 +19,7 @@ import java.util.List;
 public class LabelMemberShipEventListener {
 
     private final LabelRepository labelRepository;
-    private final SocialUserRepository socialUserRepository;
+    private final SocialUserPort socialUserPort;
 
     @EventListener
     @Transactional
@@ -32,11 +32,11 @@ public class LabelMemberShipEventListener {
     }
 
     private void removeFriendFromLabels(String ownerId, String memberIdToRemove) {
-        SocialUser owner = socialUserRepository.getUser(ownerId);
+        SocialUser owner = socialUserPort.getUser(ownerId);
 
         List<Label> labels = labelRepository.findAllByOwner_Id(owner.getId());
 
-        SocialUser memberToRemove = socialUserRepository.getUser(memberIdToRemove);
+        SocialUser memberToRemove = socialUserPort.getUser(memberIdToRemove);
 
         for (Label label : labels) {
             log.debug("Label '{}'에서 멤버 '{}' 제거 시도", label.getLabelName(), memberIdToRemove);

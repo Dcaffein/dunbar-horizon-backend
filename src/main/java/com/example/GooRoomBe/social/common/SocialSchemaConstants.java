@@ -13,4 +13,8 @@ public class SocialSchemaConstants {
 
     public static final String OWNS = "OWNS";
     public static final String HAS_MEMBER = "HAS_MEMBER";
+
+    public static final String TRACE = "Trace";
+    public static final String LEFT = "LEFT";
+    public static final String ON = "ON";
 }

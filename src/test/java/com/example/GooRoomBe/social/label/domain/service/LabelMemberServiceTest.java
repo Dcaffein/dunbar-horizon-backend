@@ -1,6 +1,6 @@
 package com.example.GooRoomBe.social.label.domain.service;
 
-import com.example.GooRoomBe.social.friend.infrastructure.FriendshipPort;
+import com.example.GooRoomBe.social.friend.domain.FriendshipPort;
 import com.example.GooRoomBe.social.friend.domain.Friendship;
 import com.example.GooRoomBe.social.friend.exception.FriendshipNotFoundException;
 import com.example.GooRoomBe.social.label.domain.Label;
