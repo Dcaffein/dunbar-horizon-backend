@@ -1,6 +1,6 @@
 package com.example.GooRoomBe.social.friend.domain.service;
 
-import com.example.GooRoomBe.social.friend.infrastructure.FriendshipPort;
+import com.example.GooRoomBe.social.friend.domain.FriendshipPort;
 import com.example.GooRoomBe.social.friend.exception.AlreadyFriendException;
 import com.example.GooRoomBe.social.friend.exception.DuplicateFriendRequestException;
 import com.example.GooRoomBe.social.friend.infrastructure.FriendRequestRepository;

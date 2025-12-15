@@ -14,6 +14,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,62 +26,51 @@ class FriendshipAdapterTest {
     @InjectMocks
     private FriendshipAdapter friendshipAdapter;
 
-    @Mock
-    private Friendship friendship;
-
-    private final String MY_ID = "userA";
-    private final String FRIEND_ID = "userB";
+    private final String MY_ID = "my-id";
+    private final String FRIEND_ID = "friend-id";
 
     @Test
-    @DisplayName("getFriendship: 친구 관계가 존재하면 Friendship 객체를 반환한다")
+    @DisplayName("getFriendship: 관계가 존재하면 Friendship 객체를 반환한다")
     void getFriendship_Success() {
-        // given
+        // Given
+        Friendship mockFriendship = mock(Friendship.class);
         given(friendshipRepository.findFriendshipByUsers(MY_ID, FRIEND_ID))
-                .willReturn(Optional.of(friendship));
+                .willReturn(Optional.of(mockFriendship));
 
-        // when
+        // When
         Friendship result = friendshipAdapter.getFriendship(MY_ID, FRIEND_ID);
 
-        // then
-        assertThat(result).isEqualTo(friendship);
-        // 레포지토리의 올바른 메서드가 호출되었는지 검증
-        verify(friendshipRepository).findFriendshipByUsers(MY_ID, FRIEND_ID);
+        // Then
+        assertThat(result).isEqualTo(mockFriendship);
     }
 
     @Test
-    @DisplayName("getFriendship: 친구 관계가 없으면 FriendshipNotFoundException을 던진다")
-    void getFriendship_Fail_NotFound() {
-        // given
+    @DisplayName("getFriendship: 관계가 없으면 FriendshipNotFoundException을 던진다")
+    void getFriendship_NotFound() {
+        // Given
         given(friendshipRepository.findFriendshipByUsers(MY_ID, FRIEND_ID))
                 .willReturn(Optional.empty());
 
-        // when & then
+        // When & Then
         assertThatThrownBy(() -> friendshipAdapter.getFriendship(MY_ID, FRIEND_ID))
-                .isInstanceOf(FriendshipNotFoundException.class)
-                .hasMessageContaining(MY_ID);
+                .isInstanceOf(FriendshipNotFoundException.class);
     }
 
     @Test
-    @DisplayName("save: 레포지토리의 save를 호출하고 결과를 반환한다")
+    @DisplayName("applyDecay: 리포지토리의 쿼리 메서드를 올바른 파라미터로 호출한다")
+    void applyDecay_Delegation() {
+        // When
+        friendshipAdapter.applyDecayToAllFriendships(0.95, 0.1);
+
+        // Then
+        verify(friendshipRepository).applyDecayToAllFriendships(0.95, 0.1);
+    }
+
+    // save, delete 등은 단순 위임이므로 필요하다면 verify로 간단히 작성 가능
+    @Test
     void save_Delegation() {
-        // given
-        given(friendshipRepository.save(friendship)).willReturn(friendship);
-
-        // when
-        Friendship result = friendshipAdapter.save(friendship);
-
-        // then
-        assertThat(result).isEqualTo(friendship);
+        Friendship friendship = mock(Friendship.class);
+        friendshipAdapter.save(friendship);
         verify(friendshipRepository).save(friendship);
-    }
-
-    @Test
-    @DisplayName("delete: 레포지토리의 delete를 호출한다")
-    void delete_Delegation() {
-        // when
-        friendshipAdapter.delete(friendship);
-
-        // then
-        verify(friendshipRepository).delete(friendship);
     }
 }

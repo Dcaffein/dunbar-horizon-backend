@@ -30,6 +30,9 @@ public class Friendship {
     @Getter
     private LocalDate createdAt;
 
+    @Getter
+    private double intimacy;
+
     @Relationship(type = MEMBER_OF, direction = Relationship.Direction.INCOMING)
     private List<FriendRecognition> recognitions = new ArrayList<>();
 
@@ -56,18 +59,17 @@ public class Friendship {
     }
 
     private FriendRecognition getFriendRecognition(String myId) {
-        //이 친구관계 참여자인지 확인
         boolean isMember = this.recognitions.stream()
                 .anyMatch(friendRecognition -> friendRecognition.getUser().getId().equals(myId));
         if (!isMember) {
-            throw new FriendshipNotFoundException(this,myId);
+            throw new FriendshipAuthorizationException(myId);
         }
 
         //
         return this.recognitions.stream()
                 .filter(friendRecognition -> !friendRecognition.getUser().getId().equals(myId))
                 .findFirst()
-                .orElseThrow(() -> new FriendshipNotFoundException(this,myId));
+                .orElseThrow(() -> new FriendshipAuthorizationException(myId));
     }
 
     private static String generateCompositeId(String id1, String id2) {
@@ -94,7 +96,6 @@ public class Friendship {
         getSelfRecognition(myId).updateOnIntroduce(onIntroduce);
     }
 
-    //me
     public SocialUser getFriend(String myId) {
         return getFriendRecognition(myId).getUser();
     }
@@ -106,5 +107,22 @@ public class Friendship {
         if (!isParticipant) {
             throw new FriendshipAuthorizationException(myId);
         }
+    }
+
+    public void adjustInterestScore(String userId, double scoreDelta) {
+        getSelfRecognition(userId).adjustInterestScore(scoreDelta);
+        recalculateIntimacy();
+    }
+
+    private void recalculateIntimacy() {
+        if (this.recognitions.size() < 2) {
+            this.intimacy = 0.0;
+            return;
+        }
+
+        double affinityA = Math.max(0, this.recognitions.get(0).getInterestScore());
+        double affinityB = Math.max(0, this.recognitions.get(1).getInterestScore());
+
+        this.intimacy = Math.sqrt(affinityA * affinityB);
     }
 }

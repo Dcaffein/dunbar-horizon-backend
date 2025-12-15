@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.within;
 
 @ExtendWith(MockitoExtension.class)
 class FriendRecognitionTest {
@@ -22,6 +23,7 @@ class FriendRecognitionTest {
 
         assertThat(recognition.getUser()).isEqualTo(user);
         assertThat(recognition.getFriendAlias()).isEmpty();
+        assertThat(recognition.getInterestScore()).isEqualTo(0.0);
         assertThat(recognition.isOnIntroduce()).isFalse();
     }
 
@@ -41,5 +43,33 @@ class FriendRecognitionTest {
         recognition.updateOnIntroduce(true);
 
         assertThat(recognition.isOnIntroduce()).isTrue();
+    }
+
+    @Test
+    @DisplayName("관심도(Interest) 점수 조정이 정상적으로 동작한다")
+    void adjustInterestScore() {
+        // Given
+        FriendRecognition recognition = new FriendRecognition(user);
+
+        // When: 점수 10점 증가
+        recognition.adjustInterestScore(10.0);
+
+        // Then
+        assertThat(recognition.getInterestScore()).isEqualTo(10.0);
+
+        // When: 점수 5점 감소
+        recognition.adjustInterestScore(-5.0);
+
+        // Then
+        assertThat(recognition.getInterestScore()).isEqualTo(5.0);
+    }
+
+    @Test
+    @DisplayName("점수는 0점 미만으로 내려가지 않는다")
+    void score_ShouldNotBeNegative() {
+        FriendRecognition recognition = new FriendRecognition(user);
+        recognition.adjustInterestScore(-100.0);
+
+        assertThat(recognition.getInterestScore()).isEqualTo(0.0);
     }
 }

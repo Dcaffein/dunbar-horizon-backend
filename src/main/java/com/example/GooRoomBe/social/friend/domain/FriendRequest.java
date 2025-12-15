@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.domain.AbstractAggregateRoot;
 import org.springframework.data.neo4j.core.schema.*;
+import org.springframework.data.neo4j.core.support.UUIDStringGenerator;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -20,7 +21,7 @@ import static com.example.GooRoomBe.social.common.SocialSchemaConstants.TO;
 @AllArgsConstructor
 @Node("FriendRequest")
 public class FriendRequest extends AbstractAggregateRoot<FriendRequest> {
-    @Id
+    @Id @GeneratedValue(generatorClass = UUIDStringGenerator.class)
     private String id;
 
     @Relationship(type = SENT, direction = Relationship.Direction.INCOMING)

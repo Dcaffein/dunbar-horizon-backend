@@ -6,7 +6,7 @@ import com.example.GooRoomBe.social.friend.domain.event.FriendRequestAcceptedEve
 import com.example.GooRoomBe.social.friend.domain.factory.FriendshipFactory;
 import com.example.GooRoomBe.social.friend.infrastructure.FriendRequestRepository;
 import com.example.GooRoomBe.social.friend.exception.FriendRequestNotFoundException;
-import com.example.GooRoomBe.social.friend.infrastructure.FriendshipPort;
+import com.example.GooRoomBe.social.friend.domain.FriendshipPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;

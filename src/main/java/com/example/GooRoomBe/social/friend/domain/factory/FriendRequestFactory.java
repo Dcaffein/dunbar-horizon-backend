@@ -1,7 +1,7 @@
 package com.example.GooRoomBe.social.friend.domain.factory;
 
 import com.example.GooRoomBe.social.socialUser.SocialUser;
-import com.example.GooRoomBe.social.socialUser.SocialUserRepository;
+import com.example.GooRoomBe.social.socialUser.SocialUserPort;
 import com.example.GooRoomBe.social.friend.domain.FriendRequest;
 import com.example.GooRoomBe.social.friend.domain.service.FriendRequestDuplicationValidator;
 import com.example.GooRoomBe.social.friend.exception.CannotRequestToSelfException;
@@ -10,12 +10,12 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class FriendRequestFactory {
-    private final SocialUserRepository socialUserRepository;
+    private final SocialUserPort socialUserPort;
     private final FriendRequestDuplicationValidator friendRequestDuplicationValidator;
 
     @Autowired
-    public FriendRequestFactory(SocialUserRepository socialUserRepository, FriendRequestDuplicationValidator friendRequestDuplicationValidator) {
-        this.socialUserRepository = socialUserRepository;
+    public FriendRequestFactory(SocialUserPort socialUserPort, FriendRequestDuplicationValidator friendRequestDuplicationValidator) {
+        this.socialUserPort = socialUserPort;
         this.friendRequestDuplicationValidator = friendRequestDuplicationValidator;
     }
 
@@ -24,8 +24,8 @@ public class FriendRequestFactory {
             throw new CannotRequestToSelfException(requesterId);
         }
 
-        SocialUser requester = socialUserRepository.getUser(requesterId);
-        SocialUser receiver = socialUserRepository.getUser(receiverId);
+        SocialUser requester = socialUserPort.getUser(requesterId);
+        SocialUser receiver = socialUserPort.getUser(receiverId);
         friendRequestDuplicationValidator.validateNewRequest(requesterId, receiverId);
 
         return new FriendRequest(requester, receiver);

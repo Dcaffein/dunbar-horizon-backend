@@ -11,7 +11,7 @@ import java.util.Set;
 
 import static com.example.GooRoomBe.social.common.SocialSchemaConstants.*;
 
-public interface FriendshipRepository extends Neo4jRepository<Friendship, String> {
+interface FriendshipRepository extends Neo4jRepository<Friendship, String> {
     @Query("RETURN EXISTS(" +
             "(:" + SOCIAL_USER + " {id: $requesterId})-[:" + MEMBER_OF + "]->" +
             "(:" + FRIENDSHIP + ")" +
@@ -23,7 +23,7 @@ public interface FriendshipRepository extends Neo4jRepository<Friendship, String
             "(owner:" + SOCIAL_USER + " {id: $ownerId})-[r1:" + MEMBER_OF + "]->" +
             "(fs:" + FRIENDSHIP + ")" +
             "<-[r2:" + MEMBER_OF + "]-(friend:" + SOCIAL_USER + ") " +
-            "WHERE friend.id IN $potentialMemberIds " +
+                "WHERE friend.id IN $potentialMemberIds " +
             "RETURN fs, collect(r1), collect(r2), collect(owner), collect(friend)")
     Set<Friendship> filterFriendsFromIdList(@Param("ownerId") String ownerId, @Param("potentialMemberIds") List<String> potentialMemberIds);
 
@@ -32,4 +32,16 @@ public interface FriendshipRepository extends Neo4jRepository<Friendship, String
             "<-[r2:" +MEMBER_OF+ "]-(u2:" +SOCIAL_USER+ " {id: $friendId}) " +
             "RETURN f, collect(r1), collect(u1), collect(r2), collect(u2)")
     Optional<Friendship> findFriendshipByUsers(@Param("myId") String myId, @Param("friendId") String friendId);
+
+    @Query("MATCH (u:" + SOCIAL_USER + ")-[r:" + MEMBER_OF + "]->(f:" + FRIENDSHIP + ") " +
+            "WHERE r.interestScore > 0 " +
+            "SET r.interestScore = CASE " +
+                "WHEN r.interestScore * $rate < $threshold THEN 0.0 " +
+                "ELSE r.interestScore * $rate " +
+            "END " +
+            "WITH f, collect(r.interestScore) as scores " +
+            "SET f.intimacy = sqrt(" +
+                "CASE WHEN size(scores) >= 2 THEN scores[0] * scores[1] ELSE 0.0 END" +
+            ")")
+    void applyDecayToAllFriendships(@Param("rate") double rate, @Param("threshold") double threshold);
 }

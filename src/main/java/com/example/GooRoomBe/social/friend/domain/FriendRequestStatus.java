@@ -57,6 +57,7 @@ public enum FriendRequestStatus {
     };
 
     public abstract void transit(FriendRequest friendRequest, FriendRequestStatus newStatus, String currentUserId);
+
     public void validateCancel(FriendRequest request, String currentUserId) {
         throw new FriendRequestNotPendingException(request.getId());
     }

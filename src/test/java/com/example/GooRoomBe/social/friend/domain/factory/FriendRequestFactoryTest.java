@@ -4,7 +4,7 @@ import com.example.GooRoomBe.social.friend.domain.FriendRequest;
 import com.example.GooRoomBe.social.friend.domain.service.FriendRequestDuplicationValidator;
 import com.example.GooRoomBe.social.friend.exception.CannotRequestToSelfException;
 import com.example.GooRoomBe.social.socialUser.SocialUser;
-import com.example.GooRoomBe.social.socialUser.SocialUserRepository;
+import com.example.GooRoomBe.social.socialUser.SocialUserPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +20,7 @@ import static org.mockito.Mockito.*;
 class FriendRequestFactoryTest {
 
     @Mock
-    private SocialUserRepository socialUserRepository;
+    private SocialUserPort socialUserPort;
     @Mock
     private FriendRequestDuplicationValidator validator;
 
@@ -39,8 +39,8 @@ class FriendRequestFactoryTest {
         SocialUser receiver = mock(SocialUser.class);
         lenient().when(receiver.getId()).thenReturn(reqId);
 
-        when(socialUserRepository.getUser(reqId)).thenReturn(requester);
-        when(socialUserRepository.getUser(recvId)).thenReturn(receiver);
+        when(socialUserPort.getUser(reqId)).thenReturn(requester);
+        when(socialUserPort.getUser(recvId)).thenReturn(receiver);
 
         // when
         FriendRequest request = friendRequestFactory.create(reqId, recvId);

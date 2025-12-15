@@ -1,5 +1,6 @@
-package com.example.GooRoomBe.social.common.exception;
+package com.example.GooRoomBe.social.socialUser;
 
+import com.example.GooRoomBe.social.common.exception.SocialException;
 import org.springframework.http.HttpStatus;
 
 public class SocialUserNotFoundException extends SocialException {

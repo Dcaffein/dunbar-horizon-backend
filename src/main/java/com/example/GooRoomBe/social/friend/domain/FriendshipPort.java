@@ -1,6 +1,5 @@
-package com.example.GooRoomBe.social.friend.infrastructure;
+package com.example.GooRoomBe.social.friend.domain;
 
-import com.example.GooRoomBe.social.friend.domain.Friendship;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
@@ -15,4 +14,6 @@ public interface FriendshipPort {
 
     boolean existsFriendshipBetween(@Param("requesterId") String requesterId, @Param("receiverId") String receiverId);
     Set<Friendship> filterFriendsFromIdList(@Param("ownerId") String ownerId, @Param("potentialMemberIds") List<String> potentialMemberIds);
+
+    void applyDecayToAllFriendships(@Param("rate") double rate, @Param("threshold") double threshold);
 }

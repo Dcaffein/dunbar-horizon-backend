@@ -34,8 +34,8 @@ public class FriendRequestService {
     @Transactional
     public void cancelFriendRequest(String requestId, String currentUserId) {
         FriendRequest friendRequest = findFriendRequestById(requestId);
-
         friendRequest.checkCancelable(currentUserId);
+        friendRequestRepository.delete(friendRequest);
     }
 
     private FriendRequest findFriendRequestById(String requestId) {
