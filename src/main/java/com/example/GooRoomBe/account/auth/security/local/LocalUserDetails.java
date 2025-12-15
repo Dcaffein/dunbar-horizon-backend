@@ -1,4 +1,4 @@
-package com.example.GooRoomBe.account.auth.security.principal;
+package com.example.GooRoomBe.account.auth.security.local;
 
 import com.example.GooRoomBe.account.auth.domain.LocalAuth;
 import com.example.GooRoomBe.account.user.domain.User;

@@ -1,7 +1,7 @@
 package com.example.GooRoomBe.account.auth.domain;
 
-import com.example.GooRoomBe.account.auth.security.principal.oauthInfo.GoogleUserInfo;
-import com.example.GooRoomBe.account.auth.security.principal.oauthInfo.OAuth2UserInfo;
+import com.example.GooRoomBe.account.auth.security.oauth.oauthInfo.GoogleUserInfo;
+import com.example.GooRoomBe.account.auth.security.oauth.oauthInfo.OAuth2UserInfo;
 
 import java.util.Map;
 import java.util.function.Function;

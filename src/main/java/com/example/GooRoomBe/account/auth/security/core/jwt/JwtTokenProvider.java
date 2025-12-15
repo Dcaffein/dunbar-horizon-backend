@@ -1,8 +1,8 @@
-package com.example.GooRoomBe.account.auth.security.provider;
+package com.example.GooRoomBe.account.auth.security.core.jwt;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import com.example.GooRoomBe.account.auth.exception.ExpiredTokenException;
+import com.example.GooRoomBe.account.auth.exception.InvalidJwtException;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,11 +52,29 @@ public class JwtTokenProvider {
     }
 
     public void validateToken(String token) {
-        Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+        try {
+            Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token);
+        } catch (ExpiredJwtException e) {
+            throw new ExpiredTokenException();
+        } catch (SecurityException | MalformedJwtException | UnsupportedJwtException | IllegalArgumentException e) {
+            throw new InvalidJwtException();
+        }
     }
 
     public String getUserIdFromToken(String token) {
-        Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
-        return claims.getSubject();
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody()
+                    .getSubject();
+        } catch (Exception e) {
+            // 파싱 중 에러 발생 시 유효하지 않은 토큰으로 간주
+            throw new InvalidJwtException();
+        }
     }
 }

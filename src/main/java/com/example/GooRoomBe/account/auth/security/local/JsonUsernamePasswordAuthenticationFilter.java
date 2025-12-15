@@ -1,4 +1,4 @@
-package com.example.GooRoomBe.account.auth.security.filter;
+package com.example.GooRoomBe.account.auth.security.local;
 
 import com.example.GooRoomBe.account.auth.api.dto.UserLoginRequestDto;
 import com.fasterxml.jackson.databind.ObjectMapper;

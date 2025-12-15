@@ -1,4 +1,4 @@
-package com.example.GooRoomBe.account.auth.security.principal.oauthInfo;
+package com.example.GooRoomBe.account.auth.security.oauth.oauthInfo;
 
 import java.util.Map;
 

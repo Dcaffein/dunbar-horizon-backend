@@ -1,11 +1,8 @@
-package com.example.GooRoomBe.account.auth.security.service;
+package com.example.GooRoomBe.account.auth.security.local;
 
 import com.example.GooRoomBe.account.auth.domain.LocalAuth;
 import com.example.GooRoomBe.account.auth.repository.LocalAuthRepository;
-import com.example.GooRoomBe.account.auth.security.principal.LocalUserDetails;
-import com.example.GooRoomBe.account.user.domain.UserStatus;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

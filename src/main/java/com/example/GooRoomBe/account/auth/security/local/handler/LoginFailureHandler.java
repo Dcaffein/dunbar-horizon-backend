@@ -1,10 +1,10 @@
-package com.example.GooRoomBe.account.auth.security.handler;
+package com.example.GooRoomBe.account.auth.security.local.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
@@ -12,6 +12,7 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,32 +24,24 @@ public class LoginFailureHandler implements AuthenticationFailureHandler {
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
-                                        AuthenticationException exception) throws IOException, ServletException {
+                                        AuthenticationException exception) throws IOException {
 
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
 
         String errorMessage;
-        String errorCode;
-
         if (exception instanceof LockedException) {
-            errorMessage = exception.getMessage();
-            errorCode = "UNVERIFIED";
+            errorMessage = "계정이 잠겨 있습니다. 관리자에게 문의하세요.";
         } else if (exception instanceof BadCredentialsException) {
-            errorMessage = "이메일 또는 비밀번호가 올바르지 않습니다.";
-            errorCode = "BAD_CREDENTIALS";
+            errorMessage = "이메일 또는 비밀번호가 일치하지 않습니다.";
         } else {
-            errorMessage = "로그인에 실패했습니다. 관리자에게 문의하세요.";
-            errorCode = "AUTH_FAILED";
+            errorMessage = "로그인에 실패했습니다.";
         }
 
-        Map<String, String> errorDetails = new HashMap<>();
-        errorDetails.put("error", "Authentication Failed");
-        errorDetails.put("code", errorCode);
-        errorDetails.put("message", errorMessage);
+        Map<String, String> responseBody = new HashMap<>();
+        responseBody.put("message", errorMessage);
 
-        String jsonResponse = objectMapper.writeValueAsString(errorDetails);
-        response.getWriter().write(jsonResponse);
+        response.getWriter().write(objectMapper.writeValueAsString(responseBody));
     }
 }

@@ -8,7 +8,8 @@ import java.util.Optional;
 
 @Repository
 public interface RefreshTokenRepository extends Neo4jRepository<RefreshToken, String> {
-    Optional<RefreshToken> findByUser_Id(String userId);
-    void deleteAllByUserId(String userId);
-    void deleteByUserId(String userId);
+    Optional<RefreshToken> findByUser_IdAndTokenValue(String userId, String tokenValue);
+    boolean existsByUser_IdAndTokenValue(String userId, String tokenValue);
+    void deleteByUser_IdAndTokenValue(String userId, String tokenValue);
+    void deleteAllByUser_Id(String userId);
 }

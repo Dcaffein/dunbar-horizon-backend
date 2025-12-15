@@ -1,6 +1,5 @@
 package com.example.GooRoomBe.account.auth.domain.token;
 
-import com.example.GooRoomBe.account.auth.exception.TokenTheftDetectedException;
 import com.example.GooRoomBe.account.user.domain.User;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -27,16 +26,5 @@ public class RefreshToken {
     public RefreshToken(User user, String tokenValue) {
         this.user = user;
         this.tokenValue = tokenValue;
-    }
-
-    public void updateTokenValue(String tokenValue) {
-        this.tokenValue = tokenValue;
-    }
-
-    public void rotate(String incomingToken, String newToken) {
-        if (!this.tokenValue.equals(incomingToken)) {
-            throw new TokenTheftDetectedException();
-        }
-        this.tokenValue = newToken;
     }
 }

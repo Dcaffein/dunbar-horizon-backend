@@ -1,10 +1,8 @@
-package com.example.GooRoomBe.account.auth.security.service;
+package com.example.GooRoomBe.account.auth.security.oauth;
 
-import com.example.GooRoomBe.account.auth.domain.Auth;
 import com.example.GooRoomBe.account.auth.domain.OAuth;
 import com.example.GooRoomBe.account.auth.domain.Provider;
-import com.example.GooRoomBe.account.auth.security.principal.CustomOAuth2User;
-import com.example.GooRoomBe.account.auth.security.principal.oauthInfo.OAuth2UserInfo;
+import com.example.GooRoomBe.account.auth.security.oauth.oauthInfo.OAuth2UserInfo;
 import com.example.GooRoomBe.account.auth.repository.OAuthRepository;
 import com.example.GooRoomBe.account.user.domain.User;
 import com.example.GooRoomBe.account.user.domain.UserFactory;

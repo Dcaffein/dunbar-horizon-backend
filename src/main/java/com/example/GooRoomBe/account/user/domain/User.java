@@ -4,8 +4,10 @@ import com.example.GooRoomBe.account.user.exception.NotUnverifiedException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
+import org.springframework.data.neo4j.core.support.UUIDStringGenerator;
 
 import java.util.UUID;
 
@@ -13,7 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Node({"User", "SocialUser"})
 public class User {
-    @Id
+    @Id @GeneratedValue(generatorClass = UUIDStringGenerator.class)
     private String id;
 
     private String nickname;

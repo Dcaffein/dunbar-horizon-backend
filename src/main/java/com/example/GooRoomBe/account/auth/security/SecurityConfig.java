@@ -1,13 +1,13 @@
-package com.example.GooRoomBe.account.auth.security.config;
+package com.example.GooRoomBe.account.auth.security;
 
-import com.example.GooRoomBe.account.auth.security.handler.OAuth2AuthenticationSuccessHandler;
-import com.example.GooRoomBe.account.auth.security.provider.CustomAuthenticationProvider;
-import com.example.GooRoomBe.account.auth.security.filter.JsonUsernamePasswordAuthenticationFilter;
-import com.example.GooRoomBe.account.auth.security.handler.LoginFailureHandler;
-import com.example.GooRoomBe.account.auth.security.handler.LoginSuccessHandler;
-import com.example.GooRoomBe.account.auth.security.filter.JwtAuthenticationFilter;
-import com.example.GooRoomBe.account.auth.security.service.CustomOAuth2UserService;
-import com.example.GooRoomBe.account.auth.security.handler.CustomAuthenticationEntryPoint;
+import com.example.GooRoomBe.account.auth.security.oauth.OAuth2AuthenticationSuccessHandler;
+import com.example.GooRoomBe.account.auth.security.local.CustomAuthenticationProvider;
+import com.example.GooRoomBe.account.auth.security.local.JsonUsernamePasswordAuthenticationFilter;
+import com.example.GooRoomBe.account.auth.security.local.handler.LoginFailureHandler;
+import com.example.GooRoomBe.account.auth.security.local.handler.LoginSuccessHandler;
+import com.example.GooRoomBe.account.auth.security.core.jwt.JwtAuthenticationFilter;
+import com.example.GooRoomBe.account.auth.security.oauth.CustomOAuth2UserService;
+import com.example.GooRoomBe.account.auth.security.core.exception.CustomAuthenticationEntryPoint;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +22,7 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -63,7 +64,18 @@ public class SecurityConfig {
                                            CustomAuthenticationEntryPoint customAuthenticationEntryPoint
     ) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .ignoringRequestMatchers(
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/email-verifications",
+                                "/api/v1/users"
+                        )
+                        .ignoringRequestMatchers(request ->
+                                "POST".equals(request.getMethod()) &&
+                                        "/api/v1/auth/tokens".equals(request.getRequestURI())
+                        )
+                )
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
@@ -83,10 +95,11 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers(
-                                "/api/v1/auth/**",
-                                "/oauth2/**",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/email-verifications",
                                 "/error"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/tokens").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
                         .anyRequest().authenticated());
 

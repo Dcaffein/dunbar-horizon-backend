@@ -1,11 +1,6 @@
-package com.example.GooRoomBe.account.auth.security.filter;
+package com.example.GooRoomBe.account.auth.security.core.jwt;
 
-import com.example.GooRoomBe.account.auth.security.provider.JwtTokenProvider;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.UnsupportedJwtException;
-import io.jsonwebtoken.security.SecurityException;
+import com.example.GooRoomBe.account.auth.exception.AuthException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -42,29 +37,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null) {
             try {
                 jwtTokenProvider.validateToken(token);
-
                 String userId = jwtTokenProvider.getUserIdFromToken(token);
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userId, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            } catch (ExpiredJwtException e) {
-                log.warn("Expired JWT token: {}", e.getMessage());
-                request.setAttribute("exceptionCode", "TOKEN_EXPIRED");
-            } catch (SecurityException | MalformedJwtException | UnsupportedJwtException | IllegalArgumentException e) {
-                log.warn("Invalid JWT token: {}", e.getMessage());
-                request.setAttribute("exceptionCode", "TOKEN_INVALID");
-            } catch (JwtException e) {
-                log.warn("JWT error: {}", e.getMessage());
-                request.setAttribute("exceptionCode", "TOKEN_ERROR");
+            } catch (AuthException e) {
+                log.warn("Auth Error: {}", e.getMessage());
+                request.setAttribute("exception", e);
+            } catch (Exception e) {
+                log.error("JWT Processing Error", e);
+                request.setAttribute("exception", e);
             }
         }
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * 요청에 포함된 쿠키들 중에서 'accessToken' 쿠키를 찾아 토큰 값을 반환합니다.
-     */
     private String resolveToken(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {

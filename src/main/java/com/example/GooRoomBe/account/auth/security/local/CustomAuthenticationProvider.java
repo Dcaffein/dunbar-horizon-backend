@@ -1,4 +1,4 @@
-package com.example.GooRoomBe.account.auth.security.provider;
+package com.example.GooRoomBe.account.auth.security.local;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationProvider;
