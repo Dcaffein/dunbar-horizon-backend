@@ -28,6 +28,8 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(e.getHttpStatus())
                 .body(response);
+
+
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
