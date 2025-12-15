@@ -1,5 +1,6 @@
 package com.example.GooRoomBe.social.query;
 
+import com.example.GooRoomBe.social.query.api.ConnectingFriendDto;
 import com.example.GooRoomBe.social.query.api.FriendSuggestionDto;
 import com.example.GooRoomBe.social.query.api.OneHopsNetworkDto;
 import org.junit.jupiter.api.BeforeEach;
@@ -218,5 +219,58 @@ class SocialQueryServiceTest {
         // 1-hop 친구가 없으므로, 그 건너편에 있는 2-hop이나 라벨을 탐색할 수 없음 -> 결과 0건
         assertThat(result).isNotNull();
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("공통 친구 필터링: 입력된 후보 ID 중 타겟 유저와 실제로 친구인 유저들의 ID만 반환한다")
+    void getConnectingFriendIds_ShouldReturnOnlyRealFriends() {
+        // Given
+        String targetId = "targetUser";
+        String f1 = "friend1"; // Target과 친구 O
+        String f2 = "friend2"; // Target과 친구 X
+        String f3 = "friend3"; // Target과 친구 O
+
+        // 데이터 셋업
+        String cypher = String.format("""
+            CREATE (target:%s {id: $targetId})
+            CREATE (f1:%s {id: $f1})
+            CREATE (f2:%s {id: $f2})
+            CREATE (f3:%s {id: $f3})
+
+            // F1 <-> Target (친구 관계 생성)
+            CREATE (f1)-[:%s]->(:%s)<-[:%s]-(target)
+
+            // F3 <-> Target (친구 관계 생성)
+            CREATE (f3)-[:%s]->(:%s)<-[:%s]-(target)
+            
+            // F2는 관계를 만들지 않음 (고립됨)
+            """,
+                SOCIAL_USER, SOCIAL_USER, SOCIAL_USER, SOCIAL_USER, // Nodes
+                MEMBER_OF, FRIENDSHIP, MEMBER_OF, // F1-Target
+                MEMBER_OF, FRIENDSHIP, MEMBER_OF  // F3-Target
+        );
+
+        neo4jClient.query(cypher)
+                .bindAll(Map.of(
+                        "targetId", targetId,
+                        "f1", f1,
+                        "f2", f2,
+                        "f3", f3
+                ))
+                .run();
+
+        // When: 내 친구 목록 전체(F1, F2, F3)를 후보로 넘김
+        List<String> candidates = List.of(f1, f2, f3);
+        List<ConnectingFriendDto> result = socialQueryService.getConnectingFriends(targetId, candidates);
+
+        // Then
+        // 결과 개수 확인
+        assertThat(result).hasSize(2);
+
+        //  DTO 내부의 friendId 값 추출하여 검증
+        assertThat(result)
+                .extracting(ConnectingFriendDto::friendId)
+                .containsExactlyInAnyOrder(f1, f3)
+                .doesNotContain(f2);
     }
 }

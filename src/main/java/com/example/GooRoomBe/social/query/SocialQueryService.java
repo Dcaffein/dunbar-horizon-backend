@@ -1,5 +1,6 @@
 package com.example.GooRoomBe.social.query;
 
+import com.example.GooRoomBe.social.query.api.ConnectingFriendDto;
 import com.example.GooRoomBe.social.query.api.FriendSuggestionDto;
 import com.example.GooRoomBe.social.query.api.OneHopsNetworkDto;
 import lombok.RequiredArgsConstructor;
@@ -34,25 +35,25 @@ public class SocialQueryService {
 
         //  1-hop 패턴 호출
         StatementBuilder.OngoingReadingAndWith firstWith = findOneHopFriends(literalOf(userId))
-                .with(ME, ONE_HOP_FRIEND, ALIAS, WEIGHT);
+                .with(ME, ONE_HOP_FRIEND, ALIAS, MY_REL);
 
         // 2-hop(MUTUAL_FRIEND) 패턴 호출
         StatementBuilder.OngoingReadingAndWith secondWith = findTwoHopPatternOptional(firstWith, MUTUAL_FRIEND)
                 .and(isFriends(ME, MUTUAL_FRIEND)) // 함께 아는 친구 조건
-                .with(ME, ONE_HOP_FRIEND, ALIAS, WEIGHT, MUTUAL_FRIEND);
+                .with(ME, ONE_HOP_FRIEND, ALIAS, MY_REL,MUTUAL_FRIEND);
 
         Statement statement = secondWith
                 .with(
                         ONE_HOP_FRIEND,
                         ALIAS,
-                        WEIGHT,
+                        MY_REL,
                         collectDistinct(MUTUAL_FRIEND.property("id")).as("mutualFriendIds")
                 )
                 .returning(
                         ONE_HOP_FRIEND.property("id").as("friendId"),
                         ONE_HOP_FRIEND.property("nickname").as("friendName"),
                         ALIAS,
-                        WEIGHT,
+                        MY_REL.property("interactionScore").as("interactionScore"),
                         name("mutualFriendIds")
                 )
                 .build();
@@ -99,5 +100,40 @@ public class SocialQueryService {
                 .build();
 
         return neo4jTemplate.findAll(statement, FriendSuggestionDto.class);
+    }
+
+    /**
+     * 2-Hop 유저(Target)를 아는 내 친구 목록 조회
+     *
+     * @param targetId 2-hop 친구 ID
+     * @param myFriendIds 내 친구들의 ID 목록 (후보군)
+     * @return 연결고리가 되는 친구들의 ID 리스트 (List<ConnectingFriendDto>)
+     */
+    public List<ConnectingFriendDto> getConnectingFriends(String targetId, List<String> myFriendIds) {
+
+        // 1. 노드 정의
+        Node target = USER.named("target");
+        Node candidate = USER.named("candidate");
+
+        // 2. 쿼리 빌드
+        // MATCH (target:User {id: $targetId})
+        // MATCH (candidate:User)
+        // WHERE candidate.id IN $myFriendIds
+        // AND (target과 candidate가 친구 관계임)
+        // RETURN candidate.id AS friendId
+        Statement statement = match(target)
+                .where(target.property("id").isEqualTo(literalOf(targetId)))
+                .match(candidate)
+                .where(candidate.property("id").in(literalOf(myFriendIds))) // 후보군(내 친구들) 안에서만 검색
+                .and(isFriends(target, candidate)) // Neo4jConditions.isFriends 활용
+                .returning(
+                        // ⭐️ DTO 필드명("friendId")과 Alias를 일치시킴
+                        candidate.property("id").as("friendId")
+                )
+                .build();
+
+        // 3. 실행 (findAll 사용)
+        // 쿼리 결과의 각 행(friendId)을 ConnectingFriendDto 객체로 자동 매핑하여 리스트로 반환합니다.
+        return neo4jTemplate.findAll(statement, ConnectingFriendDto.class);
     }
 }
