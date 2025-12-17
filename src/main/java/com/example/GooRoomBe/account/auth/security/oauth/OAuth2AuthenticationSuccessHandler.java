@@ -11,7 +11,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
 
@@ -41,10 +40,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         RefreshToken newRefreshToken = new RefreshToken(user, refreshTokenValue);
         refreshTokenRepository.save(newRefreshToken);
 
-        CsrfToken csrfTokenObj = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-        String csrfTokenValue = (csrfTokenObj != null) ? csrfTokenObj.getToken() : null;
-
-        authCookieManager.addAuthCookies(response, accessToken, refreshTokenValue, csrfTokenValue);
+        authCookieManager.addAuthCookies(response, accessToken, refreshTokenValue);
 
         clearAuthenticationAttributes(request);
 

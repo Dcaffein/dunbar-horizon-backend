@@ -20,23 +20,21 @@ class AuthCookieManagerTest {
     }
 
     @Test
-    @DisplayName("인증 쿠키 추가: Access, Refresh, CSRF 쿠키가 모두 생성되어야 한다")
+    @DisplayName("인증 쿠키 추가: Access, Refresh")
     void addAuthCookies_Success() {
         // Given
         MockHttpServletResponse response = new MockHttpServletResponse();
         String accessToken = "access-token";
         String refreshToken = "refresh-token";
-        String csrfToken = "csrf-token";
 
         // When
-        authCookieManager.addAuthCookies(response, accessToken, refreshToken, csrfToken);
+        authCookieManager.addAuthCookies(response, accessToken, refreshToken);
 
         // Then
         String allCookies = response.getHeaders("Set-Cookie").toString();
 
         assertThat(allCookies).contains("accessToken=access-token");
         assertThat(allCookies).contains("refreshToken=refresh-token");
-        assertThat(allCookies).contains("XSRF-TOKEN=csrf-token");
 
         // Lax, HttpOnly 속성 확인
         assertThat(response.getHeaders("Set-Cookie").get(0)).contains("SameSite=Lax");

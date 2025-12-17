@@ -16,13 +16,9 @@ public class AuthCookieManager {
     private long refreshExpiration;
 
 
-    public void addAuthCookies(HttpServletResponse response, String accessToken, String refreshToken, String csrfToken) {
-        response.addHeader(HttpHeaders.SET_COOKIE, createCookie("accessToken", accessToken, accessExpiration, true).toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, createCookie("refreshToken", refreshToken, refreshExpiration, true).toString());
-
-        if (csrfToken != null) {
-            response.addHeader(HttpHeaders.SET_COOKIE, createCookie("XSRF-TOKEN", csrfToken, accessExpiration, false).toString());
-        }
+    public void addAuthCookies(HttpServletResponse response, String accessToken, String refreshToken) {
+        response.addHeader(HttpHeaders.SET_COOKIE, createCookie("accessToken", accessToken, accessExpiration).toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, createCookie("refreshToken", refreshToken, refreshExpiration).toString());
     }
 
     /**
@@ -34,9 +30,9 @@ public class AuthCookieManager {
         response.addHeader(HttpHeaders.SET_COOKIE, createExpiredCookie("XSRF-TOKEN").toString());
     }
 
-    private ResponseCookie createCookie(String name, String value, long maxAge, boolean httpOnly) {
+    private ResponseCookie createCookie(String name, String value, long maxAge) {
         return ResponseCookie.from(name, value)
-                .httpOnly(httpOnly)
+                .httpOnly(true)
                 .secure(false)
                 .path("/")
                 .maxAge(maxAge)

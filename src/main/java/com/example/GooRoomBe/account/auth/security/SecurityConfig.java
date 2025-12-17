@@ -9,6 +9,7 @@ import com.example.GooRoomBe.account.auth.security.core.jwt.JwtAuthenticationFil
 import com.example.GooRoomBe.account.auth.security.oauth.CustomOAuth2UserService;
 import com.example.GooRoomBe.account.auth.security.core.exception.CustomAuthenticationEntryPoint;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -22,7 +23,6 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -54,6 +54,13 @@ public class SecurityConfig {
     }
 
     @Bean
+    public FilterRegistrationBean<JsonUsernamePasswordAuthenticationFilter> registration(JsonUsernamePasswordAuthenticationFilter filter) {
+        FilterRegistrationBean<JsonUsernamePasswordAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            AuthenticationManager authenticationManager,
                                            JsonUsernamePasswordAuthenticationFilter jsonAuthFilter,
@@ -64,22 +71,10 @@ public class SecurityConfig {
                                            CustomAuthenticationEntryPoint customAuthenticationEntryPoint
     ) throws Exception {
         http
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .ignoringRequestMatchers(
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/email-verifications",
-                                "/api/v1/users"
-                        )
-                        .ignoringRequestMatchers(request ->
-                                "POST".equals(request.getMethod()) &&
-                                        "/api/v1/auth/tokens".equals(request.getRequestURI())
-                        )
-                )
+                .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
         http
                 .authenticationProvider(customAuthenticationProvider)
                 .addFilterAt(jsonAuthFilter, UsernamePasswordAuthenticationFilter.class)

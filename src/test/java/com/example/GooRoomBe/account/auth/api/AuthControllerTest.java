@@ -20,7 +20,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -62,7 +61,6 @@ class AuthControllerTest extends ControllerTestSupport {
 
     @Test
     @DisplayName("토큰 재발급: RefreshToken 쿠키가 있으면 새 토큰을 발급한다")
-        // @WithMockUser 제거
     void reissueTokens_Success() throws Exception {
         String refreshToken = "valid-refresh-token";
         Cookie cookie = new Cookie("refreshToken", refreshToken);
@@ -79,7 +77,7 @@ class AuthControllerTest extends ControllerTestSupport {
                 .andExpect(status().isOk());
 
         verify(authTokenService).reissueTokens(refreshToken);
-        verify(authCookieManager).addAuthCookies(any(HttpServletResponse.class), eq("new-access-token"), eq("valid-refresh-token"), any());
+        verify(authCookieManager).addAuthCookies(any(HttpServletResponse.class), eq("new-access-token"), eq("valid-refresh-token"));
     }
 
     @Test
@@ -98,7 +96,6 @@ class AuthControllerTest extends ControllerTestSupport {
         Cookie cookie = new Cookie("refreshToken", refreshToken);
 
         mockMvc.perform(delete("/api/v1/auth/tokens")
-                        .with(csrf())
                         .cookie(cookie))
                 .andDo(print())
                 .andExpect(status().isOk());

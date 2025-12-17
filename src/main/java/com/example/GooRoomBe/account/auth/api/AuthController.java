@@ -9,7 +9,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -61,14 +60,10 @@ public class AuthController {
 
         Map<String, String> tokens = authTokenService.reissueTokens(refreshTokenValue);
 
-        CsrfToken csrfTokenObj = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-        String csrfTokenValue = (csrfTokenObj != null) ? csrfTokenObj.getToken() : null;
-
         authCookieManager.addAuthCookies(
                 response,
                 tokens.get("accessToken"),
-                tokens.get("refreshToken"),
-                csrfTokenValue
+                tokens.get("refreshToken")
         );
 
         return ResponseEntity.ok().build();

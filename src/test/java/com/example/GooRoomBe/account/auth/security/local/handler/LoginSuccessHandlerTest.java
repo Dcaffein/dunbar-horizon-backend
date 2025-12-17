@@ -17,8 +17,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.web.csrf.CsrfToken;
-import org.springframework.security.web.csrf.DefaultCsrfToken;
+
+import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,21 +39,17 @@ class LoginSuccessHandlerTest {
 
     @Test
     @DisplayName("로그인 성공: 토큰 생성, 저장, 쿠키 설정이 순차적으로 실행되어야 한다")
-    void onAuthenticationSuccess() {
+    void onAuthenticationSuccess() throws IOException {
         // Given
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        //
         User mockUser = mock(User.class);
         given(mockUser.getId()).willReturn("1");
 
         LocalUserDetails userDetails = new LocalUserDetails(new LocalAuth(mockUser, "encodedPw"));
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null);
-
-        CsrfToken csrfToken = new DefaultCsrfToken("X-XSRF-TOKEN", "_csrf", "csrf-uuid");
-        request.setAttribute(CsrfToken.class.getName(), csrfToken);
 
         given(jwtTokenProvider.createAccessToken("1")).willReturn("access-token");
         given(jwtTokenProvider.createRefreshToken("1")).willReturn("refresh-token");
@@ -66,8 +62,7 @@ class LoginSuccessHandlerTest {
         verify(authCookieManager).addAuthCookies(
                 any(HttpServletResponse.class),
                 eq("access-token"),
-                eq("refresh-token"),
-                eq("csrf-uuid")
+                eq("refresh-token")
         );
         assertEquals(HttpServletResponse.SC_OK, response.getStatus());
     }
