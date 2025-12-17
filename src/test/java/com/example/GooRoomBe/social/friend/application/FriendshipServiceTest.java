@@ -4,7 +4,7 @@ import com.example.GooRoomBe.social.friend.api.dto.FriendUpdateRequestDto;
 import com.example.GooRoomBe.social.friend.domain.Friendship;
 import com.example.GooRoomBe.social.friend.domain.FriendshipPort;
 import com.example.GooRoomBe.social.friend.domain.event.FriendShipDeletedEvent;
-import com.example.GooRoomBe.social.socialUser.SocialUser;
+import com.example.GooRoomBe.global.userReference.SocialUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

@@ -3,7 +3,7 @@ package com.example.GooRoomBe.social.label.domain.service;
 import com.example.GooRoomBe.social.label.domain.Label;
 import com.example.GooRoomBe.social.label.exception.LabelNameDuplicateException;
 import com.example.GooRoomBe.social.label.repository.LabelRepository;
-import com.example.GooRoomBe.social.socialUser.SocialUser;
+import com.example.GooRoomBe.global.userReference.SocialUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

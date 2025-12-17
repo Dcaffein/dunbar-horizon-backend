@@ -1,10 +1,10 @@
 package com.example.GooRoomBe.social.label.domain;
 
-import com.example.GooRoomBe.social.socialUser.SocialUserNotFoundException;
+import com.example.GooRoomBe.global.userReference.SocialUserNotFoundException;
 import com.example.GooRoomBe.social.label.domain.service.LabelNameService;
 import com.example.GooRoomBe.social.label.exception.LabelNameDuplicateException;
-import com.example.GooRoomBe.social.socialUser.SocialUser;
-import com.example.GooRoomBe.social.socialUser.SocialUserPort;
+import com.example.GooRoomBe.global.userReference.SocialUser;
+import com.example.GooRoomBe.social.common.SocialUserPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

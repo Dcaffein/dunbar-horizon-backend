@@ -1,6 +1,6 @@
 package com.example.GooRoomBe.social.common.dto;
 
-import com.example.GooRoomBe.social.socialUser.SocialUser;
+import com.example.GooRoomBe.global.userReference.SocialUser;
 
 public record SocialMemberResponseDto(
         String id,

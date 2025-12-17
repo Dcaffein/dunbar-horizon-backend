@@ -2,8 +2,8 @@ package com.example.GooRoomBe.social.label.application;
 
 import com.example.GooRoomBe.social.label.api.dto.LabelUpdateRequestDto;
 import com.example.GooRoomBe.social.label.exception.LabelNotFoundException;
-import com.example.GooRoomBe.social.socialUser.SocialUser;
-import com.example.GooRoomBe.social.socialUser.SocialUserPort;
+import com.example.GooRoomBe.global.userReference.SocialUser;
+import com.example.GooRoomBe.social.common.SocialUserPort;
 import com.example.GooRoomBe.social.label.domain.Label;
 import com.example.GooRoomBe.social.label.domain.LabelFactory;
 import com.example.GooRoomBe.social.label.domain.service.LabelMemberService;

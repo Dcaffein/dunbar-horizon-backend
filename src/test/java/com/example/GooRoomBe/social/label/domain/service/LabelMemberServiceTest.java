@@ -5,7 +5,7 @@ import com.example.GooRoomBe.social.friend.domain.Friendship;
 import com.example.GooRoomBe.social.friend.exception.FriendshipNotFoundException;
 import com.example.GooRoomBe.social.label.domain.Label;
 import com.example.GooRoomBe.social.label.exception.InvalidLabelMemberException;
-import com.example.GooRoomBe.social.socialUser.SocialUser;
+import com.example.GooRoomBe.global.userReference.SocialUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

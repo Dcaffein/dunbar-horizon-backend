@@ -48,7 +48,7 @@ public class Notification {
         this.relatedUrl = relatedUrl;
         this.type = type;
         this.isSent = isSent;
-        this.isRead = false; // 기본값: 안 읽음
+        this.isRead = false;
         this.createdAt = LocalDateTime.now();
     }
 

@@ -1,7 +1,7 @@
 package com.example.GooRoomBe.social.friend.domain.factory;
 
-import com.example.GooRoomBe.social.socialUser.SocialUser;
-import com.example.GooRoomBe.social.socialUser.SocialUserPort;
+import com.example.GooRoomBe.global.userReference.SocialUser;
+import com.example.GooRoomBe.social.common.SocialUserPort;
 import com.example.GooRoomBe.social.friend.domain.FriendRequest;
 import com.example.GooRoomBe.social.friend.domain.service.FriendRequestDuplicationValidator;
 import com.example.GooRoomBe.social.friend.exception.CannotRequestToSelfException;

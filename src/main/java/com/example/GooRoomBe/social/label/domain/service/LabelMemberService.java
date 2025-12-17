@@ -6,7 +6,7 @@ import com.example.GooRoomBe.social.friend.exception.FriendshipNotFoundException
 import com.example.GooRoomBe.social.label.domain.Label;
 import com.example.GooRoomBe.social.label.exception.InvalidLabelMemberException;
 import com.example.GooRoomBe.social.label.exception.LabelMemberDuplicationException;
-import com.example.GooRoomBe.social.socialUser.SocialUser;
+import com.example.GooRoomBe.global.userReference.SocialUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

@@ -1,7 +1,7 @@
 package com.example.GooRoomBe.social.label.domain;
 
-import com.example.GooRoomBe.social.socialUser.SocialUser;
-import com.example.GooRoomBe.social.socialUser.SocialUserPort;
+import com.example.GooRoomBe.global.userReference.SocialUser;
+import com.example.GooRoomBe.social.common.SocialUserPort;
 import com.example.GooRoomBe.social.label.domain.service.LabelNameService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

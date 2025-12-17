@@ -5,7 +5,7 @@ import com.example.GooRoomBe.social.friend.api.dto.FriendRequestUpdateDto;
 import com.example.GooRoomBe.social.friend.application.FriendRequestService;
 import com.example.GooRoomBe.social.friend.domain.FriendRequest;
 import com.example.GooRoomBe.social.friend.domain.FriendRequestStatus;
-import com.example.GooRoomBe.social.socialUser.SocialUser;
+import com.example.GooRoomBe.global.userReference.SocialUser;
 import com.example.GooRoomBe.support.ControllerTestSupport;
 import com.example.GooRoomBe.support.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
@@ -18,7 +18,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -58,7 +57,6 @@ class FriendRequestControllerTest extends ControllerTestSupport {
 
         // When & Then
         mockMvc.perform(post("/api/v1/friend-requests")
-                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andDo(print())
@@ -76,7 +74,6 @@ class FriendRequestControllerTest extends ControllerTestSupport {
 
         // When & Then
         mockMvc.perform(patch("/api/v1/friend-requests/{requestId}", requestId)
-                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andDo(print())
@@ -98,8 +95,7 @@ class FriendRequestControllerTest extends ControllerTestSupport {
         String requestId = "req-123";
 
         // When & Then
-        mockMvc.perform(delete("/api/v1/friend-requests/{requestId}", requestId)
-                        .with(csrf()))
+        mockMvc.perform(delete("/api/v1/friend-requests/{requestId}", requestId))
                 .andDo(print())
                 .andExpect(status().isNoContent());
 

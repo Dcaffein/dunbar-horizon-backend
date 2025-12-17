@@ -13,7 +13,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.verify;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -35,7 +34,6 @@ class FriendshipControllerTest extends ControllerTestSupport {
 
         // When & Then
         mockMvc.perform(patch("/api/v1/friends/{friendId}", friendId)
-                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andDo(print())
@@ -57,8 +55,7 @@ class FriendshipControllerTest extends ControllerTestSupport {
         String friendId = "friend-id";
 
         // When & Then
-        mockMvc.perform(delete("/api/v1/friends/{friendId}", friendId)
-                        .with(csrf()))
+        mockMvc.perform(delete("/api/v1/friends/{friendId}", friendId))
                 .andDo(print())
                 .andExpect(status().isNoContent());
 

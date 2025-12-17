@@ -2,7 +2,7 @@ package com.example.GooRoomBe.social.friend.domain;
 
 import com.example.GooRoomBe.social.friend.exception.FriendshipAuthorizationException;
 import com.example.GooRoomBe.social.friend.exception.FriendshipNotFoundException;
-import com.example.GooRoomBe.social.socialUser.SocialUser;
+import com.example.GooRoomBe.global.userReference.SocialUser;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

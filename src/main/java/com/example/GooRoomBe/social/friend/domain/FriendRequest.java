@@ -1,7 +1,7 @@
 package com.example.GooRoomBe.social.friend.domain;
 
 import com.example.GooRoomBe.social.friend.domain.event.FriendRequestAcceptedEvent;
-import com.example.GooRoomBe.social.socialUser.SocialUser;
+import com.example.GooRoomBe.global.userReference.SocialUser;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

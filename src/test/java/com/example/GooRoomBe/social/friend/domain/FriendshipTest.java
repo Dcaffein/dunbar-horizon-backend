@@ -1,8 +1,7 @@
 package com.example.GooRoomBe.social.friend.domain;
 
 import com.example.GooRoomBe.social.friend.exception.FriendshipAuthorizationException;
-import com.example.GooRoomBe.social.friend.exception.FriendshipNotFoundException;
-import com.example.GooRoomBe.social.socialUser.SocialUser;
+import com.example.GooRoomBe.global.userReference.SocialUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

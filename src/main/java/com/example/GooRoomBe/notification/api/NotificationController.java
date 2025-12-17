@@ -21,7 +21,7 @@ public class NotificationController {
     @PostMapping("/device-token")
     public ResponseEntity<Void> registerDeviceToken(
             @AuthenticationPrincipal String userId,
-            @RequestBody DeviceTokenRequestDto dto) { // DTO는 record로 간단히 생성
+            @RequestBody DeviceTokenRequestDto dto) {
 
         notificationService.registerDeviceToken(userId, dto.token());
         return ResponseEntity.ok().build();

@@ -2,7 +2,7 @@ package com.example.GooRoomBe.social.label.domain;
 
 import com.example.GooRoomBe.social.label.exception.InvalidLabelNameException;
 import com.example.GooRoomBe.social.label.exception.LabelAuthorizationException;
-import com.example.GooRoomBe.social.socialUser.SocialUser;
+import com.example.GooRoomBe.global.userReference.SocialUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
