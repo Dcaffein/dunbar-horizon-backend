@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,7 +19,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
-        log.warn("[Business Exception] {}: {}", e.getClass().getSimpleName(), e.getMessage());
+        log.warn("{}: {}", e.getClass().getSimpleName(), e.getMessage());
 
         ErrorResponse response = ErrorResponse.builder()
                 .error(e.getClass().getSimpleName())
@@ -28,8 +29,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(e.getHttpStatus())
                 .body(response);
+    }
 
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException e) {
+        log.warn("[Access Denied] {}", e.getMessage());
 
+        ErrorResponse response = ErrorResponse.builder()
+                .error("AccessDeniedException")
+                .message("해당 리소스에 접근할 권한이 없습니다.")
+                .build();
+
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

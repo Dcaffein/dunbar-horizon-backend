@@ -1,0 +1,92 @@
+package com.example.GooRoomBe.social.adapter.in;
+
+import com.example.GooRoomBe.global.annotation.CurrentUserId;
+import com.example.GooRoomBe.social.adapter.in.dto.*;
+import com.example.GooRoomBe.social.application.port.in.LabelCommandUseCase;
+import com.example.GooRoomBe.social.application.port.in.LabelQueryUseCase;
+import com.example.GooRoomBe.social.application.port.in.dto.LabelResponse;
+import com.example.GooRoomBe.social.domain.label.Label;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.net.URI;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/labels")
+@RequiredArgsConstructor
+public class LabelController {
+
+    private final LabelCommandUseCase labelCommandUseCase;
+    private final LabelQueryUseCase labelQueryUseCase;
+
+    @GetMapping
+    public ResponseEntity<List<LabelResponse>> getAllLabels(
+            @CurrentUserId Long currentUserId) {
+
+        return ResponseEntity.ok(labelQueryUseCase.getAllLabels(currentUserId));
+    }
+
+    @PostMapping
+    public ResponseEntity<LabelResponse> createLabel(
+            @CurrentUserId Long currentUserId,
+            @RequestBody @Valid LabelCreateRequest dto) {
+
+        Label newLabel = labelCommandUseCase.createLabel(currentUserId, dto.labelName(), dto.exposure());
+
+        return ResponseEntity
+                .created(URI.create("/api/v1/labels/" + newLabel.getId()))
+                .body(LabelResponse.from(newLabel));
+    }
+
+    @DeleteMapping("/{labelId}")
+    public ResponseEntity<Void> deleteLabel(
+            @CurrentUserId Long currentUserId,
+            @PathVariable String labelId) {
+
+        labelCommandUseCase.deleteLabel(currentUserId, labelId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{labelId}")
+    public ResponseEntity<Void> updateLabel(
+            @CurrentUserId Long currentUserId,
+            @PathVariable String labelId,
+            @RequestBody @Valid LabelUpdateRequest dto) {
+
+        labelCommandUseCase.updateLabel(labelId, currentUserId, dto.labelName(), dto.exposure());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{labelId}/members")
+    public ResponseEntity<Void> replaceMembers(
+            @CurrentUserId Long currentUserId,
+            @PathVariable String labelId,
+            @RequestBody @Valid LabelMembersReplaceRequest labelMembersReplaceRequest) {
+
+        labelCommandUseCase.replaceLabelMembers(currentUserId, labelId, labelMembersReplaceRequest.memberIds());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{labelId}/members")
+    public ResponseEntity<Void> addMember(
+            @CurrentUserId Long currentUserId,
+            @PathVariable String labelId,
+            @RequestBody @Valid LabelMemberAddRequest labelMemberAddRequest) {
+
+        labelCommandUseCase.addMemberToLabel(currentUserId, labelId, labelMemberAddRequest.memberId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{labelId}/members/{memberId}")
+    public ResponseEntity<Void> removeMember(
+            @CurrentUserId Long currentUserId,
+            @PathVariable String labelId,
+            @PathVariable Long memberId) {
+
+        labelCommandUseCase.removeMemberFromLabel(currentUserId, labelId, memberId);
+        return ResponseEntity.noContent().build();
+    }
+}

@@ -1,67 +1,42 @@
 package com.example.GooRoomBe.trace.application;
 
-import com.example.GooRoomBe.social.common.dto.SocialMemberResponseDto;
-import com.example.GooRoomBe.global.userReference.SocialUser;
-import com.example.GooRoomBe.social.common.SocialUserPort;
-import com.example.GooRoomBe.trace.api.dto.TraceRecordResponseDto;
-import com.example.GooRoomBe.trace.domain.Trace;
-import com.example.GooRoomBe.trace.domain.TracePort;
-import com.example.GooRoomBe.trace.domain.event.TraceRevealedEvent;
+import com.example.GooRoomBe.trace.adapter.in.web.dto.TraceRecordResponseDto;
+import com.example.GooRoomBe.trace.domain.model.Trace;
+import com.example.GooRoomBe.trace.domain.repository.TraceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
-
 @Service
 @RequiredArgsConstructor
 public class TraceService {
 
-    private final TracePort tracePort;
-    private final SocialUserPort socialUserPort;
+    private final TraceRepository traceRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public TraceRecordResponseDto visit(String visitorId, String targetId) {
-        if (visitorId.equals(targetId)) {
-            return TraceRecordResponseDto.hidden();
+    public TraceRecordResponseDto recordTrace(Long visitorId, Long targetId) {
+        Trace trace = traceRepository.findByVisitorAndTarget(visitorId, targetId)
+                .orElseGet(() -> new Trace(visitorId, targetId));
+
+        if (trace.getId() != null) {
+            trace.updateVisitCount();
         }
 
-        return tracePort.findTrace(visitorId, targetId)
-                .map(trace -> handleRevisit(trace, visitorId, targetId))
-                .orElseGet(() -> handleNewVisit(visitorId, targetId));
-    }
+        int partnerCount = traceRepository.findByVisitorAndTarget(targetId, visitorId)
+                .map(Trace::getCount)
+                .orElse(0);
 
-    private TraceRecordResponseDto handleNewVisit(String visitorId, String targetId) {
-        SocialUser visitor = socialUserPort.getUser(visitorId);
-        SocialUser target = socialUserPort.getUser(targetId);
+        traceRepository.save(trace);
 
-        Trace newTrace = new Trace(visitor, target);
-
-        tracePort.save(newTrace, visitorId);
-        eventPublisher.publishEvent(newTrace.createInteractionEvent());
-
-        return TraceRecordResponseDto.hidden();
-    }
-
-    private TraceRecordResponseDto handleRevisit(Trace trace, String visitorId, String targetId) {
-        trace.updateVisitCount();
-        tracePort.save(trace, visitorId);
         eventPublisher.publishEvent(trace.createInteractionEvent());
 
-        if (!trace.isRevealReady()) {
-            return TraceRecordResponseDto.hidden();
-        }
-
-        int partnerCount = tracePort.getVisitCount(targetId, visitorId);
-        Optional<TraceRevealedEvent> revealEvent = trace.checkRevealEvent(partnerCount);
-
-        if (revealEvent.isPresent()) {
-            eventPublisher.publishEvent(revealEvent.get());
-            return TraceRecordResponseDto.revealed(SocialMemberResponseDto.from(trace.getTarget()));
-        }
-
-        return TraceRecordResponseDto.hidden();
+        return trace.checkRevealEvent(partnerCount)
+                .map(event -> {
+                    eventPublisher.publishEvent(event);
+                    return TraceRecordResponseDto.revealed(targetId);
+                })
+                .orElseGet(TraceRecordResponseDto::hidden);
     }
 }

@@ -1,34 +1,33 @@
 package com.example.GooRoomBe.notification.domain;
 
-import com.example.GooRoomBe.global.event.NotificationType;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.example.GooRoomBe.global.event.notification.NotificationType;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.neo4j.core.schema.GeneratedValue;
-import org.springframework.data.neo4j.core.schema.Id;
-import org.springframework.data.neo4j.core.schema.Node;
-import org.springframework.data.neo4j.core.support.UUIDStringGenerator;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.util.Map;
 
-@Node("Notification")
+@Document(collection = "notifications")
 @Getter
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notification {
 
-    @Id @GeneratedValue(generatorClass = UUIDStringGenerator.class)
+    @Id
     private String id;
 
-    private String receiverId;
+    @Indexed
+    private Long receiverId;
 
     private String title;
 
     private String content;
 
-    private String relatedUrl;
+    private Map<String, Object> metadata;
 
     private NotificationType type;
 
@@ -37,15 +36,15 @@ public class Notification {
     private boolean isSent;
 
     @CreatedDate
+    @Indexed(expireAfter = "30d")
     private LocalDateTime createdAt;
 
-    @Builder
-    public Notification(String receiverId, String title, String content, String relatedUrl, NotificationType type, boolean isSent) {
-        this.id = UUID.randomUUID().toString();
+    public Notification(Long receiverId, String title, String content,
+                        Map<String, Object> metadata, NotificationType type, boolean isSent) {
         this.receiverId = receiverId;
         this.title = title;
         this.content = content;
-        this.relatedUrl = relatedUrl;
+        this.metadata = metadata;
         this.type = type;
         this.isSent = isSent;
         this.isRead = false;
