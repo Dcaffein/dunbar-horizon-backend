@@ -50,9 +50,9 @@ public class CastMongoTemplateRepository {
         // 1. 내가 수신자 리스트에 있고 2. 내가 읽은 리스트에는 없으며 3. 차단하지 않은 유저의 캐스트 조회
         Criteria criteria = Criteria.where(CastField.RECIPIENT_IDS).is(userId)
                 .and(CastField.READ_RECIPIENTS).ne(userId)
-                .and(CastField.SENDER_ID).nin(mutedIds);
+                .and(CastField.CREATOR_ID).nin(mutedIds);
 
         // creatorId만 추출하여 중복 제거(distinct)
-        return mongoTemplate.findDistinct(new Query(criteria), CastField.SENDER_ID, Cast.class, Long.class);
+        return mongoTemplate.findDistinct(new Query(criteria), CastField.CREATOR_ID, Cast.class, Long.class);
     }
 }

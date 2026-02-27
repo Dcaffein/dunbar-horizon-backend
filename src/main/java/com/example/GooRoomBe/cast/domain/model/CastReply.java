@@ -26,6 +26,7 @@ public class CastReply {
 
     private LocalDateTime createdAt;
 
+    @Builder.Default
     private boolean isPublic = true;
 
     public static CastReply of(String replyId, Long replierId, String nickname, String profileImageUrl,
