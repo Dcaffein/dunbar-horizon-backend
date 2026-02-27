@@ -14,7 +14,7 @@ import static com.example.GooRoomBe.social.domain.label.constant.LabelConstants.
 import static com.example.GooRoomBe.social.domain.label.constant.LabelConstants.LABEL;
 import static com.example.GooRoomBe.social.domain.socialUser.constant.SocialUserConstants.USER_REFERENCE;
 
-public interface LabelNeo4jRepository extends Neo4jRepository<Label, Long> {
+public interface LabelNeo4jRepository extends Neo4jRepository<Label, String> {
 
     @NonNull
     Optional<Label> findById(String id);
