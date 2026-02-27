@@ -1,4 +1,4 @@
-package com.example.GooRoomBe.notification.adapter.out.persistence;
+package com.example.GooRoomBe.notification.adapter.out.persistence.mongo;
 
 import com.example.GooRoomBe.notification.domain.Notification;
 import org.springframework.data.domain.Pageable;

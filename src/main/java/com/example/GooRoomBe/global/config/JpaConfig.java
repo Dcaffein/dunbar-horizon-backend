@@ -11,8 +11,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
                 "com.example.GooRoomBe.account",
                 "com.example.GooRoomBe.cast",
                 "com.example.GooRoomBe.trace",
-                "com.example.GooRoomBe.notification.adapter.out.persistence",
-                "com.example.GooRoomBe.flag"
+                "com.example.GooRoomBe.notification.adapter.out.persistence.jpa"
         }
 )
 public class JpaConfig {

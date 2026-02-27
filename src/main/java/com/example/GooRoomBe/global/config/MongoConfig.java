@@ -6,10 +6,8 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 
 @Configuration
 @EnableMongoRepositories(
-        basePackages = {
-                "com.example.GooRoomBe.notification.adapter.out.persistence.mongo",
-                "com.example.GooRoomBe.cast.adapter.out.persistence.mongo"
-        }
+        basePackages = {"com.example.GooRoomBe.notification.adapter.out.persistence.mongo",
+                "com.example.GooRoomBe.cast.adapter.out.persistence.mongo"}
 )
 @EnableMongoAuditing
 public class MongoConfig {

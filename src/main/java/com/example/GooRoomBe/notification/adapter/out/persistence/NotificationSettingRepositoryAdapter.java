@@ -1,5 +1,6 @@
 package com.example.GooRoomBe.notification.adapter.out.persistence;
 
+import com.example.GooRoomBe.notification.adapter.out.persistence.mongo.NotificationSettingJpaRepository;
 import com.example.GooRoomBe.notification.domain.NotificationSetting;
 import com.example.GooRoomBe.notification.repository.NotificationSettingRepository;
 import lombok.RequiredArgsConstructor;
