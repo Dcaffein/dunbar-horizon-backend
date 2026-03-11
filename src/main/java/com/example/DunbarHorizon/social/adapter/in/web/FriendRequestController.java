@@ -1,0 +1,82 @@
+package com.example.DunbarHorizon.social.adapter.in.web;
+
+import com.example.DunbarHorizon.global.annotation.CurrentUserId;
+import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendRequestCreateRequest;
+import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
+import com.example.DunbarHorizon.social.application.port.in.FriendRequestReceiverActionUseCase;
+import com.example.DunbarHorizon.social.application.port.in.FriendRequestQueryUseCase;
+import com.example.DunbarHorizon.social.application.port.in.FriendRequesterActionUseCase;
+import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.net.URI;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/friend-requests")
+@RequiredArgsConstructor
+public class FriendRequestController {
+
+    private final FriendRequesterActionUseCase requesterActionUseCase;
+    private final FriendRequestReceiverActionUseCase receiverActionUseCase;
+    private final FriendRequestQueryUseCase queryUseCase;
+
+    @GetMapping
+    public ResponseEntity<List<FriendRequestResult>> getReceivedRequests(
+            @CurrentUserId Long currentUserId) {
+
+        return ResponseEntity.ok(queryUseCase.getReceivedRequests(currentUserId));
+    }
+
+    @PostMapping
+    public ResponseEntity<FriendRequestResult> sendFriendRequest(
+            @CurrentUserId Long currentUserId,
+            @RequestBody @Valid FriendRequestCreateRequest request) {
+
+        FriendRequest newRequest = requesterActionUseCase.sendRequest(currentUserId, request.receiverId());
+        FriendRequestResult response = FriendRequestResult.from(newRequest);
+
+        return ResponseEntity
+                .created(URI.create("/api/v1/friend-requests/" + newRequest.getId()))
+                .body(response);
+    }
+
+    @DeleteMapping("/{requestId}")
+    public ResponseEntity<Void> cancelFriendRequest(
+            @CurrentUserId Long currentUserId,
+            @PathVariable String requestId) {
+
+        requesterActionUseCase.cancelRequest(requestId, currentUserId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{requestId}/accept")
+    public ResponseEntity<Void> acceptFriendRequest(
+            @CurrentUserId Long currentUserId,
+            @PathVariable String requestId) {
+
+        receiverActionUseCase.acceptRequest(requestId, currentUserId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{requestId}/hide")
+    public ResponseEntity<Void> hideFriendRequest(
+            @CurrentUserId Long currentUserId,
+            @PathVariable String requestId) {
+
+        receiverActionUseCase.hideRequest(requestId, currentUserId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{requestId}/hide")
+    public ResponseEntity<Void> undoHideFriendRequest(
+            @CurrentUserId Long currentUserId,
+            @PathVariable String requestId) {
+
+        receiverActionUseCase.undoHideRequest(requestId, currentUserId);
+        return ResponseEntity.noContent().build();
+    }
+}

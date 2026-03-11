@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(__NEW_LINE_23448b4fcc2fa10a__ rm:*)",
+      "Bash(__NEW_LINE_495cfd0b42705518__ rmdir:*)",
+      "Bash(./gradlew dependencies:*)",
+      "Bash(./gradlew test:*)",
+      "Bash(xargs grep:*)",
+      "Bash(python3:*)",
+      "Bash(rm:*)"
+    ]
+  }
+}
