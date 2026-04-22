@@ -28,6 +28,14 @@ public class FriendshipController {
         return ResponseEntity.ok(friendshipQueryUseCase.getDetailedFriendships(currentUserId));
     }
 
+    @GetMapping("/{friendId}")
+    public ResponseEntity<Friendship> getFriendDetails(
+            @CurrentUserId Long currentUserId,
+            @PathVariable Long friendId
+    ) {
+        return ResponseEntity.ok(friendshipQueryUseCase.getFriend(currentUserId,friendId));
+    }
+
     @PatchMapping("/{friendId}")
     public ResponseEntity<Void> updateFriend(
             @CurrentUserId Long currentUserId,

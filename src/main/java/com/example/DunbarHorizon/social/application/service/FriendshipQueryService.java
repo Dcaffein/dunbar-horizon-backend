@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.social.application.dto.result.FriendshipDetailR
 import com.example.DunbarHorizon.social.application.port.in.FriendshipQueryUseCase;
 import com.example.DunbarHorizon.social.application.dto.info.FriendProfileInfo;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,12 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
     @Override
     public boolean areFriends(Long userId, Long targetId) {
         return friendshipRepository.existsFriendshipBetween(userId, targetId);
+    }
+
+    @Override
+    public Friendship getFriend(Long userId, Long targetId) {
+        String friendshipId = Friendship.generateCompositeId(userId, targetId);
+        return friendshipRepository.findById(friendshipId).orElseThrow(()-> new FriendshipNotFoundException(userId, targetId));
     }
 
     @Override
