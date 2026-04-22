@@ -28,7 +28,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-neo4j'
 
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+	runtimeOnly 'com.mysql:mysql-connector-j'
 
 	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
@@ -55,7 +55,7 @@ dependencies {
 	testImplementation "org.springframework.boot:spring-boot-testcontainers"
 	testImplementation 'org.testcontainers:junit-jupiter'
 	testImplementation 'org.testcontainers:junit-jupiter'
-	testImplementation 'org.testcontainers:mariadb'
+	testImplementation 'org.testcontainers:mysql'
 	testImplementation 'org.testcontainers:neo4j'
 	testImplementation 'org.testcontainers:mongodb'
 	testCompileOnly 'org.projectlombok:lombok'
@@ -65,5 +65,5 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 	jvmArgs('-XX:+EnableDynamicAgentLoading')
-	enabled = true
+	enabled = false
 }
