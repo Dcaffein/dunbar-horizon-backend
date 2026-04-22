@@ -62,6 +62,6 @@ public class SocialQueryController {
             @CurrentUserId Long currentUserId,
             @RequestParam Long anchorId
     ) {
-        return ResponseEntity.ok(expansionQueryUseCase.getTwoHopSuggestionsByOneHop(currentUserId, anchorId));
+        return ResponseEntity.ok(expansionQueryUseCase.getAnchorExpansion(currentUserId, anchorId, 0.3));
     }
 }
