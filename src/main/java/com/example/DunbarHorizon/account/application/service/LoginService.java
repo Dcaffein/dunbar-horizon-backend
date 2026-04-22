@@ -36,7 +36,7 @@ public class LoginService implements LoginUseCase {
     private final PasswordHasher passwordHasher;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthTokenResult login(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
