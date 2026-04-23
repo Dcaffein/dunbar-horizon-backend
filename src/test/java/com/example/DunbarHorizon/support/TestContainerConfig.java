@@ -3,15 +3,15 @@ package com.example.DunbarHorizon.support;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
-import org.testcontainers.containers.MariaDBContainer;
 import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class TestContainerConfig {
 
-    private static final MariaDBContainer<?> MARIADB = new MariaDBContainer<>(DockerImageName.parse("mariadb:11.3"))
+    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>(DockerImageName.parse("mysql:8.0"))
             .withDatabaseName("dunbar_horizon_db")
             .withUsername("root")
             .withPassword("test")
@@ -28,15 +28,15 @@ public class TestContainerConfig {
             .withReuse(true);
 
     static {
-        MARIADB.start();
+        MYSQL.start();
         NEO4J.start();
         MONGO.start();
     }
 
     @Bean
     @ServiceConnection
-    public MariaDBContainer<?> mariaDBContainer() {
-        return MARIADB;
+    public MySQLContainer<?> mariaDBContainer() {
+        return MYSQL;
     }
 
     @Bean
