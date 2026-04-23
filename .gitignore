@@ -39,3 +39,8 @@ out/
 dunbarhorizon-firebase.json
 src/main/resources/dunbarhorizon-firebase.json
 **/dunbarhorizon-firebase.json
+
+# Claude Code Agent Local Settings & Cache
+.claude/*.local.json
+.claude/memory/
+.claude/history/

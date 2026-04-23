@@ -4,8 +4,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-All Gradle commands should be run from the `DunbarHorizonBe/` subdirectory.
-
 ```bash
 # Build
 ./gradlew build
@@ -18,7 +16,8 @@ All Gradle commands should be run from the `DunbarHorizonBe/` subdirectory.
 ./gradlew test
 ```
 
-> Note: Tests are currently disabled in `build.gradle` (line 68: `enabled = false`). Remove that line to re-enable them.
+> Note: Tests are currently disabled in `build.gradle` (`enabled = false`). Remove that line to re-enable them.
+> Integration tests require Docker (Testcontainers: MySQL, Neo4j, MongoDB).
 
 ## Architecture
 
@@ -29,64 +28,202 @@ All Gradle commands should be run from the `DunbarHorizonBe/` subdirectory.
 Each domain module follows this layered pattern:
 ```
 {domain}/
-├── adapter/in/web/      # REST Controllers, request DTOs
-├── adapter/out/         # Persistence adapters, external service adapters (JWT, email, etc.)
-├── application/         # Use case services, input/output ports
-└── domain/              # Entities, domain exceptions, repository interfaces
+├── adapter/in/web/      # REST Controllers, request/response DTOs
+├── adapter/out/         # Persistence adapters, external service adapters
+├── application/
+│   ├── dto/             # Input/output DTOs for use cases
+│   ├── port/in/         # Input port interfaces (use cases)
+│   ├── port/out/        # Output port interfaces (repositories)
+│   └── service/         # Use case implementations
+└── domain/              # Entities, value objects, domain exceptions
 ```
 
 Domain modules:
 - `account/` — User signup, login, email verification, OAuth2 Google
-- `buzz/` — Content casting/sharing (the core social feature)
-- `flag/` — Content moderation
-- `social/` — Friendships, friend requests, labels, social network analysis
-- `notification/` — Push notifications via Firebase (FCM)
-- `trace/` — User activity tracing
-- `global/` — Cross-cutting: security config, DB config, exception handling, custom annotations, domain events, base entities
+- `buzz/` — Content casting/sharing (core social feature), MongoDB-backed
+- `flag/` — Content moderation (flags, comments, memorials)
+- `social/` — Friendships, friend requests, labels, social network analysis (Neo4j)
+- `notification/` — Push notifications via Firebase FCM, MongoDB-backed
+- `trace/` — User activity tracing (who visited whom)
+- `global/` — Cross-cutting: security, DB config, exception handling, annotations, domain events, base entities
 
 ### Multi-Database Design
 
-The app uses three databases, each optimized for its data type:
+| Database | Purpose | Config |
+|----------|---------|--------|
+| MySQL (JPA/Hibernate) | Relational: users, flags, traces, notification tokens | `global/config/database/JpaConfig.java` |
+| Neo4j | Graph: friendship networks, labels, social connections | `global/config/database/Neo4jConfig.java` |
+| MongoDB | Documents: buzz content, notification history | `global/config/database/MongoConfig.java` |
 
-| Database | Purpose | Config File |
-|----------|---------|-------------|
-| MariaDB (JPA/Hibernate) | Relational data: users, casts, flags, traces | `global/config/JpaConfig.java` |
-| Neo4j | Graph data: friendship networks, social connections | `global/config/Neo4jConfig.java` |
-| MongoDB | Document data: push notification history | `global/config/MongoConfig.java` |
+**JPA base packages:** `account`, `buzz`, `trace`, `notification.adapter.out.persistence.jpa`, `flag`
+**Neo4j base packages:** `social`
+**MongoDB base packages:** `notification.adapter.out.persistence.mongo`, `buzz.adapter.out.persistence.mongo`
 
-Local defaults: MariaDB on `localhost:3306/dunbarhorizon_db`, Neo4j on `bolt://localhost:7687/dunbarhorizon`, MongoDB on `localhost:27017/dunbarhorizon_notification`.
+Local defaults:
+- MySQL: `localhost:3306/dunbar_horizon`
+- Neo4j: `bolt://localhost:7687`, database: `neo4j`
+- MongoDB: `localhost:27017/dunbar_horizon_notification`
 
 ### Authentication
 
-- **JWT (email/password):** Tokens stored as HTTP-only cookies (`access_token`, `refresh_token`). HMAC-SHA512 signature. Refresh token has 7-day TTL.
-- **OAuth2 (Google):** `CustomOAuth2UserService` maps the Google profile; `OAuth2AuthenticationSuccessHandler` issues JWT cookies.
-- Public endpoints: `/api/auth/**`, `/oauth2/**`, `/login/oauth2/**`. All others require authentication.
+- **JWT (email/password):** Tokens stored as HTTP-only cookies (`access_token`, `refresh_token`). HMAC-SHA512. Refresh token default TTL: 7 days (604800s).
+- **OAuth2 (Google):** `CustomOAuth2UserService` → `OAuth2AuthenticationSuccessHandler` issues JWT cookies.
+- Public endpoints: `POST /api/auth/users`, `POST /api/auth/tokens`, `PATCH/DELETE /api/auth/tokens`, `POST /api/auth/verifications`, `/oauth2/**`, `/login/oauth2/**`
+- All other endpoints require authentication.
 - Roles: `ROLE_USER`, `ROLE_ADMIN`.
-- `@CurrentUserId` is a custom annotation that resolves the authenticated user's ID in controller method parameters.
+- `@CurrentUserId` — custom parameter annotation resolving authenticated user's ID from JWT in controllers.
 
 ### API Conventions
 
-- REST JSON API; creation returns `201`, success `200`, no-content `204`.
+- REST JSON API: `201` on creation, `200` on success, `204` on no-content.
 - Auth endpoints: `/api/auth/`
 - Feature endpoints: `/api/v1/{domain}/`
-- Paginated responses use Spring Data `Slice<T>`.
-- Error responses: `ErrorResponse` with `errorName`, `message`, and validation errors.
+- Paginated responses: `Slice<T>`
+- Error response shape: `{ "error": "ExceptionClassName", "message": "...", "validation": {...} }`
 
-### Key Patterns
+## API Endpoints Reference
 
-- **Soft delete:** Entities implement `Deletable` / `SoftDeletable` interfaces.
-- **Auditing:** `BaseTimeEntity` provides `createdAt`/`updatedAt` for both JPA and Neo4j entities.
-- **Domain events:** `UserCreatedEvent`, `UserInteractionEvent` etc. under `global/event/`.
-- **Async:** `@Async` + Spring Retry used for notifications and background tasks.
+### Account (`/api/auth/`)
+```
+POST   /api/auth/users                    # signup
+POST   /api/auth/tokens                   # login → JWT cookies
+DELETE /api/auth/tokens                   # logout
+PATCH  /api/auth/tokens                   # refresh tokens
+POST   /api/auth/verifications            # send verification email
+PATCH  /api/auth/verifications?token=...  # verify email
+```
+
+### Social Network (`/api/v1/networks`)
+```
+GET /api/v1/networks/me?circleSize=DUNBAR
+    → List<NetworkFriendEdgeResult>  # default intimacy network (Soft Morphing)
+
+GET /api/v1/networks/labels/{labelName}?circleSize=KINSHIP
+    → List<NetworkFriendEdgeResult>  # label-filtered network
+
+GET /api/v1/networks/mutual/one-hop?targetId=..&currentSkeletonIds=[..]
+    → List<MutualFriendEdgeResult>   # drag-and-drop friend addition
+
+GET /api/v1/networks/mutual/two-hop?targetId=..&circleSize=DUNBAR
+    → List<NetworkOneHopsByTwoHopResult>  # 2-hop recommendations
+
+GET /api/v1/networks/recommendations?anchorId=..
+    → List<AnchorExpansionResult>    # anchor expansion suggestions
+```
+
+### Friendships (`/api/v1/friends`)
+```
+GET    /api/v1/friends                   # list all friendships
+GET    /api/v1/friends/{friendId}        # friendship detail
+PATCH  /api/v1/friends/{friendId}        # update (alias, intimacy, isRoutable)
+DELETE /api/v1/friends/{friendId}        # break friendship
+```
+
+### Friend Requests (`/api/v1/friend-requests`)
+```
+GET    /api/v1/friend-requests                 # list incoming requests
+POST   /api/v1/friend-requests                 # send request
+DELETE /api/v1/friend-requests/{id}            # cancel request
+POST   /api/v1/friend-requests/{id}/accept     # accept
+POST   /api/v1/friend-requests/{id}/reject     # reject
+```
+
+### Labels (`/api/v1/labels`)
+```
+GET    /api/v1/labels                          # list labels
+POST   /api/v1/labels                          # create label
+DELETE /api/v1/labels/{labelId}               # delete label
+PATCH  /api/v1/labels/{labelId}               # update label
+POST   /api/v1/labels/{labelId}/members        # add members
+PUT    /api/v1/labels/{labelId}/members        # replace members
+DELETE /api/v1/labels/{labelId}/members/{userId} # remove member
+```
+
+### Buzz (`/api/v1/buzzes`)
+```
+POST   /api/v1/buzzes                          # create buzz (manual/label/pivot recipients)
+GET    /api/v1/buzzes/                         # received buzzes (paginated)
+GET    /api/v1/buzzes/{buzzId}                 # buzz detail
+GET    /api/v1/buzzes/senders/unread           # unread sender IDs
+POST   /api/v1/buzzes/{buzzId}/replies         # reply
+PATCH  /api/v1/buzzes/{buzzId}/replies/{id}    # update reply
+DELETE /api/v1/buzzes/{buzzId}/replies/{id}    # delete reply
+```
+
+### Trace (`/api/v1/traces`)
+```
+POST  /api/v1/traces            # record visit
+GET   /api/v1/traces/{userId}   # get trace records
+```
+
+## Key Domain Concepts
+
+### Social Graph (Neo4j)
+
+**Node types:**
+- `SocialUser` (label: `USER_REFERENCE`) — synced from account domain
+- `Friendship` — intermediate node connecting two users (HEX pattern)
+  - Properties: `intimacy`, `interestScore`, `isRoutable`, `createdAt`, `updatedAt`
+- `Label` — user-defined friend group
+  - Properties: `name`, `exposure`
+
+**Relationship types:**
+- `(user)-[:HAS_FRIENDSHIP]->(friendship)<-[:HAS_FRIENDSHIP]-(friend)`
+- `(user)-[:OWNS_LABEL]->(label)`
+- `(user)-[:ATTACHED_TO]->(label)`
+
+**DunbarCircle enum** (`social/domain/friend/DunbarCircle.java`):
+```java
+SUPPORT(5), SYMPATHY(15), KINSHIP(50), DUNBAR(150)
+```
+Maps frontend slider values to network query size limits.
+
+**Network query patterns** (in `SocialNetworkNeo4jRepositoryAdapter`):
+- Default network: top N friends by intimacy + their mutual connections
+- Stranger Quota: max 5 mutual friends exposed for privacy
+- `isRoutable = false` friends are hidden from others' network views
+
+### Neo4j Cypher DSL (current refactor: `refactor/neo4j-pure-cypher`)
+
+Uses `Neo4jClient` + `org.neo4j.cypherdsl` (not Spring Data OGM). Key files:
+- `social/adapter/out/neo4j/dsl/SocialNetworkPatterns.java` — type-safe Cypher node/pattern builders
+- `social/adapter/out/neo4j/dsl/SocialNetworkProperties.java` — property name constants
+- `social/adapter/out/neo4j/dsl/ApocPatterns.java` — APOC library wrappers (path expansion, mutual friend counting)
+
+APOC plugin is required in Neo4j for `apoc.path.expandConfig` queries.
+
+### Buzz Recipients
+
+Three recipient strategies:
+- `ManualRecipientSpec` — explicit list of user IDs
+- `LabelRecipientSpec` — all members of a label
+- `PivotRecipientSpec` — friends-of-friends via pivot user
+
+### Domain Events
+
+Located in `global/event/`:
+- `UserActivatedEvent`, `UserDeactivatedEvent` — account lifecycle
+- `UserInteractionEvent(actorId, targetId, InteractionType)` — updates Neo4j interest scores
+- `MutualInteractionEvent` — mutual interaction tracking
+- `NotificationEvent` — triggers FCM push
+
+Aggregate roots extend `BaseTimeAggregateRoot` which publishes events via `@DomainEvents`.
+
+## Key Patterns
+
+- **Soft delete:** `Deletable` / `SoftDeletable` interfaces.
+- **Auditing:** `BaseTimeEntity` (JPA) + Neo4j auditing for `createdAt`/`updatedAt`.
+- **Async:** `@Async` + Spring Retry for notifications and background tasks.
+- **Cross-DB sync:** `SocialUserSyncHelper` keeps MySQL ↔ Neo4j `SocialUser` nodes in sync on account events.
+- **Friendship decay:** `FriendshipDecayService` / `FriendshipDecayPolicy` handles time-based intimacy decay.
 
 ## Environment Variables
 
-These must be set before running:
-
 ```
+# Required
 JWT_SECRET_KEY              # Base64-encoded HMAC-SHA512 secret
-JWT_ACCESS_EXPIRATION       # Access token expiration (seconds)
-JWT_REFRESH_EXPIRATION      # Refresh token expiration (default: 604800)
+JWT_ACCESS_EXPIRATION       # Access token TTL (seconds)
+JWT_REFRESH_EXPIRATION      # Refresh token TTL (default: 604800)
 
 OAUTH_GOOGLE_CLIENT_ID
 OAUTH_GOOGLE_CLIENT_SECRET
@@ -94,17 +231,32 @@ OAUTH_GOOGLE_CLIENT_SECRET
 SMTP_USER                   # Gmail address
 SMTP_PASSWORD               # Gmail app password
 
-MARIADB_PASSWORD
+MYSQL_PASSWORD              # MySQL root password
 NEO4J_PASSWORD
+
+# Optional (have defaults)
+MYSQL_URL                   # default: jdbc:mysql://localhost:3306/dunbar_horizon
+DB_USERNAME                 # default: root
+NEO4J_URI                   # default: bolt://localhost:7687
+MONGO_URI                   # default: mongodb://localhost:27017/dunbar_horizon_notification
 ```
 
 ## Spring Profiles
 
-- `local` (default) — uses `application-local.properties`; Neo4j Cypher logging enabled; frontend at `http://localhost:3000`
-- `prod` — uses `application-prod.properties`; frontend at `https://www.dunbarhorizon.com`
+Config is in `src/main/resources/application.yml`.
 
-Switch profiles via `spring.profiles.active` in `application.properties` or as a JVM flag.
+- `local` (default) — Neo4j Cypher logging at DEBUG; CORS allows `http://localhost:3000`
+- `prod` — CORS allows `https://www.dunbarhorizon.com`; JVM: `-Xms256m -Xmx512m`
+
+Switch: `spring.profiles.active` property or JVM flag `-Dspring.profiles.active=prod`.
+
+Dockerfile uses `eclipse-temurin:21-jdk-alpine` and activates the `prod` profile.
 
 ## Testing
 
-Integration tests use Testcontainers (MariaDB, Neo4j, MongoDB) — Docker must be running. Test classes are in `src/test/java/com/example/DunbarHorizon/`.
+Testcontainers in `TestContainerConfig.java` spin up:
+- `mysql:8.0` (database: `dunbar_horizon_db`, user: `root`, password: `test`)
+- `neo4j:5.12` (password: `password`, APOC plugin enabled)
+- `mongo:7.0`
+
+All containers use `reuse=true` for faster iteration. Docker must be running.
