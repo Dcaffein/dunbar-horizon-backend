@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out;
 
+import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
 import com.example.DunbarHorizon.support.Neo4jRepositoryTest;
@@ -31,6 +32,14 @@ class SocialNetworkNeo4jRepositoryAdapterTest {
         /*
          * 데이터 모델 규칙 준수: (User)-[:HAS_FRIENDSHIP]->(Friendship)<-[:HAS_FRIENDSHIP]-(User)
          * 프라이버시 정책: isRoutable은 타겟 User에서 출발하는 :HAS_FRIENDSHIP 엣지의 속성으로 부여
+         *
+         * 관계도:
+         *   나(1) ↔ 친구A(10) [intimacy: 0.9]
+         *   나(1) ↔ 친구B(20) [intimacy: 0.5]
+         *   나(1) ↔ 친구C(30) [intimacy: 0.1]
+         *   A(10) ↔ B(20)    [intimacy: 0.8]  ← 유일한 친구-친구 내부 엣지
+         *   타겟X(100) ↔ B(20) [isRoutable: true]
+         *   타겟X(100) ↔ C(30) [isRoutable: false] ← 프라이버시 차단
          */
         neo4jClient.query("""
             CREATE (me:UserReference {id: 1, nickname: '나'})
@@ -38,70 +47,87 @@ class SocialNetworkNeo4jRepositoryAdapterTest {
             CREATE (fb:UserReference {id: 20, nickname: '친구B'})
             CREATE (fc:UserReference {id: 30, nickname: '친구C'})
             CREATE (tx:UserReference {id: 100, nickname: '타겟X'})
-            
+
             // 1촌 관계: (나) - (A, B, C)
-            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.9})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(fa)
-            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.5})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(fb)
-            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.1})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(fc)
-            
-            // 친구들 간의 관계: A와 B는 서로 친구임 (Edge 탐색용)
-            CREATE (fa)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.8})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(fb)
-            
-            // 2-Hop 관계 및 프라이버시 관문 (Intersection 탐색용)
-            // 타겟X가 친구B를 통한 노출은 허용함 (isRoutable: true)
-            CREATE (tx)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.6})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(fb)
-            
-            // 타겟X가 친구C를 통한 노출은 차단함 (isRoutable: false)
-            CREATE (tx)-[:HAS_FRIENDSHIP {isRoutable: false}]->(:Friendship {intimacy: 0.4})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(fc)
+            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.9})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fa)
+            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.5})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fb)
+            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.1})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fc)
+
+            // 친구들 간의 내부 관계: A와 B만 서로 친구
+            CREATE (fa)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.8})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fb)
+
+            // 2-Hop 관계 및 프라이버시 관문
+            CREATE (tx)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.6})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fb)
+            CREATE (tx)-[:HAS_FRIENDSHIP {isRoutable: false, interestScore: 0.0}]->(:Friendship {intimacy: 0.4})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fc)
         """).run();
     }
 
     @Test
-    @DisplayName("내 친구들 사이의 모든 유효한 친구 관계(Edge)를 정확히 추출한다")
-    void getFriendsNetwork_Success() {
-        List<NetworkFriendEdgeResult> result = socialNetworkRepository.getFriendsNetwork(1L);
+    @DisplayName("친밀도 기반 네트워크 조회 시, 친구들 사이의 내부 연결 엣지(A-B)를 반환한다")
+    void getDefaultIntimacyNetwork_Success() {
+        List<NetworkFriendEdgeResult> result = socialNetworkRepository.getDefaultIntimacyNetwork(1L, 150);
 
-        // A-B 사이의 엣지 1개만 반환되어야 함
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).friendAId()).isIn(10L, 20L);
-        assertThat(result.get(0).friendBId()).isIn(10L, 20L);
-        assertThat(result.get(0).intimacy()).isEqualTo(0.8);
+        // A(10)-B(20) 사이 엣지가 양 방향으로 반환됨 (member=A 관점, member=B 관점 각각 1개)
+        assertThat(result).isNotEmpty();
+        assertThat(result).allSatisfy(edge -> {
+            assertThat(edge.friendAId()).isIn(10L, 20L);
+            assertThat(edge.friendBId()).isIn(10L, 20L);
+            assertThat(edge.intimacy()).isEqualTo(0.8);
+        });
+        // 친구C(30)는 다른 친구와 직접 연결이 없으므로 결과에 등장하지 않아야 함
+        assertThat(result).noneMatch(edge -> edge.friendAId().equals(30L) || edge.friendBId().equals(30L));
     }
 
     @Test
-    @DisplayName("입력된 특정 타겟들 내에서만 교차 검증하여 친구 관계(Edge)를 추출한다")
-    void getVerifiedFriendsNetwork_Success() {
-        // 친구A(10)와 친구C(30)만 넘김 (이 둘은 친구가 아님)
-        List<NetworkFriendEdgeResult> result = socialNetworkRepository.getVerifiedFriendsNetwork(1L, List.of(10L, 30L));
+    @DisplayName("limitSize로 경계 인원을 제한하면 해당 범위 내의 엣지만 반환된다")
+    void getDefaultIntimacyNetwork_WithSmallLimitSize() {
+        // limitSize=1이면 가장 친밀한 친구A(10)만 포함되어 내부 탐색 결과가 없어야 함
+        List<NetworkFriendEdgeResult> result = socialNetworkRepository.getDefaultIntimacyNetwork(1L, 1);
 
         assertThat(result).isEmpty();
-
-        // 친구A(10)와 친구B(20)를 넘기면 엣지가 나옴
-        List<NetworkFriendEdgeResult> validResult = socialNetworkRepository.getVerifiedFriendsNetwork(1L, List.of(10L, 20L));
-        assertThat(validResult).hasSize(1);
     }
 
     @Test
-    @DisplayName("가장 친밀도가 높은 상위 Core 친구를 기점으로 Boundary 내의 네트워크를 조회한다")
-    void getTopIntimateFriendsNetwork_Success() {
-        // Boundary를 3명(A,B,C)으로 잡고, 그중 상위 1명(A)을 기점으로 탐색
-        // A와 B의 관계가 반환되어야 함
-        List<NetworkFriendEdgeResult> result = socialNetworkRepository.getTopIntimateFriendsNetwork(1L, 3, 1);
+    @DisplayName("limitSize가 A, B 둘 다 포함할 만큼 크면 A-B 엣지가 반환된다")
+    void getDefaultIntimacyNetwork_WithLimitSizeIncludingBoth() {
+        // limitSize=2: 친밀도 상위 2명 (A=0.9, B=0.5), C(30)는 제외됨
+        List<NetworkFriendEdgeResult> result = socialNetworkRepository.getDefaultIntimacyNetwork(1L, 2);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).friendAId()).isIn(10L, 20L);
-        assertThat(result.get(0).friendBId()).isIn(10L, 20L);
+        assertThat(result).isNotEmpty();
+        assertThat(result).noneMatch(edge -> edge.friendAId().equals(30L) || edge.friendBId().equals(30L));
     }
 
     @Test
-    @DisplayName("2-Hop 타겟과의 공통 친구 조회 시 타겟이 엣지에 설정한 프라이버시(isRoutable)를 준수한다")
+    @DisplayName("2-Hop 타겟과의 공통 친구 조회 시 타겟이 설정한 프라이버시(isRoutable)를 준수한다")
     void getIntersectionOneHops_PrivacyFilterTest() {
-        // 나와 타겟X(100) 사이의 물리적인 공통 친구는 B(20), C(30) 두 명임
-        // 하지만 C 쪽의 엣지에는 isRoutable: false가 걸려 있음
-        List<NetworkOneHopsByTwoHopResult> result = socialNetworkRepository.getIntersectionOneHops(1L, 100L);
+        // 나(1)와 타겟X(100)의 물리적 공통 친구: B(20, isRoutable=true), C(30, isRoutable=false)
+        // labelName=null이면 글로벌 네트워크 기준으로 스켈레톤 재구성
+        List<NetworkOneHopsByTwoHopResult> result = socialNetworkRepository.getIntersectionOneHops(1L, 100L, null, 150);
 
-        // 결과적으로 노출이 허용된 B(20L)만 반환되어야 함
+        // isRoutable=true인 B(20)만 반환되어야 함
         assertThat(result).hasSize(1);
         assertThat(result.get(0).friendId()).isEqualTo(20L);
+    }
+
+    @Test
+    @DisplayName("1-Hop 친구 추가(Drag & Drop) 시 현재 화면의 스켈레톤 내에서 isRoutable=true인 엣지만 반환한다")
+    void getIntersectionByOneHop_Success() {
+        // labelName=null, limitSize=150: 글로벌 네트워크 기준 스켈레톤 = [A(10), B(20), C(30)]
+        // X-B 관계는 isRoutable=true → 반환, X-C 관계는 isRoutable=false → 제외
+        List<MutualFriendEdgeResult> result = socialNetworkRepository.getIntersectionByOneHop(1L, 100L, null, 150);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).friendAId()).isEqualTo(100L);
+        assertThat(result.get(0).friendBId()).isEqualTo(20L);
+    }
+
+    @Test
+    @DisplayName("1-Hop 친구 추가 시 스켈레톤 범위 밖의 친구와는 엣지가 반환되지 않는다")
+    void getIntersectionByOneHop_NotInSkeleton() {
+        // limitSize=1: 스켈레톤은 가장 친밀한 A(10)만 포함
+        // 타겟X(100)는 A와 직접 연결이 없으므로 교집합이 없어야 함
+        List<MutualFriendEdgeResult> result = socialNetworkRepository.getIntersectionByOneHop(1L, 100L, null, 1);
+
+        assertThat(result).isEmpty();
     }
 }

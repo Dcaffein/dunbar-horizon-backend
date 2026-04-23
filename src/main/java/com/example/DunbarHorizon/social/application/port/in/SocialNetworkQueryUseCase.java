@@ -4,14 +4,11 @@ import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeR
 import com.example.DunbarHorizon.social.application.dto.result.NetworkFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
 
-import java.util.Collection;
 import java.util.List;
 
 public interface SocialNetworkQueryUseCase {
-    List<NetworkFriendEdgeResult> getFriendsNetwork(Long userId);
-    List<NetworkFriendEdgeResult> getVerifiedFriendsNetwork(Long userId, Collection<Long> targetIds);
-    List<NetworkFriendEdgeResult> getTopIntimateFriendsNetwork(Long userId);
-    List<NetworkFriendEdgeResult> getTopInterestFriendsNetwork(Long userId);
-    List<NetworkOneHopsByTwoHopResult> getIntersectionByTwoHop(Long userId, Long targetId);
-    List<MutualFriendEdgeResult> getIntersectionByOneHop(Long userId, Long targetId);
+    List<NetworkFriendEdgeResult> getFriendsNetwork(Long userId, int limitSize);
+    List<NetworkFriendEdgeResult> getLabelNetwork(Long userId, String labelName, int limitSize);
+    List<MutualFriendEdgeResult> getIntersectionByOneHop(Long userId, Long targetId, String labelName, int limitSize);
+    List<NetworkOneHopsByTwoHopResult> getIntersectionByTwoHop(Long userId, Long targetId, String labelName, int limitSize);
 }
