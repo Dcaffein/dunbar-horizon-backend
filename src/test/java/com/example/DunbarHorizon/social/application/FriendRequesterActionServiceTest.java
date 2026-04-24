@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.social.application;
 
 import com.example.DunbarHorizon.social.application.service.FriendRequesterActionService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipBroker;
@@ -17,7 +16,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -45,7 +43,6 @@ class FriendRequesterActionServiceTest {
         Long resId = 2L;
         SocialUser requester = mock(SocialUser.class);
         SocialUser receiver = mock(SocialUser.class);
-
         FriendRequest mockRequest = mock(FriendRequest.class);
 
         given(socialUserRepository.findById(reqId)).willReturn(Optional.of(requester));
@@ -60,7 +57,7 @@ class FriendRequesterActionServiceTest {
     }
 
     @Test
-    @DisplayName("신청자가 자신이 보낸 요청을 취소하면 상태가 DELETED로 변경되어 저장된다")
+    @DisplayName("신청자가 자신이 보낸 요청을 취소하면 요청이 물리 삭제된다")
     void cancelFriendRequest_Success() {
         // given
         String requestId = "uuid-v7-id";
@@ -77,7 +74,6 @@ class FriendRequesterActionServiceTest {
         requesterService.cancelRequest(requestId, requesterId);
 
         // then
-        assertThat(request.getStatus()).isEqualTo(FriendRequestStatus.DELETED);
-        verify(friendRequestRepository).saveRequest(request);
+        verify(friendRequestRepository).deleteById(requestId);
     }
 }

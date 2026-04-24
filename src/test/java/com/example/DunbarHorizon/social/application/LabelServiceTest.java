@@ -1,6 +1,9 @@
 package com.example.DunbarHorizon.social.application;
 
 import com.example.DunbarHorizon.social.application.service.LabelService;
+import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
+import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
+import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import com.example.DunbarHorizon.social.domain.label.Label;
@@ -16,9 +19,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
@@ -130,5 +136,61 @@ class LabelServiceTest {
         verify(labelNamePolicy).changeLabelName(mockLabel, newName);
         verify(mockLabel, never()).updateExposure(anyLong(), anyBoolean());
         verify(labelRepository).save(mockLabel);
+    }
+
+    @Test
+    @DisplayName("소유자가 라벨을 단건 조회하면 LabelResult를 반환한다")
+    void getLabelById_Success() {
+        // given
+        SocialUser owner = mock(SocialUser.class);
+        given(owner.getId()).willReturn(currentUserId);
+
+        given(labelRepository.findById(labelId)).willReturn(Optional.of(mockLabel));
+        given(mockLabel.getOwner()).willReturn(owner);
+        given(mockLabel.getId()).willReturn(labelId);
+        given(mockLabel.getLabelName()).willReturn("친구들");
+        given(mockLabel.isExposure()).willReturn(true);
+        given(mockLabel.getMembers()).willReturn(List.of());
+
+        // when
+        LabelResult result = labelService.getLabelById(currentUserId, labelId);
+
+        // then
+        assertThat(result.id()).isEqualTo(labelId);
+        assertThat(result.labelName()).isEqualTo("친구들");
+    }
+
+    @Test
+    @DisplayName("소유자가 아닌 유저가 라벨을 조회하면 LabelAuthorizationException이 발생한다")
+    void getLabelById_ByNonOwner_Fail() {
+        // given
+        Long nonOwnerId = 99L;
+        SocialUser owner = mock(SocialUser.class);
+        given(owner.getId()).willReturn(currentUserId);
+
+        given(labelRepository.findById(labelId)).willReturn(Optional.of(mockLabel));
+        given(mockLabel.getOwner()).willReturn(owner);
+
+        // when & then
+        assertThatThrownBy(() -> labelService.getLabelById(nonOwnerId, labelId))
+                .isInstanceOf(LabelAuthorizationException.class);
+    }
+
+    @Test
+    @DisplayName("소유자가 라벨 멤버 목록을 조회하면 멤버 결과 리스트를 반환한다")
+    void getLabelMembers_Success() {
+        // given
+        SocialUser owner = mock(SocialUser.class);
+        given(owner.getId()).willReturn(currentUserId);
+
+        given(labelRepository.findById(labelId)).willReturn(Optional.of(mockLabel));
+        given(mockLabel.getOwner()).willReturn(owner);
+        given(mockLabel.getMembers()).willReturn(List.of());
+
+        // when
+        List<LabelMemberResult> result = labelService.getLabelMembers(currentUserId, labelId);
+
+        // then
+        assertThat(result).isNotNull().isEmpty();
     }
 }

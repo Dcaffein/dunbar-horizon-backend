@@ -4,6 +4,8 @@ import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelCreateRequest;
 import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelMemberAddRequest;
 import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelMembersReplaceRequest;
 import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelUpdateRequest;
+import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
+import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.application.service.LabelService;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
@@ -136,5 +138,33 @@ class LabelControllerTest extends BaseControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(labelService).removeMemberFromLabel(anyLong(),eq(labelId), eq(memberId));
+    }
+
+    @Test
+    @DisplayName("라벨 단건 정보를 조회한다")
+    void getLabelById_Success() throws Exception {
+        // given
+        LabelResult result = new LabelResult(labelId, "친구들", true, List.of());
+        given(labelService.getLabelById(eq(1L), eq(labelId))).willReturn(result);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/labels/{labelId}", labelId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(labelId))
+                .andExpect(jsonPath("$.labelName").value("친구들"));
+    }
+
+    @Test
+    @DisplayName("라벨의 멤버 목록을 조회한다")
+    void getLabelMembers_Success() throws Exception {
+        // given
+        List<LabelMemberResult> members = List.of(new LabelMemberResult(2L, "멤버닉네임"));
+        given(labelService.getLabelMembers(eq(1L), eq(labelId))).willReturn(members);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/labels/{labelId}/members", labelId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(2))
+                .andExpect(jsonPath("$[0].nickname").value("멤버닉네임"));
     }
 }
