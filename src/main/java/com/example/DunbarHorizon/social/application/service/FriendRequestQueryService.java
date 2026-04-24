@@ -24,4 +24,19 @@ public class FriendRequestQueryService implements FriendRequestQueryUseCase {
                 .toList();
     }
 
+    @Override
+    public List<FriendRequestResult> getHiddenRequests(Long userId) {
+        return friendRequestRepository.findAllByReceiver_IdAndStatus(userId, FriendRequestStatus.HIDDEN)
+                .stream()
+                .map(FriendRequestResult::from)
+                .toList();
+    }
+
+    @Override
+    public List<FriendRequestResult> getSentRequests(Long userId) {
+        return friendRequestRepository.findAllByRequester_IdAndStatus(userId, FriendRequestStatus.PENDING)
+                .stream()
+                .map(FriendRequestResult::from)
+                .toList();
+    }
 }

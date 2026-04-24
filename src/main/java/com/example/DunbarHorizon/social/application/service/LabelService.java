@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.social.application.service;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.social.application.port.in.LabelCommandUseCase;
 import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
+import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelNotFoundException;
@@ -93,6 +94,22 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     public List<LabelResult> getAllLabels(Long ownerId) {
         return labelRepository.findAllByOwner_Id(ownerId).stream()
                 .map(LabelResult::from)
+                .toList();
+    }
+
+    @Override
+    public LabelResult getLabelById(Long ownerId, String labelId) {
+        Label label = getLabel(labelId);
+        validateOwner(label, ownerId);
+        return LabelResult.from(label);
+    }
+
+    @Override
+    public List<LabelMemberResult> getLabelMembers(Long ownerId, String labelId) {
+        Label label = getLabel(labelId);
+        validateOwner(label, ownerId);
+        return label.getMembers().stream()
+                .map(LabelMemberResult::from)
                 .toList();
     }
 

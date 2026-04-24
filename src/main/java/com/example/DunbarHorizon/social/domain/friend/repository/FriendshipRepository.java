@@ -12,7 +12,7 @@ import java.util.Set;
 public interface FriendshipRepository {
     Friendship save(Friendship friendship);
     Optional<Friendship> findById(String id);
-    void delete(Friendship friendship);
+    void delete(String friendshipId);
 
     List<Friendship> findFriendships(Long userId);
 

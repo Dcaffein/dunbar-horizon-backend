@@ -26,9 +26,7 @@ public class FriendRequestReceiverActionService implements FriendRequestReceiver
 
         request.accept(receiverId);
         friendshipBroker.establish(request);
-        request.complete();
-
-        friendRequestRepository.saveRequest(request);
+        friendRequestRepository.deleteById(requestId);
 
         eventPublisher.publishEvent(new FriendRequestAcceptedEvent(
                 request.getId(),

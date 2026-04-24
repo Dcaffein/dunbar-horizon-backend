@@ -20,18 +20,12 @@ public enum FriendRequestStatus {
         }
 
         @Override
-        public FriendRequestStatus cancel(FriendRequest request, Long userId) {
+        public void validateCancelBy(FriendRequest request, Long userId) {
             validateRequester(request, userId);
-            return DELETED;
         }
     },
 
-    ACCEPTED {
-        @Override
-        public FriendRequestStatus complete(FriendRequest request) {
-            return DELETED;
-        }
-    },
+    ACCEPTED,
 
     HIDDEN {
         @Override
@@ -45,15 +39,12 @@ public enum FriendRequestStatus {
             validateReceiver(request, userId);
             return PENDING;
         }
-    },
+    };
 
-    DELETED {};
-
-    public FriendRequestStatus accept(FriendRequest request, Long userId) { return throwException("수락", this); }
-    public FriendRequestStatus hide(FriendRequest request, Long userId) { return throwException("숨김", this); }
-    public FriendRequestStatus undoHide(FriendRequest request, Long userId) { return throwException("숨김 해제", this); }
-    public FriendRequestStatus cancel(FriendRequest request, Long userId) { return throwException("취소", this); }
-    public FriendRequestStatus complete(FriendRequest request) { return throwException("완료 처리", this); }
+    public FriendRequestStatus accept(FriendRequest request, Long userId) { return throwInvalidException("수락"); }
+    public FriendRequestStatus hide(FriendRequest request, Long userId) { return throwInvalidException("숨김"); }
+    public FriendRequestStatus undoHide(FriendRequest request, Long userId) { return throwInvalidException("숨김 해제"); }
+    public void validateCancelBy(FriendRequest request, Long userId) { throwInvalidException("취소"); }
 
     protected void validateReceiver(FriendRequest request, Long userId) {
         if (!request.getReceiver().getId().equals(userId)) {
@@ -67,9 +58,9 @@ public enum FriendRequestStatus {
         }
     }
 
-    private FriendRequestStatus throwException(String action, FriendRequestStatus current) {
+    private FriendRequestStatus throwInvalidException(String action) {
         throw new FriendRequestInvalidException(
-                String.format("[%s] 상태에서는 [%s] 행위를 할 수 없습니다.", current.name(), action)
+                String.format("[%s] 상태에서는 [%s] 행위를 할 수 없습니다.", this.name(), action)
         );
     }
 }

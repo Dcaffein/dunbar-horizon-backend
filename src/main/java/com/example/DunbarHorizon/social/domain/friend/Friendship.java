@@ -112,15 +112,6 @@ public class Friendship {
         return getFriendRecognition(myId).getUser();
     }
 
-    public void checkDeletable(Long myId) {
-        boolean isParticipant = this.recognitions.stream()
-                .anyMatch(r -> r.getUser().getId().equals(myId));
-
-        if (!isParticipant) {
-            throw new FriendshipAuthorizationException(myId);
-        }
-    }
-
     public void updateFriendAlias(Long myId, String alias) {
         getSelfRecognition(myId).updateFriendAlias(alias);
     }

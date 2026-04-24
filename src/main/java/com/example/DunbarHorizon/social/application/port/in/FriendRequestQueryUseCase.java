@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface FriendRequestQueryUseCase {
     List<FriendRequestResult> getReceivedRequests(Long userId);
+    List<FriendRequestResult> getHiddenRequests(Long userId);
+    List<FriendRequestResult> getSentRequests(Long userId);
 }

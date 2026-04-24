@@ -7,6 +7,7 @@ import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,4 +44,11 @@ public interface FriendRequestNeo4jRepository extends Neo4jRepository<FriendRequ
     boolean existsRequestBetween(@Param("requesterId") Long requesterId, @Param("receiverId") Long receiverId);
 
     List<FriendRequest> findAllByReceiver_IdAndStatus(Long receiverId, FriendRequestStatus status);
+
+    List<FriendRequest> findAllByRequester_IdAndStatus(Long requesterId, FriendRequestStatus status);
+
+    @Query("MATCH (fr:" + FRIEND_REQUEST + ") " +
+            "WHERE fr.status = 'HIDDEN' AND fr.createdAt <= $threshold " +
+            "DETACH DELETE fr")
+    void deleteOldHiddenRequests(@Param("threshold") LocalDateTime threshold);
 }
