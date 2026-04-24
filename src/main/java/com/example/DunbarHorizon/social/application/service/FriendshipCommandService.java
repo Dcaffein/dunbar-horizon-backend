@@ -34,11 +34,10 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
 
     @Transactional
     public void brokeUpWith(Long currentUserId, Long friendId) {
-        Friendship friendShip = findById(currentUserId,friendId);
-
-        friendShip.checkDeletable(currentUserId);
+        Friendship friendShip = findById(currentUserId, friendId);
         List<UserReference> userIds = friendShip.getUsers().stream().toList();
-        friendshipRepository.delete(friendShip);
+
+        friendshipRepository.delete(friendShip.getId());
 
         eventPublisher.publishEvent(new FriendShipDeletedEvent(userIds.getFirst().getId(), userIds.getLast().getId()));
     }

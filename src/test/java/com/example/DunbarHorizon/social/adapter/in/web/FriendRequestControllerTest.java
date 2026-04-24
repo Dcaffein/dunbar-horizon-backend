@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.in.web;
 
 import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendRequestCreateRequest;
+import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
 import com.example.DunbarHorizon.social.application.port.in.FriendRequestReceiverActionUseCase;
 import com.example.DunbarHorizon.social.application.port.in.FriendRequestQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.in.FriendRequesterActionUseCase;
@@ -14,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -116,5 +119,29 @@ class FriendRequestControllerTest extends BaseControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(requesterActionUseCase).cancelRequest(eq(requestId), eq(1L));
+    }
+
+    @Test
+    @DisplayName("숨김 처리된 친구 요청 목록을 조회한다")
+    void getHiddenRequests_Success() throws Exception {
+        // given
+        given(queryUseCase.getHiddenRequests(eq(1L))).willReturn(List.of());
+
+        // when & then
+        mockMvc.perform(get("/api/v1/friend-requests/hidden"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    @DisplayName("내가 보낸 친구 요청 목록을 조회한다")
+    void getSentRequests_Success() throws Exception {
+        // given
+        given(queryUseCase.getSentRequests(eq(1L))).willReturn(List.of());
+
+        // when & then
+        mockMvc.perform(get("/api/v1/friend-requests/sent"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
     }
 }

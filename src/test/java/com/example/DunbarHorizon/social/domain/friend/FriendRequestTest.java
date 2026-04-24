@@ -8,8 +8,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 class FriendRequestTest {
 
@@ -47,27 +48,47 @@ class FriendRequestTest {
     }
 
     @Test
-    @DisplayName("이미 수락된 요청은 취소할 수 없다")
-    void cancel_AfterAccepted_Fail() {
+    @DisplayName("요청자가 PENDING 상태의 요청에 대해 취소 권한을 검증하면 예외가 발생하지 않는다")
+    void validateCancelBy_ByRequester_Success() {
+        // given
+        FriendRequest request = new FriendRequest(requester, receiver);
+
+        // when & then
+        assertThatNoException().isThrownBy(() -> request.validateCancelBy(1L));
+    }
+
+    @Test
+    @DisplayName("수신자가 자신이 받은 요청의 취소 권한을 검증하면 예외가 발생한다")
+    void validateCancelBy_ByReceiver_Fail() {
+        // given
+        FriendRequest request = new FriendRequest(requester, receiver);
+
+        // when & then
+        assertThatThrownBy(() -> request.validateCancelBy(2L))
+                .isInstanceOf(FriendRequestAuthorizationException.class);
+    }
+
+    @Test
+    @DisplayName("이미 수락된 요청에 대해 취소 권한을 검증하면 예외가 발생한다")
+    void validateCancelBy_AfterAccepted_Fail() {
         // given
         FriendRequest request = new FriendRequest(requester, receiver);
         ReflectionTestUtils.setField(request, "status", FriendRequestStatus.ACCEPTED);
 
         // when & then
-        assertThatThrownBy(() -> request.cancel(1L))
+        assertThatThrownBy(() -> request.validateCancelBy(1L))
                 .isInstanceOf(FriendRequestInvalidException.class);
     }
 
     @Test
-    @DisplayName("요청자가 PENDING 상태의 요청을 취소하면 상태가 DELETED가 된다")
-    void cancel_ByRequester_Success() {
+    @DisplayName("HIDDEN 상태의 요청에 대해 취소 권한을 검증하면 예외가 발생한다")
+    void validateCancelBy_WhenHidden_Fail() {
         // given
         FriendRequest request = new FriendRequest(requester, receiver);
+        ReflectionTestUtils.setField(request, "status", FriendRequestStatus.HIDDEN);
 
-        // when
-        request.cancel(1L);
-
-        // then
-        assertThat(request.getStatus()).isEqualTo(FriendRequestStatus.DELETED);
+        // when & then
+        assertThatThrownBy(() -> request.validateCancelBy(1L))
+                .isInstanceOf(FriendRequestInvalidException.class);
     }
 }

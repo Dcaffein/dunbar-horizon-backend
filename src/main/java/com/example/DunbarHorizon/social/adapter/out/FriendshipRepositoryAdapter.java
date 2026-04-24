@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.social.adapter.out.neo4j.springData.FriendshipN
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -36,8 +37,8 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
     }
 
     @Override
-    public void delete(Friendship friendship) {
-        friendshipNeo4jRepository.delete(friendship);
+    public void delete(String friendshipId) {
+        friendshipNeo4jRepository.deleteById(friendshipId);
     }
 
     @Override

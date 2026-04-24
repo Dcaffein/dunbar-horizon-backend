@@ -31,6 +31,20 @@ public class FriendRequestController {
         return ResponseEntity.ok(queryUseCase.getReceivedRequests(currentUserId));
     }
 
+    @GetMapping("/hidden")
+    public ResponseEntity<List<FriendRequestResult>> getHiddenRequests(
+            @CurrentUserId Long currentUserId) {
+
+        return ResponseEntity.ok(queryUseCase.getHiddenRequests(currentUserId));
+    }
+
+    @GetMapping("/sent")
+    public ResponseEntity<List<FriendRequestResult>> getSentRequests(
+            @CurrentUserId Long currentUserId) {
+
+        return ResponseEntity.ok(queryUseCase.getSentRequests(currentUserId));
+    }
+
     @PostMapping
     public ResponseEntity<FriendRequestResult> sendFriendRequest(
             @CurrentUserId Long currentUserId,

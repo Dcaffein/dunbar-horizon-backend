@@ -7,6 +7,7 @@ import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRe
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,7 +40,22 @@ public class FriendRequestRepositoryAdapter implements FriendRequestRepository {
     }
 
     @Override
+    public void deleteById(String requestId) {
+        friendRequestNeo4jRepository.deleteById(requestId);
+    }
+
+    @Override
     public List<FriendRequest> findAllByReceiver_IdAndStatus(Long receiverId, FriendRequestStatus status) {
         return friendRequestNeo4jRepository.findAllByReceiver_IdAndStatus(receiverId, status);
+    }
+
+    @Override
+    public List<FriendRequest> findAllByRequester_IdAndStatus(Long requesterId, FriendRequestStatus status) {
+        return friendRequestNeo4jRepository.findAllByRequester_IdAndStatus(requesterId, status);
+    }
+
+    @Override
+    public void deleteOldHiddenRequests(LocalDateTime threshold) {
+        friendRequestNeo4jRepository.deleteOldHiddenRequests(threshold);
     }
 }

@@ -19,6 +19,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > Note: Tests are currently disabled in `build.gradle` (`enabled = false`). Remove that line to re-enable them.
 > Integration tests require Docker (Testcontainers: MySQL, Neo4j, MongoDB).
 
+## 문서 지도 (Document Map)
+
+작업 시작 전 아래 문서를 참조하여 필요한 규칙을 확인한다.
+
+| 문서 | 경로 | 참조 시점 |
+|------|------|---------|
+| 작업 파이프라인 | `harness/WORKFLOW.md` | 모든 작업 시작 전 — 계획(PLAN.md) 작성 → 승인 → 브랜치 → 구현 → 커밋 순서 준수 |
+| 아키텍처 & 코딩 컨벤션 | `harness/ARCHITECTURE.md` | 새 파일·기능 추가 시 — 계층 분리, DDD/Hexagonal 규칙, 도메인 간 통신 방식 |
+| 테스트 프로토콜 | `harness/TESTING-PROTOCOL.md` | 테스트 코드 작성 시 — Base 클래스 상속, Given-When-Then 형식, Edge Case 검증 |
+
+**작업 규칙 요약**
+- `PLAN.md`는 프로젝트 루트(`/`)에 생성한다.
+- 브랜치는 반드시 `main`에서 분기하며, 네이밍은 `ai/feat-[기능명]` 또는 `ai/fix-[버그명]`을 따른다.
+- 명시적 승인(Approve) 전까지 코드를 작성하거나 수정하지 않는다.
+
 ## Architecture
 
 **DunbarHorizon** is a Spring Boot 3.4.0 / Java 21 REST API using **hexagonal architecture** (Ports & Adapters).

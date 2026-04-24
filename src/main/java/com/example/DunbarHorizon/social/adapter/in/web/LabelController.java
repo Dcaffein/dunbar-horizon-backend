@@ -7,6 +7,7 @@ import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelMembersReplaceRe
 import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelUpdateRequest;
 import com.example.DunbarHorizon.social.application.port.in.LabelCommandUseCase;
 import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
+import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import jakarta.validation.Valid;
@@ -30,6 +31,22 @@ public class LabelController {
             @CurrentUserId Long currentUserId) {
 
         return ResponseEntity.ok(labelQueryUseCase.getAllLabels(currentUserId));
+    }
+
+    @GetMapping("/{labelId}")
+    public ResponseEntity<LabelResult> getLabelById(
+            @CurrentUserId Long currentUserId,
+            @PathVariable String labelId) {
+
+        return ResponseEntity.ok(labelQueryUseCase.getLabelById(currentUserId, labelId));
+    }
+
+    @GetMapping("/{labelId}/members")
+    public ResponseEntity<List<LabelMemberResult>> getLabelMembers(
+            @CurrentUserId Long currentUserId,
+            @PathVariable String labelId) {
+
+        return ResponseEntity.ok(labelQueryUseCase.getLabelMembers(currentUserId, labelId));
     }
 
     @PostMapping

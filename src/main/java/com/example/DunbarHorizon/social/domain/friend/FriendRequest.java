@@ -51,12 +51,8 @@ public class FriendRequest {
         this.status = this.status.undoHide(this, userId);
     }
 
-    public void cancel(Long userId) {
-        this.status = this.status.cancel(this, userId);
-    }
-
-    public void complete() {
-        this.status = this.status.complete(this);
+    public void validateCancelBy(Long userId) {
+        this.status.validateCancelBy(this, userId);
     }
 
     public boolean isAccepted() {

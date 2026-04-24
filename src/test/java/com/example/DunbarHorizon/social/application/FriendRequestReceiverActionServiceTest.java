@@ -40,7 +40,7 @@ class FriendRequestReceiverActionServiceTest {
     private ApplicationEventPublisher eventPublisher;
 
     @Test
-    @DisplayName("수신자가 요청을 수락하면 Friendship이 수립되고 요청은 DELETED 상태로 완료된다")
+    @DisplayName("수신자가 요청을 수락하면 Friendship이 수립되고 요청은 물리 삭제된다")
     void acceptFriendRequest_Success() {
         // given
         String requestId = "uuid-v7-id";
@@ -57,11 +57,32 @@ class FriendRequestReceiverActionServiceTest {
         receiverService.acceptRequest(requestId, receiverId);
 
         // then
-        assertThat(request.getStatus()).isEqualTo(FriendRequestStatus.DELETED);
-
         verify(friendshipBroker).establish(request);
+        verify(friendRequestRepository).deleteById(requestId);
         verify(eventPublisher).publishEvent(any(FriendRequestAcceptedEvent.class));
-        verify(friendRequestRepository).saveRequest(request);
+    }
+
+    @Test
+    @DisplayName("숨김 처리된 요청도 수락이 가능하다")
+    void acceptFriendRequest_WhenHidden_Success() {
+        // given
+        String requestId = "uuid-v7-id";
+        Long receiverId = 2L;
+        SocialUser res = mock(SocialUser.class);
+        given(res.getId()).willReturn(receiverId);
+        given(res.getNickname()).willReturn("수신자");
+
+        FriendRequest request = FriendTestFactory.createRequest(mock(SocialUser.class), res);
+        request.hide(receiverId);
+        given(friendRequestRepository.findById(requestId)).willReturn(Optional.of(request));
+
+        // when
+        receiverService.acceptRequest(requestId, receiverId);
+
+        // then
+        assertThat(request.getStatus()).isEqualTo(FriendRequestStatus.ACCEPTED);
+        verify(friendshipBroker).establish(request);
+        verify(friendRequestRepository).deleteById(requestId);
     }
 
     @Test

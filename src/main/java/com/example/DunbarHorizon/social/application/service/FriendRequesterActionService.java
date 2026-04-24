@@ -35,8 +35,8 @@ public class FriendRequesterActionService implements FriendRequesterActionUseCas
     @Override
     public void cancelRequest(String requestId, Long requesterId) {
         FriendRequest request = findRequestById(requestId);
-        request.cancel(requesterId);
-        friendRequestRepository.saveRequest(request);
+        request.validateCancelBy(requesterId);
+        friendRequestRepository.deleteById(requestId);
     }
 
 

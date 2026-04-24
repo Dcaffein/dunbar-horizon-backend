@@ -102,7 +102,7 @@ class FriendshipServiceTest {
         verify(friendshipRepository).save(mockFriendship);
     }
     @Test
-    @DisplayName("친구 관계 해제 시 복합 ID로 조회 후 검증 및 삭제하며 이벤트를 발행한다")
+    @DisplayName("친구 관계 해제 시 복합 ID로 조회 후 물리 삭제하며 이벤트를 발행한다")
     void brokeUpWith_Success() {
         // given
         Long myId = 1L;
@@ -114,14 +114,14 @@ class FriendshipServiceTest {
         SocialUser u2 = new SocialUser(2L, "u2", "");
 
         given(friendshipRepository.findById(compositeId)).willReturn(Optional.of(mockFriendship));
+        given(mockFriendship.getId()).willReturn(compositeId);
         given(mockFriendship.getUsers()).willReturn(Set.of(u1, u2));
 
         // when
         friendshipService.brokeUpWith(myId, friendId);
 
         // then
-        verify(mockFriendship).checkDeletable(myId);
-        verify(friendshipRepository).delete(mockFriendship);
+        verify(friendshipRepository).delete(compositeId);
         verify(eventPublisher).publishEvent(any(FriendShipDeletedEvent.class));
     }
 }

@@ -9,7 +9,12 @@
       "Bash(./gradlew test:*)",
       "Bash(xargs grep:*)",
       "Bash(python3:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(git checkout *)",
+      "Bash(git rm *)",
+      "Bash(git restore *)",
+      "Bash(git commit -m ' *)",
+      "Bash(xargs -I{} git show {} --name-only --format=\"\")"
     ]
   }
 }
