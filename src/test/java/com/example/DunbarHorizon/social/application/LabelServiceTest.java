@@ -150,7 +150,7 @@ class LabelServiceTest {
         given(mockLabel.getId()).willReturn(labelId);
         given(mockLabel.getLabelName()).willReturn("친구들");
         given(mockLabel.isExposure()).willReturn(true);
-        given(mockLabel.getMembers()).willReturn(List.of());
+        given(mockLabel.getMembers()).willReturn(Set.of());
 
         // when
         LabelResult result = labelService.getLabelById(currentUserId, labelId);
@@ -185,7 +185,7 @@ class LabelServiceTest {
 
         given(labelRepository.findById(labelId)).willReturn(Optional.of(mockLabel));
         given(mockLabel.getOwner()).willReturn(owner);
-        given(mockLabel.getMembers()).willReturn(List.of());
+        given(mockLabel.getMembers()).willReturn(Set.of());
 
         // when
         List<LabelMemberResult> result = labelService.getLabelMembers(currentUserId, labelId);

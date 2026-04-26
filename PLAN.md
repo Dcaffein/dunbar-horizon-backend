@@ -1,161 +1,120 @@
-# PLAN: Social/Friend API 연동 완성 (task-01-SocialApi)
-
-## [도메인 수정 승인 요청]
-
-### 승인 요청 1: `DELETED` 상태 제거 + 물리 삭제 전환
-
-**변경 배경:** `reject` 기능 제거, HIDDEN 요청은 시스템이 1개월 후 자동 삭제.
-이에 따라 `DELETED` 상태가 존재할 이유가 없어지므로 도메인에서 제거하고 물리 삭제로 전환.
-
-| 변경 대상 | 현재 | 변경 후 |
-|-----------|------|---------|
-| `FriendRequestStatus.DELETED` | soft-delete terminal 상태 | 제거 |
-| `FriendRequest.cancel()` | status → DELETED | 메서드 제거 |
-| `FriendRequest.complete()` | status → DELETED | 메서드 제거 |
-| `FriendRequestRepository` | — | `deleteById(String id)` 추가 |
-| `FriendRequesterActionService.cancelRequest()` | status 변경 후 save | 물리 삭제 호출 |
-| `FriendRequestReceiverActionService.acceptRequest()` | complete() 후 save | establish 후 물리 삭제 |
-
-ACCEPTED, HIDDEN, PENDING 상태 및 기존 hide/undoHide/accept 전이는 그대로 유지.
-
----
-
-### 승인 요청 2: `DeletableFriendship` 제거 + 어댑터 버그 수정
-
-**현재 버그:**
-`FriendshipRepositoryAdapter.delete()` (line 40)에서
-`friendshipNeo4jRepository.delete(friendship)` 호출 시 `DeletableFriendship` 객체를
-그대로 전달하고 있음. `FriendshipNeo4jRepository`는 `Neo4jRepository<Friendship, String>`을
-상속하므로 `delete(Friendship)` 타입을 기대 → **타입 불일치 버그**.
-
-**DeletableFriendship 필요성 검토:**
-- 의도: `checkDeletable(myId)` 호출 후에만 삭제 가능하도록 타입으로 강제
-- 그러나 `findById(userId, friendId)`는 `generateCompositeId(userId, friendId)`로 ID를
-  계산하므로, 존재하면 이미 두 유저 중 하나가 호출자임이 보장 → `checkDeletable()` 권한 검증이 **중복**
-- Adapter에서는 `friendship.getEntity()`로 내부 `Friendship`을 꺼내야 하므로 오히려 혼란
-
-**결론: 제거 권장**
-
-| 변경 대상 | 현재 | 변경 후 |
-|-----------|------|---------|
-| `FriendshipRepository.delete()` | `delete(DeletableFriendship)` | `delete(String friendshipId)` |
-| `FriendshipRepositoryAdapter.delete()` | 타입 불일치 버그 | `deleteById(friendshipId)` 호출 |
-| `Friendship.checkDeletable()` | DeletableFriendship 반환 | 메서드 제거 |
-| `FriendshipCommandService.brokeUpWith()` | checkDeletable() 경유 | ID 직접 전달 |
-| `DeletableFriendship.java` | Wrapper 클래스 | 파일 제거 |
-| `global/common/Deletable.java` | 추상 기반 클래스 | 다른 곳 미사용 시 제거 |
-
----
+# PLAN.md — Task 03: Transactional Outbox + Account→Social 동기화
 
 ## 목표
 
-`social/friend` 도메인에 구현되어 있으나 Controller까지 연결되지 않은 기능을 연동하고,
-자연스럽게 있어야 하는 CRUD를 추가한다.
+현재 `SocialUserEventListener`의 `@Async` + `BEFORE_COMMIT` 패턴을 제거하고, Transactional Outbox 패턴을 도입하여 Account→Social 이벤트를 유실 없이 전달한다.
 
 ---
 
-## 작업 계획 (7 Items + 1 Bugfix)
+## 현재 문제 분석
 
-### Item 0: DeletableFriendship + checkDeletable() 제거 + 어댑터 버그 수정 [도메인 수정]
+### 버그: `SocialUserEventListener`
+```
+@Async                                             // 별도 스레드 실행
+@TransactionalEventListener(phase = BEFORE_COMMIT) // 현재 트랜잭션 컨텍스트 필요
+```
+`@Async`로 분리된 스레드는 원래 JPA 트랜잭션과 독립적이므로, Neo4j 쓰기가 account 트랜잭션과 원자성을 보장받지 못한다.
 
-변경 파일:
-- `domain/friend/Friendship.java` — `checkDeletable()` 메서드 제거
-- `domain/friend/DeletableFriendship.java` — 파일 제거
-- `domain/friend/repository/FriendshipRepository.java` — `delete(DeletableFriendship)` → `delete(String friendshipId)`
-- `adapter/out/FriendshipRepositoryAdapter.java` — `friendshipNeo4jRepository.deleteById(friendshipId)` 호출
-- `application/service/FriendshipCommandService.java` — `checkDeletable()` 제거, `delete(friendshipId)` 직접 호출
-- `global/common/Deletable.java` — 다른 도메인에서 미사용 확인 후 제거
+### 현재 이벤트 발행 경로 (두 가지)
+1. **도메인 이벤트 경로**: `User.activate()`/`deactivate()` → `registerEvent()` → `userJpaRepository.save(user)` → Spring Data `@DomainEvents` → `ApplicationEventPublisher`
+2. **직접 발행 경로**: `SignupService.registerOAuthUser()` → `eventPublisher.publishEvent(new UserActivatedEvent(...))` 직접 호출
 
----
-
-### Item 1: `getTwoHopSuggestionsByOneHop()` Controller 연결
-
-**추가 endpoint:** `GET /api/v1/networks/suggestions/pivot?pivotId={id}`
-
-변경 파일:
-- `adapter/in/web/SocialQueryController.java` — endpoint 추가
+두 경로 모두 `ApplicationEventPublisher`를 통해 발행되므로, `OutboxDomainEventListener`가 동일하게 수신 가능하다.
 
 ---
 
-### Item 2: HIDDEN 친구 요청 목록 조회
+## 이벤트 흐름 설계
 
-**추가 endpoint:** `GET /api/v1/friend-requests/hidden`
+### 즉시 발행 경로 (Happy Path)
 
-변경 파일:
-- `application/port/in/FriendRequestQueryUseCase.java` — `getHiddenRequests(userId)` 추가
-- `application/service/FriendRequestQueryService.java` — 구현 추가
-- `adapter/in/web/FriendRequestController.java` — endpoint 추가
+```
+User.activate() / User.deactivate()
+        ↓
+UserActivatedEvent / UserDeactivatedEvent (Domain Event)
+        ↓
+OutboxDomainEventListener — @TransactionalEventListener(BEFORE_COMMIT), 동기
+        ├── Outbox 레코드 저장 (status=PENDING)  ← JPA 트랜잭션에 포함
+        └── TransactionSynchronizationManager.registerSynchronization()
+                             ↓ (트랜잭션 커밋 후)
+                    UserSyncIntegrationEvent 발행
+                             ↓
+        SocialUserEventListener — @EventListener, @Async
+                ├── Neo4j SocialUser 생성/활성화/비활성화
+                └── 성공: Outbox status → COMPLETED (새 @Transactional 호출)
+                    실패: PENDING 유지 (Scheduler가 재시도)
+```
 
----
+### 재시도 경로 (Scheduler)
 
-### Item 3: 보낸 친구 요청 목록 조회
+```
+OutboxRetryScheduler — @Scheduled(fixedDelay = 5분)
+        ↓
+PENDING 레코드 중 createdAt < now - 5분 조회
+        ↓
+OutboxRetryService.retry(outbox)  — @Transactional
+        ├── retry_count > 5 → status = FAILED + ERROR 로그
+        └── retry_count ≤ 5 → retry_count++ 저장 → UserSyncIntegrationEvent 발행
+                             ↓
+               SocialUserEventListener (@EventListener, @Async)
+```
 
-**추가 endpoint:** `GET /api/v1/friend-requests/sent`
-
-변경 파일:
-- `domain/friend/repository/FriendRequestRepository.java` — `findAllByRequester_IdAndStatus()` 추가
-- `adapter/out/FriendRequestRepositoryAdapter.java` — 구현 추가
-- `application/port/in/FriendRequestQueryUseCase.java` — `getSentRequests(userId)` 추가
-- `application/service/FriendRequestQueryService.java` — 구현 추가
-- `adapter/in/web/FriendRequestController.java` — endpoint 추가
-
----
-
-### Item 4: 특정 라벨 상세 조회
-
-**추가 endpoint:** `GET /api/v1/labels/{labelId}`
-
-변경 파일:
-- `application/port/in/LabelQueryUseCase.java` — `getLabelById(ownerId, labelId)` 추가
-- `application/service/LabelService.java` — 구현 추가
-- `adapter/in/web/LabelController.java` — endpoint 추가
-
----
-
-### Item 5: 특정 라벨 멤버 목록 조회
-
-**추가 endpoint:** `GET /api/v1/labels/{labelId}/members`
-
-반환: 멤버 프로필 (userId, nickname, profileImageUrl) — `FriendProfileInfo` 재사용
-
-변경 파일:
-- `application/port/in/LabelQueryUseCase.java` — `getLabelMembers(ownerId, labelId)` 추가
-- `application/service/LabelService.java` — 구현 추가
-- `adapter/in/web/LabelController.java` — endpoint 추가
+> **설계 근거**: `SocialUserEventListener`를 `@EventListener`(비트랜잭셔널)로 변경하면, 즉시 발행 경로(`TransactionSynchronizationManager.afterCommit()`)와 스케줄러 재시도 경로(트랜잭션 무관) 모두에서 동일한 코드로 처리 가능하다.
 
 ---
 
-### Item 6: `DELETED` 상태 제거 및 물리 삭제 리팩토링 [도메인 수정]
+## 생성/수정 파일 목록
 
-변경 파일:
-- `domain/friend/FriendRequestStatus.java` — `DELETED` 상태 제거, `cancel()` / `complete()` default 구현 제거
-- `domain/friend/FriendRequest.java` — `cancel()`, `complete()` 메서드 제거
-- `domain/friend/repository/FriendRequestRepository.java` — `deleteById(String id)` 추가
-- `adapter/out/FriendRequestRepositoryAdapter.java` — 물리 삭제 구현
-- `application/service/FriendRequesterActionService.java` — `deleteById()` 호출
-- `application/service/FriendRequestReceiverActionService.java` — `deleteById()` 호출
+### 신규 생성 (11개)
+
+| 파일 경로 | 역할 |
+|-----------|------|
+| `account/domain/outbox/UserEventOutbox.java` | Outbox JPA 엔티티 (UUID PK, aggregateId, eventType, payload JSON, status, retryCount, createdAt, processedAt) |
+| `account/domain/outbox/UserOutboxEventType.java` | enum: ACTIVATE, DEACTIVATE |
+| `account/domain/outbox/UserOutboxStatus.java` | enum: PENDING, COMPLETED, FAILED |
+| `account/domain/outbox/repository/UserEventOutboxRepository.java` | Repository 인터페이스 (save, findById, findPendingOlderThan) |
+| `account/adapter/out/persistence/jpa/UserEventOutboxJpaRepository.java` | Spring Data JPA |
+| `account/adapter/out/persistence/UserEventOutboxRepositoryAdapter.java` | Repository 어댑터 구현 |
+| `global/event/user/UserSyncIntegrationEvent.java` | Integration Event record (outboxId, userId, eventType, nickname, profileImageUrl) |
+| `account/application/eventHandler/UserOutboxDomainEventListener.java` | BEFORE_COMMIT: Outbox 저장 + AFTER_COMMIT 콜백 등록 |
+| `account/application/service/UserOutboxRetryService.java` | 재시도/Dead Letter 처리, Outbox 상태 업데이트 |
+| `account/adapter/in/scheduler/UserOutboxRetryScheduler.java` | @Scheduled 5분 주기 재시도 트리거 |
+
+> Dead Letter 알림 채널은 미결정 상태로, 5회 초과 FAILED 전환 시 ERROR 로그만 남기고 알림은 추후 연동한다.
+
+### 수정 (2개)
+
+| 파일 경로 | 변경 내용 |
+|-----------|---------|
+| `social/application/eventHandler/SocialUserEventListener.java` | `UserSyncIntegrationEvent` 수신, `@EventListener` + `@Async`로 변경, Outbox COMPLETED 마킹 추가 |
+
+### 변경 불필요 (확인 완료)
+
+| 파일 | 이유 |
+|------|------|
+| `VerificationService.java` | `user.activate()` → `@DomainEvents` 경로로 `UserActivatedEvent` 자동 발행됨 |
+| `SignupService.java` | `eventPublisher.publishEvent()` 직접 발행으로 `OutboxDomainEventListener` 수신 가능 |
+| `JpaConfig.java` | `account` 패키지가 이미 JPA base packages에 포함됨 |
 
 ---
 
-### Item 7: HIDDEN 요청 1개월 후 자동 삭제 스케줄러
+## 테스트 계획
 
-**기준:** `FriendRequest.createdAt` 기준 1개월 경과 + status = HIDDEN
-
-변경 파일:
-- `domain/friend/repository/FriendRequestRepository.java` — `deleteOldHiddenRequests(LocalDateTime threshold)` 추가
-- `adapter/out/FriendRequestRepositoryAdapter.java` — Cypher 쿼리 구현
-- `adapter/in/scheduler/FriendRequestCleanupScheduler.java` — 신규. 매일 새벽 4시 실행
+| 테스트 클래스 | 유형 | 검증 항목 |
+|--------------|------|---------|
+| `UserOutboxDomainEventListenerTest` | 단위 (Mockito) | BEFORE_COMMIT 시 Outbox PENDING 저장 |
+| `UserEventOutboxRepositoryTest` | 슬라이스 (JpaRepositoryTest 상속) | PENDING 저장/조회/상태 변경 쿼리 |
+| `UserOutboxRetryServiceTest` | 단위 (Mockito) | retry_count 증가, 5회 초과 시 FAILED 전환 + Slack 호출 |
+| `SocialUserEventListenerTest` | 단위 (Mockito) | Integration Event 수신 → Neo4j 처리 + Outbox COMPLETED |
 
 ---
 
 ## 예상 사이드 이펙트
 
-- Item 0: `Deletable.java` 제거 전 다른 도메인 사용 여부 확인 필요.
-- Item 6 (물리 삭제 전환): 기존에 DELETED 상태로 Neo4j에 저장된 레코드가 잔존할 수 있으나 신규 흐름에는 영향 없음.
-- 나머지 항목은 신규 경로 추가로 기존 기능에 영향 없음.
+1. **`SocialUserEventListener` 변경**: `UserActivatedEvent`/`UserDeactivatedEvent`를 직접 리스닝하는 코드가 이 리스너뿐이므로 영향 범위 없음 (확인 완료).
+3. **Outbox 테이블 추가**: MySQL 스키마에 `user_event_outbox` 테이블이 추가된다. `ddl-auto=update` 환경에서는 자동 생성되나, `prod`에서는 수동 DDL 적용이 필요하다.
 
 ---
 
 ## 브랜치
 
-`ai/feat-social-api-wiring`
+`ai/feat-sync-outbox`
