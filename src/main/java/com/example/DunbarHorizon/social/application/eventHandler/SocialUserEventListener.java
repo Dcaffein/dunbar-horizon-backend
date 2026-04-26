@@ -24,10 +24,10 @@ public class SocialUserEventListener {
     @EventListener
     public void onUserSync(UserSyncIntegrationEvent event) {
         try {
-            if (event.eventType() == UserOutboxEventType.ACTIVATE) {
-                handleActivate(event);
-            } else if (event.eventType() == UserOutboxEventType.DEACTIVATE) {
-                handleDeactivate(event);
+            switch (event.eventType()) {
+                case ACTIVATE -> handleActivate(event);
+                case DEACTIVATE -> handleDeactivate(event);
+                case PROFILE_UPDATE -> handleProfileUpdate(event);
             }
             eventPublisher.publishEvent(new UserSyncCompletedEvent(event.outboxId()));
         } catch (Exception e) {
@@ -53,6 +53,14 @@ public class SocialUserEventListener {
         socialUserRepository.findById(event.userId())
                 .ifPresent(socialUser -> {
                     socialUser.switchUserStatus(false);
+                    socialUserRepository.save(socialUser);
+                });
+    }
+
+    private void handleProfileUpdate(UserSyncIntegrationEvent event) {
+        socialUserRepository.findById(event.userId())
+                .ifPresent(socialUser -> {
+                    socialUser.updateProfile(event.nickname(), event.profileImageUrl(), event.occurredAt());
                     socialUserRepository.save(socialUser);
                 });
     }

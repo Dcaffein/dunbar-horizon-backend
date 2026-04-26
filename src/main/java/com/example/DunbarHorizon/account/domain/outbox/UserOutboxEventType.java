@@ -1,5 +1,5 @@
 package com.example.DunbarHorizon.account.domain.outbox;
 
 public enum UserOutboxEventType {
-    ACTIVATE, DEACTIVATE
+    ACTIVATE, DEACTIVATE, PROFILE_UPDATE
 }

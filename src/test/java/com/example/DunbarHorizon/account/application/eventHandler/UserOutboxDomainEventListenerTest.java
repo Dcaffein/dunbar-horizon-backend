@@ -6,6 +6,8 @@ import com.example.DunbarHorizon.account.domain.outbox.UserOutboxStatus;
 import com.example.DunbarHorizon.account.domain.outbox.repository.UserEventOutboxRepository;
 import com.example.DunbarHorizon.global.event.user.UserActivatedEvent;
 import com.example.DunbarHorizon.global.event.user.UserDeactivatedEvent;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -27,7 +29,8 @@ class UserOutboxDomainEventListenerTest {
     void setUp() {
         outboxRepository = mock(UserEventOutboxRepository.class);
         eventPublisher = mock(ApplicationEventPublisher.class);
-        listener = new UserOutboxDomainEventListener(outboxRepository, eventPublisher);
+        ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        listener = new UserOutboxDomainEventListener(outboxRepository, eventPublisher, objectMapper);
         TransactionSynchronizationManager.initSynchronization();
     }
 

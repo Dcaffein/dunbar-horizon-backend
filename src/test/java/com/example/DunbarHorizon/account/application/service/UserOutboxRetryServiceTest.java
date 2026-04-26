@@ -6,6 +6,8 @@ import com.example.DunbarHorizon.account.domain.outbox.UserOutboxStatus;
 import com.example.DunbarHorizon.account.domain.outbox.repository.UserEventOutboxRepository;
 import com.example.DunbarHorizon.global.event.user.UserSyncCompletedEvent;
 import com.example.DunbarHorizon.global.event.user.UserSyncIntegrationEvent;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -30,7 +32,8 @@ class UserOutboxRetryServiceTest {
     void setUp() {
         outboxRepository = mock(UserEventOutboxRepository.class);
         eventPublisher = mock(ApplicationEventPublisher.class);
-        retryService = new UserOutboxRetryService(outboxRepository, eventPublisher);
+        ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        retryService = new UserOutboxRetryService(outboxRepository, eventPublisher, objectMapper);
     }
 
     @Test

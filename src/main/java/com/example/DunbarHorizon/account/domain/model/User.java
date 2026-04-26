@@ -2,7 +2,9 @@ package com.example.DunbarHorizon.account.domain.model;
 
 import com.example.DunbarHorizon.global.event.user.UserActivatedEvent;
 import com.example.DunbarHorizon.global.event.user.UserDeactivatedEvent;
+import com.example.DunbarHorizon.global.event.user.UserProfileUpdatedEvent;
 import com.example.DunbarHorizon.account.domain.event.UserDeletedEvent;
+import java.time.LocalDateTime;
 import com.example.DunbarHorizon.global.common.BaseTimeAggregateRoot;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -62,6 +64,7 @@ public class User extends BaseTimeAggregateRoot {
     public void updateProfile(String nickname, String profileImage) {
         this.nickname = nickname;
         this.profileImage = profileImage;
+        this.registerEvent(new UserProfileUpdatedEvent(this.id, nickname, profileImage, LocalDateTime.now()));
     }
 
     public void overwritePendingProfile(String nickname) {
