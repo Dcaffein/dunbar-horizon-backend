@@ -1,24 +1,42 @@
 package com.example.DunbarHorizon.social.application.eventHandler;
 
-import com.example.DunbarHorizon.global.event.user.UserActivatedEvent;
-import com.example.DunbarHorizon.global.event.user.UserDeactivatedEvent;
+import com.example.DunbarHorizon.account.domain.outbox.UserOutboxEventType;
+import com.example.DunbarHorizon.global.event.user.UserSyncCompletedEvent;
+import com.example.DunbarHorizon.global.event.user.UserSyncIntegrationEvent;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class SocialUserEventListener {
 
     private final SocialUserRepository socialUserRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onUserActivated(UserActivatedEvent event) {
+    @EventListener
+    public void onUserSync(UserSyncIntegrationEvent event) {
+        try {
+            if (event.eventType() == UserOutboxEventType.ACTIVATE) {
+                handleActivate(event);
+            } else if (event.eventType() == UserOutboxEventType.DEACTIVATE) {
+                handleDeactivate(event);
+            }
+            eventPublisher.publishEvent(new UserSyncCompletedEvent(event.outboxId()));
+        } catch (Exception e) {
+            log.error("[SocialUserEventListener] Sync failed — outboxId={}, userId={}, eventType={}",
+                    event.outboxId(), event.userId(), event.eventType(), e);
+        }
+    }
+
+    private void handleActivate(UserSyncIntegrationEvent event) {
         socialUserRepository.findById(event.userId())
                 .ifPresentOrElse(
                         socialUser -> {
@@ -31,10 +49,8 @@ public class SocialUserEventListener {
                 );
     }
 
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onUserDeactivated(UserDeactivatedEvent event) {
-        socialUserRepository.findById(event.id())
+    private void handleDeactivate(UserSyncIntegrationEvent event) {
+        socialUserRepository.findById(event.userId())
                 .ifPresent(socialUser -> {
                     socialUser.switchUserStatus(false);
                     socialUserRepository.save(socialUser);

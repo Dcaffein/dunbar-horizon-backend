@@ -1,161 +1,80 @@
-# PLAN: Social/Friend API 연동 완성 (task-01-SocialApi)
+# PLAN.md — Task 04: Social Profile Lazy Sync 안전망
 
-## [도메인 수정 승인 요청]
+## 현재 상태 분석
 
-### 승인 요청 1: `DELETED` 상태 제거 + 물리 삭제 전환
+Lazy Sync의 핵심 흐름은 **이미 구현**되어 있다:
 
-**변경 배경:** `reject` 기능 제거, HIDDEN 요청은 시스템이 1개월 후 자동 삭제.
-이에 따라 `DELETED` 상태가 존재할 이유가 없어지므로 도메인에서 제거하고 물리 삭제로 전환.
+```
+SocialUserService.getUserReference(userId)
+  → getUserReferences() : Neo4j에 없으면 missingIds 식별
+    → SocialUserSyncHelper.syncAndSave(missingIds)
+      → userQueryUseCase.getUserProfiles()  ← Account에서 조회
+      → socialUserRepository.saveAll()      ← Neo4j에 저장
+```
 
-| 변경 대상 | 현재 | 변경 후 |
-|-----------|------|---------|
-| `FriendRequestStatus.DELETED` | soft-delete terminal 상태 | 제거 |
-| `FriendRequest.cancel()` | status → DELETED | 메서드 제거 |
-| `FriendRequest.complete()` | status → DELETED | 메서드 제거 |
-| `FriendRequestRepository` | — | `deleteById(String id)` 추가 |
-| `FriendRequesterActionService.cancelRequest()` | status 변경 후 save | 물리 삭제 호출 |
-| `FriendRequestReceiverActionService.acceptRequest()` | complete() 후 save | establish 후 물리 삭제 |
+Account 모듈에도 없으면 `UserReferenceNotFoundException (404)` 이미 발생 → AC 2, 4 충족.
 
-ACCEPTED, HIDDEN, PENDING 상태 및 기존 hide/undoHide/accept 전이는 그대로 유지.
+## 미충족 항목 (실제 작업 범위)
 
----
+| Acceptance Criteria | 현재 상태 | 작업 필요 |
+|---------------------|-----------|-----------|
+| AC1. Neo4j Unique Constraint | ❌ 없음 | 추가 필요 |
+| AC2. 없으면 Account에서 조회 | ✅ 구현됨 | — |
+| AC3. MERGE 쿼리로 생성 | ⚠️ save()는 SDN 내부적으로 MERGE 사용 | 명시적 처리로 변경 |
+| AC4. Account에도 없으면 404 | ✅ 구현됨 | — |
+| AC5. DataIntegrityViolationException 처리 | ❌ 없음 | 추가 필요 |
 
-### 승인 요청 2: `DeletableFriendship` 제거 + 어댑터 버그 수정
+## 아키텍처 위반 수정
 
-**현재 버그:**
-`FriendshipRepositoryAdapter.delete()` (line 40)에서
-`friendshipNeo4jRepository.delete(friendship)` 호출 시 `DeletableFriendship` 객체를
-그대로 전달하고 있음. `FriendshipNeo4jRepository`는 `Neo4jRepository<Friendship, String>`을
-상속하므로 `delete(Friendship)` 타입을 기대 → **타입 불일치 버그**.
+`SocialUserSyncHelper`(social **application** 계층)가 `UserQueryUseCase`(account **application** 계층)를 직접 참조 → **계층 경계 위반**.
 
-**DeletableFriendship 필요성 검토:**
-- 의도: `checkDeletable(myId)` 호출 후에만 삭제 가능하도록 타입으로 강제
-- 그러나 `findById(userId, friendId)`는 `generateCompositeId(userId, friendId)`로 ID를
-  계산하므로, 존재하면 이미 두 유저 중 하나가 호출자임이 보장 → `checkDeletable()` 권한 검증이 **중복**
-- Adapter에서는 `friendship.getEntity()`로 내부 `Friendship`을 꺼내야 하므로 오히려 혼란
+ARCHITECTURE.md 규칙: `port/out` 인터페이스를 정의하고 `adapter/out`에서 구현.
 
-**결론: 제거 권장**
+```
+[현재] social/application/service/SocialUserSyncHelper → account.application.port.in.UserQueryUseCase (위반)
 
-| 변경 대상 | 현재 | 변경 후 |
-|-----------|------|---------|
-| `FriendshipRepository.delete()` | `delete(DeletableFriendship)` | `delete(String friendshipId)` |
-| `FriendshipRepositoryAdapter.delete()` | 타입 불일치 버그 | `deleteById(friendshipId)` 호출 |
-| `Friendship.checkDeletable()` | DeletableFriendship 반환 | 메서드 제거 |
-| `FriendshipCommandService.brokeUpWith()` | checkDeletable() 경유 | ID 직접 전달 |
-| `DeletableFriendship.java` | Wrapper 클래스 | 파일 제거 |
-| `global/common/Deletable.java` | 추상 기반 클래스 | 다른 곳 미사용 시 제거 |
+[변경] social/application/service/SocialUserSyncHelper → social/application/port/out/UserProfilePort (준수)
+                                                             ↑ implements
+       social/adapter/out/AccountUserProfileAdapter → account.application.port.in.UserQueryUseCase (adapter에서 참조 허용)
+```
 
 ---
 
-## 목표
+## 생성/수정 파일 목록
 
-`social/friend` 도메인에 구현되어 있으나 Controller까지 연결되지 않은 기능을 연동하고,
-자연스럽게 있어야 하는 CRUD를 추가한다.
+### 신규 생성 (3개)
 
----
+| 파일 경로 | 역할 |
+|-----------|------|
+| `social/application/port/out/UserProfilePort.java` | Output Port 인터페이스 (getActiveUserProfile, getUserProfiles) |
+| `social/adapter/out/AccountUserProfileAdapter.java` | UserProfilePort 구현, UserQueryUseCase 위임 |
+| `social/adapter/out/neo4j/schema/SocialUserSchemaInitializer.java` | 앱 기동 시 Neo4j Unique Constraint 생성 (`@PostConstruct` + `Neo4jClient`) |
 
-## 작업 계획 (7 Items + 1 Bugfix)
+### 수정 (1개)
 
-### Item 0: DeletableFriendship + checkDeletable() 제거 + 어댑터 버그 수정 [도메인 수정]
+| 파일 경로 | 변경 내용 |
+|-----------|---------|
+| `social/application/service/SocialUserSyncHelper.java` | `UserQueryUseCase` → `UserProfilePort`로 교체, `DataIntegrityViolationException` catch-and-ignore 추가 |
 
-변경 파일:
-- `domain/friend/Friendship.java` — `checkDeletable()` 메서드 제거
-- `domain/friend/DeletableFriendship.java` — 파일 제거
-- `domain/friend/repository/FriendshipRepository.java` — `delete(DeletableFriendship)` → `delete(String friendshipId)`
-- `adapter/out/FriendshipRepositoryAdapter.java` — `friendshipNeo4jRepository.deleteById(friendshipId)` 호출
-- `application/service/FriendshipCommandService.java` — `checkDeletable()` 제거, `delete(friendshipId)` 직접 호출
-- `global/common/Deletable.java` — 다른 도메인에서 미사용 확인 후 제거
-
----
-
-### Item 1: `getTwoHopSuggestionsByOneHop()` Controller 연결
-
-**추가 endpoint:** `GET /api/v1/networks/suggestions/pivot?pivotId={id}`
-
-변경 파일:
-- `adapter/in/web/SocialQueryController.java` — endpoint 추가
+> **MERGE 처리**: Spring Data Neo4j의 `save()`는 사용자 지정 ID 엔티티에 대해 내부적으로 MERGE를 사용한다. Unique Constraint와 DataIntegrityViolationException catch 추가로 AC3, AC5를 충족한다. 별도 `@Query("MERGE ...")` 메서드는 추가하지 않는다.
 
 ---
 
-### Item 2: HIDDEN 친구 요청 목록 조회
+## 테스트 계획
 
-**추가 endpoint:** `GET /api/v1/friend-requests/hidden`
-
-변경 파일:
-- `application/port/in/FriendRequestQueryUseCase.java` — `getHiddenRequests(userId)` 추가
-- `application/service/FriendRequestQueryService.java` — 구현 추가
-- `adapter/in/web/FriendRequestController.java` — endpoint 추가
-
----
-
-### Item 3: 보낸 친구 요청 목록 조회
-
-**추가 endpoint:** `GET /api/v1/friend-requests/sent`
-
-변경 파일:
-- `domain/friend/repository/FriendRequestRepository.java` — `findAllByRequester_IdAndStatus()` 추가
-- `adapter/out/FriendRequestRepositoryAdapter.java` — 구현 추가
-- `application/port/in/FriendRequestQueryUseCase.java` — `getSentRequests(userId)` 추가
-- `application/service/FriendRequestQueryService.java` — 구현 추가
-- `adapter/in/web/FriendRequestController.java` — endpoint 추가
-
----
-
-### Item 4: 특정 라벨 상세 조회
-
-**추가 endpoint:** `GET /api/v1/labels/{labelId}`
-
-변경 파일:
-- `application/port/in/LabelQueryUseCase.java` — `getLabelById(ownerId, labelId)` 추가
-- `application/service/LabelService.java` — 구현 추가
-- `adapter/in/web/LabelController.java` — endpoint 추가
-
----
-
-### Item 5: 특정 라벨 멤버 목록 조회
-
-**추가 endpoint:** `GET /api/v1/labels/{labelId}/members`
-
-반환: 멤버 프로필 (userId, nickname, profileImageUrl) — `FriendProfileInfo` 재사용
-
-변경 파일:
-- `application/port/in/LabelQueryUseCase.java` — `getLabelMembers(ownerId, labelId)` 추가
-- `application/service/LabelService.java` — 구현 추가
-- `adapter/in/web/LabelController.java` — endpoint 추가
-
----
-
-### Item 6: `DELETED` 상태 제거 및 물리 삭제 리팩토링 [도메인 수정]
-
-변경 파일:
-- `domain/friend/FriendRequestStatus.java` — `DELETED` 상태 제거, `cancel()` / `complete()` default 구현 제거
-- `domain/friend/FriendRequest.java` — `cancel()`, `complete()` 메서드 제거
-- `domain/friend/repository/FriendRequestRepository.java` — `deleteById(String id)` 추가
-- `adapter/out/FriendRequestRepositoryAdapter.java` — 물리 삭제 구현
-- `application/service/FriendRequesterActionService.java` — `deleteById()` 호출
-- `application/service/FriendRequestReceiverActionService.java` — `deleteById()` 호출
-
----
-
-### Item 7: HIDDEN 요청 1개월 후 자동 삭제 스케줄러
-
-**기준:** `FriendRequest.createdAt` 기준 1개월 경과 + status = HIDDEN
-
-변경 파일:
-- `domain/friend/repository/FriendRequestRepository.java` — `deleteOldHiddenRequests(LocalDateTime threshold)` 추가
-- `adapter/out/FriendRequestRepositoryAdapter.java` — Cypher 쿼리 구현
-- `adapter/in/scheduler/FriendRequestCleanupScheduler.java` — 신규. 매일 새벽 4시 실행
+| 테스트 클래스 | 유형 | 검증 항목 |
+|--------------|------|---------|
+| `SocialUserSyncHelperTest` | 단위 (Mockito) | 미싱 유저 조회 → Port 호출 → 저장, DataIntegrityViolationException 시 정상 반환 |
 
 ---
 
 ## 예상 사이드 이펙트
 
-- Item 0: `Deletable.java` 제거 전 다른 도메인 사용 여부 확인 필요.
-- Item 6 (물리 삭제 전환): 기존에 DELETED 상태로 Neo4j에 저장된 레코드가 잔존할 수 있으나 신규 흐름에는 영향 없음.
-- 나머지 항목은 신규 경로 추가로 기존 기능에 영향 없음.
+1. **Neo4j Unique Constraint**: 이미 중복 id 노드가 존재한다면 Constraint 생성 시 실패한다. 신규 환경 기준으로 구현한다.
+2. **`SocialUserSyncHelper` 변경**: `UserQueryUseCase` 의존성 제거로 기존 테스트가 있다면 수정이 필요하다. (`SocialUserSyncHelper` 전용 테스트는 현재 없음 — 확인 완료)
 
 ---
 
 ## 브랜치
 
-`ai/feat-social-api-wiring`
+`ai/feat-sync-outbox` (Task 03 브랜치에서 이어서 작업)
