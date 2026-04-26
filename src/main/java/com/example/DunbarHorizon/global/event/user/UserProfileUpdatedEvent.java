@@ -1,13 +1,9 @@
 package com.example.DunbarHorizon.global.event.user;
 
-import com.example.DunbarHorizon.account.domain.outbox.UserOutboxEventType;
-
 import java.time.LocalDateTime;
 
-public record UserSyncIntegrationEvent(
-        String outboxId,
+public record UserProfileUpdatedEvent(
         Long userId,
-        UserOutboxEventType eventType,
         String nickname,
         String profileImageUrl,
         LocalDateTime occurredAt

@@ -2,11 +2,14 @@ package com.example.DunbarHorizon.account.adapter.in.web;
 
 import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
 import com.example.DunbarHorizon.account.application.port.in.SignupUseCase;
+import com.example.DunbarHorizon.account.application.port.in.UserProfileUpdateUseCase;
 import com.example.DunbarHorizon.account.application.port.in.VerificationUseCase;
 import com.example.DunbarHorizon.account.application.dto.AuthTokenResult;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.LoginRequestDto;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.SignupRequestDto;
+import com.example.DunbarHorizon.account.adapter.in.web.dto.UserProfileUpdateRequest;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.VerificationEmailRequestDto;
+import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import com.example.DunbarHorizon.global.security.AuthCookieManager;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -23,6 +26,7 @@ public class AccountController {
     private final SignupUseCase signupUseCase;
     private final LoginUseCase loginUseCase;
     private final VerificationUseCase verificationUseCase;
+    private final UserProfileUpdateUseCase userProfileUpdateUseCase;
     private final AuthCookieManager authCookieManager;
 
     @PostMapping("/users")
@@ -69,6 +73,14 @@ public class AccountController {
     @PatchMapping("/verifications")
     public ResponseEntity<Void> verifyEmail(@RequestParam String token) {
         verificationUseCase.verifyEmail(token);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/users/me")
+    public ResponseEntity<Void> updateProfile(
+            @CurrentUserId Long userId,
+            @RequestBody @Valid UserProfileUpdateRequest request) {
+        userProfileUpdateUseCase.updateProfile(userId, request.nickname(), request.profileImageUrl());
         return ResponseEntity.ok().build();
     }
 
