@@ -45,6 +45,7 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 	implementation 'com.google.firebase:firebase-admin:9.2.0'
+	implementation 'software.amazon.awssdk:s3:2.25.0'
 
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -58,6 +59,7 @@ dependencies {
 	testImplementation 'org.testcontainers:mysql'
 	testImplementation 'org.testcontainers:neo4j'
 	testImplementation 'org.testcontainers:mongodb'
+	testImplementation 'org.testcontainers:localstack'
 	testCompileOnly 'org.projectlombok:lombok'
 	testAnnotationProcessor 'org.projectlombok:lombok'
 }
@@ -65,5 +67,5 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 	jvmArgs('-XX:+EnableDynamicAgentLoading')
-	enabled = false
+	enabled = true
 }

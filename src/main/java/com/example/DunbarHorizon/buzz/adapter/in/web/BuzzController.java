@@ -14,8 +14,10 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -27,11 +29,12 @@ public class BuzzController {
     private final BuzzCommandUseCase buzzCommandUseCase;
     private final BuzzQueryUseCase buzzQueryUseCase;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> createBuzz(
             @CurrentUserId Long currentUserId,
-            @RequestBody @Valid BuzzCreateRequest request) {
-        buzzCommandUseCase.createBuzz(request.toCommand(currentUserId));
+            @RequestPart("request") @Valid BuzzCreateRequest request,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+        buzzCommandUseCase.createBuzz(request.toCommand(currentUserId), images);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -54,22 +57,24 @@ public class BuzzController {
         return ResponseEntity.ok(buzzQueryUseCase.getUnreadSenderIds(currentUserId));
     }
 
-    @PostMapping("/{buzzId}/replies")
+    @PostMapping(value = "/{buzzId}/replies", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> reply(
             @CurrentUserId Long currentUserId,
             @PathVariable String buzzId,
-            @RequestBody @Valid BuzzReplyRequest dto) {
-        buzzCommandUseCase.replyToBuzz(currentUserId, buzzId, dto.text(), dto.imageUrls(), dto.isPublic());
+            @RequestPart("request") @Valid BuzzReplyRequest dto,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+        buzzCommandUseCase.replyToBuzz(currentUserId, buzzId, dto.text(), images, dto.isPublic());
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @PatchMapping("/{buzzId}/replies/{replyId}")
+    @PatchMapping(value = "/{buzzId}/replies/{replyId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> updateReply(
             @CurrentUserId Long currentUserId,
             @PathVariable String buzzId,
             @PathVariable String replyId,
-            @RequestBody @Valid BuzzReplyRequest dto) {
-        buzzCommandUseCase.updateReply(currentUserId, buzzId, replyId, dto.text(), dto.imageUrls());
+            @RequestPart("request") @Valid BuzzReplyRequest dto,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+        buzzCommandUseCase.updateReply(currentUserId, buzzId, replyId, dto.text(), images);
         return ResponseEntity.noContent().build();
     }
 

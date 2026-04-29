@@ -9,6 +9,7 @@ import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzReadEvent;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
+import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzRepliedEvent;
@@ -22,6 +23,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,10 +36,11 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     private final RecipientStrategyProvider strategyProvider;
     private final BuzzRepository buzzRepository;
     private final BuzzSocialPort buzzSocialPort;
+    private final ImageStoragePort imageStoragePort;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
-    public void createBuzz(CreateBuzzCommand command) {
+    public void createBuzz(CreateBuzzCommand command, List<MultipartFile> images) {
         BuzzCreatorInfo author = buzzSocialPort.getCreatorProfiles(List.of(command.creatorId()))
                 .stream()
                 .findFirst()
@@ -45,12 +48,14 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
         RecipientStrategyPort strategy = strategyProvider.getStrategy(command.spec().getType());
         Set<Long> recipientIds = strategy.fetchRecipientIds(command.creatorId(), command.spec());
 
+        List<String> imageUrls = imageStoragePort.upload(images);
+
         Buzz buzz = Buzz.builder()
                 .creatorId(command.creatorId())
                 .creatorNickname(author.nickname())
                 .creatorProfileImageUrl(author.profileImageUrl())
                 .text(command.text())
-                .imageUrls(command.imageUrls())
+                .imageUrls(imageUrls)
                 .recipientIds(new ArrayList<>(recipientIds))
                 .build();
 
@@ -59,13 +64,14 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     }
 
     @Override
-    public void replyToBuzz(Long replierId, String buzzId, String replyText, List<String> imageUrls, boolean isPublic) {
+    public void replyToBuzz(Long replierId, String buzzId, String replyText, List<MultipartFile> images, boolean isPublic) {
         BuzzCreatorInfo replierProfile = buzzSocialPort.getCreatorProfiles(List.of(replierId))
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new EntityNotFoundException("사용자 정보를 찾을 수 없습니다."));
 
         Buzz buzz = getBuzzOrThrow(buzzId);
+        List<String> imageUrls = imageStoragePort.upload(images);
 
         BuzzReply reply = buzz.createReply(
                 replierId,
@@ -80,8 +86,9 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     }
 
     @Override
-    public void updateReply(Long requesterId, String buzzId, String replyId, String replyText, List<String> imageUrls) {
+    public void updateReply(Long requesterId, String buzzId, String replyId, String replyText, List<MultipartFile> images) {
         Buzz buzz = getBuzzOrThrow(buzzId);
+        List<String> imageUrls = imageStoragePort.upload(images);
         buzz.updateReply(requesterId, replyId, replyText, imageUrls);
         buzzRepository.updateReply(buzzId, replyId, replyText, imageUrls);
     }
