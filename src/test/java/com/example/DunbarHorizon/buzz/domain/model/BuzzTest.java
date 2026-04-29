@@ -113,7 +113,7 @@ class BuzzTest {
         }
 
         @Test
-        @DisplayName("답장을 남기면 작성자의 정보를 저장")
+        @DisplayName("수신자가 답장을 남기면 readRecipientIds에 추가된다")
         void createResponse_Success_WithProfile() {
             // when
             BuzzReply response = buzz.createReply(
@@ -123,6 +123,36 @@ class BuzzTest {
             assertThat(response.getReplierNickname()).isEqualTo(recipientNickname);
             assertThat(response.getReplierProfileImageUrl()).isEqualTo(recipientProfile);
             assertThat(buzz.getReadRecipientIds()).contains(recipientId);
+        }
+
+        @Test
+        @DisplayName("작성자 본인이 답장을 남길 수 있다")
+        void createReply_Success_ByCreator() {
+            // when
+            BuzzReply reply = buzz.createReply(
+                    creatorId, creatorNickname, creatorProfile, "Creator Reply", null, true);
+
+            // then
+            assertThat(reply.getReplierId()).isEqualTo(creatorId);
+        }
+
+        @Test
+        @DisplayName("작성자가 답장을 남겨도 readRecipientIds에 추가되지 않는다")
+        void createReply_Creator_NotMarkedAsRead() {
+            // when
+            buzz.createReply(creatorId, creatorNickname, creatorProfile, "Creator Reply", null, true);
+
+            // then
+            assertThat(buzz.getReadRecipientIds()).doesNotContain(creatorId);
+        }
+
+        @Test
+        @DisplayName("수신자도 작성자도 아닌 제3자가 답장을 시도하면 예외가 발생한다")
+        void createReply_Fail_ByStranger() {
+            // when & then
+            assertThatThrownBy(() -> buzz.createReply(
+                    strangerId, "낯선자", "stranger.png", "Stranger Reply", null, true))
+                    .isInstanceOf(BuzzAccessDeniedException.class);
         }
     }
 

@@ -83,11 +83,13 @@ public class Buzz {
         if (isExpired()) {
             throw new BuzzInvalidStateException("만료된 캐스트에는 답장할 수 없습니다.");
         }
-        if (!isRecipient(replierId)) {
+        if (!isRecipient(replierId) && !creatorId.equals(replierId)) {
             throw new BuzzAccessDeniedException("이 캐스트에 답장을 남길 권한이 없습니다.");
         }
 
-        markAsRead(replierId);
+        if (isRecipient(replierId)) {
+            markAsRead(replierId);
+        }
 
         return BuzzReply.builder()
                 .replyId(UUID.randomUUID().toString())
