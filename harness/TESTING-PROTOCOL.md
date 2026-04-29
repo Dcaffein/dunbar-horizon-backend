@@ -17,7 +17,7 @@
 
 - **Web / Controller 테스트**:
     - `BaseControllerTest`를 상속받아라.
-    - 보안/인증이 필요한 API는 `@WithMockCustomUser` 어노테이션을 사용하여 인증된 상태를 모킹하라.
+    - 보안/인증이 필요한 API는 `@WithMockCustomUser` 어노테이션을 사용하여 인증된 상태를 모킹하라.2
 - **Persistence / Repository 테스트**:
     - JPA 관련 테스트: `JpaRepositoryTest`를 상속받아라.
     - Neo4j 관련 테스트: `Neo4jRepositoryTest`를 상속받아라.
