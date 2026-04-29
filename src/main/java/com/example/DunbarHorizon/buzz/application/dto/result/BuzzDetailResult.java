@@ -11,7 +11,7 @@ public record BuzzDetailResult(
         BuzzProfileResult author,
         String text,
         List<String> imageUrls,
-        List<BuzzReplyResult> replies,
+        List<BuzzCommentResult> comments,
         long remainingMinutes,
         boolean isUnread
 ) {
@@ -21,7 +21,7 @@ public record BuzzDetailResult(
                 new BuzzProfileResult(buzz.getCreatorId(), buzz.getCreatorNickname(), buzz.getCreatorProfileImageUrl()),
                 buzz.getText(),
                 buzz.getImageUrls(),
-                buzz.getReplies().stream().map(BuzzReplyResult::from).toList(),
+                buzz.getComments().stream().map(BuzzCommentResult::from).toList(),
                 Math.max(0L, Duration.between(LocalDateTime.now(), buzz.getExpiresAt()).toMinutes()),
                 buzz.isUnreadBy(currentUserId)
         );

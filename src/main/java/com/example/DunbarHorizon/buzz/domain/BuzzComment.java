@@ -10,15 +10,15 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class BuzzReply {
+public class BuzzComment {
 
-    private String replyId;
+    private String commentId;
 
-    private Long replierId;
+    private Long commenterId;
 
-    private String replierNickname;
+    private String commenterNickname;
 
-    private String replierProfileImageUrl;
+    private String commenterProfileImageUrl;
 
     private String text;
 
@@ -29,11 +29,11 @@ public class BuzzReply {
     @Builder.Default
     private boolean isPublic = true;
 
-    public static BuzzReply of(String replyId, Long replierId, String nickname, String profileImageUrl,
-                               String text, List<String> imageUrls, boolean isPublic) {
-        return new BuzzReply(
-                replyId,
-                replierId,
+    public static BuzzComment of(String commentId, Long commenterId, String nickname, String profileImageUrl,
+                                 String text, List<String> imageUrls, boolean isPublic) {
+        return new BuzzComment(
+                commentId,
+                commenterId,
                 nickname,
                 profileImageUrl,
                 text,
@@ -51,7 +51,7 @@ public class BuzzReply {
 
     private void validateContent(String text) {
         if (text == null || text.isBlank()) {
-            throw new BuzzInvalidStateException("답장 내용은 비어있을 수 없습니다.");
+            throw new BuzzInvalidStateException("댓글 내용은 비어있을 수 없습니다.");
         }
     }
 }

@@ -11,12 +11,12 @@ import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
+import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
-import com.example.DunbarHorizon.buzz.domain.event.BuzzRepliedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.BuzzReply;
+import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -64,8 +64,8 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     }
 
     @Override
-    public void replyToBuzz(Long replierId, String buzzId, String replyText, List<MultipartFile> images, boolean isPublic) {
-        BuzzCreatorInfo replierProfile = buzzSocialPort.getCreatorProfiles(List.of(replierId))
+    public void commentOnBuzz(Long commenterId, String buzzId, String commentText, List<MultipartFile> images, boolean isPublic) {
+        BuzzCreatorInfo commenterProfile = buzzSocialPort.getCreatorProfiles(List.of(commenterId))
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new EntityNotFoundException("사용자 정보를 찾을 수 없습니다."));
@@ -73,31 +73,31 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
         Buzz buzz = getBuzzOrThrow(buzzId);
         List<String> imageUrls = imageStoragePort.upload(images);
 
-        BuzzReply reply = buzz.createReply(
-                replierId,
-                replierProfile.nickname(),
-                replierProfile.profileImageUrl(),
-                replyText,
+        BuzzComment comment = buzz.createComment(
+                commenterId,
+                commenterProfile.nickname(),
+                commenterProfile.profileImageUrl(),
+                commentText,
                 imageUrls,
                 isPublic
         );
-        buzzRepository.addReply(buzzId, reply);
-        eventPublisher.publishEvent(new BuzzRepliedEvent(buzzId, buzz.getCreatorId(), replierId));
+        buzzRepository.addComment(buzzId, comment);
+        eventPublisher.publishEvent(new BuzzCommentedEvent(buzzId, buzz.getCreatorId(), commenterId));
     }
 
     @Override
-    public void updateReply(Long requesterId, String buzzId, String replyId, String replyText, List<MultipartFile> images) {
+    public void updateComment(Long requesterId, String buzzId, String commentId, String commentText, List<MultipartFile> images) {
         Buzz buzz = getBuzzOrThrow(buzzId);
         List<String> imageUrls = imageStoragePort.upload(images);
-        buzz.updateReply(requesterId, replyId, replyText, imageUrls);
-        buzzRepository.updateReply(buzzId, replyId, replyText, imageUrls);
+        buzz.updateComment(requesterId, commentId, commentText, imageUrls);
+        buzzRepository.updateComment(buzzId, commentId, commentText, imageUrls);
     }
 
     @Override
-    public void deleteReply(Long requesterId, String buzzId, String replyId) {
+    public void deleteComment(Long requesterId, String buzzId, String commentId) {
         Buzz buzz = getBuzzOrThrow(buzzId);
-        buzz.validateReplyDeletion(requesterId, replyId);
-        buzzRepository.removeReply(buzzId, replyId);
+        buzz.validateCommentDeletion(requesterId, commentId);
+        buzzRepository.removeComment(buzzId, commentId);
     }
 
     @Override

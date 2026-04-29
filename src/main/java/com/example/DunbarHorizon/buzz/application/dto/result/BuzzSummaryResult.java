@@ -11,7 +11,7 @@ public record BuzzSummaryResult(
         BuzzProfileResult author,
         String text,
         List<String> imageUrls,
-        int replyCount,
+        int commentCount,
         long remainingMinutes,
         boolean isUnread
 ) {
@@ -21,7 +21,7 @@ public record BuzzSummaryResult(
                 new BuzzProfileResult(buzz.getCreatorId(), buzz.getCreatorNickname(), buzz.getCreatorProfileImageUrl()),
                 buzz.getText(),
                 buzz.getImageUrls(),
-                buzz.getReplies().size(),
+                buzz.getComments().size(),
                 Duration.between(LocalDateTime.now(), buzz.getExpiresAt()).toMinutes(),
                 buzz.isUnreadBy(currentUserId)
         );

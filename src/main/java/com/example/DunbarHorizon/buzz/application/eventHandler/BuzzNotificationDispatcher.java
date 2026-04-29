@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.buzz.application.eventHandler;
 
+import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
-import com.example.DunbarHorizon.buzz.domain.event.BuzzRepliedEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -32,15 +32,15 @@ public class BuzzNotificationDispatcher {
     }
 
     @EventListener
-    public void dispatch(BuzzRepliedEvent event) {
+    public void dispatch(BuzzCommentedEvent event) {
         NotificationEvent notification = NotificationEvent.builder()
                 .receiverId(event.creatorId())
-                .title("Buzz 답장")
-                .content("누군가 내 Buzz에 응답했습니다")
+                .title("Buzz 댓글")
+                .content("누군가 내 Buzz에 댓글을 남겼습니다")
                 .type(NotificationType.BUZZ_RESPONSE)
                 .metadata(Map.of(
                         "buzzId", event.buzzId(),
-                        "replierId", event.replierId()
+                        "commenterId", event.commenterId()
                 ))
                 .build();
 

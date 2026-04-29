@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.buzz.adapter.out.persistence.mongo.BuzzMongoTem
 import com.example.DunbarHorizon.buzz.adapter.out.persistence.mongo.BuzzSDMRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.BuzzReply;
+import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -27,22 +27,22 @@ public class BuzzRepositoryAdapter implements BuzzRepository {
 
     @Override
     public Buzz findById(String id) {
-        return buzzTemplateRepository.findByIdWithReplySlice(id);
+        return buzzTemplateRepository.findByIdWithCommentSlice(id);
     }
 
     @Override
-    public void addReply(String buzzId, BuzzReply reply) {
-        buzzTemplateRepository.addReply(buzzId, reply);
+    public void addComment(String buzzId, BuzzComment comment) {
+        buzzTemplateRepository.addComment(buzzId, comment);
     }
 
     @Override
-    public void updateReply(String buzzId, String replyId, String text, List<String> imageUrls) {
-        buzzTemplateRepository.updateReply(buzzId, replyId, text, imageUrls);
+    public void updateComment(String buzzId, String commentId, String text, List<String> imageUrls) {
+        buzzTemplateRepository.updateComment(buzzId, commentId, text, imageUrls);
     }
 
     @Override
-    public void removeReply(String buzzId, String replyId) {
-        buzzTemplateRepository.removeReply(buzzId, replyId);
+    public void removeComment(String buzzId, String commentId) {
+        buzzTemplateRepository.removeComment(buzzId, commentId);
     }
 
     @Override

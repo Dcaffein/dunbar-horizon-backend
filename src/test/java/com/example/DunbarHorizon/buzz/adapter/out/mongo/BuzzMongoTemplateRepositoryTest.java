@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.buzz.adapter.out.mongo;
 
 import com.example.DunbarHorizon.buzz.adapter.out.persistence.mongo.BuzzMongoTemplateRepository;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.BuzzReply;
+import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -39,7 +39,6 @@ class BuzzMongoTemplateRepositoryTest {
     void setUp() {
         mongoTemplate.dropCollection(Buzz.class);
 
-        // 기본 테스트 데이터(Buzz) 생성
         Buzz buzz = Buzz.builder()
                 .creatorId(creatorId)
                 .creatorNickname("작성자")
@@ -53,107 +52,106 @@ class BuzzMongoTemplateRepositoryTest {
     }
 
     @Nested
-    @DisplayName("답장 추가 (addReply) 테스트")
-    class AddReplyTest {
+    @DisplayName("댓글 추가 (addComment) 테스트")
+    class AddCommentTest {
         @Test
-        @DisplayName("답장을 추가하면 replies 배열에 저장되고 작성자는 자동으로 읽음 처리된다")
-        void addReply_Success() {
+        @DisplayName("댓글을 추가하면 comments 배열에 저장되고 작성자는 자동으로 읽음 처리된다")
+        void addComment_Success() {
             // given
-            BuzzReply reply = BuzzReply.of("res-1", recipientId, "답장자", "p.png", "답장 내용", null, true);
+            BuzzComment comment = BuzzComment.of("com-1", recipientId, "댓글자", "p.png", "댓글 내용", null, true);
 
             // when
-            templateRepository.addReply(savedBuzzId, reply);
+            templateRepository.addComment(savedBuzzId, comment);
 
             // then
             Buzz updated = mongoTemplate.findById(savedBuzzId, Buzz.class);
-            assertThat(updated.getReplies()).hasSize(1);
-            assertThat(updated.getReadRecipientIds()).contains(recipientId); // $addToSet 확인
+            assertThat(updated.getComments()).hasSize(1);
+            assertThat(updated.getReadRecipientIds()).contains(recipientId);
         }
     }
 
     @Nested
-    @DisplayName("답장 수정 (updateReply) 테스트")
-    class UpdateReplyTest {
+    @DisplayName("댓글 수정 (updateComment) 테스트")
+    class UpdateCommentTest {
         @Test
-        @DisplayName("포지셔널 연산자($)를 통해 특정 답장의 내용만 수정되어야 한다")
-        void updateReply_Success() {
+        @DisplayName("포지셔널 연산자($)를 통해 특정 댓글의 내용만 수정되어야 한다")
+        void updateComment_Success() {
             // given
-            BuzzReply reply1 = BuzzReply.of("res-1", recipientId, "닉1", "p1", "원본1", null, true);
-            BuzzReply reply2 = BuzzReply.of("res-2", recipientId, "닉2", "p2", "원본2", null, true);
-            templateRepository.addReply(savedBuzzId, reply1);
-            templateRepository.addReply(savedBuzzId, reply2);
+            BuzzComment comment1 = BuzzComment.of("com-1", recipientId, "닉1", "p1", "원본1", null, true);
+            BuzzComment comment2 = BuzzComment.of("com-2", recipientId, "닉2", "p2", "원본2", null, true);
+            templateRepository.addComment(savedBuzzId, comment1);
+            templateRepository.addComment(savedBuzzId, comment2);
 
             // when
             String newText = "수정된 내용";
-            templateRepository.updateReply(savedBuzzId, "res-1", newText, List.of("new_img.jpg"));
+            templateRepository.updateComment(savedBuzzId, "com-1", newText, List.of("new_img.jpg"));
 
             // then
             Buzz updated = mongoTemplate.findById(savedBuzzId, Buzz.class);
-            BuzzReply updatedReply = updated.getReplies().stream()
-                    .filter(r -> r.getReplyId().equals("res-1"))
+            BuzzComment updatedComment = updated.getComments().stream()
+                    .filter(c -> c.getCommentId().equals("com-1"))
                     .findFirst().orElseThrow();
 
-            assertThat(updatedReply.getText()).isEqualTo(newText);
-            assertThat(updatedReply.getImageUrls()).containsExactly("new_img.jpg");
+            assertThat(updatedComment.getText()).isEqualTo(newText);
+            assertThat(updatedComment.getImageUrls()).containsExactly("new_img.jpg");
 
-            // 다른 답장은 그대로여야 함
-            BuzzReply otherReply = updated.getReplies().stream()
-                    .filter(r -> r.getReplyId().equals("res-2"))
+            BuzzComment otherComment = updated.getComments().stream()
+                    .filter(c -> c.getCommentId().equals("com-2"))
                     .findFirst().orElseThrow();
-            assertThat(otherReply.getText()).isEqualTo("원본2");
+            assertThat(otherComment.getText()).isEqualTo("원본2");
         }
     }
 
     @Nested
-    @DisplayName("답장 삭제 (removeReply) 테스트")
-    class RemoveReplyTest {
+    @DisplayName("댓글 삭제 (removeComment) 테스트")
+    class RemoveCommentTest {
         @Test
-        @DisplayName("배열에서 특정 responseId를 가진 요소가 삭제되어야 한다")
-        void removeReply_Success() {
+        @DisplayName("배열에서 특정 commentId를 가진 요소가 삭제되어야 한다")
+        void removeComment_Success() {
             // given
-            templateRepository.addReply(savedBuzzId, BuzzReply.of("res-1", recipientId, "닉", "p", "내용", null, true));
+            templateRepository.addComment(savedBuzzId, BuzzComment.of("com-1", recipientId, "닉", "p", "내용", null, true));
 
             // when
-            templateRepository.removeReply(savedBuzzId, "res-1");
+            templateRepository.removeComment(savedBuzzId, "com-1");
 
             // then
             Buzz updated = mongoTemplate.findById(savedBuzzId, Buzz.class);
-            assertThat(updated.getReplies()).isEmpty();
+            assertThat(updated.getComments()).isEmpty();
         }
     }
 
     @Nested
-    @DisplayName("답장 슬라이스 조회 (findByIdWithReplySlice) 테스트")
-    class ReplySliceQueryTest {
+    @DisplayName("댓글 슬라이스 조회 (findByIdWithCommentSlice) 테스트")
+    class CommentSliceQueryTest {
 
         @Test
-        @DisplayName("replies가 25개이면 최신 20개만 반환한다")
-        void findByIdWithReplySlice_Returns20WhenOver() {
+        @DisplayName("comments가 25개이면 최신 20개만 반환한다")
+        void findByIdWithCommentSlice_Returns20WhenOver() {
             // given
             IntStream.rangeClosed(1, 25).forEach(i ->
-                    templateRepository.addReply(savedBuzzId,
-                            BuzzReply.of("res-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
+                    templateRepository.addComment(savedBuzzId,
+                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
 
             // when
-            Buzz result = templateRepository.findByIdWithReplySlice(savedBuzzId);
+            Buzz result = templateRepository.findByIdWithCommentSlice(savedBuzzId);
 
             // then
-            assertThat(result.getReplies()).hasSize(20);
+            assertThat(result.getComments()).hasSize(20);
         }
 
         @Test
-        @DisplayName("replies가 10개이면 전체 10개를 반환한다")
-        void findByIdWithReplySlice_ReturnsAllWhenUnder() {
+        @DisplayName("comments가 10개이면 전체 10개를 반환한다")
+        void findByIdWithCommentSlice_ReturnsAllWhenUnder() {
             // given
             IntStream.rangeClosed(1, 10).forEach(i ->
-                    templateRepository.addReply(savedBuzzId,
-                            BuzzReply.of("res-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
+                    templateRepository.addComment(savedBuzzId,
+                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
 
             // when
-            Buzz result = templateRepository.findByIdWithReplySlice(savedBuzzId);
+            Buzz result = templateRepository.findByIdWithCommentSlice(savedBuzzId);
 
             // then
-            assertThat(result.getReplies()).hasSize(10);
+            assertThat(result.getComments()).hasSize(10);
         }
     }
 
@@ -164,18 +162,13 @@ class BuzzMongoTemplateRepositoryTest {
         @DisplayName("수신 여부, 읽음 여부, 차단 여부를 모두 만족하는 발신자 ID 목록을 가져온다")
         void findUnreadSenderIds_Success() {
             // given
-            // 1. 아직 안 읽은 친구 버즈 (포함 대상 - 10L)
             saveBuzz(10L, List.of(recipientId));
 
-            // 2. 이미 읽은 버즈 (제외 대상 - 11L)
-            // 리포지토리에 markAsRead가 없으므로 mongoTemplate으로 직접 읽음 상태 주입
             Buzz readBuzz = saveBuzz(11L, List.of(recipientId));
             manuallyMarkAsRead(readBuzz.getId(), recipientId);
 
-            // 3. 나를 차단한 친구 버즈 (제외 대상 - 12L)
             saveBuzz(12L, List.of(recipientId));
 
-            // 4. 수신자가 내가 아닌 버즈 (제외 대상 - 13L)
             saveBuzz(13L, List.of(99L));
 
             Set<Long> blockedIds = Set.of(12L);
@@ -184,7 +177,6 @@ class BuzzMongoTemplateRepositoryTest {
             List<Long> unreadSenderIds = templateRepository.findUnreadSenderIds(recipientId, blockedIds);
 
             // then
-            // setUp에서 만든 1L과 방금 만든 10L만 포함되어야 함 (버즈 기준)
             assertThat(unreadSenderIds).containsExactlyInAnyOrder(1L, 10L);
             assertThat(unreadSenderIds).doesNotContain(11L, 12L, 13L);
         }

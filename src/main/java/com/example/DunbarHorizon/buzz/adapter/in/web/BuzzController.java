@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web;
 
+import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzCommentRequest;
 import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzCreateRequest;
-import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzReplyRequest;
 import com.example.DunbarHorizon.buzz.application.port.in.BuzzCommandUseCase;
 import com.example.DunbarHorizon.buzz.application.port.in.BuzzQueryUseCase;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
@@ -57,33 +57,33 @@ public class BuzzController {
         return ResponseEntity.ok(buzzQueryUseCase.getUnreadSenderIds(currentUserId));
     }
 
-    @PostMapping(value = "/{buzzId}/replies", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Void> reply(
+    @PostMapping(value = "/{buzzId}/comments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> comment(
             @CurrentUserId Long currentUserId,
             @PathVariable String buzzId,
-            @RequestPart("request") @Valid BuzzReplyRequest dto,
+            @RequestPart("request") @Valid BuzzCommentRequest dto,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) {
-        buzzCommandUseCase.replyToBuzz(currentUserId, buzzId, dto.text(), images, dto.isPublic());
+        buzzCommandUseCase.commentOnBuzz(currentUserId, buzzId, dto.text(), images, dto.isPublic());
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @PatchMapping(value = "/{buzzId}/replies/{replyId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Void> updateReply(
+    @PatchMapping(value = "/{buzzId}/comments/{commentId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> updateComment(
             @CurrentUserId Long currentUserId,
             @PathVariable String buzzId,
-            @PathVariable String replyId,
-            @RequestPart("request") @Valid BuzzReplyRequest dto,
+            @PathVariable String commentId,
+            @RequestPart("request") @Valid BuzzCommentRequest dto,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) {
-        buzzCommandUseCase.updateReply(currentUserId, buzzId, replyId, dto.text(), images);
+        buzzCommandUseCase.updateComment(currentUserId, buzzId, commentId, dto.text(), images);
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/{buzzId}/replies/{replyId}")
-    public ResponseEntity<Void> deleteReply(
+    @DeleteMapping("/{buzzId}/comments/{commentId}")
+    public ResponseEntity<Void> deleteComment(
             @CurrentUserId Long currentUserId,
             @PathVariable String buzzId,
-            @PathVariable String replyId) {
-        buzzCommandUseCase.deleteReply(currentUserId, buzzId, replyId);
+            @PathVariable String commentId) {
+        buzzCommandUseCase.deleteComment(currentUserId, buzzId, commentId);
         return ResponseEntity.noContent().build();
     }
 

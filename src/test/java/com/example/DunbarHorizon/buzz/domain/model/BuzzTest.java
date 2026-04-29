@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.buzz.domain.model;
 
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.BuzzReply;
+import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import org.junit.jupiter.api.BeforeEach;
@@ -97,8 +97,8 @@ class BuzzTest {
     }
 
     @Nested
-    @DisplayName("답장(Response) 생성 비즈니스 로직 테스트")
-    class ResponseCreationTest {
+    @DisplayName("댓글(Comment) 생성 비즈니스 로직 테스트")
+    class CommentCreationTest {
         private Buzz buzz;
 
         @BeforeEach
@@ -113,45 +113,45 @@ class BuzzTest {
         }
 
         @Test
-        @DisplayName("수신자가 답장을 남기면 readRecipientIds에 추가된다")
-        void createResponse_Success_WithProfile() {
+        @DisplayName("수신자가 댓글을 남기면 readRecipientIds에 추가된다")
+        void createComment_Success_WithProfile() {
             // when
-            BuzzReply response = buzz.createReply(
-                    recipientId, recipientNickname, recipientProfile, "Good Reply", null, true);
+            BuzzComment comment = buzz.createComment(
+                    recipientId, recipientNickname, recipientProfile, "Good Comment", null, true);
 
             // then
-            assertThat(response.getReplierNickname()).isEqualTo(recipientNickname);
-            assertThat(response.getReplierProfileImageUrl()).isEqualTo(recipientProfile);
+            assertThat(comment.getCommenterNickname()).isEqualTo(recipientNickname);
+            assertThat(comment.getCommenterProfileImageUrl()).isEqualTo(recipientProfile);
             assertThat(buzz.getReadRecipientIds()).contains(recipientId);
         }
 
         @Test
-        @DisplayName("작성자 본인이 답장을 남길 수 있다")
-        void createReply_Success_ByCreator() {
+        @DisplayName("작성자 본인이 댓글을 남길 수 있다")
+        void createComment_Success_ByCreator() {
             // when
-            BuzzReply reply = buzz.createReply(
-                    creatorId, creatorNickname, creatorProfile, "Creator Reply", null, true);
+            BuzzComment comment = buzz.createComment(
+                    creatorId, creatorNickname, creatorProfile, "Creator Comment", null, true);
 
             // then
-            assertThat(reply.getReplierId()).isEqualTo(creatorId);
+            assertThat(comment.getCommenterId()).isEqualTo(creatorId);
         }
 
         @Test
-        @DisplayName("작성자가 답장을 남겨도 readRecipientIds에 추가되지 않는다")
-        void createReply_Creator_NotMarkedAsRead() {
+        @DisplayName("작성자가 댓글을 남겨도 readRecipientIds에 추가되지 않는다")
+        void createComment_Creator_NotMarkedAsRead() {
             // when
-            buzz.createReply(creatorId, creatorNickname, creatorProfile, "Creator Reply", null, true);
+            buzz.createComment(creatorId, creatorNickname, creatorProfile, "Creator Comment", null, true);
 
             // then
             assertThat(buzz.getReadRecipientIds()).doesNotContain(creatorId);
         }
 
         @Test
-        @DisplayName("수신자도 작성자도 아닌 제3자가 답장을 시도하면 예외가 발생한다")
-        void createReply_Fail_ByStranger() {
+        @DisplayName("수신자도 작성자도 아닌 제3자가 댓글을 시도하면 예외가 발생한다")
+        void createComment_Fail_ByStranger() {
             // when & then
-            assertThatThrownBy(() -> buzz.createReply(
-                    strangerId, "낯선자", "stranger.png", "Stranger Reply", null, true))
+            assertThatThrownBy(() -> buzz.createComment(
+                    strangerId, "낯선자", "stranger.png", "Stranger Comment", null, true))
                     .isInstanceOf(BuzzAccessDeniedException.class);
         }
     }
@@ -160,7 +160,7 @@ class BuzzTest {
     @DisplayName("수정 및 삭제 권한 테스트")
     class AuthorityTest {
         private Buzz buzz;
-        private BuzzReply response;
+        private BuzzComment comment;
 
         @BeforeEach
         void setUp() {
@@ -172,37 +172,37 @@ class BuzzTest {
                     .recipientIds(List.of(recipientId))
                     .build();
 
-            response = buzz.createReply(recipientId, recipientNickname, recipientProfile, "Original Reply", null,true);
+            comment = buzz.createComment(recipientId, recipientNickname, recipientProfile, "Original Comment", null, true);
 
-            List<BuzzReply> responses = new ArrayList<>();
-            responses.add(response);
+            List<BuzzComment> comments = new ArrayList<>();
+            comments.add(comment);
 
-            ReflectionTestUtils.setField(buzz, "replies", responses);
+            ReflectionTestUtils.setField(buzz, "comments", comments);
         }
 
         @Test
-        @DisplayName("답장 작성자가 아닌 사람이 수정을 시도하면 예외가 발생한다")
-        void updateResponse_Fail_NotAuthor() {
-            assertThatThrownBy(() -> buzz.updateReply(creatorId, response.getReplyId(), "New Text", null))
+        @DisplayName("댓글 작성자가 아닌 사람이 수정을 시도하면 예외가 발생한다")
+        void updateComment_Fail_NotAuthor() {
+            assertThatThrownBy(() -> buzz.updateComment(creatorId, comment.getCommentId(), "New Text", null))
                     .isInstanceOf(BuzzAccessDeniedException.class);
         }
 
         @Test
-        @DisplayName("답장 삭제는 작성자 본인이 할 수 있다")
-        void validateResponseDeletion_Success_ByAuthor() {
-            buzz.validateReplyDeletion(recipientId, response.getReplyId());
+        @DisplayName("댓글 삭제는 작성자 본인이 할 수 있다")
+        void validateCommentDeletion_Success_ByAuthor() {
+            buzz.validateCommentDeletion(recipientId, comment.getCommentId());
         }
 
         @Test
-        @DisplayName("답장 삭제는 버즈 생성자도 할 수 있다")
-        void validateResponseDeletion_Success_ByCreator() {
-            buzz.validateReplyDeletion(creatorId, response.getReplyId());
+        @DisplayName("댓글 삭제는 버즈 생성자도 할 수 있다")
+        void validateCommentDeletion_Success_ByCreator() {
+            buzz.validateCommentDeletion(creatorId, comment.getCommentId());
         }
 
         @Test
-        @DisplayName("제3자가 답장 삭제를 시도하면 예외가 발생한다")
-        void validateResponseDeletion_Fail_ByStranger() {
-            assertThatThrownBy(() -> buzz.validateReplyDeletion(strangerId, response.getReplyId()))
+        @DisplayName("제3자가 댓글 삭제를 시도하면 예외가 발생한다")
+        void validateCommentDeletion_Fail_ByStranger() {
+            assertThatThrownBy(() -> buzz.validateCommentDeletion(strangerId, comment.getCommentId()))
                     .isInstanceOf(BuzzAccessDeniedException.class);
         }
     }

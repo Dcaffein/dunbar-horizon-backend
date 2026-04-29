@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.buzz.adapter.out.persistence.mongo;
 
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.BuzzReply;
+import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -18,18 +18,18 @@ public class BuzzMongoTemplateRepository {
 
     private final MongoTemplate mongoTemplate;
 
-    public void addReply(String buzzId, BuzzReply response) {
+    public void addComment(String buzzId, BuzzComment comment) {
         Query query = new Query(Criteria.where("id").is(buzzId));
         Update update = new Update()
-                .push(BuzzField.RESPONSES, response)
-                .addToSet(BuzzField.READ_RECIPIENTS, response.getReplierId());
+                .push(BuzzField.RESPONSES, comment)
+                .addToSet(BuzzField.READ_RECIPIENTS, comment.getCommenterId());
 
         mongoTemplate.updateFirst(query, update, Buzz.class);
     }
 
-    public void updateReply(String buzzId, String responseId, String text, List<String> imageUrls) {
+    public void updateComment(String buzzId, String commentId, String text, List<String> imageUrls) {
         Query query = new Query(Criteria.where("id").is(buzzId)
-                .and(BuzzField.RESPONSES + "." + BuzzField.RESPONSE_ID).is(responseId));
+                .and(BuzzField.RESPONSES + "." + BuzzField.RESPONSE_ID).is(commentId));
 
         Update update = new Update()
                 .set(BuzzField.RESPONSES + ".$." + BuzzField.TEXT, text)
@@ -38,35 +38,29 @@ public class BuzzMongoTemplateRepository {
         mongoTemplate.updateFirst(query, update, Buzz.class);
     }
 
-    public void removeReply(String buzzId, String responseId) {
+    public void removeComment(String buzzId, String commentId) {
         Query query = new Query(Criteria.where("id").is(buzzId));
         Update update = new Update().pull(BuzzField.RESPONSES,
-                Query.query(Criteria.where(BuzzField.RESPONSE_ID).is(responseId)));
+                Query.query(Criteria.where(BuzzField.RESPONSE_ID).is(commentId)));
 
         mongoTemplate.updateFirst(query, update, Buzz.class);
     }
 
     public List<Long> findUnreadSenderIds(Long userId, Set<Long> mutedIds) {
-        // 1. 내가 수신자 리스트에 있고 2. 내가 읽은 리스트에는 없으며 3. 차단하지 않은 유저의 캐스트 조회
         Criteria criteria = Criteria.where(BuzzField.RECIPIENT_IDS).is(userId)
                 .and(BuzzField.READ_RECIPIENTS).ne(userId)
                 .and(BuzzField.CREATOR_ID).nin(mutedIds);
 
-        // creatorId만 추출하여 중복 제거(distinct)
         return mongoTemplate.findDistinct(new Query(criteria), BuzzField.CREATOR_ID, Buzz.class, Long.class);
     }
 
     public void addReadRecipient(String buzzId, Long userId) {
         Query query = new Query(Criteria.where("id").is(buzzId));
-
-        Update update = new Update()
-                // $addToSet: 배열에 데이터가 없을 때만 추가
-                .addToSet("readRecipientIds", userId);
-
+        Update update = new Update().addToSet("readRecipientIds", userId);
         mongoTemplate.updateFirst(query, update, Buzz.class);
     }
 
-    public Buzz findByIdWithReplySlice(String buzzId) {
+    public Buzz findByIdWithCommentSlice(String buzzId) {
         Query query = new Query(Criteria.where("_id").is(buzzId));
         query.fields().slice(BuzzField.RESPONSES, -20);
         return mongoTemplate.findOne(query, Buzz.class);

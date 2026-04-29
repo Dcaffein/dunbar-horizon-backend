@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.buzz.application.eventHandler;
 
+import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
-import com.example.DunbarHorizon.buzz.domain.event.BuzzRepliedEvent;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import lombok.RequiredArgsConstructor;
@@ -27,9 +27,9 @@ public class BuzzInteractionEventListener {
     }
 
     @EventListener
-    public void onBuzzReplied(BuzzRepliedEvent event) {
+    public void onBuzzCommented(BuzzCommentedEvent event) {
         eventPublisher.publishEvent(new UserInteractionEvent(
-                event.replierId(),
+                event.commenterId(),
                 event.creatorId(),
                 InteractionType.BUZZ_REPLY
         ));

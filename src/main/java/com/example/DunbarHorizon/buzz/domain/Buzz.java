@@ -35,7 +35,7 @@ public class Buzz {
 
     private List<Long> readRecipientIds = new ArrayList<>();
 
-    private List<BuzzReply> replies = new ArrayList<>();
+    private List<BuzzComment> comments = new ArrayList<>();
 
     private LocalDateTime createdAt;
 
@@ -78,24 +78,24 @@ public class Buzz {
         }
     }
 
-    public BuzzReply createReply(Long replierId, String nickname, String profileImageUrl,
-                                 String text, List<String> imageUrls, boolean isPublic) {
+    public BuzzComment createComment(Long commenterId, String nickname, String profileImageUrl,
+                                     String text, List<String> imageUrls, boolean isPublic) {
         if (isExpired()) {
-            throw new BuzzInvalidStateException("만료된 캐스트에는 답장할 수 없습니다.");
+            throw new BuzzInvalidStateException("만료된 캐스트에는 댓글을 남길 수 없습니다.");
         }
-        if (!isRecipient(replierId) && !creatorId.equals(replierId)) {
-            throw new BuzzAccessDeniedException("이 캐스트에 답장을 남길 권한이 없습니다.");
-        }
-
-        if (isRecipient(replierId)) {
-            markAsRead(replierId);
+        if (!isRecipient(commenterId) && !creatorId.equals(commenterId)) {
+            throw new BuzzAccessDeniedException("이 캐스트에 댓글을 남길 권한이 없습니다.");
         }
 
-        return BuzzReply.builder()
-                .replyId(UUID.randomUUID().toString())
-                .replierId(replierId)
-                .replierNickname(nickname)
-                .replierProfileImageUrl(profileImageUrl)
+        if (isRecipient(commenterId)) {
+            markAsRead(commenterId);
+        }
+
+        return BuzzComment.builder()
+                .commentId(UUID.randomUUID().toString())
+                .commenterId(commenterId)
+                .commenterNickname(nickname)
+                .commenterProfileImageUrl(profileImageUrl)
                 .text(text)
                 .imageUrls(imageUrls)
                 .createdAt(LocalDateTime.now())
@@ -103,33 +103,33 @@ public class Buzz {
                 .build();
     }
 
-    public void updateReply(Long requesterId, String replyId, String newText, List<String> newImageUrls) {
+    public void updateComment(Long requesterId, String commentId, String newText, List<String> newImageUrls) {
         if (isExpired()) {
-            throw new BuzzInvalidStateException("만료된 캐스트의 답장은 수정할 수 없습니다.");
+            throw new BuzzInvalidStateException("만료된 캐스트의 댓글은 수정할 수 없습니다.");
         }
 
-        BuzzReply target = findReplies(replyId);
+        BuzzComment target = findComments(commentId);
 
-        if (!target.getReplierId().equals(requesterId)) {
-            throw new BuzzAccessDeniedException("답장 수정 권한이 없습니다.");
+        if (!target.getCommenterId().equals(requesterId)) {
+            throw new BuzzAccessDeniedException("댓글 수정 권한이 없습니다.");
         }
 
         target.update(newText, newImageUrls);
     }
 
-    public void validateReplyDeletion(Long requesterId, String replyId) {
-        BuzzReply target = findReplies(replyId);
+    public void validateCommentDeletion(Long requesterId, String commentId) {
+        BuzzComment target = findComments(commentId);
 
-        if (!target.getReplierId().equals(requesterId) && !this.creatorId.equals(requesterId)) {
-            throw new BuzzAccessDeniedException("답장 삭제 권한이 없습니다.");
+        if (!target.getCommenterId().equals(requesterId) && !this.creatorId.equals(requesterId)) {
+            throw new BuzzAccessDeniedException("댓글 삭제 권한이 없습니다.");
         }
     }
 
-    private BuzzReply findReplies(String replyId) {
-        return replies.stream()
-                .filter(r -> r.getReplyId().equals(replyId))
+    private BuzzComment findComments(String commentId) {
+        return comments.stream()
+                .filter(c -> c.getCommentId().equals(commentId))
                 .findFirst()
-                .orElseThrow(() -> new BuzzInvalidStateException("존재하지 않는 답장입니다."));
+                .orElseThrow(() -> new BuzzInvalidStateException("존재하지 않는 댓글입니다."));
     }
 
     private void validateRecipientIds(List<Long> recipientIds) {
