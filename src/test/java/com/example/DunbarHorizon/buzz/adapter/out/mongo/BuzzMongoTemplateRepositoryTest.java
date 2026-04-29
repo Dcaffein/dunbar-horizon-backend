@@ -17,6 +17,7 @@ import org.springframework.data.mongodb.core.query.Update;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -118,6 +119,41 @@ class BuzzMongoTemplateRepositoryTest {
             // then
             Buzz updated = mongoTemplate.findById(savedBuzzId, Buzz.class);
             assertThat(updated.getReplies()).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("답장 슬라이스 조회 (findByIdWithReplySlice) 테스트")
+    class ReplySliceQueryTest {
+
+        @Test
+        @DisplayName("replies가 25개이면 최신 20개만 반환한다")
+        void findByIdWithReplySlice_Returns20WhenOver() {
+            // given
+            IntStream.rangeClosed(1, 25).forEach(i ->
+                    templateRepository.addReply(savedBuzzId,
+                            BuzzReply.of("res-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
+
+            // when
+            Buzz result = templateRepository.findByIdWithReplySlice(savedBuzzId);
+
+            // then
+            assertThat(result.getReplies()).hasSize(20);
+        }
+
+        @Test
+        @DisplayName("replies가 10개이면 전체 10개를 반환한다")
+        void findByIdWithReplySlice_ReturnsAllWhenUnder() {
+            // given
+            IntStream.rangeClosed(1, 10).forEach(i ->
+                    templateRepository.addReply(savedBuzzId,
+                            BuzzReply.of("res-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
+
+            // when
+            Buzz result = templateRepository.findByIdWithReplySlice(savedBuzzId);
+
+            // then
+            assertThat(result.getReplies()).hasSize(10);
         }
     }
 
