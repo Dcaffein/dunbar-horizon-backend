@@ -27,7 +27,7 @@ public class BuzzRepositoryAdapter implements BuzzRepository {
 
     @Override
     public Buzz findById(String id) {
-        return buzzSDMRepository.findById(id).orElse(null);
+        return buzzTemplateRepository.findByIdWithReplySlice(id);
     }
 
     @Override

@@ -65,4 +65,10 @@ public class BuzzMongoTemplateRepository {
 
         mongoTemplate.updateFirst(query, update, Buzz.class);
     }
+
+    public Buzz findByIdWithReplySlice(String buzzId) {
+        Query query = new Query(Criteria.where("_id").is(buzzId));
+        query.fields().slice(BuzzField.RESPONSES, -20);
+        return mongoTemplate.findOne(query, Buzz.class);
+    }
 }
