@@ -12,6 +12,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,6 +43,41 @@ class BuzzTest {
                     .recipientIds(List.of())
                     .build())
                     .isInstanceOf(BuzzInvalidStateException.class);
+        }
+
+        @Test
+        @DisplayName("수신자가 150명을 초과하면 생성에 실패한다")
+        void createBuzz_Fail_TooManyRecipients() {
+            // given
+            List<Long> recipients = LongStream.rangeClosed(1, 151).boxed().toList();
+
+            // when & then
+            assertThatThrownBy(() -> Buzz.builder()
+                    .creatorId(creatorId)
+                    .creatorNickname(creatorNickname)
+                    .creatorProfileImageUrl(creatorProfile)
+                    .text("Hello")
+                    .recipientIds(recipients)
+                    .build())
+                    .isInstanceOf(BuzzInvalidStateException.class);
+        }
+
+        @Test
+        @DisplayName("수신자가 정확히 150명이면 생성에 성공한다")
+        void createBuzz_Success_MaxRecipients() {
+            // given
+            List<Long> recipients = LongStream.rangeClosed(1, 150).boxed().toList();
+
+            // when & then
+            Buzz buzz = Buzz.builder()
+                    .creatorId(creatorId)
+                    .creatorNickname(creatorNickname)
+                    .creatorProfileImageUrl(creatorProfile)
+                    .text("Hello")
+                    .recipientIds(recipients)
+                    .build();
+
+            assertThat(buzz.getRecipientIds()).hasSize(150);
         }
 
         @Test

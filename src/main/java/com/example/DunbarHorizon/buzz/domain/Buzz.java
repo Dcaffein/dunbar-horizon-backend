@@ -134,5 +134,8 @@ public class Buzz {
         if (recipientIds == null || recipientIds.isEmpty()) {
             throw new BuzzInvalidStateException("수신자가 최소 한 명 이상 지정되어야 합니다.");
         }
+        if (recipientIds.size() > 150) {
+            throw new BuzzInvalidStateException("수신자는 최대 150명까지 지정할 수 있습니다.");
+        }
     }
 }
