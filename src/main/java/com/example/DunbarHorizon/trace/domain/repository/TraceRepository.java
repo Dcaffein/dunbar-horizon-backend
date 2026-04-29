@@ -5,6 +5,6 @@ import com.example.DunbarHorizon.trace.domain.model.Trace;
 import java.util.Optional;
 
 public interface TraceRepository {
-    Optional<Trace> findByVisitorAndTarget(Long visitorId, Long targetId);
+    Optional<Trace> findByUserAIdAndUserBId(Long visitorId, Long targetId);
     Trace save(Trace trace);
 }

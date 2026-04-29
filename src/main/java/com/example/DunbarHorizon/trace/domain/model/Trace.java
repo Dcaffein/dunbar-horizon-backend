@@ -1,86 +1,140 @@
 package com.example.DunbarHorizon.trace.domain.model;
 
+import com.example.DunbarHorizon.global.common.BaseTimeAggregateRoot;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
-import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import com.example.DunbarHorizon.trace.domain.event.TraceRevealedEvent;
+import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.Objects;
 
 @Entity
 @Getter
-@Table(name = "traces", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_visitor_target", columnNames = {"visitor_id", "target_id"})
-})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Trace {
+@Table(name = "trace", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_trace_users", columnNames = {"user_a_id", "user_b_id"})
+})
+public class Trace extends BaseTimeAggregateRoot {
 
-    public static final int REVEAL_THRESHOLD = 3;
+    private static final int REVEAL_THRESHOLD = 3;
+    private static final int REVEALED_EXPIRATION_DAYS = 7;
+    private static final int TRACING_EXPIRATION_DAYS = 3;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "visitor_id", nullable = false)
-    private Long visitorId;
+    @Column(name = "user_a_id", nullable = false)
+    private Long userAId;
 
-    @Column(name = "target_id", nullable = false)
-    private Long targetId;
-
-    @Column(nullable = false)
-    private Integer count;
+    @Column(name = "user_b_id", nullable = false)
+    private Long userBId;
 
     @Column(nullable = false)
-    private LocalDateTime lastVisitedAt;
+    private int userACount;
+
+    @Column(nullable = false)
+    private int userBCount;
+
+    private LocalDateTime userALastVisitedAt;
+    private LocalDateTime userBLastVisitedAt;
+
+    @Column(nullable = false)
+    private boolean isRevealed;
+
+    private LocalDateTime revealedAt;
+
+    @Column(nullable = false)
+    private LocalDateTime lastTracedAt;
+
+    @Version
+    private Long version;
 
     public Trace(Long visitorId, Long targetId) {
-        if (visitorId.equals(targetId)) {
-            throw new IllegalArgumentException("자기 자신은 방문할 수 없습니다.");
+        validateNotSelf(visitorId, targetId);
+
+        if (visitorId < targetId) {
+            this.userAId = visitorId;
+            this.userBId = targetId;
+            this.userACount = 1;
+            this.userBCount = 0;
+            this.userALastVisitedAt = LocalDateTime.now();
+        } else {
+            this.userAId = targetId;
+            this.userBId = visitorId;
+            this.userACount = 0;
+            this.userBCount = 1;
+            this.userBLastVisitedAt = LocalDateTime.now();
         }
-        this.visitorId = visitorId;
-        this.targetId = targetId;
-        this.count = 1;
-        this.lastVisitedAt = LocalDateTime.now();
+
+        this.isRevealed = false;
+        this.lastTracedAt = LocalDateTime.now();
     }
 
-    public void updateVisitCount() {
+    public void recordVisit(Long visitorId) {
+        if (isExpired()) {
+            throw new IllegalStateException("This trace has already expired.");
+        }
+
         LocalDateTime now = LocalDateTime.now();
-        if (isExpired(now)) {
-            this.count = 1;
-        } else if (isDifferentDay(now)) {
-            this.count++;
+        Long targetId;
+
+        // 1. 방문자 식별 및 카운트 증가, 타겟 ID 추출
+        if (Objects.equals(this.userAId, visitorId)) {
+            if (isAlreadyVisitedToday(this.userALastVisitedAt, now)) return;
+            this.userACount++;
+            this.userALastVisitedAt = now;
+            targetId = this.userBId; // A가 방문했으니 타겟은 B
+        } else if (Objects.equals(this.userBId, visitorId)) {
+            if (isAlreadyVisitedToday(this.userBLastVisitedAt, now)) return;
+            this.userBCount++;
+            this.userBLastVisitedAt = now;
+            targetId = this.userAId; // B가 방문했으니 타겟은 A
+        } else {
+            throw new IllegalArgumentException("Visitor is not a participant of this trace.");
         }
-        this.lastVisitedAt = now;
+
+        this.lastTracedAt = now;
+
+        // 2. 일상적인 방문에 대한 친밀도 증가 이벤트 발행
+        registerEvent(new UserInteractionEvent(visitorId, targetId, InteractionType.VISIT));
+
+        // 3. 상호 호감(Reveal) 조건 검사 및 이벤트 발행
+        checkAndReveal();
     }
 
-    public boolean isRevealReady() {
-        return this.count >= REVEAL_THRESHOLD;
-    }
+    public boolean isExpired() {
+        LocalDateTime now = LocalDateTime.now();
 
-    public Optional<TraceRevealedEvent> checkRevealEvent(int partnerCount) {
-        if (this.isRevealReady() && partnerCount >= REVEAL_THRESHOLD) {
-            return Optional.of(new TraceRevealedEvent(this.visitorId, this.targetId));
+        if (isRevealed && revealedAt != null) {
+            return revealedAt.plusDays(REVEALED_EXPIRATION_DAYS).isBefore(now);
         }
-        return Optional.empty();
+
+        return lastTracedAt.plusDays(TRACING_EXPIRATION_DAYS).isBefore(now);
     }
 
-    public UserInteractionEvent createInteractionEvent() {
-        return new UserInteractionEvent(
-                this.visitorId,
-                this.targetId,
-                InteractionType.VISIT
-        );
+    private void checkAndReveal() {
+        if (!isRevealed && userACount >= REVEAL_THRESHOLD && userBCount >= REVEAL_THRESHOLD) {
+            this.isRevealed = true;
+            this.revealedAt = LocalDateTime.now();
+            registerEvent(new TraceRevealedEvent(this.userAId, this.userBId));
+        }
     }
 
-    private boolean isExpired(LocalDateTime now) {
-        return this.lastVisitedAt.plusDays(7).isBefore(now);
+    private boolean isAlreadyVisitedToday(LocalDateTime lastVisitedAt, LocalDateTime now) {
+        if (lastVisitedAt == null) {
+            return false;
+        }
+        return lastVisitedAt.toLocalDate().isEqual(now.toLocalDate());
     }
 
-    private boolean isDifferentDay(LocalDateTime now) {
-        return !this.lastVisitedAt.toLocalDate().isEqual(now.toLocalDate());
+    private void validateNotSelf(Long visitorId, Long targetId) {
+        if (Objects.equals(visitorId, targetId)) {
+            throw new IllegalArgumentException("Cannot trace self.");
+        }
     }
 }

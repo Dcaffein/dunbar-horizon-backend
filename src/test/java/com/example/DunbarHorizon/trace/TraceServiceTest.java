@@ -1,24 +1,18 @@
-package com.example.DunbarHorizon.trace;
+package com.example.DunbarHorizon.trace.application;
 
-import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import com.example.DunbarHorizon.trace.adapter.in.web.dto.TraceRecordResponseDto;
-import com.example.DunbarHorizon.trace.application.TraceService;
-import com.example.DunbarHorizon.trace.domain.event.TraceRevealedEvent;
 import com.example.DunbarHorizon.trace.domain.model.Trace;
 import com.example.DunbarHorizon.trace.domain.repository.TraceRepository;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
@@ -28,56 +22,65 @@ class TraceServiceTest {
 
     @InjectMocks
     private TraceService traceService;
+
     @Mock
     private TraceRepository traceRepository;
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
 
-    private final Long visitorId = 1L;
-    private final Long targetId = 2L;
+    private final Long user1 = 1L;
+    private final Long user2 = 2L;
 
     @Test
-    @DisplayName("첫 방문 시 새로운 Trace를 생성하고 상호작용 이벤트를 발행한다")
-    void recordTrace_FirstTime_Success() {
-        // given
-        given(traceRepository.findByVisitorAndTarget(visitorId, targetId)).willReturn(Optional.empty());
-        given(traceRepository.findByVisitorAndTarget(targetId, visitorId)).willReturn(Optional.empty());
+    @DisplayName("기존 흔적이 없으면 새로운 Trace를 생성하고 방문을 기록한 뒤 저장한다")
+    void recordTrace_NewTrace_Success() {
+        // given: 리포지토리에 데이터가 없는 상황 (1L, 2L 순서로 조회됨)
+        given(traceRepository.findByUserAIdAndUserBId(user1, user2))
+                .willReturn(Optional.empty());
 
         // when
-        TraceRecordResponseDto response = traceService.recordTrace(visitorId, targetId);
+        TraceRecordResponseDto response = traceService.recordTrace(user1, user2);
 
         // then
-        assertThat(response.isMatched()).isEqualTo(false);
-        verify(traceRepository).save(any(Trace.class));
-        verify(eventPublisher).publishEvent(any(UserInteractionEvent.class));
-        verify(eventPublisher, never()).publishEvent(any(TraceRevealedEvent.class));
+        verify(traceRepository).save(any(Trace.class)); // 새로운 객체가 저장되었는지 확인
+        assertThat(response.isRevealed()).isFalse();   // 초기 상태이므로 false 반환 확인
     }
 
     @Test
-    @DisplayName("서로 3회 이상 방문했을 경우 정체 공개 이벤트를 발행한다")
-    void recordTrace_Reveal_Success() {
-        // given
-        // 내 방문 기록 (이미 2회였고 이번에 3회째가 된다고 가정)
-        Trace myTrace = spy(new Trace(visitorId, targetId));
-        ReflectionTestUtils.setField(myTrace, "id", 100L);
-        ReflectionTestUtils.setField(myTrace, "count", 2);
-        // 마지막 방문일은 어제로 설정하여 오늘 방문 시 카운트가 오르도록 유도
-        ReflectionTestUtils.setField(myTrace, "lastVisitedAt", LocalDateTime.now().minusDays(1));
-
-        // 상대방의 나에 대한 방문 기록 (이미 3회)
-        Trace partnerTrace = new Trace(targetId, visitorId);
-        ReflectionTestUtils.setField(partnerTrace, "count", 3);
-
-        given(traceRepository.findByVisitorAndTarget(visitorId, targetId)).willReturn(Optional.of(myTrace));
-        given(traceRepository.findByVisitorAndTarget(targetId, visitorId)).willReturn(Optional.of(partnerTrace));
+    @DisplayName("기존 흔적이 존재하면 해당 객체에 방문 기록을 위임하고 변경 사항을 저장한다")
+    void recordTrace_ExistingTrace_DelegatesToDomain() {
+        // given: 이미 존재하는 Trace 모킹
+        Trace mockTrace = spy(new Trace(user1, user2));
+        given(traceRepository.findByUserAIdAndUserBId(user1, user2))
+                .willReturn(Optional.of(mockTrace));
 
         // when
-        TraceRecordResponseDto response = traceService.recordTrace(visitorId, targetId);
+        traceService.recordTrace(user1, user2);
 
         // then
-        assertThat(response.isMatched()).isEqualTo(true);
-        assertThat(myTrace.getCount()).isEqualTo(3);
-        verify(eventPublisher).publishEvent(any(TraceRevealedEvent.class));
-        verify(eventPublisher).publishEvent(any(UserInteractionEvent.class));
+        verify(mockTrace).recordVisit(user1); // 도메인 로직(recordVisit)이 호출되었는지 확인
+        verify(traceRepository).save(mockTrace); // 변경된 객체가 저장되었는지 확인
+    }
+
+    @Test
+    @DisplayName("도메인 객체가 공개(Revealed) 상태라면 응답 DTO에 반영되어야 한다")
+    void recordTrace_WhenRevealed_ReturnsRevealedDto() {
+        // given: 공개 조건이 이미 충족된 상태의 Trace 가정
+        Trace revealedTrace = new Trace(user1, user2);
+        // 리플렉션 등을 사용하지 않고도 테스트 가능하도록 도메인 상태를 조작하거나
+        // 실제 recordVisit을 여러번 호출한 객체를 준비할 수 있습니다.
+        for(int i=0; i<3; i++) {
+            // 내부 로직상 날짜 제한이 있다면 spy나 별도 조작이 필요할 수 있음
+        }
+
+        // 여기서는 단순하게 공개 상태로 가정된 mock을 사용
+        Trace mockTrace = mock(Trace.class);
+        given(mockTrace.isRevealed()).willReturn(true);
+        given(traceRepository.findByUserAIdAndUserBId(anyLong(), anyLong()))
+                .willReturn(Optional.of(mockTrace));
+
+        // when
+        TraceRecordResponseDto response = traceService.recordTrace(user1, user2);
+
+        // then
+        assertThat(response.isRevealed()).isTrue();
     }
 }

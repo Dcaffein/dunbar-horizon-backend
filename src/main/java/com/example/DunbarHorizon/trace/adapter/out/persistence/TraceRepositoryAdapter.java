@@ -13,7 +13,7 @@ public class TraceRepositoryAdapter implements TraceRepository {
     private final TraceJpaRepository traceJpaRepository;
 
     @Override
-    public Optional<Trace> findByVisitorAndTarget(Long visitorId, Long targetId) {
+    public Optional<Trace> findByUserAIdAndUserBId(Long visitorId, Long targetId) {
         return traceJpaRepository.findByVisitorIdAndTargetId(visitorId, targetId);
     }
 

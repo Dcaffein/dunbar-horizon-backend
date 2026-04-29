@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record TraceRecordResponseDto(
-        boolean isMatched,
+        boolean isRevealed,
         Long targetId
 ) {
     public static TraceRecordResponseDto hidden() {

@@ -12,8 +12,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
 @Import(TraceRepositoryAdapter.class)
@@ -25,49 +25,56 @@ class TraceRepositoryAdapterTest {
     @Autowired
     private TestEntityManager entityManager;
 
-    private final Long visitorId = 1L;
-    private final Long targetId = 2L;
+    private final Long user1 = 1L;
+    private final Long user2 = 2L;
 
     @Test
-    @DisplayName("Trace를 저장하고 포트 메서드명으로 정확히 조회한다")
-    void saveAndFind_Success() {
-        // given
-        Trace trace = new Trace(visitorId, targetId);
+    @DisplayName("Trace를 저장하면 무조건 작은 ID가 userA로 저장되고, 정확히 조회된다")
+    void saveAndFind_SortsIds_Success() {
+        // given: 큰 ID(2L)가 방문자, 작은 ID(1L)가 타겟으로 역방향 생성
+        Trace trace = new Trace(user2, user1);
 
         // when
         traceRepositoryAdapter.save(trace);
+        entityManager.flush();
+        entityManager.clear(); // 1차 캐시를 비우고 DB에서 확실히 다시 조회
 
-        // then
-        Optional<Trace> found = traceRepositoryAdapter.findByVisitorAndTarget(visitorId, targetId);
+        // then: 조회할 때도 작은 값, 큰 값 순서로 조회
+        Optional<Trace> foundTrace = traceRepositoryAdapter.findByUserAIdAndUserBId(user1, user2);
 
-        assertThat(found).isPresent();
-        assertThat(found.get().getVisitorId()).isEqualTo(visitorId);
-        assertThat(found.get().getTargetId()).isEqualTo(targetId);
-        assertThat(found.get().getCount()).isEqualTo(1);
+        assertThat(foundTrace).isPresent();
+        // 식별자가 자동으로 정렬되어 저장되었는지 확인
+        assertThat(foundTrace.get().getUserAId()).isEqualTo(user1);
+        assertThat(foundTrace.get().getUserBId()).isEqualTo(user2);
+
+        // 2번 유저(B)가 방문한 기록이 정확히 반영되었는지 확인
+        assertThat(foundTrace.get().getUserACount()).isEqualTo(0);
+        assertThat(foundTrace.get().getUserBCount()).isEqualTo(1);
     }
 
     @Test
-    @DisplayName("동일한 방문자와 피방문자 쌍을 저장하면 DB 유니크 제약 조건에 의해 에러가 발생한다")
-    void uniqueConstraint_Violation() {
-        // given
-        Trace firstTrace = new Trace(visitorId, targetId);
+    @DisplayName("서로 역방향인 방문 기록을 두 번 생성해 저장하면 DB 복합 유니크 제약조건에 의해 실패한다")
+    void uniqueConstraint_Violation_With_ReversedIds() {
+        // given: A가 B를 방문한 기록 생성 및 DB 반영
+        Trace firstTrace = new Trace(user1, user2);
         traceRepositoryAdapter.save(firstTrace);
-        entityManager.flush(); // DB에 즉시 반영하여 제약 조건 활성화
+        entityManager.flush();
 
-        // when & then
-        Trace secondTrace = new Trace(visitorId, targetId);
+        // when & then: B가 A를 방문한 '새로운' 기록을 생성하려 시도
+        // (도메인 생성자에서 A, B가 다시 1, 2로 정렬되므로 기존 로우와 복합키가 충돌해야 함)
+        Trace secondTrace = new Trace(user2, user1);
 
         assertThatThrownBy(() -> {
             traceRepositoryAdapter.save(secondTrace);
-            entityManager.flush(); // 여기서 유니크 제약 위반 발생
+            entityManager.flush(); // 즉시 쿼리를 날려 제약 조건 위반을 유도
         }).isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
     @DisplayName("존재하지 않는 방문 기록을 조회하면 빈 Optional을 반환한다")
-    void findByVisitorAndTarget_Empty() {
+    void findByUserAIdAndUserBId_Empty() {
         // when
-        Optional<Trace> result = traceRepositoryAdapter.findByVisitorAndTarget(999L, 888L);
+        Optional<Trace> result = traceRepositoryAdapter.findByUserAIdAndUserBId(999L, 888L);
 
         // then
         assertThat(result).isEmpty();

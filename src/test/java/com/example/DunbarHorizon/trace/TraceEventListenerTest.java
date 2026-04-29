@@ -39,7 +39,6 @@ class TraceEventListenerTest {
 
         NotificationEvent publishedEvent = captor.getValue();
 
-        // [수정] receiverId() -> receiverIds() 리스트 검증
         assertThat(publishedEvent.receiverIds()).contains(2L);
         assertThat(publishedEvent.type()).isEqualTo(NotificationType.TRACE_REVEALED);
         assertThat(publishedEvent.title()).contains("서로간 잦은 방문");
