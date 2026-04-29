@@ -71,7 +71,7 @@ public class Buzz {
 
     public void markAsRead(Long userId) {
         if (!isRecipient(userId)) {
-            throw new BuzzAccessDeniedException("해당 캐스트의 수신자가 아닙니다.");
+            throw new BuzzAccessDeniedException("해당 Buzz의 수신자가 아닙니다.");
         }
         if (!readRecipientIds.contains(userId)) {
             this.readRecipientIds.add(userId);
@@ -81,10 +81,10 @@ public class Buzz {
     public BuzzComment createComment(Long commenterId, String nickname, String profileImageUrl,
                                      String text, List<String> imageUrls, boolean isPublic) {
         if (isExpired()) {
-            throw new BuzzInvalidStateException("만료된 캐스트에는 댓글을 남길 수 없습니다.");
+            throw new BuzzInvalidStateException("만료된 Buzz에는 댓글을 남길 수 없습니다.");
         }
         if (!isRecipient(commenterId) && !creatorId.equals(commenterId)) {
-            throw new BuzzAccessDeniedException("이 캐스트에 댓글을 남길 권한이 없습니다.");
+            throw new BuzzAccessDeniedException("이 Buzz에 댓글을 남길 권한이 없습니다.");
         }
 
         if (isRecipient(commenterId)) {
@@ -105,7 +105,7 @@ public class Buzz {
 
     public void updateComment(Long requesterId, String commentId, String newText, List<String> newImageUrls) {
         if (isExpired()) {
-            throw new BuzzInvalidStateException("만료된 캐스트의 댓글은 수정할 수 없습니다.");
+            throw new BuzzInvalidStateException("만료된 Buzz의 댓글은 수정할 수 없습니다.");
         }
 
         BuzzComment target = findComments(commentId);
