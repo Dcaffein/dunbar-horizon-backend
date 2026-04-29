@@ -52,7 +52,7 @@ class BuzzControllerTest extends BaseControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.validation.memberIds").exists());
+                    .andExpect(jsonPath("$.validation['recipient.memberIds']").exists());
         }
 
         @Test
