@@ -44,7 +44,7 @@ class TraceControllerTest extends BaseControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.isMatched").value(false));
+                .andExpect(jsonPath("$.isRevealed").value(false));
 
         // 서비스가 로그인 유저 ID(1L)와 타겟 ID(2L)로 호출되었는지 검증
         verify(traceService).recordTrace(1L, targetId);
