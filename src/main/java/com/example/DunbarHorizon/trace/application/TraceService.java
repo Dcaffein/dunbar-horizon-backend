@@ -4,6 +4,9 @@ import com.example.DunbarHorizon.trace.adapter.in.web.dto.TraceRecordResponseDto
 import com.example.DunbarHorizon.trace.domain.model.Trace;
 import com.example.DunbarHorizon.trace.domain.repository.TraceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +16,7 @@ public class TraceService {
 
     private final TraceRepository traceRepository;
 
+    @Retryable(retryFor = {DataIntegrityViolationException.class, ObjectOptimisticLockingFailureException.class}, maxAttempts = 3)
     @Transactional
     public TraceRecordResponseDto recordTrace(Long visitorId, Long targetId) {
 
