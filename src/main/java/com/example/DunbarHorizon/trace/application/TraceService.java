@@ -16,10 +16,7 @@ public class TraceService {
     @Transactional
     public TraceRecordResponseDto recordTrace(Long visitorId, Long targetId) {
 
-        Long userAId = Math.min(visitorId, targetId);
-        Long userBId = Math.max(visitorId, targetId);
-
-        Trace trace = traceRepository.findByUserAIdAndUserBId(userAId, userBId)
+        Trace trace = traceRepository.findByUserAIdAndUserBId(visitorId, targetId)
                 .orElseGet(() -> new Trace(visitorId, targetId));
 
         trace.recordVisit(visitorId);

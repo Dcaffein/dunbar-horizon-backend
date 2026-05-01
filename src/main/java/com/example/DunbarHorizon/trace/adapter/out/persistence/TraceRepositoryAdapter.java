@@ -13,8 +13,9 @@ public class TraceRepositoryAdapter implements TraceRepository {
     private final TraceJpaRepository traceJpaRepository;
 
     @Override
-    public Optional<Trace> findByUserAIdAndUserBId(Long visitorId, Long targetId) {
-        return traceJpaRepository.findByUserAIdAndUserBId(visitorId, targetId);
+    public Optional<Trace> findByUserAIdAndUserBId(Long id1, Long id2) {
+        Trace.TraceIdPair sorted = Trace.sortIds(id1, id2);
+        return traceJpaRepository.findByUserAIdAndUserBId(sorted.minId(), sorted.maxId());
     }
 
     @Override

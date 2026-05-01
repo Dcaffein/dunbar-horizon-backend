@@ -54,18 +54,24 @@ public class Trace extends BaseTimeAggregateRoot {
     @Version
     private Long version;
 
+    public record TraceIdPair(Long minId, Long maxId) {}
+
+    public static TraceIdPair sortIds(Long id1, Long id2) {
+        return id1 < id2 ? new TraceIdPair(id1, id2) : new TraceIdPair(id2, id1);
+    }
+
     public Trace(Long visitorId, Long targetId) {
         validateNotSelf(visitorId, targetId);
 
-        if (visitorId < targetId) {
-            this.userAId = visitorId;
-            this.userBId = targetId;
+        TraceIdPair sorted = sortIds(visitorId, targetId);
+        this.userAId = sorted.minId();
+        this.userBId = sorted.maxId();
+
+        if (Objects.equals(visitorId, sorted.minId())) {
             this.userACount = 1;
             this.userBCount = 0;
             this.userALastVisitedAt = LocalDateTime.now();
         } else {
-            this.userAId = targetId;
-            this.userBId = visitorId;
             this.userACount = 0;
             this.userBCount = 1;
             this.userBLastVisitedAt = LocalDateTime.now();
