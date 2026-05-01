@@ -20,6 +20,20 @@ class TraceTest {
     private final Long user2 = 2L;
 
     @Test
+    @DisplayName("sortIds는 항상 작은 값을 minId, 큰 값을 maxId로 반환한다")
+    void sortIds_AlwaysReturnsMinMax() {
+        // when
+        Trace.TraceIdPair pair1 = Trace.sortIds(1L, 2L);
+        Trace.TraceIdPair pair2 = Trace.sortIds(2L, 1L);
+
+        // then
+        assertThat(pair1.minId()).isEqualTo(1L);
+        assertThat(pair1.maxId()).isEqualTo(2L);
+        assertThat(pair2.minId()).isEqualTo(1L);
+        assertThat(pair2.maxId()).isEqualTo(2L);
+    }
+
+    @Test
     @DisplayName("자기 자신을 방문하려고 하면 예외가 발생한다")
     void constructor_Fail_SelfVisit() {
         assertThatThrownBy(() -> new Trace(user1, user1))
