@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.trace.adapter.in.web;
 
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
-import com.example.DunbarHorizon.trace.adapter.in.web.dto.TraceRecordResponseDto;
 import com.example.DunbarHorizon.trace.adapter.in.web.dto.VisitRequestDto;
 import com.example.DunbarHorizon.trace.application.TraceService;
 import lombok.RequiredArgsConstructor;
@@ -16,12 +15,12 @@ public class TraceController {
     private final TraceService traceService;
 
     @PostMapping
-    public ResponseEntity<TraceRecordResponseDto> recordTrace(
+    public ResponseEntity<Void> recordTrace(
             @CurrentUserId Long currentUserId,
             @RequestBody VisitRequestDto request) {
 
-        TraceRecordResponseDto response = traceService.recordTrace(currentUserId, request.targetId());
+        traceService.recordTrace(currentUserId, request.targetId());
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok().build();
     }
 }

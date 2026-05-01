@@ -22,14 +22,15 @@ public class TraceEventListener {
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleTraceRevealed(TraceRevealedEvent event) {
-        Map<String,Object> metadata = new HashMap<>();
+        Map<String, Object> metadata = new HashMap<>();
 
-        eventPublisher.publishEvent(new NotificationEvent(
-                event.targetId(),
-                "서로간 잦은 방문",
-                "서로 통했습니다! 접속해서 인사를 건네보세요",
-                NotificationType.TRACE_REVEALED,
-                metadata
-        ));
+        eventPublisher.publishEvent(NotificationEvent.builder()
+                .receiverId(event.minId())
+                .receiverId(event.maxId())
+                .title("서로간 잦은 방문")
+                .content("서로 통했습니다! 접속해서 인사를 건네보세요")
+                .type(NotificationType.TRACE_REVEALED)
+                .metadata(metadata)
+                .build());
     }
 }
