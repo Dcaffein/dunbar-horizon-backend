@@ -98,18 +98,24 @@ class TraceTest {
     }
 
     @Test
-    @DisplayName("서로 모르는 상태에서 마지막 방문 후 3일이 지나면 만료 처리되어 방문 기록이 거부된다")
-    void recordVisit_Expired_TrackB_ThrowsException() {
-        // given
+    @DisplayName("만료된 발자국에 재방문하면 모든 기록이 초기화되고 카운트가 1부터 재시작된다")
+    void recordVisit_Expired_ResetsAndRestarts() {
+        // given: 만료된 Trace (lastTracedAt 4일 전, 양측 카운트 2)
         Trace trace = new Trace(user1, user2);
-
-        // 마지막 방문일을 4일 전으로 조작 (TRACING_EXPIRATION_DAYS = 3)
+        ReflectionTestUtils.setField(trace, "userACount", 2);
+        ReflectionTestUtils.setField(trace, "userBCount", 2);
         ReflectionTestUtils.setField(trace, "lastTracedAt", LocalDateTime.now().minusDays(4));
+        clearDomainEvents(trace);
 
-        // when & then
-        assertThatThrownBy(() -> trace.recordVisit(user2))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("This trace has already expired.");
+        // when: B가 만료 후 재방문
+        trace.recordVisit(user2);
+
+        // then: 초기화 후 B 카운트만 1로 재시작
+        assertThat(trace.getUserACount()).isEqualTo(0);
+        assertThat(trace.getUserBCount()).isEqualTo(1);
+        assertThat(trace.isRevealed()).isFalse();
+        assertThat(trace.getUserALastVisitedAt()).isNull();
+        assertThat(trace.getUserBLastVisitedAt()).isNotNull();
     }
 
     @Test

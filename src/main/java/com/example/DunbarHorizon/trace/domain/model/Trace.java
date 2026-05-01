@@ -83,34 +83,42 @@ public class Trace extends BaseTimeAggregateRoot {
 
     public void recordVisit(Long visitorId) {
         if (isExpired()) {
-            throw new IllegalStateException("This trace has already expired.");
+            resetTrace();
         }
 
         LocalDateTime now = LocalDateTime.now();
         Long targetId;
 
-        // 1. 방문자 식별 및 카운트 증가, 타겟 ID 추출
         if (Objects.equals(this.userAId, visitorId)) {
             if (isAlreadyVisitedToday(this.userALastVisitedAt, now)) return;
             this.userACount++;
             this.userALastVisitedAt = now;
-            targetId = this.userBId; // A가 방문했으니 타겟은 B
+            targetId = this.userBId;
         } else if (Objects.equals(this.userBId, visitorId)) {
             if (isAlreadyVisitedToday(this.userBLastVisitedAt, now)) return;
             this.userBCount++;
             this.userBLastVisitedAt = now;
-            targetId = this.userAId; // B가 방문했으니 타겟은 A
+            targetId = this.userAId;
         } else {
             throw new IllegalArgumentException("Visitor is not a participant of this trace.");
         }
 
         this.lastTracedAt = now;
 
-        // 2. 일상적인 방문에 대한 친밀도 증가 이벤트 발행
         registerEvent(new UserInteractionEvent(visitorId, targetId, InteractionType.VISIT));
 
-        // 3. 상호 호감(Reveal) 조건 검사 및 이벤트 발행
         checkAndReveal();
+    }
+
+    private void resetTrace() {
+        this.userACount = 0;
+        this.userBCount = 0;
+        this.userALastVisitedAt = null;
+        this.userBLastVisitedAt = null;
+        this.isRevealed = false;
+        this.revealedAt = null;
+        this.lastTracedAt = LocalDateTime.now();
+        clearDomainEvents();
     }
 
     public boolean isExpired() {
