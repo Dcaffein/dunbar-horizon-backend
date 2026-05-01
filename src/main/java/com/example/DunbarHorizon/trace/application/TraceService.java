@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.trace.application;
 
-import com.example.DunbarHorizon.trace.adapter.in.web.dto.TraceRecordResponseDto;
 import com.example.DunbarHorizon.trace.domain.model.Trace;
 import com.example.DunbarHorizon.trace.domain.repository.TraceRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,18 +17,12 @@ public class TraceService {
 
     @Retryable(retryFor = {DataIntegrityViolationException.class, ObjectOptimisticLockingFailureException.class}, maxAttempts = 3)
     @Transactional
-    public TraceRecordResponseDto recordTrace(Long visitorId, Long targetId) {
-
+    public void recordTrace(Long visitorId, Long targetId) {
         Trace trace = traceRepository.findByUserAIdAndUserBId(visitorId, targetId)
                 .orElseGet(() -> new Trace(visitorId, targetId));
 
         trace.recordVisit(visitorId);
 
         traceRepository.save(trace);
-
-        if (trace.isRevealed()) {
-            return TraceRecordResponseDto.revealed(targetId);
-        }
-        return TraceRecordResponseDto.hidden();
     }
 }

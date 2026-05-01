@@ -4,9 +4,9 @@ import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.trace.application.TraceEventListener;
 import com.example.DunbarHorizon.trace.domain.event.TraceRevealedEvent;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -25,8 +25,8 @@ class TraceEventListenerTest {
     private ApplicationEventPublisher eventPublisher;
 
     @Test
-    @DisplayName("정체 공개 이벤트가 발생하면 알림 이벤트를 발행한다")
-    void handleTraceRevealed_Success() {
+    @DisplayName("정체 공개 이벤트가 발생하면 양측 모두에게 알림 이벤트를 발행한다")
+    void handleTraceRevealed_NotifiesBothUsers() {
         // given
         TraceRevealedEvent event = new TraceRevealedEvent(1L, 2L);
 
@@ -35,12 +35,12 @@ class TraceEventListenerTest {
 
         // then
         ArgumentCaptor<NotificationEvent> captor = ArgumentCaptor.forClass(NotificationEvent.class);
-        verify(eventPublisher).publishEvent(captor.capture());
+        verify(eventPublisher, times(1)).publishEvent(captor.capture());
 
         NotificationEvent publishedEvent = captor.getValue();
 
-        assertThat(publishedEvent.receiverIds()).contains(2L);
+        assertThat(publishedEvent.receiverIds()).containsExactlyInAnyOrder(1L, 2L);
         assertThat(publishedEvent.type()).isEqualTo(NotificationType.TRACE_REVEALED);
-        assertThat(publishedEvent.title()).contains("서로간 잦은 방문");
+        assertThat(publishedEvent.title()).isEqualTo("서로간 잦은 방문");
     }
 }
