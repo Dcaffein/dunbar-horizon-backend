@@ -104,7 +104,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
             throw new FlagDeadlinePassedException();
         }
 
-        if (this.capacity == null || currentCount >= this.capacity) {
+        if (this.capacity != null && currentCount >= this.capacity) {
             throw new FlagFullCapacityException();
         }
 
