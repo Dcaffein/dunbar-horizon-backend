@@ -7,6 +7,7 @@ import com.example.DunbarHorizon.flag.application.port.out.FlagUserPort;
 import com.example.DunbarHorizon.flag.domain.comment.FlagComment;
 import com.example.DunbarHorizon.flag.domain.comment.repository.FlagCommentRepository;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,7 @@ public class FlagCommentQueryService implements FlagCommentQueryUseCase {
 
     @Override
     public List<CommentResult> getCommentTree(Long flagId, Long viewerId) {
-        Flag flag = flagRepository.findById(flagId).orElseThrow();
+        Flag flag = flagRepository.findById(flagId).orElseThrow(() -> new FlagNotFoundException(flagId));
         List<FlagComment> allComments = commentRepository.findAllByFlagId(flagId);
 
         Map<Long, List<FlagComment>> childrenMap = allComments.stream()
