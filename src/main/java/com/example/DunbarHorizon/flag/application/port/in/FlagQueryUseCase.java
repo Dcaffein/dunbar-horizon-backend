@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface FlagQueryUseCase {
     List<FlagResult> getFriendFlags(Long userId);
-    List<FlagResult> getMyFlagsByRole(Long userId, FlagRole role);
+    List<FlagResult> getMyHostingFlags(Long userId);
+    List<FlagResult> getParticipatingFlags(Long userId);
     FlagDetailResult getFlagDetail(Long flagId, Long viewerId);
 }
