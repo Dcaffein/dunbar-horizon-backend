@@ -12,5 +12,4 @@ public interface NotificationMongoRepository extends MongoRepository<Notificatio
     Slice<Notification> findAllByReceiverIdOrderByCreatedAtDesc(Long receiverId, Pageable pageable);
     long countByReceiverIdAndIsReadFalse(Long receiverId);
     List<Notification> findByIsSentFalse();
-    void deleteByCreatedAtBefore(LocalDateTime threshold);
 }

@@ -12,7 +12,6 @@ public interface NotificationRepository{
     Slice<Notification> findAllByReceiverId(Long receiverId, Pageable pageable);
     long countByReceiverIdAndIsReadFalse(Long receiverId);
     List<Notification> findByIsSentFalse();
-    void deleteByCreatedAtBefore(LocalDateTime threshold);
     Notification save(Notification notification);
     Optional<Notification> findById(String id);
     List<Notification> saveAll(List<Notification> notifications);

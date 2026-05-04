@@ -29,4 +29,12 @@ public class NotificationSettingRepositoryAdapter implements NotificationSetting
     public List<NotificationSetting> findAllByUserIdIn(List<Long> userIds) {
         return notificationSettingJpaRepository.findAllByUserIdIn(userIds);
     }
+
+    @Override
+    public List<NotificationSetting> findAllByFcmTokenIn(List<String> invalidTokens) {
+        if (invalidTokens == null || invalidTokens.isEmpty()) {
+            return List.of();
+        }
+        return notificationSettingJpaRepository.findAllByFcmTokenIn(invalidTokens);
+    }
 }

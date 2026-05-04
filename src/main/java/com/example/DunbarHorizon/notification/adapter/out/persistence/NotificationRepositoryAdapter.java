@@ -34,11 +34,6 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     }
 
     @Override
-    public void deleteByCreatedAtBefore(LocalDateTime threshold) {
-        notificationMongoRepository.deleteByCreatedAtBefore(threshold);
-    }
-
-    @Override
     public Notification save(Notification notification) {
         return notificationMongoRepository.save(notification);
     }

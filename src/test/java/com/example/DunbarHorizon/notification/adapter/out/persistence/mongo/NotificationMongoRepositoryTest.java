@@ -1,6 +1,5 @@
-package com.example.DunbarHorizon.notification.adapter.out.persistence;
+package com.example.DunbarHorizon.notification.adapter.out.persistence.mongo;
 
-import com.example.DunbarHorizon.notification.adapter.out.persistence.mongo.NotificationMongoRepository;
 import com.example.DunbarHorizon.notification.domain.Notification;
 import com.example.DunbarHorizon.support.MongoRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,23 +81,6 @@ class NotificationMongoRepositoryTest {
         // then
         assertThat(unsent).hasSize(1);
         assertThat(unsent.get(0).isSent()).isFalse();
-    }
-
-    @Test
-    @DisplayName("deleteByCreatedAtBefore: 특정 시점 이전의 알림을 삭제한다")
-    void deleteOldNotifications_Success() {
-        // given
-        LocalDateTime threshold = LocalDateTime.now().minusDays(30);
-        saveNotification(receiverId, "오래된 알림", threshold.minusDays(1));
-        saveNotification(receiverId, "최신 알림", threshold.plusDays(1));
-
-        // when
-        notificationMongoRepository.deleteByCreatedAtBefore(threshold);
-
-        // then
-        List<Notification> all = mongoTemplate.findAll(Notification.class);
-        assertThat(all).hasSize(1);
-        assertThat(all.get(0).getTitle()).isEqualTo("최신 알림");
     }
 
     private void saveNotification(Long receiverId, String title, LocalDateTime createdAt) {

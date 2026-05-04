@@ -9,4 +9,5 @@ public interface NotificationSettingRepository {
     Optional<NotificationSetting> findById(Long userId);
     NotificationSetting save(NotificationSetting setting);
     List<NotificationSetting> findAllByUserIdIn(List<Long> userIds);
+    List<NotificationSetting> findAllByFcmTokenIn(List<String> invalidTokens);
 }

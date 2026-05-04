@@ -22,8 +22,6 @@ class RefreshTokenJpaRepositoryTest {
     @Autowired
     private TestEntityManager em;
 
-
-
     @Test
     @DisplayName("deleteAllByUserId: @Modifying 쿼리를 통해 특정 유저의 모든 토큰을 삭제한다")
     void deleteAllByUserId_Success() {
