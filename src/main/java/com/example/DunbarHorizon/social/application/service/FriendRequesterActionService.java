@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.port.in.FriendRequesterActionUseCase;
+import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
@@ -9,6 +10,7 @@ import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserR
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +31,11 @@ public class FriendRequesterActionService implements FriendRequesterActionUseCas
 
         FriendRequest newRequest = friendshipBroker.propose(requester, receiver);
 
-        return friendRequestRepository.saveRequest(newRequest);
+        try {
+            return friendRequestRepository.saveRequest(newRequest);
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicateFriendRequestException(requesterId, receiverId);
+        }
     }
 
     @Override

@@ -16,6 +16,8 @@ public interface FlagCommentJpaRepository extends JpaRepository<FlagComment, Lon
 
     List<FlagComment> findAllByFlagId(Long flagId);
 
+    long countByFlagId(Long flagId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM FlagComment c WHERE c.id = :id")
     Optional<FlagComment> findByIdForUpdate(@Param("id") Long id);

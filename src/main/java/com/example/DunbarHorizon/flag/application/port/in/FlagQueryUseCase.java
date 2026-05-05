@@ -9,5 +9,6 @@ public interface FlagQueryUseCase {
     List<FlagResult> getFriendFlags(Long userId);
     List<FlagResult> getMyHostingFlags(Long userId);
     List<FlagResult> getParticipatingFlags(Long userId);
+    List<FlagResult> getMyFlagsByRole(Long userId, FlagRole role);
     FlagDetailResult getFlagDetail(Long flagId, Long viewerId);
 }

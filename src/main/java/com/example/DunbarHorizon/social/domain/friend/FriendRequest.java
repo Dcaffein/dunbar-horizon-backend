@@ -21,6 +21,8 @@ public class FriendRequest {
     @Id
     private String id;
 
+    private String pairKey;
+
     @Relationship(type = SENT_FRIEND_REQUEST, direction = Relationship.Direction.INCOMING)
     private UserReference requester;
 
@@ -33,10 +35,17 @@ public class FriendRequest {
 
     FriendRequest(UserReference requester, UserReference receiver) {
         this.id = UuidUtil.createV7().toString();
+        this.pairKey = generatePairKey(requester.getId(), receiver.getId());
         this.requester = requester;
         this.receiver = receiver;
         this.status = FriendRequestStatus.PENDING;
         this.createdAt = LocalDateTime.now();
+    }
+
+    public static String generatePairKey(Long id1, Long id2) {
+        long min = Math.min(id1, id2);
+        long max = Math.max(id1, id2);
+        return min + "_" + max;
     }
 
     public void accept(Long userId) {
