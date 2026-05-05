@@ -3,8 +3,8 @@ package com.example.DunbarHorizon.account.application.eventListener;
 import com.example.DunbarHorizon.global.event.user.UserActivatedEvent;
 import com.example.DunbarHorizon.account.domain.repository.AuthRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -15,8 +15,9 @@ public class AccountCleanupEventListener {
 
     private final AuthRepository authRepository;
 
+    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void cleanUpGarbageAuths(UserActivatedEvent event) {
         authRepository.deleteUnverifiedByUserId(event.userId());
     }
