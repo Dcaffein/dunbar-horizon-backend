@@ -15,8 +15,8 @@ import com.example.DunbarHorizon.social.domain.label.repository.LabelRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
@@ -31,7 +31,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     private final LabelMemberRegistry labelMemberRegistry;
     private final LabelCreator labelCreator;
 
-    @Transactional
+    @Neo4jTransactional
     public Label createLabel(Long currentUserId, String labelName, boolean exposure) {
         labelNamePolicy.validateLabelNameUniqueness(currentUserId, labelName);
         UserReference owner = socialUserRepository.findById(currentUserId)
@@ -39,7 +39,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
         return labelRepository.save(labelCreator.create(owner, labelName, exposure));
     }
 
-    @Transactional
+    @Neo4jTransactional
     public void deleteLabel(Long currentUserId, String labelId) {
         Label label = getLabel(labelId);
         if (label.getOwner().getId().equals(currentUserId)) {
@@ -47,7 +47,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
         }
     }
 
-    @Transactional
+    @Neo4jTransactional
     public void addMemberToLabel(Long currentUserId, String labelId, Long newMemberId) {
         Label label = getLabel(labelId);
         validateOwner(label, currentUserId);
@@ -57,7 +57,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
         labelRepository.save(label);
     }
 
-    @Transactional
+    @Neo4jTransactional
     public void removeMemberFromLabel(Long currentUserId, String labelId, Long memberIdToRemove) {
         Label label = getLabel(labelId);
         validateOwner(label, currentUserId);
@@ -67,7 +67,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
         labelRepository.save(label);
     }
 
-    @Transactional
+    @Neo4jTransactional
     public void replaceLabelMembers(Long currentUserId, String labelId, List<Long> potentialMemberIds) {
         Label label = getLabel(labelId);
         validateOwner(label, currentUserId);
@@ -75,7 +75,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
         labelRepository.save(label);
     }
 
-    @Transactional
+    @Neo4jTransactional
     public void updateLabel(String labelId, Long currentUserId, String labelName, Boolean exposure) {
         Label label = getLabel(labelId);
 

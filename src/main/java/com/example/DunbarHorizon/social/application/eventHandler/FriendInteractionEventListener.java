@@ -13,12 +13,11 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
+import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
@@ -37,7 +36,7 @@ public class FriendInteractionEventListener {
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2.0)
     )
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Neo4jTransactional
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleUserInteraction(UserInteractionEvent event) {
         String friendshipId = Friendship.generateCompositeId(event.actorId(), event.targetId());
@@ -63,7 +62,7 @@ public class FriendInteractionEventListener {
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2.0)
     )
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Neo4jTransactional
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleMutualInteraction(MutualInteractionEvent event) {
         String friendshipId = Friendship.generateCompositeId(event.userIdA(), event.userIdB());

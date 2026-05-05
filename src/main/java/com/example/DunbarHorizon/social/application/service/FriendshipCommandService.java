@@ -9,8 +9,8 @@ import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFou
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -21,7 +21,7 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
     private final FriendshipRepository friendshipRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Transactional
+    @Neo4jTransactional
     public void updateFriendship(Long currentUserId, Long friendId, FriendshipUpdateCommand command) {
         Friendship friendship = findById(currentUserId,friendId);
 
@@ -32,7 +32,7 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
         friendshipRepository.save(friendship);
     }
 
-    @Transactional
+    @Neo4jTransactional
     public void brokeUpWith(Long currentUserId, Long friendId) {
         Friendship friendShip = findById(currentUserId, friendId);
         List<UserReference> userIds = friendShip.getUsers().stream().toList();
