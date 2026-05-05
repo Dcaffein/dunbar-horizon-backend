@@ -23,7 +23,8 @@ public class FriendRequestRepositoryAdapter implements FriendRequestRepository {
             return friendRequestNeo4jRepository.mergeFriendRequest(
                     request.getRequester().getId(),
                     request.getReceiver().getId(),
-                    request.getId()
+                    request.getId(),
+                    request.getPairKey()
             );
         }
         return friendRequestNeo4jRepository.updateFriendRequest(request);

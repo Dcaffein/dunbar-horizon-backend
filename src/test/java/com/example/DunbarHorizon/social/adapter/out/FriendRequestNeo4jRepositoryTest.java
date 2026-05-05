@@ -40,7 +40,7 @@ class FriendRequestNeo4jRepositoryTest {
 
         // when
         FriendRequest saved = friendRequestRepository.mergeFriendRequest(
-                requester.getId(), receiver.getId(), newRequest.getId());
+                requester.getId(), receiver.getId(), newRequest.getId(), newRequest.getPairKey());
 
         // then
         assertThat(saved.getId()).isNotNull();
@@ -57,7 +57,7 @@ class FriendRequestNeo4jRepositoryTest {
         // given
         FriendRequest newRequest = FriendTestFactory.createRequest(requester, receiver);
         friendRequestRepository.mergeFriendRequest(
-                requester.getId(), receiver.getId(), newRequest.getId());
+                requester.getId(), receiver.getId(), newRequest.getId(), newRequest.getPairKey());
 
         // findById로 관계(receiver 등)가 함께 로드된 엔티티를 가져옴
         FriendRequest saved = friendRequestRepository.findById(newRequest.getId())
@@ -82,7 +82,7 @@ class FriendRequestNeo4jRepositoryTest {
         // given
         FriendRequest newRequest = FriendTestFactory.createRequest(requester, receiver);
         friendRequestRepository.mergeFriendRequest(
-                requester.getId(), receiver.getId(), newRequest.getId());
+                requester.getId(), receiver.getId(), newRequest.getId(), newRequest.getPairKey());
 
         // when
         boolean forward = friendRequestRepository.existsRequestBetween(requester.getId(), receiver.getId());
