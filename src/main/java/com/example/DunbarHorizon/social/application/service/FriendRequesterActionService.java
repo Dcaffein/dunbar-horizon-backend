@@ -11,12 +11,12 @@ import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Neo4jTransactional
 public class FriendRequesterActionService implements FriendRequesterActionUseCase {
     private final FriendRequestRepository friendRequestRepository;
     private final SocialUserRepository socialUserRepository;

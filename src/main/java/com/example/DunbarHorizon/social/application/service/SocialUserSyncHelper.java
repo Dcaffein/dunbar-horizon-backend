@@ -7,10 +7,9 @@ import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
@@ -24,7 +23,7 @@ public class SocialUserSyncHelper {
     private final SocialUserRepository socialUserRepository;
     private final UserProfilePort userProfilePort;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Neo4jTransactional
     public Set<UserReference> syncAndSave(Set<Long> missingIds) {
         List<UserProfileInfo> profiles = userProfilePort.getUserProfiles(missingIds);
         List<SocialUser> newUsers = profiles.stream()

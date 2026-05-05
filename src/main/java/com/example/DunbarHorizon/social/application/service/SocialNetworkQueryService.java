@@ -6,14 +6,14 @@ import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByT
 import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkRepository;
 import lombok.RequiredArgsConstructor;
+import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Neo4jTransactional(readOnly = true)
 public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
 
     private final SocialNetworkRepository socialNetworkRepository;

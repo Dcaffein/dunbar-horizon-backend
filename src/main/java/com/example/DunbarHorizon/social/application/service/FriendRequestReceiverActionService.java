@@ -8,12 +8,12 @@ import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRe
 import com.example.DunbarHorizon.social.domain.friend.FriendshipBroker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Neo4jTransactional
 public class FriendRequestReceiverActionService implements FriendRequestReceiverActionUseCase {
 
     private final FriendRequestRepository friendRequestRepository;
