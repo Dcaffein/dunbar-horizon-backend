@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.social.application;
 import com.example.DunbarHorizon.social.application.service.FriendRequesterActionService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
+import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipBroker;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
@@ -13,9 +14,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -54,6 +57,27 @@ class FriendRequesterActionServiceTest {
 
         // then
         verify(friendRequestRepository).saveRequest(mockRequest);
+    }
+
+    @Test
+    @DisplayName("DB 유니크 제약 위반 시 DuplicateFriendRequestException으로 변환된다")
+    void sendRequest_WhenConstraintViolated_ThrowsDuplicateFriendRequestException() {
+        // given
+        Long reqId = 1L;
+        Long resId = 2L;
+        SocialUser requester = mock(SocialUser.class);
+        SocialUser receiver = mock(SocialUser.class);
+        FriendRequest mockRequest = mock(FriendRequest.class);
+
+        given(socialUserRepository.findById(reqId)).willReturn(Optional.of(requester));
+        given(socialUserRepository.findById(resId)).willReturn(Optional.of(receiver));
+        given(friendshipBroker.propose(requester, receiver)).willReturn(mockRequest);
+        given(friendRequestRepository.saveRequest(mockRequest))
+                .willThrow(new DataIntegrityViolationException("unique constraint violation"));
+
+        // when & then
+        assertThatThrownBy(() -> requesterService.sendRequest(reqId, resId))
+                .isInstanceOf(DuplicateFriendRequestException.class);
     }
 
     @Test

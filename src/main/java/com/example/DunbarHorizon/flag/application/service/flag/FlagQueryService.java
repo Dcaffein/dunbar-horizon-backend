@@ -76,6 +76,15 @@ public class FlagQueryService implements FlagQueryUseCase {
     }
 
     @Override
+    public List<FlagResult> getMyFlagsByRole(Long userId, FlagRole role) {
+        return switch (role) {
+            case HOST -> getMyHostingFlags(userId);
+            case PARTICIPANT -> getParticipatingFlags(userId);
+            case GUEST -> List.of();
+        };
+    }
+
+    @Override
     public List<FlagResult> getMyHostingFlags(Long userId) {
         List<Flag> managedFlags = flagRepository.findAllByHostId(userId);
         FlagUserInfo myInfo = flagUserPort.findUserInfosByIds(Set.of(userId)).get(userId);
