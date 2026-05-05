@@ -6,8 +6,8 @@ import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -22,7 +22,8 @@ public class FlagEncoreEventListener {
     private final FlagParticipantRepository participantRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
+    @Async
+    @Transactional(readOnly = true)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(FlagEncoreEvent event) {
         List<Long> oldParticipantIds = participantRepository.findAllParticipantIdsByFlagId(event.parentFlagId());
