@@ -1,88 +1,104 @@
-# PLAN — FriendRequest DB 유니크 제약 조건 추가
+# PLAN — Task 19: Social 도메인 동시성 통합 테스트 추가
 
 ## 작업 목표
 
-`FriendRequest` 노드에 Neo4j DB 레벨 유니크 제약 조건을 추가하여,
-도메인 체크(check-then-act)를 통과하는 동시 요청을 최종 방어한다.
-
-## 배경
-
-`FriendshipBroker.propose()`의 중복 검사는 순차 요청의 정상 흐름을 처리하지만,
-두 트랜잭션이 동시에 체크를 통과하는 TOCTOU 레이스 컨디션을 막지 못한다.
-DB 레벨 유니크 제약이 이 케이스를 방어하는 최종 안전망이 된다.
+`FriendRequesterActionService.sendRequest()`에 두 트랜잭션이 동시에 접근할 때
+`FriendRequest.pairKey` DB 유니크 제약이 실제로 방어하는지 검증하는 통합 테스트를 추가한다.
 
 ---
 
-## 수정·생성 파일
+## 생성 파일
 
 | 구분 | 파일 |
 |------|------|
-| 수정 | `social/domain/friend/FriendRequest.java` |
-| 생성 | `social/adapter/out/neo4j/schema/FriendRequestSchemaInitializer.java` |
-| 수정 | `social/application/service/FriendRequesterActionService.java` |
-| 수정 | `social/application/FriendRequesterActionServiceTest.java` |
+| 신규 생성 | `src/test/java/com/example/DunbarHorizon/social/adapter/out/neo4j/FriendRequestConcurrencyTest.java` |
+
+---
+
+## 테스트 환경 구성
+
+`Neo4jRepositoryTest`는 `@DataNeo4jTest` + `@Transactional` 조합이어서 두 가지 이유로 사용 불가:
+1. 서비스 빈(`FriendRequesterActionService`)이 로드되지 않음
+2. `@Transactional`이 붙으면 멀티스레드 각각이 독립 트랜잭션을 가질 수 없음
+
+따라서 아래 어노테이션을 직접 조합한다:
+
+```java
+@SpringBootTest
+@ActiveProfiles("test")
+@Import(TestContainerConfig.class)
+class FriendRequestConcurrencyTest { ... }
+```
+
+**`@Transactional`은 테스트 클래스와 메서드 양쪽 모두 금지.**
+데이터 정리는 `@AfterEach`에서 `FriendRequestNeo4jRepository.deleteAll()`과
+`SocialUserNeo4jRepository.deleteById()`로 수동 처리한다.
 
 ---
 
 ## 구현 상세
 
-### 1. `FriendRequest` — `pairKey` 추가
-
-`Friendship.generateCompositeId()`와 동일한 방식으로 `min(A,B)_max(A,B)` 형태의
-`pairKey` 프로퍼티를 추가하고 생성자에서 세팅한다.
+### 주입 대상
 
 ```java
-@Property
-private String pairKey;   // e.g. "1_2"
+@Autowired FriendRequesterActionService friendRequesterActionService;
+@Autowired FriendRequestNeo4jRepository friendRequestNeo4jRepository;
+@Autowired SocialUserNeo4jRepository    socialUserNeo4jRepository;
+```
 
-FriendRequest(UserReference requester, UserReference receiver) {
-    ...
-    long min = Math.min(requester.getId(), receiver.getId());
-    long max = Math.max(requester.getId(), receiver.getId());
-    this.pairKey = min + "_" + max;
+### @BeforeEach / @AfterEach
+
+```java
+@BeforeEach
+void setUp() {
+    userA = socialUserNeo4jRepository.save(new SocialUser(1L, "userA", ""));
+    userB = socialUserNeo4jRepository.save(new SocialUser(2L, "userB", ""));
+}
+
+@AfterEach
+void tearDown() {
+    friendRequestNeo4jRepository.deleteAll();
+    socialUserNeo4jRepository.deleteById(userA.getId());
+    socialUserNeo4jRepository.deleteById(userB.getId());
 }
 ```
 
-### 2. `FriendRequestSchemaInitializer` — 신규 생성
+### 검증 시나리오
 
-`SocialUserSchemaInitializer`와 동일한 패턴으로 작성한다.
-
-```java
-neo4jClient.query(
-    "CREATE CONSTRAINT friend_request_pair_unique IF NOT EXISTS " +
-    "FOR (r:FriendRequest) REQUIRE r.pairKey IS UNIQUE"
-).run();
-```
-
-`IF NOT EXISTS`로 멱등하게 동작하므로 인스턴스 재시작 시 에러가 발생하지 않는다.
-
-### 3. `FriendRequesterActionService` — 제약 위반 처리
-
-동시 요청이 DB 제약에 걸릴 경우 Spring이
-`DataIntegrityViolationException`을 던진다.
-이를 catch하여 `DuplicateFriendRequestException`으로 변환한다.
+**시나리오 1 — 동일 방향 동시 요청 (A→B 두 번)**
 
 ```java
-try {
-    return friendRequestRepository.saveRequest(newRequest);
-} catch (DataIntegrityViolationException e) {
-    throw new DuplicateFriendRequestException(requesterId, receiverId);
-}
+// 두 스레드가 동시에 sendRequest(A.id, B.id) 호출
+// 기대: successCount == 1, failCount == 1 (DuplicateFriendRequestException)
 ```
 
----
+**시나리오 2 — 역방향 동시 요청 (A→B / B→A)**
 
-## 테스트 전략
+```java
+// 스레드1: sendRequest(A.id, B.id)
+// 스레드2: sendRequest(B.id, A.id)
+// pairKey는 방향 무관 동일("1_2") → 기대: successCount == 1, failCount == 1
+```
 
-`FriendRequesterActionServiceTest` (기존 파일 수정, 단위 테스트):
-- `sendRequest` 시 `friendRequestRepository.saveRequest()`가
-  `DataIntegrityViolationException`을 던질 때
-  `DuplicateFriendRequestException`으로 변환되는지 검증
+### 공통 패턴
+
+```java
+CountDownLatch startLatch = new CountDownLatch(1);
+CountDownLatch doneLatch  = new CountDownLatch(2);
+AtomicInteger successCount = new AtomicInteger(0);
+AtomicInteger failCount    = new AtomicInteger(0);
+
+// 각 스레드 Runnable 구성 후
+startLatch.countDown();          // 동시 출발
+doneLatch.await(5, TimeUnit.SECONDS);
+
+assertThat(successCount.get()).isEqualTo(1);
+assertThat(failCount.get()).isEqualTo(1);
+```
 
 ---
 
 ## 예상 사이드 이펙트
 
-- 기존 Neo4j에 `pairKey`가 없는 `FriendRequest` 노드가 존재하면
-  제약 조건 생성이 실패할 수 있다. (개발 환경 DB 초기화 권장)
-- `FriendRequest` 생성자가 package-private이므로 외부 변경 영향 없음.
+- 없음. 신규 테스트 파일만 추가하며 프로덕션 코드 변경 없음.
+- `@SpringBootTest`는 전체 컨텍스트를 로드하므로 테스트 실행 시간이 길 수 있음.
