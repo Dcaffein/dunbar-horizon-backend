@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.notification.domain;
 
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
+import com.example.DunbarHorizon.notification.domain.exception.NotificationAccessDeniedException;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -53,7 +54,7 @@ public class Notification {
 
     public void read(Long currentUserId) {
         if (!isOwnedBy(currentUserId)) {
-            throw new IllegalArgumentException("본인의 알림만 상태를 변경할 수 있습니다.");
+            throw new NotificationAccessDeniedException("본인의 알림만 상태를 변경할 수 있습니다.");
         }
         this.isRead = true;
     }

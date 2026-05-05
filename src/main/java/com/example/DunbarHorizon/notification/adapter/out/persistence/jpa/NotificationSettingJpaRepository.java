@@ -16,4 +16,5 @@ public interface NotificationSettingJpaRepository extends JpaRepository<Notifica
     List<NotificationSetting> findAllByUserIdIn(List<Long> userIds);
 
     List<NotificationSetting> findAllByFcmTokenIn(List<String> fcmTokens);
+
 }

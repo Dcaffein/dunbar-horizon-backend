@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
 import com.example.DunbarHorizon.notification.domain.Notification;
 import com.example.DunbarHorizon.notification.domain.NotificationSetting;
+import com.example.DunbarHorizon.notification.domain.event.DeviceTokenRegisteredEvent;
 import com.example.DunbarHorizon.notification.domain.repository.NotificationSettingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,8 +22,9 @@ import java.util.Objects;
 public class NotificationEventListener {
 
     private final NotificationSender notificationSender;
-    private final NotificationService historyService;
+    private final NotificationService notificationService;
     private final NotificationSettingRepository settingRepository;
+
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -31,10 +33,10 @@ public class NotificationEventListener {
         // 전체 공지사항 (Broadcast)
         if (event.isAnnouncement()) {
             Notification notice = createSingleNotification(null, event);
-            notice = historyService.savePendingNotification(notice);
+            notice = notificationService.savePendingNotification(notice);
 
             notificationSender.sendBroadcast(event);
-            historyService.markAsSent(notice.getId());
+            notificationService.markAsSent(notice.getId());
             return;
         }
 
@@ -56,18 +58,31 @@ public class NotificationEventListener {
         List<Notification> notifications = event.receiverIds().stream()
                 .map(id -> createSingleNotification(id, event))
                 .toList();
-        List<Notification> savedNotifications = historyService.savePendingNotifications(notifications);
+        List<Notification> savedNotifications = notificationService.savePendingNotifications(notifications);
 
         try {
             // 3. FCM 발송
             List<String> invalidTokens = notificationSender.sendMulticast(event, validTokens);
 
             // 4. 결과 업데이트 및 죽은 토큰 청소 (Tx)
-            historyService.markAllAsSent(savedNotifications);
-            historyService.cleanupInvalidTokens(invalidTokens);
+            notificationService.markAllAsSent(savedNotifications);
+            notificationService.cleanupInvalidTokens(invalidTokens);
 
         } catch (Exception e) {
             log.error("FCM 벌크 전송 중 시스템 에러: {}", e.getMessage());
+        }
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleDeviceTokenRegistration(DeviceTokenRegisteredEvent event) {
+        if (event.isAlarmOn()) {
+            try {
+                notificationSender.subscribeToTopic(event.token(), "notice");
+                log.info("새로운 기기 토큰이 공지사항(notice) 토픽에 성공적으로 구독되었습니다.");
+            } catch (Exception e) {
+                log.error("FCM 토픽 구독 중 에러 발생: {}", e.getMessage());
+            }
         }
     }
 
