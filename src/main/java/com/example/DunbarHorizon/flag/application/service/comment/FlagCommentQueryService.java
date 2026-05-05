@@ -48,7 +48,7 @@ public class FlagCommentQueryService implements FlagCommentQueryUseCase {
 
     @Override
     public Long getCommentCount(Long flagId) {
-        return 0L;
+        return commentRepository.countByFlagId(flagId);
     }
 
     private CommentResult convertToResponse(

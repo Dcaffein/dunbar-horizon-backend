@@ -44,4 +44,9 @@ public class FlagCommentRepositoryAdapter implements FlagCommentRepository {
             jpaRepository.deleteById(scope.getTargetId());
         }
     }
+
+    @Override
+    public long countByFlagId(Long flagId) {
+        return jpaRepository.countByFlagId(flagId);
+    }
 }

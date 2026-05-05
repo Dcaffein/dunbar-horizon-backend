@@ -51,15 +51,6 @@ public class FlagController {
         return ResponseEntity.ok(flagQueryUseCase.getFriendFlags(currentUserId));
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<List<FlagResult>> getMyFlags(
-            @RequestParam(name = "role") FlagRole role,
-            @CurrentUserId Long currentUserId
-    ) {
-        List<FlagResult> responses = flagQueryUseCase.getMyFlagsByRole(currentUserId, role);
-        return ResponseEntity.ok(responses);
-    }
-
     @PatchMapping("/{id}/details")
     public ResponseEntity<Void> modifyDetails(
             @PathVariable Long id,

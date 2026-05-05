@@ -12,4 +12,5 @@ public interface FlagCommentRepository {
     List<FlagComment> findAllByFlagId(Long flagId);
     Optional<FlagComment> findByIdForUpdate(Long id);
     void delete(CommentDeletionScope scope);
+    long countByFlagId(Long flagId);
 }
