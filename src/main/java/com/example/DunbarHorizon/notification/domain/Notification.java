@@ -51,11 +51,18 @@ public class Notification {
         this.createdAt = LocalDateTime.now();
     }
 
-    public void read() {
+    public void read(Long currentUserId) {
+        if (!isOwnedBy(currentUserId)) {
+            throw new IllegalArgumentException("본인의 알림만 상태를 변경할 수 있습니다.");
+        }
         this.isRead = true;
     }
 
     public void markAsSent() {
         this.isSent = true;
+    }
+
+    private boolean isOwnedBy(Long userId) {
+        return this.receiverId != null && this.receiverId.equals(userId);
     }
 }
