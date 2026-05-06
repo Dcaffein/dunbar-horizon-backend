@@ -54,16 +54,6 @@ class FlagQueryServiceTest {
     }
 
     @Test
-    @DisplayName("GUEST 역할로 조회하면 빈 리스트가 반환된다")
-    void getMyFlagsByRole_Guest_ReturnsEmpty() {
-        // when
-        List<FlagResult> result = flagQueryService.getMyFlagsByRole(USER_ID, FlagRole.GUEST);
-
-        // then
-        assertThat(result).isEmpty();
-    }
-
-    @Test
     @DisplayName("HOST 역할로 조회하면 호스팅 중인 플래그 목록이 반환된다")
     void getMyFlagsByRole_Host_ReturnsManagedFlags() {
         // given
@@ -160,10 +150,9 @@ class FlagQueryServiceTest {
     }
 
     @Test
-    @DisplayName("플래그 상세 조회 시 호스트도 참여자도 아닌 사용자는 GUEST 역할로 응답받는다")
-    void getFlagDetail_ViewerIsGuest_ReturnsGuestRole() {
-        // given
-        Long guestId = 999L;
+    @DisplayName("플래그 상세 조회 시 호스트도 참여자도 아닌 사용자는 role이 null로 응답받는다")
+    void getFlagDetail_ViewerHasNoRelation_ReturnsNullRole() {
+        Long viewerId = 999L;
         Flag flag = createRecruitingFlag(1L);
 
         given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
@@ -171,10 +160,8 @@ class FlagQueryServiceTest {
         given(flagUserPort.findUserInfosByIds(anySet()))
                 .willReturn(Map.of(USER_ID, userInfo(USER_ID)));
 
-        // when
-        FlagDetailResult result = flagQueryService.getFlagDetail(1L, guestId);
+        FlagDetailResult result = flagQueryService.getFlagDetail(1L, viewerId);
 
-        // then
-        assertThat(result.role()).isEqualTo(FlagRole.GUEST);
+        assertThat(result.role()).isNull();
     }
 }
