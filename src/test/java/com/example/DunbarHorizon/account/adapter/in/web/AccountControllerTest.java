@@ -1,44 +1,24 @@
 package com.example.DunbarHorizon.account.adapter.in.web;
 
-import com.example.DunbarHorizon.global.security.AuthCookieManager;
-import com.example.DunbarHorizon.global.security.JwtTokenProvider;
+import com.example.DunbarHorizon.account.adapter.in.web.dto.LoginRequestDto;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.SignupRequestDto;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.VerificationEmailRequestDto;
-import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
-import com.example.DunbarHorizon.account.application.port.in.SignupUseCase;
-import com.example.DunbarHorizon.account.application.port.in.VerificationUseCase;
 import com.example.DunbarHorizon.account.application.dto.AuthTokenResult;
-import com.example.DunbarHorizon.account.adapter.in.web.dto.LoginRequestDto;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.DunbarHorizon.support.BaseControllerTest;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AccountController.class)
-@AutoConfigureMockMvc(addFilters = false)
-class AccountControllerTest {
-
-    @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
-
-    @MockitoBean private SignupUseCase signupUseCase;
-    @MockitoBean private LoginUseCase loginUseCase;
-    @MockitoBean private VerificationUseCase verificationUseCase;
-
-    @MockitoBean private AuthCookieManager authCookieManager;
-    @MockitoBean private JwtTokenProvider jwtTokenProvider;
+class AccountControllerTest extends BaseControllerTest {
 
     @Test
     @DisplayName("회원가입 요청 시 201 Created를 반환한다")
@@ -50,7 +30,6 @@ class AccountControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
 
-        // SignupUseCase가 호출되었는지 검증
         verify(signupUseCase).signup(eq("test@test.com"), eq("Pw123!@#"), eq("tester"));
     }
 
@@ -60,7 +39,6 @@ class AccountControllerTest {
         LoginRequestDto request = new LoginRequestDto("test@test.com", "password123");
         AuthTokenResult result = new AuthTokenResult("access-token", "refresh-token");
 
-        // AuthUseCase 동작 정의
         given(loginUseCase.login(anyString(), anyString())).willReturn(result);
 
         mockMvc.perform(post("/api/auth/tokens")
@@ -79,7 +57,6 @@ class AccountControllerTest {
                         .cookie(new Cookie("refresh_token", "some-rt")))
                 .andExpect(status().isNoContent());
 
-        // AuthUseCase의 logout 호출 검증
         verify(loginUseCase).logout(eq("some-rt"));
         verify(authCookieManager).addExpiredTokenCookie(any());
     }
@@ -90,7 +67,6 @@ class AccountControllerTest {
         String oldRt = "old-rt";
         AuthTokenResult newResult = new AuthTokenResult("new-at", "new-rt");
 
-        // AuthUseCase의 reissue 동작 정의
         given(loginUseCase.reissue(oldRt)).willReturn(newResult);
 
         mockMvc.perform(patch("/api/auth/tokens")
@@ -111,7 +87,6 @@ class AccountControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
 
-        // VerificationUseCase 호출 검증
         verify(verificationUseCase).sendVerificationEmail(eq("test@test.com"), eq("http://redirect.com"));
     }
 
@@ -124,7 +99,6 @@ class AccountControllerTest {
                         .param("token", token))
                 .andExpect(status().isOk());
 
-        // VerificationUseCase 호출 검증
         verify(verificationUseCase).verifyEmail(eq(token));
     }
 }

@@ -1,10 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.in.web;
 
 import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendRequestCreateRequest;
-import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
-import com.example.DunbarHorizon.social.application.port.in.FriendRequestReceiverActionUseCase;
-import com.example.DunbarHorizon.social.application.port.in.FriendRequestQueryUseCase;
-import com.example.DunbarHorizon.social.application.port.in.FriendRequesterActionUseCase;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
@@ -12,9 +8,7 @@ import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 
@@ -25,23 +19,12 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(FriendRequestController.class)
-@WithMockCustomUser()
+@WithMockCustomUser
 class FriendRequestControllerTest extends BaseControllerTest {
-
-    @MockitoBean
-    private FriendRequesterActionUseCase requesterActionUseCase;
-
-    @MockitoBean
-    private FriendRequestReceiverActionUseCase receiverActionUseCase;
-
-    @MockitoBean
-    private FriendRequestQueryUseCase queryUseCase;
 
     @Test
     @DisplayName("친구 요청을 성공적으로 보낸다")
     void sendFriendRequest_Success() throws Exception {
-        // given
         Long receiverId = 2L;
         FriendRequestCreateRequest dto = new FriendRequestCreateRequest(receiverId);
 
@@ -53,14 +36,12 @@ class FriendRequestControllerTest extends BaseControllerTest {
         given(mockRequest.getRequester()).willReturn(mockRequester);
         given(mockRequest.getReceiver()).willReturn(mockReceiver);
         given(mockRequest.getStatus()).willReturn(FriendRequestStatus.PENDING);
-
         given(mockRequester.getId()).willReturn(1L);
         given(mockReceiver.getId()).willReturn(2L);
 
-        given(requesterActionUseCase.sendRequest(eq(1L), eq(receiverId)))
+        given(friendRequesterActionUseCase.sendRequest(eq(1L), eq(receiverId)))
                 .willReturn(mockRequest);
 
-        // when & then
         mockMvc.perform(post("/api/v1/friend-requests")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
@@ -72,62 +53,52 @@ class FriendRequestControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("친구 요청을 수락한다")
     void acceptFriendRequest_Success() throws Exception {
-        // given
         String requestId = "newRequest";
 
-        // when & then
         mockMvc.perform(post("/api/v1/friend-requests/{requestId}/accept", requestId))
                 .andExpect(status().isNoContent());
 
-        verify(receiverActionUseCase).acceptRequest(eq(requestId), eq(1L));
+        verify(friendRequestReceiverActionUseCase).acceptRequest(eq(requestId), eq(1L));
     }
 
     @Test
     @DisplayName("친구 요청을 숨긴다")
     void hideFriendRequest_Success() throws Exception {
-        // given
         String requestId = "newRequest";
 
-        // when & then
         mockMvc.perform(post("/api/v1/friend-requests/{requestId}/hide", requestId))
                 .andExpect(status().isNoContent());
 
-        verify(receiverActionUseCase).hideRequest(eq(requestId), eq(1L));
+        verify(friendRequestReceiverActionUseCase).hideRequest(eq(requestId), eq(1L));
     }
 
     @Test
     @DisplayName("친구 요청 숨김을 취소한다")
     void undoHideFriendRequest_Success() throws Exception {
-        // given
         String requestId = "newRequest";
 
-        // when & then
         mockMvc.perform(delete("/api/v1/friend-requests/{requestId}/hide", requestId))
                 .andExpect(status().isNoContent());
 
-        verify(receiverActionUseCase).undoHideRequest(eq(requestId), eq(1L));
+        verify(friendRequestReceiverActionUseCase).undoHideRequest(eq(requestId), eq(1L));
     }
 
     @Test
     @DisplayName("친구 요청을 취소한다")
     void cancelFriendRequest_Success() throws Exception {
-        // given
         String requestId = "newRequest";
 
-        // when & then
         mockMvc.perform(delete("/api/v1/friend-requests/{requestId}", requestId))
                 .andExpect(status().isNoContent());
 
-        verify(requesterActionUseCase).cancelRequest(eq(requestId), eq(1L));
+        verify(friendRequesterActionUseCase).cancelRequest(eq(requestId), eq(1L));
     }
 
     @Test
     @DisplayName("숨김 처리된 친구 요청 목록을 조회한다")
     void getHiddenRequests_Success() throws Exception {
-        // given
-        given(queryUseCase.getHiddenRequests(eq(1L))).willReturn(List.of());
+        given(friendRequestQueryUseCase.getHiddenRequests(eq(1L))).willReturn(List.of());
 
-        // when & then
         mockMvc.perform(get("/api/v1/friend-requests/hidden"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
@@ -136,10 +107,8 @@ class FriendRequestControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("내가 보낸 친구 요청 목록을 조회한다")
     void getSentRequests_Success() throws Exception {
-        // given
-        given(queryUseCase.getSentRequests(eq(1L))).willReturn(List.of());
+        given(friendRequestQueryUseCase.getSentRequests(eq(1L))).willReturn(List.of());
 
-        // when & then
         mockMvc.perform(get("/api/v1/friend-requests/sent"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());

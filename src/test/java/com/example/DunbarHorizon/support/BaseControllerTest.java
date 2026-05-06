@@ -1,35 +1,70 @@
 package com.example.DunbarHorizon.support;
 
+import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
+import com.example.DunbarHorizon.account.application.port.in.SignupUseCase;
+import com.example.DunbarHorizon.account.application.port.in.VerificationUseCase;
+import com.example.DunbarHorizon.buzz.application.port.in.BuzzCommandUseCase;
+import com.example.DunbarHorizon.buzz.application.port.in.BuzzQueryUseCase;
+import com.example.DunbarHorizon.flag.application.port.in.*;
 import com.example.DunbarHorizon.global.security.JwtAuthenticationFilter;
 import com.example.DunbarHorizon.global.security.JwtTokenProvider;
+import com.example.DunbarHorizon.global.security.AuthCookieManager;
+import com.example.DunbarHorizon.social.application.port.in.*;
+import com.example.DunbarHorizon.social.application.port.in.LabelCommandUseCase;
+import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
+import com.example.DunbarHorizon.trace.application.port.in.TraceCommandUseCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
 
-@AutoConfigureMockMvc(addFilters = false)
+@WebMvcTest
 @Import(TestSecurityConfig.class)
 public abstract class BaseControllerTest {
+
+    @Autowired
     protected MockMvc mockMvc;
 
     @Autowired
     protected ObjectMapper objectMapper;
 
-    @Autowired
-    private WebApplicationContext context;
+    @MockitoBean protected JwtTokenProvider jwtTokenProvider;
+    @MockitoBean protected JwtAuthenticationFilter jwtAuthenticationFilter;
+    @MockitoBean protected AuthCookieManager authCookieManager;
 
-    @MockitoBean private JwtTokenProvider jwtTokenProvider;
-    @MockitoBean private JwtAuthenticationFilter jwtAuthenticationFilter;
+    @MockitoBean protected SignupUseCase signupUseCase;
+    @MockitoBean protected LoginUseCase loginUseCase;
+    @MockitoBean protected VerificationUseCase verificationUseCase;
 
-    @BeforeEach
-    void setUp() {
-        this.mockMvc = MockMvcBuilders
-                .webAppContextSetup(context)
-                .build();
-    }
+    @MockitoBean protected BuzzCommandUseCase buzzCommandUseCase;
+    @MockitoBean protected BuzzQueryUseCase buzzQueryUseCase;
+
+    @MockitoBean protected FlagHostUseCase flagHostUseCase;
+    @MockitoBean protected FlagManagementUseCase flagManagementUseCase;
+    @MockitoBean protected FlagParticipationUseCase flagParticipationUseCase;
+    @MockitoBean protected FlagQueryUseCase flagQueryUseCase;
+
+    @MockitoBean protected FlagCommentCommandUseCase flagCommentCommandUseCase;
+    @MockitoBean protected FlagCommentQueryUseCase flagCommentQueryUseCase;
+
+    @MockitoBean protected FlagMemorialCommandUseCase flagMemorialCommandUseCase;
+    @MockitoBean protected FlagMemorialQueryUseCase flagMemorialQueryUseCase;
+
+    @MockitoBean protected FriendRequesterActionUseCase friendRequesterActionUseCase;
+    @MockitoBean protected FriendRequestReceiverActionUseCase friendRequestReceiverActionUseCase;
+    @MockitoBean protected FriendRequestQueryUseCase friendRequestQueryUseCase;
+
+    @MockitoBean protected FriendshipCommandUseCase friendshipCommandUseCase;
+    @MockitoBean protected FriendshipQueryUseCase friendshipQueryUseCase;
+
+    @MockitoBean protected LabelCommandUseCase labelCommandUseCase;
+    @MockitoBean protected LabelQueryUseCase labelQueryUseCase;
+
+    @MockitoBean protected SocialExpansionQueryUseCase socialExpansionQueryUseCase;
+    @MockitoBean protected SocialNetworkQueryUseCase socialNetworkQueryUseCase;
+
+    @MockitoBean protected TraceCommandUseCase traceCommandUseCase;
+
 }
