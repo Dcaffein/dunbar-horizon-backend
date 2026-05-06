@@ -1,0 +1,33 @@
+app:
+    frontend:
+        base-url: http://localhost:3000
+
+spring:
+    jpa:
+        hibernate:
+            ddl-auto: create
+        show-sql: true
+        properties:
+            hibernate:
+                format_sql: true
+                dialect: org.hibernate.dialect.MySQLDialect
+    data:
+        mongodb:
+            auto-index-creation: true
+        neo4j:
+            database: neo4j
+    mail:
+        host: localhost
+        port: 3025
+
+jwt:
+    secret: thisIsAVeryLongAndSecureSecretKeyForJWTAuthUsingHS512Algorithm1234567890abcdefghijklmn
+    access-expiration-seconds: 3600
+    refresh-expiration-seconds: 86400
+
+aws:
+    s3:
+        access-key: dummy-access-key
+        secret-key: dummy-secret-key
+        region: ap-northeast-2
+        bucket: dummy-bucket
