@@ -2,17 +2,22 @@ package com.example.DunbarHorizon.account.adapter.in.web;
 
 import com.example.DunbarHorizon.account.adapter.in.web.dto.LoginRequestDto;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.SignupRequestDto;
+import com.example.DunbarHorizon.account.adapter.in.web.dto.UserProfileUpdateRequest;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.VerificationEmailRequestDto;
 import com.example.DunbarHorizon.account.application.dto.AuthTokenResult;
 import com.example.DunbarHorizon.support.BaseControllerTest;
+import com.example.DunbarHorizon.support.WithMockCustomUser;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -100,5 +105,38 @@ class AccountControllerTest extends BaseControllerTest {
                 .andExpect(status().isOk());
 
         verify(verificationUseCase).verifyEmail(eq(token));
+    }
+
+    @Test
+    @WithMockCustomUser
+    @DisplayName("이미지 파일과 함께 프로필을 수정하면 200 OK를 반환하고 updateProfile()을 호출한다")
+    void updateProfile_withImage_Success() throws Exception {
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(new UserProfileUpdateRequest("새닉네임")));
+        MockMultipartFile imagePart = new MockMultipartFile(
+                "profileImage", "photo.jpg", MediaType.IMAGE_JPEG_VALUE, "image-bytes".getBytes());
+
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/auth/users/me")
+                        .file(requestPart)
+                        .file(imagePart))
+                .andExpect(status().isOk());
+
+        verify(userProfileUpdateUseCase).updateProfile(any(), eq("새닉네임"), any());
+    }
+
+    @Test
+    @WithMockCustomUser
+    @DisplayName("이미지 없이 닉네임만 수정하면 200 OK를 반환하고 profileImage=null로 updateProfile()을 호출한다")
+    void updateProfile_withoutImage_Success() throws Exception {
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(new UserProfileUpdateRequest("새닉네임")));
+
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/auth/users/me")
+                        .file(requestPart))
+                .andExpect(status().isOk());
+
+        verify(userProfileUpdateUseCase).updateProfile(any(), eq("새닉네임"), isNull());
     }
 }
