@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.support;
 
 import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
 import com.example.DunbarHorizon.account.application.port.in.SignupUseCase;
+import com.example.DunbarHorizon.account.application.port.in.UserProfileUpdateUseCase;
 import com.example.DunbarHorizon.account.application.port.in.VerificationUseCase;
 import com.example.DunbarHorizon.buzz.application.port.in.BuzzCommandUseCase;
 import com.example.DunbarHorizon.buzz.application.port.in.BuzzQueryUseCase;
@@ -37,6 +38,7 @@ public abstract class BaseControllerTest {
     @MockitoBean protected SignupUseCase signupUseCase;
     @MockitoBean protected LoginUseCase loginUseCase;
     @MockitoBean protected VerificationUseCase verificationUseCase;
+    @MockitoBean protected UserProfileUpdateUseCase userProfileUpdateUseCase;
 
     @MockitoBean protected BuzzCommandUseCase buzzCommandUseCase;
     @MockitoBean protected BuzzQueryUseCase buzzQueryUseCase;
