@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.social.application;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxEventType;
 import com.example.DunbarHorizon.global.event.user.UserSyncCompletedEvent;
 import com.example.DunbarHorizon.global.event.user.UserSyncIntegrationEvent;
-import com.example.DunbarHorizon.social.application.eventHandler.SocialUserEventListener;
+import com.example.DunbarHorizon.social.application.eventListener.SocialUserEventListener;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import org.junit.jupiter.api.DisplayName;

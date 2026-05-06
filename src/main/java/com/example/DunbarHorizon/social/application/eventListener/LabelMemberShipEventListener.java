@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.social.application.eventHandler;
+package com.example.DunbarHorizon.social.application.eventListener;
 
 import com.example.DunbarHorizon.social.domain.friend.event.FriendShipDeletedEvent;
 import com.example.DunbarHorizon.social.domain.label.Label;

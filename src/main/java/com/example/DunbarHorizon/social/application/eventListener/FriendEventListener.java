@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.social.application.eventHandler;
+package com.example.DunbarHorizon.social.application.eventListener;
 
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;

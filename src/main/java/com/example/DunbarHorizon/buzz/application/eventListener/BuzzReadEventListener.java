@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.buzz.application.eventHandler;
+package com.example.DunbarHorizon.buzz.application.eventListener;
 
 
 import com.example.DunbarHorizon.buzz.adapter.out.persistence.mongo.BuzzMongoTemplateRepository;

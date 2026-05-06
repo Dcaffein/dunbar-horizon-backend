@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.social.application.eventHandler;
+package com.example.DunbarHorizon.social.application.eventListener;
 
 import com.example.DunbarHorizon.global.event.interaction.MutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
@@ -16,6 +16,7 @@ import org.springframework.retry.annotation.Retryable;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -36,8 +37,8 @@ public class FriendInteractionEventListener {
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2.0)
     )
-    @Neo4jTransactional
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Neo4jTransactional(propagation = Propagation.REQUIRES_NEW)
     public void handleUserInteraction(UserInteractionEvent event) {
         String friendshipId = Friendship.generateCompositeId(event.actorId(), event.targetId());
         friendshipRepository.findById(friendshipId).ifPresent(friendship -> {
@@ -62,8 +63,8 @@ public class FriendInteractionEventListener {
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2.0)
     )
-    @Neo4jTransactional
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Neo4jTransactional(propagation = Propagation.REQUIRES_NEW)
     public void handleMutualInteraction(MutualInteractionEvent event) {
         String friendshipId = Friendship.generateCompositeId(event.userIdA(), event.userIdB());
         friendshipRepository.findById(friendshipId).ifPresent(friendship -> {

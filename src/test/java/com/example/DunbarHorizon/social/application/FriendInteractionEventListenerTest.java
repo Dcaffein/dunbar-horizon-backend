@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.application;
 
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
-import com.example.DunbarHorizon.social.application.eventHandler.FriendInteractionEventListener;
+import com.example.DunbarHorizon.social.application.eventListener.FriendInteractionEventListener;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import org.junit.jupiter.api.DisplayName;

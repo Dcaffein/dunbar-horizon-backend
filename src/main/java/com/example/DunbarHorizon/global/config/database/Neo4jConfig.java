@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.global.config;
+package com.example.DunbarHorizon.global.config.database;
 
 import org.neo4j.driver.Driver;
 import org.springframework.context.annotation.Bean;

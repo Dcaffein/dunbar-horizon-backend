@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.application;
 
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
-import com.example.DunbarHorizon.social.application.eventHandler.FriendEventListener;
+import com.example.DunbarHorizon.social.application.eventListener.FriendEventListener;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipBroker;

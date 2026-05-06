@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.global.annotation;
 
 import org.springframework.core.annotation.AliasFor;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.annotation.ElementType;
@@ -14,4 +15,7 @@ import java.lang.annotation.Target;
 public @interface Neo4jTransactional {
     @AliasFor(annotation = Transactional.class, attribute = "readOnly")
     boolean readOnly() default false;
+
+    @AliasFor(annotation = Transactional.class, attribute = "propagation")
+    Propagation propagation() default Propagation.REQUIRED;
 }

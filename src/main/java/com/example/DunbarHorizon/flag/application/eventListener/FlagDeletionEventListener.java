@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -33,8 +34,8 @@ public class FlagDeletionEventListener {
     private final ApplicationEventPublisher eventPublisher;
 
     @Async
-    @Transactional
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleFlagDeletion(FlagDeletedEvent event) {
         Flag deletedFlag = flagRepository.findById(event.flagId())
                 .orElseThrow(() -> new IllegalStateException("삭제된 플래그를 찾을 수 없습니다."));

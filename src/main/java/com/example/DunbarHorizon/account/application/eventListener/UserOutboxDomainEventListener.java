@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.account.application.eventHandler;
+package com.example.DunbarHorizon.account.application.eventListener;
 
 import com.example.DunbarHorizon.account.domain.outbox.UserEventOutbox;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxEventType;

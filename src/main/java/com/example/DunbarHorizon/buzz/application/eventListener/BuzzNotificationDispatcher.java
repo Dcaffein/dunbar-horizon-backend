@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.buzz.application.eventHandler;
+package com.example.DunbarHorizon.buzz.application.eventListener;
 
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;

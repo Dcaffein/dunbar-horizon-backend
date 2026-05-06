@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.application;
 
-import com.example.DunbarHorizon.social.application.eventHandler.LabelMemberShipEventListener;
+import com.example.DunbarHorizon.social.application.eventListener.LabelMemberShipEventListener;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendShipDeletedEvent;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.repository.LabelRepository;

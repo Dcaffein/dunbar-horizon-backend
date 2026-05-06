@@ -14,6 +14,7 @@ import com.example.DunbarHorizon.global.security.AuthCookieManager;
 import com.example.DunbarHorizon.social.application.port.in.*;
 import com.example.DunbarHorizon.social.application.port.in.LabelCommandUseCase;
 import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
+import com.example.DunbarHorizon.notification.application.NotificationService;
 import com.example.DunbarHorizon.trace.application.port.in.TraceCommandUseCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;

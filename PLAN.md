@@ -1,104 +1,63 @@
-# PLAN — Task 19: Social 도메인 동시성 통합 테스트 추가
+# PLAN: Task 23 — FlagRole에서 GUEST 제거 및 getMyFlagsByRole 엔드포인트 추가
 
 ## 작업 목표
-
-`FriendRequesterActionService.sendRequest()`에 두 트랜잭션이 동시에 접근할 때
-`FriendRequest.pairKey` DB 유니크 제약이 실제로 방어하는지 검증하는 통합 테스트를 추가한다.
-
----
-
-## 생성 파일
-
-| 구분 | 파일 |
-|------|------|
-| 신규 생성 | `src/test/java/com/example/DunbarHorizon/social/adapter/out/neo4j/FriendRequestConcurrencyTest.java` |
+`FlagRole.GUEST`를 제거한다.
+`getMyFlagsByRole()`은 유효한 기능이지만 컨트롤러에 노출되지 않은 상태이므로,
+`GET /api/v1/flags/me?role={HOST|PARTICIPANT}` 엔드포인트를 추가해 완성한다.
 
 ---
 
-## 테스트 환경 구성
+## 현황 분석
 
-`Neo4jRepositoryTest`는 `@DataNeo4jTest` + `@Transactional` 조합이어서 두 가지 이유로 사용 불가:
-1. 서비스 빈(`FriendRequesterActionService`)이 로드되지 않음
-2. `@Transactional`이 붙으면 멀티스레드 각각이 독립 트랜잭션을 가질 수 없음
+### GUEST가 쓰이는 위치
 
-따라서 아래 어노테이션을 직접 조합한다:
+| 위치 | 용도 | 조치 |
+|------|------|------|
+| `FlagRole.java` | enum 값 정의 | 제거 |
+| `FlagQueryService.getMyFlagsByRole()` | GUEST 케이스 → `List.of()` | 케이스 제거. HOST/PARTICIPANT exhaustive switch |
+| `FlagQueryService.determineViewerRole()` | 폴백으로 GUEST 반환 | `null` 반환으로 변경 |
+| `FlagDetailResult.role` 필드 | 응답 DTO | `@Nullable` 추가 |
 
-```java
-@SpringBootTest
-@ActiveProfiles("test")
-@Import(TestContainerConfig.class)
-class FriendRequestConcurrencyTest { ... }
-```
-
-**`@Transactional`은 테스트 클래스와 메서드 양쪽 모두 금지.**
-데이터 정리는 `@AfterEach`에서 `FriendRequestNeo4jRepository.deleteAll()`과
-`SocialUserNeo4jRepository.deleteById()`로 수동 처리한다.
+### `getMyFlagsByRole` 미노출 현황
+`FlagQueryUseCase.getMyFlagsByRole()`은 구현되어 있으나 컨트롤러 엔드포인트가 없다.
+`FlagQueryController`에 `GET /me?role=...`을 추가한다.
+기존 `/me/hosting`, `/me/participating`은 유지한다 (별도 삭제 task).
 
 ---
 
-## 구현 상세
+## 변경 파일 목록
 
-### 주입 대상
+**수정**
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| `flag/application/port/in/FlagRole.java` | `GUEST` 제거. HOST, PARTICIPANT만 유지 |
+| `flag/application/service/flag/FlagQueryService.java` | `getMyFlagsByRole()` switch에서 GUEST 케이스 제거. `determineViewerRole()` 반환 타입 `@Nullable FlagRole`, `null` 반환 |
+| `flag/application/dto/result/FlagDetailResult.java` | `FlagRole role` 필드에 `@Nullable` 추가 |
+| `flag/adapter/in/web/FlagQueryController.java` | `GET /me?role={HOST\|PARTICIPANT}` 엔드포인트 추가. `FlagQueryUseCase.getMyFlagsByRole()` 호출 |
+| `test/.../FlagQueryServiceTest.java` | `getMyFlagsByRole_Guest_ReturnsEmpty` 테스트 제거 |
+| `test/.../FlagControllerTest.java` | `getMyFlags_HostRole_Returns200` — 기존 테스트가 이미 올바른 형태이므로 유지 |
+
+---
+
+## 구현 방향
 
 ```java
-@Autowired FriendRequesterActionService friendRequesterActionService;
-@Autowired FriendRequestNeo4jRepository friendRequestNeo4jRepository;
-@Autowired SocialUserNeo4jRepository    socialUserNeo4jRepository;
-```
-
-### @BeforeEach / @AfterEach
-
-```java
-@BeforeEach
-void setUp() {
-    userA = socialUserNeo4jRepository.save(new SocialUser(1L, "userA", ""));
-    userB = socialUserNeo4jRepository.save(new SocialUser(2L, "userB", ""));
-}
-
-@AfterEach
-void tearDown() {
-    friendRequestNeo4jRepository.deleteAll();
-    socialUserNeo4jRepository.deleteById(userA.getId());
-    socialUserNeo4jRepository.deleteById(userB.getId());
+// FlagQueryController
+@GetMapping("/me")
+public ResponseEntity<List<FlagResult>> getMyFlagsByRole(
+        @CurrentUserId Long currentUserId,
+        @RequestParam FlagRole role) {
+    return ResponseEntity.ok(flagQueryUseCase.getMyFlagsByRole(currentUserId, role));
 }
 ```
 
-### 검증 시나리오
-
-**시나리오 1 — 동일 방향 동시 요청 (A→B 두 번)**
-
-```java
-// 두 스레드가 동시에 sendRequest(A.id, B.id) 호출
-// 기대: successCount == 1, failCount == 1 (DuplicateFriendRequestException)
-```
-
-**시나리오 2 — 역방향 동시 요청 (A→B / B→A)**
-
-```java
-// 스레드1: sendRequest(A.id, B.id)
-// 스레드2: sendRequest(B.id, A.id)
-// pairKey는 방향 무관 동일("1_2") → 기대: successCount == 1, failCount == 1
-```
-
-### 공통 패턴
-
-```java
-CountDownLatch startLatch = new CountDownLatch(1);
-CountDownLatch doneLatch  = new CountDownLatch(2);
-AtomicInteger successCount = new AtomicInteger(0);
-AtomicInteger failCount    = new AtomicInteger(0);
-
-// 각 스레드 Runnable 구성 후
-startLatch.countDown();          // 동시 출발
-doneLatch.await(5, TimeUnit.SECONDS);
-
-assertThat(successCount.get()).isEqualTo(1);
-assertThat(failCount.get()).isEqualTo(1);
-```
+- `@RequestParam FlagRole role` — Spring이 문자열을 FlagRole로 변환. GUEST가 제거되면 `?role=GUEST` 요청은 자동으로 400 Bad Request.
+- `determineViewerRole()` 반환 타입을 `@Nullable FlagRole`로 바꾸고 null이 "관계 없는 뷰어"를 의미하게 한다.
 
 ---
 
 ## 예상 사이드 이펙트
 
-- 없음. 신규 테스트 파일만 추가하며 프로덕션 코드 변경 없음.
-- `@SpringBootTest`는 전체 컨텍스트를 로드하므로 테스트 실행 시간이 길 수 있음.
+- `FlagDetailResult.role`이 nullable이 되므로, 클라이언트가 `role == null`을 "관계 없는 뷰어"로 처리해야 한다.
+- 기존에 GUEST를 체크하는 프론트엔드 코드가 있다면 수정 필요.
