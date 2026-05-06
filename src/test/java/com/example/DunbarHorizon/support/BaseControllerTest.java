@@ -2,7 +2,9 @@ package com.example.DunbarHorizon.support;
 
 import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
 import com.example.DunbarHorizon.account.application.port.in.SignupUseCase;
+import com.example.DunbarHorizon.account.application.port.in.UserProfileUpdateUseCase;
 import com.example.DunbarHorizon.account.application.port.in.VerificationUseCase;
+import com.example.DunbarHorizon.notification.application.NotificationService;
 import com.example.DunbarHorizon.buzz.application.port.in.BuzzCommandUseCase;
 import com.example.DunbarHorizon.buzz.application.port.in.BuzzQueryUseCase;
 import com.example.DunbarHorizon.flag.application.port.in.*;
@@ -15,12 +17,14 @@ import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
 import com.example.DunbarHorizon.trace.application.port.in.TraceCommandUseCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest
+@AutoConfigureMockMvc(addFilters = false)
 @Import(TestSecurityConfig.class)
 public abstract class BaseControllerTest {
 
@@ -37,6 +41,7 @@ public abstract class BaseControllerTest {
     @MockitoBean protected SignupUseCase signupUseCase;
     @MockitoBean protected LoginUseCase loginUseCase;
     @MockitoBean protected VerificationUseCase verificationUseCase;
+    @MockitoBean protected UserProfileUpdateUseCase userProfileUpdateUseCase;
 
     @MockitoBean protected BuzzCommandUseCase buzzCommandUseCase;
     @MockitoBean protected BuzzQueryUseCase buzzQueryUseCase;
@@ -66,5 +71,8 @@ public abstract class BaseControllerTest {
     @MockitoBean protected SocialNetworkQueryUseCase socialNetworkQueryUseCase;
 
     @MockitoBean protected TraceCommandUseCase traceCommandUseCase;
+
+    // TODO: NotificationController가 구체 서비스를 직접 주입받음 — 포트 인터페이스 분리 필요 (별도 task)
+    @MockitoBean protected NotificationService notificationService;
 
 }

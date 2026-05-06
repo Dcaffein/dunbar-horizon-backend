@@ -13,6 +13,7 @@ import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
+import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -80,7 +81,6 @@ public class FlagQueryService implements FlagQueryUseCase {
         return switch (role) {
             case HOST -> getMyHostingFlags(userId);
             case PARTICIPANT -> getParticipatingFlags(userId);
-            case GUEST -> List.of();
         };
     }
 
@@ -108,9 +108,10 @@ public class FlagQueryService implements FlagQueryUseCase {
                 .toList();
     }
 
+    @Nullable
     private FlagRole determineViewerRole(boolean isHost, boolean isParticipant) {
         if (isHost) return FlagRole.HOST;
         if (isParticipant) return FlagRole.PARTICIPANT;
-        return FlagRole.GUEST;
+        return null;
     }
 }
