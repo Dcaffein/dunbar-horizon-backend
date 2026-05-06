@@ -247,7 +247,9 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
                 .bind(limitSize).to("limitSize")
                 .bind(labelName == null ? "" : labelName).to("labelName")
                 .fetchAs(NetworkOneHopsByTwoHopResult.class)
-                // ... mappedBy 로직 동일
+                .mappedBy((typeSystem, record) -> new NetworkOneHopsByTwoHopResult(
+                        record.get("friendId").asLong()
+                ))
                 .all().stream().toList();
     }
 
@@ -286,10 +288,13 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
         return neo4jClient.query(cypher)
                 .bind(targetId).to("targetId")
                 .bind(limitSize).to("limitSize")
-                // labelName 파라미터 바인딩 (null이어도 무방)
                 .bind(labelName == null ? "" : labelName).to("labelName")
                 .fetchAs(MutualFriendEdgeResult.class)
-                // ... mappedBy 로직 동일
+                .mappedBy((typeSystem, record) -> new MutualFriendEdgeResult(
+                        record.get("friendAId").asLong(),
+                        record.get("friendBId").asLong(),
+                        record.get("intimacy").asDouble()
+                ))
                 .all().stream().toList();
     }
 

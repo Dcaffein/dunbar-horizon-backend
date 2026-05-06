@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.trace.application;
 
+import com.example.DunbarHorizon.trace.application.port.in.TraceCommandUseCase;
 import com.example.DunbarHorizon.trace.domain.model.Trace;
 import com.example.DunbarHorizon.trace.domain.repository.TraceRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -42,7 +43,7 @@ class TraceServiceRetryTest {
     }
 
     @Autowired
-    private TraceService traceService;
+    private TraceCommandUseCase traceService;
 
     @Autowired
     private TraceRepository traceRepository;
