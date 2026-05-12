@@ -15,7 +15,7 @@ aws ecr get-login-password --region ap-northeast-2 | sudo docker login --usernam
 echo "최신 도커 이미지를 다운로드합니다."
 sudo docker compose pull
 
-echo "기존 컨테이너를 중지하고 새로운 설정을 반영하여 재시작합니다."
+echo "기존 컨테이너를 중지하고 새로운 설정을 반영하여 재시작합니다"
 # docker-compose.yml의 env_file 설정이 .env를 자동으로 읽어 컨테이너에 주입함
 sudo docker compose down
 sudo docker compose up -d
