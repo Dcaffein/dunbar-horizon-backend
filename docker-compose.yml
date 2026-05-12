@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  dunbarhorizon-api-server:
+    image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+    container_name: dunbarhorizon-api-blue
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

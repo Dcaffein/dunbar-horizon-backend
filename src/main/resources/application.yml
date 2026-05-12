@@ -52,15 +52,13 @@ spring:
       database: neo4j
 
     mongodb:
-      uri: ${MONGO_URI:mongodb://localhost:2717/dunbar_horizon_notification}
+      uri: ${MONGO_URI:mongodb://localhost:27017/dunbar_horizon_notification}
       auto-index-creation: true
 
 aws:
   s3:
-    bucket: ${AWS_S3_BUCKET}
+    bucket: ${AWS_IMAGE_BUCKET}
     region: ${AWS_S3_REGION:ap-northeast-2}
-    access-key: ${AWS_ACCESS_KEY}
-    secret-key: ${AWS_SECRET_KEY}
 
 app:
   base-url: ${APP_BASE_URL:http://localhost:8080}
@@ -77,5 +75,5 @@ logging:
     root: INFO
     org.springframework.security: DEBUG
     org.springframework.web: INFO
-    org.springframework.data.neo4j.cypher: ${LOG_LEVEL_NEO4J:DEBUG}
+    org.springframework.data.neo4j.cypher: ${LOG_LEVEL_NEO4J:INFO}
     org.neo4j.driver: INFO
