@@ -43,44 +43,44 @@ jobs:
       - name: Generate .env file
         run: |
           # JWT 관련 설정
-          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
-          echo "JWT_ACCESS_EXPIRATION=${{ secrets.JWT_ACCESS_EXPIRATION }}" >> .env
-          echo "JWT_REFRESH_EXPIRATION=${{ secrets.JWT_REFRESH_EXPIRATION }}" >> .env
+          echo "JWT_SECRET_KEY='${{ secrets.JWT_SECRET_KEY }}'" >> .env
+          echo "JWT_ACCESS_EXPIRATION='${{ secrets.JWT_ACCESS_EXPIRATION }}'" >> .env
+          echo "JWT_REFRESH_EXPIRATION='${{ secrets.JWT_REFRESH_EXPIRATION }}'" >> .env
           
           # MySQL 접속 설정
-          echo "MYSQL_URL=${{ secrets.MYSQL_URL }}" >> .env
-          echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> .env
-          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
-          echo "JPA_DDL_AUTO=${{ secrets.JPA_DDL_AUTO }}" >> .env
+          echo "MYSQL_URL='${{ secrets.MYSQL_URL }}'" >> .env
+          echo "MYSQL_PASSWORD='${{ secrets.MYSQL_PASSWORD }}'" >> .env
+          echo "DB_USERNAME='${{ secrets.DB_USERNAME }}'" >> .env
+          echo "JPA_DDL_AUTO='${{ secrets.JPA_DDL_AUTO }}'" >> .env
           
           # Neo4j 접속 설정
-          echo "NEO4J_URI=${{ secrets.NEO4J_URI }}" >> .env
-          echo "NEO4J_PASSWORD=${{ secrets.NEO4J_PASSWORD }}" >> .env
-          echo "NEO4J_USERNAME=${{ secrets.NEO4J_USERNAME }}" >> .env
+          echo "NEO4J_URI='${{ secrets.NEO4J_URI }}'" >> .env
+          echo "NEO4J_PASSWORD='${{ secrets.NEO4J_PASSWORD }}'" >> .env
+          echo "NEO4J_USERNAME='${{ secrets.NEO4J_USERNAME }}'" >> .env
           
           # MongoDB 접속 설정
-          echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> .env
+          echo "MONGO_URI='${{ secrets.MONGO_URI }}'" >> .env
           
           # OAuth2 설정
-          echo "OAUTH_GOOGLE_CLIENT_ID=${{ secrets.OAUTH_GOOGLE_CLIENT_ID }}" >> .env
-          echo "OAUTH_GOOGLE_CLIENT_SECRET=${{ secrets.OAUTH_GOOGLE_CLIENT_SECRET }}" >> .env
+          echo "OAUTH_GOOGLE_CLIENT_ID='${{ secrets.OAUTH_GOOGLE_CLIENT_ID }}'" >> .env
+          echo "OAUTH_GOOGLE_CLIENT_SECRET='${{ secrets.OAUTH_GOOGLE_CLIENT_SECRET }}'" >> .env
           
           # SMTP 설정
-          echo "SMTP_USER=${{ secrets.SMTP_USER }}" >> .env
-          echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> .env
+          echo "SMTP_USER='${{ secrets.SMTP_USER }}'" >> .env
+          echo "SMTP_PASSWORD='${{ secrets.SMTP_PASSWORD }}'" >> .env
           
           # AWS S3 설정
-          echo "AWS_IMAGE_BUCKET=${{ secrets.AWS_IMAGE_BUCKET }}" >> .env
-          echo "AWS_S3_REGION=ap-northeast-2" >> .env
+          echo "AWS_IMAGE_BUCKET='${{ secrets.AWS_IMAGE_BUCKET }}'" >> .env
+          echo "AWS_S3_REGION='ap-northeast-2'" >> .env
           
           # 애플리케이션 기본 설정
-          echo "APP_BASE_URL=${{ secrets.APP_BASE_URL }}" >> .env
-          echo "FRONTEND_BASE_URL=${{ secrets.FRONTEND_BASE_URL }}" >> .env
+          echo "APP_BASE_URL='${{ secrets.APP_BASE_URL }}'" >> .env
+          echo "FRONTEND_BASE_URL='${{ secrets.FRONTEND_BASE_URL }}'" >> .env
           
-          # ECR 배포용 변수 (워크플로우 내부 데이터 활용)
-          echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> .env
-          echo "ECR_REPOSITORY=dunbarhorizon-backend" >> .env
-          echo "IMAGE_TAG=latest" >> .env
+          # ECR 배포용 변수
+          echo "ECR_REGISTRY='${{ steps.login-ecr.outputs.registry }}'" >> .env
+          echo "ECR_REPOSITORY='dunbarhorizon-backend'" >> .env
+          echo "IMAGE_TAG='latest'" >> .env
 
       - name: Zip deployment files
         run: zip -r $GITHUB_SHA.zip appspec.yml docker-compose.yml scripts/ .env
