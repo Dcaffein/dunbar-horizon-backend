@@ -63,7 +63,6 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           AWS_IMAGE_BUCKET: ${{ secrets.AWS_IMAGE_BUCKET }}
-          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
           FRONTEND_BASE_URL: ${{ secrets.FRONTEND_BASE_URL }}
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: dunbarhorizon-backend
@@ -86,7 +85,6 @@ jobs:
           echo "SMTP_PASSWORD=$SMTP_PASSWORD" >> .env
           echo "AWS_IMAGE_BUCKET=$AWS_IMAGE_BUCKET" >> .env
           echo "AWS_S3_REGION=ap-northeast-2" >> .env
-          echo "APP_BASE_URL=$APP_BASE_URL" >> .env
           echo "FRONTEND_BASE_URL=$FRONTEND_BASE_URL" >> .env
           echo "ECR_REGISTRY=$ECR_REGISTRY" >> .env
           echo "ECR_REPOSITORY=$ECR_REPOSITORY" >> .env
