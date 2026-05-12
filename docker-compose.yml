@@ -3,7 +3,7 @@ version: '3.8'
 services:
   dunbarhorizon-api-server:
     image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
-    container_name: dunbarhorizon-api-blue
+    container_name: dunbarhorizon-api-server
     ports:
       - "8080:8080"
     env_file:

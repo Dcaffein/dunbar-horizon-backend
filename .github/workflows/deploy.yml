@@ -41,46 +41,51 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Generate .env file
+        env:
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          JWT_ACCESS_EXPIRATION: ${{ secrets.JWT_ACCESS_EXPIRATION }}
+          JWT_REFRESH_EXPIRATION: ${{ secrets.JWT_REFRESH_EXPIRATION }}
+          MYSQL_URL: ${{ secrets.MYSQL_URL }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          JPA_DDL_AUTO: ${{ secrets.JPA_DDL_AUTO }}
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          OAUTH_GOOGLE_CLIENT_ID: ${{ secrets.OAUTH_GOOGLE_CLIENT_ID }}
+          OAUTH_GOOGLE_CLIENT_SECRET: ${{ secrets.OAUTH_GOOGLE_CLIENT_SECRET }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          AWS_IMAGE_BUCKET: ${{ secrets.AWS_IMAGE_BUCKET }}
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          FRONTEND_BASE_URL: ${{ secrets.FRONTEND_BASE_URL }}
         run: |
-          # JWT 관련 설정
-          echo "JWT_SECRET_KEY='${{ secrets.JWT_SECRET_KEY }}'" >> .env
-          echo "JWT_ACCESS_EXPIRATION='${{ secrets.JWT_ACCESS_EXPIRATION }}'" >> .env
-          echo "JWT_REFRESH_EXPIRATION='${{ secrets.JWT_REFRESH_EXPIRATION }}'" >> .env
-          
-          # MySQL 접속 설정
-          echo "MYSQL_URL='${{ secrets.MYSQL_URL }}'" >> .env
-          echo "MYSQL_PASSWORD='${{ secrets.MYSQL_PASSWORD }}'" >> .env
-          echo "DB_USERNAME='${{ secrets.DB_USERNAME }}'" >> .env
-          echo "JPA_DDL_AUTO='${{ secrets.JPA_DDL_AUTO }}'" >> .env
-          
-          # Neo4j 접속 설정
-          echo "NEO4J_URI='${{ secrets.NEO4J_URI }}'" >> .env
-          echo "NEO4J_PASSWORD='${{ secrets.NEO4J_PASSWORD }}'" >> .env
-          echo "NEO4J_USERNAME='${{ secrets.NEO4J_USERNAME }}'" >> .env
-          
-          # MongoDB 접속 설정
-          echo "MONGO_URI='${{ secrets.MONGO_URI }}'" >> .env
-          
-          # OAuth2 설정
-          echo "OAUTH_GOOGLE_CLIENT_ID='${{ secrets.OAUTH_GOOGLE_CLIENT_ID }}'" >> .env
-          echo "OAUTH_GOOGLE_CLIENT_SECRET='${{ secrets.OAUTH_GOOGLE_CLIENT_SECRET }}'" >> .env
-          
-          # SMTP 설정
-          echo "SMTP_USER='${{ secrets.SMTP_USER }}'" >> .env
-          echo "SMTP_PASSWORD='${{ secrets.SMTP_PASSWORD }}'" >> .env
-          
-          # AWS S3 설정
-          echo "AWS_IMAGE_BUCKET='${{ secrets.AWS_IMAGE_BUCKET }}'" >> .env
-          echo "AWS_S3_REGION='ap-northeast-2'" >> .env
-          
-          # 애플리케이션 기본 설정
-          echo "APP_BASE_URL='${{ secrets.APP_BASE_URL }}'" >> .env
-          echo "FRONTEND_BASE_URL='${{ secrets.FRONTEND_BASE_URL }}'" >> .env
-          
-          # ECR 배포용 변수
-          echo "ECR_REGISTRY='${{ steps.login-ecr.outputs.registry }}'" >> .env
-          echo "ECR_REPOSITORY='dunbarhorizon-backend'" >> .env
-          echo "IMAGE_TAG='latest'" >> .env
+          echo "JWT_SECRET_KEY=$JWT_SECRET_KEY" >> .env
+          echo "JWT_ACCESS_EXPIRATION=$JWT_ACCESS_EXPIRATION" >> .env
+          echo "JWT_REFRESH_EXPIRATION=$JWT_REFRESH_EXPIRATION" >> .env
+        
+          echo "MYSQL_URL=$MYSQL_URL" >> .env
+          echo "MYSQL_PASSWORD=$MYSQL_PASSWORD" >> .env
+          echo "DB_USERNAME=$DB_USERNAME" >> .env
+          echo "JPA_DDL_AUTO=$JPA_DDL_AUTO" >> .env
+        
+          echo "NEO4J_URI=$NEO4J_URI" >> .env
+          echo "NEO4J_PASSWORD=$NEO4J_PASSWORD" >> .env
+          echo "NEO4J_USERNAME=$NEO4J_USERNAME" >> .env
+        
+          echo "MONGO_URI=$MONGO_URI" >> .env
+        
+          echo "OAUTH_GOOGLE_CLIENT_ID=$OAUTH_GOOGLE_CLIENT_ID" >> .env
+          echo "OAUTH_GOOGLE_CLIENT_SECRET=$OAUTH_GOOGLE_CLIENT_SECRET" >> .env
+        
+          echo "SMTP_USER=$SMTP_USER" >> .env   
+          echo "SMTP_PASSWORD=$SMTP_PASSWORD" >> .env
+        
+          echo "AWS_IMAGE_BUCKET=$AWS_IMAGE_BUCKET" >> .env
+          echo "AWS_S3_REGION=ap-northeast-2" >> .env
+          echo "APP_BASE_URL=$APP_BASE_URL" >> .env
+          echo "FRONTEND_BASE_URL=$FRONTEND_BASE_URL" >> .env
 
       - name: Zip deployment files
         run: zip -r $GITHUB_SHA.zip appspec.yml docker-compose.yml scripts/ .env
