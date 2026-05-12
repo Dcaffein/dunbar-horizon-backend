@@ -61,7 +61,6 @@ aws:
     region: ${AWS_S3_REGION:ap-northeast-2}
 
 app:
-  base-url: ${APP_BASE_URL:http://localhost:8080}
   frontend:
     base-url: ${FRONTEND_BASE_URL:http://localhost:3000}
 
