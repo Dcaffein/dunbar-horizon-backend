@@ -12,7 +12,7 @@ ECR_REGISTRY=$(grep ECR_REGISTRY .env | cut -d '=' -f2-)
 echo "Amazon ECR에 로그인합니다."
 aws ecr get-login-password --region ap-northeast-2 | sudo docker login --username AWS --password-stdin $ECR_REGISTRY
 
-echo "최신 도커 이미지를 다운로드합니다."
+echo "최신 도커 이미지를 다운로드합니다"
 sudo docker compose pull
 
 echo "기존 컨테이너를 중지하고 새로운 설정을 반영하여 재시작합니다"
