@@ -21,7 +21,7 @@ import static org.neo4j.cypherdsl.core.Cypher.*;
 @Repository
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class SocialExpansionNeo4jRepositoryAdapter implements SocialExpansionRepository {
+public class SocialExpansionRepositoryAdapter implements SocialExpansionRepository {
 
     private final Neo4jClient neo4jClient;
 
