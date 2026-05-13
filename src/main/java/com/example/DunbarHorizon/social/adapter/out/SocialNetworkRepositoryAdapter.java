@@ -4,10 +4,12 @@ import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeR
 import com.example.DunbarHorizon.social.application.dto.result.NetworkFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkRepository;
+import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import lombok.RequiredArgsConstructor;
 import org.neo4j.cypherdsl.core.*;
 import org.neo4j.cypherdsl.core.renderer.Configuration;
 import org.neo4j.cypherdsl.core.renderer.Renderer;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,19 +23,15 @@ import static com.example.DunbarHorizon.social.domain.friend.constant.FriendCons
 @Repository
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkRepository {
+public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
 
     private final Neo4jClient neo4jClient;
 
     private static final Renderer renderer = Renderer.getRenderer(Configuration.defaultConfig());
 
-    /**
-     * 사용자의 기본 소셜 네트워크 지형도를 조회
-     * 던바의 수 기반으로 노드 수를 제한(limitSize)하며
-     * 관계의 친밀도(intimacy)와 사용자의 관심도(interestScore)를 한 번에 매핑하여 반환
-     */
+    @Cacheable(cacheNames = "dunbar:network:default", key = "#userId + ':' + #circleSize.name()")
     @Override
-    public List<NetworkFriendEdgeResult> getDefaultIntimacyNetwork(Long userId, int limitSize) {
+    public List<NetworkFriendEdgeResult> getDefaultIntimacyNetwork(Long userId, DunbarCircle circleSize) {
 
         Node me = user().named("me");
         Node member = user().named("member");
@@ -47,7 +45,7 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
         String cypher = renderer.render(statement);
 
         return neo4jClient.query(cypher)
-                .bind(limitSize).to("limitSize")
+                .bind(circleSize.getLimitSize()).to("limitSize")
                 .bindAll(statement.getCatalog().getParameters())
                 .fetchAs(NetworkFriendEdgeResult.class)
                 .mappedBy((typeSystem, record) -> new NetworkFriendEdgeResult(
@@ -62,12 +60,9 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
                 .toList();
     }
 
-    /**
-     * 특정 라벨(그룹)에 속한 멤버들로만 구성된 소셜 네트워크를 조회
-     * 기본 네트워크와 동일한 동적 프루닝 및 데이터 매핑 정책을 공유
-     */
+    @Cacheable(cacheNames = "dunbar:network:label", key = "#userId + ':' + #labelId")
     @Override
-    public List<NetworkFriendEdgeResult> getLabelCustomNetwork(Long userId, String labelName, int limitSize) {
+    public List<NetworkFriendEdgeResult> getLabelCustomNetwork(Long userId, String labelId) {
 
         Node me = user().named("me");
         Node label = label().named("label");
@@ -76,7 +71,7 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
 
         StatementBuilder.OngoingReading baseBuilder = matchUserWithId(userId, "me")
                 .match(me.relationshipTo(label, "HAS_LABEL").relationshipTo(member, "HAS_MEMBER"))
-                .where(label.property("name").isEqualTo(Cypher.parameter("labelName")))
+                .where(label.property("id").isEqualTo(Cypher.parameter("labelId")))
                 .match(friendshipBetween(me, myFriendship, member));
 
         Statement statement = buildDynamicPruningNetwork(baseBuilder, me, member, myFriendship);
@@ -84,8 +79,8 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
         String cypher = renderer.render(statement);
 
         return neo4jClient.query(cypher)
-                .bind(labelName).to("labelName")
-                .bind(limitSize).to("limitSize")
+                .bind(labelId).to("labelId")
+                .bind(DunbarCircle.DUNBAR.getLimitSize()).to("limitSize")
                 .bindAll(statement.getCatalog().getParameters())
                 .fetchAs(NetworkFriendEdgeResult.class)
                 .mappedBy((typeSystem, record) -> new NetworkFriendEdgeResult(
@@ -100,10 +95,6 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
                 .toList();
     }
 
-    /**
-     * 네트워크 렌더링 시 발생하는 시각적 폭발을 방지하기 위해 엣지 개수를 동적으로 제한하는 공통 쿼리 빌더
-     * 인가된 베이스 쿼리 위에서 컷오프 연산과 관심도 추출을 수행
-     */
     private Statement buildDynamicPruningNetwork(
             StatementBuilder.OngoingReading baseBuilder,
             Node me, Node member, Node myFriendship) {
@@ -126,8 +117,6 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
         SymbolicName topEdges = Cypher.name("topEdges");
         SymbolicName edgeData = Cypher.name("edgeData");
 
-        // 탐색 경계 설정
-        // 친밀도 기준 내림차순 정렬 후 요청된 크기(limitSize)만큼 멤버를 제한하여 컬렉션으로 집계
         StatementBuilder.OngoingReadingAndWith withBoundary = baseBuilder
                 .with(me, member, myFriendship)
                 .orderBy(myFriendship.property(PROP_INTIMACY).descending())
@@ -146,8 +135,6 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
                         friendshipList
                 );
 
-        // 동적 한계치 연산
-        // 노드별로 시각화될 엣지의 수를 사용자와의 친밀도에 비례하여 동적으로 할당 (5~30개)
         Expression myIntimacy = Cypher.coalesce(myFriendship.property(PROP_INTIMACY), Cypher.literalOf(0.0));
         Expression limitCalc = Cypher.call("toInteger").withArgs(
                 Cypher.literalOf(5).add(myIntimacy.multiply(Cypher.literalOf(25)))
@@ -172,8 +159,6 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
                 "targetMember", targetMember.getRequiredSymbolicName()
         );
 
-        // 관계 매칭 및 프루닝 적용
-        // 확정된 바운더리 내부에서 노드 간의 관계를 매칭하고, 각 노드별로 계산된 동적 한계치까지만 엣지를 슬라이스
         return withLimit
                 .match(friendshipBetween(member, innerFriendship, targetMember))
                 .where(targetMember.getRequiredSymbolicName().in(boundary))
@@ -190,15 +175,11 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
                         member,
                         Cypher.subList(allEdges, Cypher.literalOf(0), dynamicLimit).as("topEdges")
                 )
-
-                // 슬라이싱된 엣지 데이터를 다시 행으로 전개하고, 맵의 요소를 정식 노드로 승격시켜 매칭에 사용
                 .unwind(topEdges).as("edgeData")
                 .with(
                         me, member, edgeData,
                         Cypher.property(edgeData, "targetMember").as(targetNode.getRequiredSymbolicName().getValue())
                 )
-
-                // 중심 노드(me)와 연결된 각 친구 노드의 interestScore를 조회하여 최종 결과에 포함
                 .match(relationshipA.relationshipFrom(member, "HAS_FRIENDSHIP"))
                 .match(relationshipB.relationshipFrom(targetNode, "HAS_FRIENDSHIP"))
                 .returning(
@@ -211,11 +192,6 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
                 .build();
     }
 
-    /**
-     * 알 수도 있는 사람(2-Hop 타겟)과 나와의 공통 친구를 조회
-     * 논리적 위계질서를 유지하기 위해, 현재 시각화된 화면 인원 내에서만 검색하며
-     * 도출되는 엣지 수는 타겟의 비친밀 상태를 고려하여 최대 5개로 제한
-     */
     @Override
     public List<NetworkOneHopsByTwoHopResult> getIntersectionOneHops(
             Long userId, Long targetId, String labelName, int limitSize) {
@@ -226,10 +202,8 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
         Relationship targetRelationship = targetUser.relationshipTo(targetFriendship, HAS_FRIENDSHIP).named("targetRelationship");
         SymbolicName currentSkeleton = Cypher.name("currentSkeleton");
 
-        // 1. 공통 빌더를 호출하여 현재 화면 상태(currentSkeleton) 재구성
         StatementBuilder.OngoingReadingAndWith withSkeleton = buildCurrentSkeleton(userId, labelName);
 
-        // 2. 이방인 페널티 적용하여 최대 5명 도출
         Statement statement = withSkeleton
                 .match(targetUser).where(idEquals(targetUser, targetId))
                 .match(targetRelationship.relationshipFrom(mutual, HAS_FRIENDSHIP))
@@ -253,9 +227,6 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
                 .all().stream().toList();
     }
 
-    /**
-     * 내 친구와 네트워크의 연결을 조회
-     */
     @Override
     public List<MutualFriendEdgeResult> getIntersectionByOneHop(
             Long userId, Long targetId, String labelName, int limitSize) {
@@ -266,14 +237,11 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
         Relationship targetRelationship = target.relationshipTo(targetFriendship, HAS_FRIENDSHIP).named("targetRelationship");
         SymbolicName currentSkeleton = Cypher.name("currentSkeleton");
 
-        // 1. 공통 빌더를 호출하여 현재 화면 상태(currentSkeleton) 재구성
         StatementBuilder.OngoingReadingAndWith withSkeleton = buildCurrentSkeleton(userId, labelName);
 
-        // 2. 타겟과 교집합 찾기
         Statement statement = withSkeleton
                 .match(target).where(idEquals(target, targetId))
                 .match(targetRelationship.relationshipFrom(mutual, HAS_FRIENDSHIP))
-                // 💡 핵심: 백엔드가 직접 만든 currentSkeleton 안에 있는 사람만 교집합으로 인정!
                 .where(mutual.getRequiredSymbolicName().in(currentSkeleton))
                 .and(isRoutable(targetRelationship))
                 .returning(
@@ -298,10 +266,6 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
                 .all().stream().toList();
     }
 
-    /**
-     * 클라이언트가 현재 보고 있는 화면의 뼈대(Skeleton)를 백엔드에서 결정론적으로 재구성합니다.
-     * labelName이 존재하면 해당 라벨로 필터링하고, 없으면 글로벌 네트워크 기준으로 limitSize만큼 자릅니다.
-     */
     private StatementBuilder.OngoingReadingAndWith buildCurrentSkeleton(Long userId, String labelName) {
         Node me = user().named("me");
         Node myFriend = user().named("myFriend");
@@ -309,14 +273,12 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
         StatementBuilder.OngoingReading builder = matchUserWithId(userId, "me")
                 .match(friendshipBetween(me, myFriendship, myFriend));
 
-        // 라벨 컨텍스트가 주어졌다면, 라벨 필터링 추가
         if (labelName != null && !labelName.isBlank()) {
             Node label = label().named("label");
             builder = builder.match(me.relationshipTo(label, "HAS_LABEL").relationshipTo(myFriend, "HAS_MEMBER"))
                     .where(label.property("name").isEqualTo(Cypher.parameter("labelName")));
         }
 
-        // 친밀도 순 정렬 및 limitSize 적용 후, 하나의 리스트(currentSkeleton)로 집계
         return builder.with(myFriend, myFriendship)
                 .orderBy(myFriendship.property(PROP_INTIMACY).descending())
                 .limit(Cypher.parameter("limitSize"))

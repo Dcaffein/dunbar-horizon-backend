@@ -50,10 +50,12 @@ spring:
   data:
     neo4j:
       database: neo4j
-
     mongodb:
       uri: ${MONGO_URI:mongodb://localhost:27017/dunbar_horizon_notification}
       auto-index-creation: true
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 aws:
   s3:

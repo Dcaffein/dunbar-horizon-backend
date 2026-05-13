@@ -31,20 +31,19 @@ public class SocialQueryController {
             @CurrentUserId Long currentUserId,
             @RequestParam(defaultValue = "DUNBAR") DunbarCircle circleSize
     ) {
-        return ResponseEntity.ok(networkQueryUseCase.getFriendsNetwork(currentUserId, circleSize.getLimitSize()));
+        return ResponseEntity.ok(networkQueryUseCase.getFriendsNetwork(currentUserId, circleSize));
     }
 
     /**
      * 라벨 네트워크
-     * 라벨은 기본적으로 50명(KINSHIP)까지만 방어적으로 조회하도록 defaultValue 설정
+     * 라벨 크기와 무관하게 최대 150명(Dunbar's Ceiling)까지 단일 뷰로 제공
      */
-    @GetMapping("/labels/{labelName}")
+    @GetMapping("/labels/{labelId}")
     public ResponseEntity<List<NetworkFriendEdgeResult>> getLabelNetwork(
             @CurrentUserId Long currentUserId,
-            @PathVariable String labelName,
-            @RequestParam(defaultValue = "KINSHIP") DunbarCircle circleSize
+            @PathVariable String labelId
     ) {
-        return ResponseEntity.ok(networkQueryUseCase.getLabelNetwork(currentUserId, labelName, circleSize.getLimitSize()));
+        return ResponseEntity.ok(networkQueryUseCase.getLabelNetwork(currentUserId, labelId));
     }
 
     /**

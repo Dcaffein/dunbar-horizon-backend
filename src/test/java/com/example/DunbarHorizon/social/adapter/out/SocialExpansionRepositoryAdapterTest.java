@@ -14,11 +14,11 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Neo4jRepositoryTest
-@Import(SocialExpansionNeo4jRepositoryAdapter.class)
-class SocialExpansionNeo4jRepositoryAdapterTest {
+@Import(SocialExpansionRepositoryAdapter.class)
+class SocialExpansionRepositoryAdapterTest {
 
     @Autowired
-    private SocialExpansionNeo4jRepositoryAdapter expansionRepository;
+    private SocialExpansionRepositoryAdapter expansionRepository;
 
     @Autowired
     private Neo4jClient neo4jClient;
