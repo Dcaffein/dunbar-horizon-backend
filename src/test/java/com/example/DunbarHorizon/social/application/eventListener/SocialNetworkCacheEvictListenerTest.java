@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.social.adapter.in.event;
+package com.example.DunbarHorizon.social.application.eventListener;
 
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkCacheManager;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
