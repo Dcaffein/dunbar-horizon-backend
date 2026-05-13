@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeR
 import com.example.DunbarHorizon.social.application.dto.result.NetworkFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
 import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
-import com.example.DunbarHorizon.social.application.port.out.SocialNetworkCacheRepository;
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkRepository;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import lombok.RequiredArgsConstructor;
@@ -19,28 +18,15 @@ import java.util.List;
 public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
 
     private final SocialNetworkRepository socialNetworkRepository;
-    private final SocialNetworkCacheRepository cacheRepository;
 
     @Override
     public List<NetworkFriendEdgeResult> getFriendsNetwork(Long userId, DunbarCircle circleSize) {
-        return cacheRepository.getDefaultNetwork(userId, circleSize)
-                .orElseGet(() -> {
-                    List<NetworkFriendEdgeResult> result =
-                            socialNetworkRepository.getDefaultIntimacyNetwork(userId, circleSize.getLimitSize());
-                    cacheRepository.putDefaultNetwork(userId, circleSize, result);
-                    return result;
-                });
+        return socialNetworkRepository.getDefaultIntimacyNetwork(userId, circleSize);
     }
 
     @Override
     public List<NetworkFriendEdgeResult> getLabelNetwork(Long userId, String labelId) {
-        return cacheRepository.getLabelNetwork(userId, labelId)
-                .orElseGet(() -> {
-                    List<NetworkFriendEdgeResult> result =
-                            socialNetworkRepository.getLabelCustomNetwork(userId, labelId, DunbarCircle.DUNBAR.getLimitSize());
-                    cacheRepository.putLabelNetwork(userId, labelId, result);
-                    return result;
-                });
+        return socialNetworkRepository.getLabelCustomNetwork(userId, labelId);
     }
 
     @Override

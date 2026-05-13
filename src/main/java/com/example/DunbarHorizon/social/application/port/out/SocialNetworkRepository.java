@@ -3,12 +3,14 @@ package com.example.DunbarHorizon.social.application.port.out;
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
+import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 
 import java.util.List;
 
 public interface SocialNetworkRepository {
-    List<NetworkFriendEdgeResult> getDefaultIntimacyNetwork(Long userId, int limitSize);
-    List<NetworkFriendEdgeResult> getLabelCustomNetwork(Long userId, String labelId, int limitSize);
-    List<MutualFriendEdgeResult> getIntersectionByOneHop( Long userId, Long targetId, String labelName, int limitSize);
+    List<NetworkFriendEdgeResult> getDefaultIntimacyNetwork(Long userId, DunbarCircle circleSize);
+    List<NetworkFriendEdgeResult> getLabelCustomNetwork(Long userId, String labelId);
+
+    List<MutualFriendEdgeResult> getIntersectionByOneHop(Long userId, Long targetId, String labelName, int limitSize);
     List<NetworkOneHopsByTwoHopResult> getIntersectionOneHops(Long userId, Long targetId, String labelName, int limitSize);
 }

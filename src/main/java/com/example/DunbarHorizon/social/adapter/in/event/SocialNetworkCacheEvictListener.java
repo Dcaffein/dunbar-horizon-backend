@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.in.event;
 
-import com.example.DunbarHorizon.social.application.port.out.SocialNetworkCacheRepository;
+import com.example.DunbarHorizon.social.application.port.out.SocialNetworkCacheManager;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendShipDeletedEvent;
 import com.example.DunbarHorizon.social.domain.label.event.LabelMemberChangedEvent;
@@ -13,24 +13,24 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class SocialNetworkCacheEvictListener {
 
-    private final SocialNetworkCacheRepository cacheRepository;
+    private final SocialNetworkCacheManager cacheManager;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onFriendRequestAccepted(FriendRequestAcceptedEvent event) {
-        cacheRepository.evictDefaultNetwork(event.requesterId());
-        cacheRepository.evictDefaultNetwork(event.receiverId());
+        cacheManager.evictDefaultNetwork(event.requesterId());
+        cacheManager.evictDefaultNetwork(event.receiverId());
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onFriendShipDeleted(FriendShipDeletedEvent event) {
-        cacheRepository.evictDefaultNetwork(event.userAId());
-        cacheRepository.evictDefaultNetwork(event.userBId());
-        cacheRepository.evictAllLabelNetworks(event.userAId());
-        cacheRepository.evictAllLabelNetworks(event.userBId());
+        cacheManager.evictDefaultNetwork(event.userAId());
+        cacheManager.evictDefaultNetwork(event.userBId());
+        cacheManager.evictAllLabelNetworks(event.userAId());
+        cacheManager.evictAllLabelNetworks(event.userBId());
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onLabelMemberChanged(LabelMemberChangedEvent event) {
-        cacheRepository.evictLabelNetwork(event.ownerId(), event.labelId());
+        cacheManager.evictLabelNetwork(event.ownerId(), event.labelId());
     }
 }
