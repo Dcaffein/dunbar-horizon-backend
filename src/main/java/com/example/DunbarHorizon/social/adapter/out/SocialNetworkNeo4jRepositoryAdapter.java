@@ -67,7 +67,7 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
      * 기본 네트워크와 동일한 동적 프루닝 및 데이터 매핑 정책을 공유
      */
     @Override
-    public List<NetworkFriendEdgeResult> getLabelCustomNetwork(Long userId, String labelName, int limitSize) {
+    public List<NetworkFriendEdgeResult> getLabelCustomNetwork(Long userId, String labelId, int limitSize) {
 
         Node me = user().named("me");
         Node label = label().named("label");
@@ -76,7 +76,7 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
 
         StatementBuilder.OngoingReading baseBuilder = matchUserWithId(userId, "me")
                 .match(me.relationshipTo(label, "HAS_LABEL").relationshipTo(member, "HAS_MEMBER"))
-                .where(label.property("name").isEqualTo(Cypher.parameter("labelName")))
+                .where(label.property("id").isEqualTo(Cypher.parameter("labelId")))
                 .match(friendshipBetween(me, myFriendship, member));
 
         Statement statement = buildDynamicPruningNetwork(baseBuilder, me, member, myFriendship);
@@ -84,7 +84,7 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
         String cypher = renderer.render(statement);
 
         return neo4jClient.query(cypher)
-                .bind(labelName).to("labelName")
+                .bind(labelId).to("labelId")
                 .bind(limitSize).to("limitSize")
                 .bindAll(statement.getCatalog().getParameters())
                 .fetchAs(NetworkFriendEdgeResult.class)
@@ -273,7 +273,7 @@ public class SocialNetworkNeo4jRepositoryAdapter implements SocialNetworkReposit
         Statement statement = withSkeleton
                 .match(target).where(idEquals(target, targetId))
                 .match(targetRelationship.relationshipFrom(mutual, HAS_FRIENDSHIP))
-                // 💡 핵심: 백엔드가 직접 만든 currentSkeleton 안에 있는 사람만 교집합으로 인정!
+                // 백엔드가 직접 만든 currentSkeleton 안에 있는 사람만 교집합으로 인정!
                 .where(mutual.getRequiredSymbolicName().in(currentSkeleton))
                 .and(isRoutable(targetRelationship))
                 .returning(
