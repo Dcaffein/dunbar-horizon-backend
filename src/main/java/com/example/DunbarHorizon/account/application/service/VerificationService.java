@@ -5,11 +5,11 @@ import com.example.DunbarHorizon.account.application.port.out.EmailPort;
 import com.example.DunbarHorizon.account.domain.exception.*;
 import com.example.DunbarHorizon.account.domain.model.Auth;
 import com.example.DunbarHorizon.account.domain.model.AuthProvider;
-import com.example.DunbarHorizon.account.domain.model.EmailVerificationToken;
 import com.example.DunbarHorizon.account.domain.model.User;
 import com.example.DunbarHorizon.account.domain.repository.AuthRepository;
 import com.example.DunbarHorizon.account.domain.repository.EmailVerificationTokenRepository;
 import com.example.DunbarHorizon.account.domain.repository.UserRepository;
+import com.example.DunbarHorizon.global.util.UuidUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +24,7 @@ public class VerificationService implements VerificationUseCase {
     private final EmailPort emailPort;
 
     @Override
-    public void sendVerificationEmail(String email,String redirectPage) {
+    public void sendVerificationEmail(String email, String redirectPage) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("가입되지 않은 이메일입니다."));
 
@@ -35,36 +35,29 @@ public class VerificationService implements VerificationUseCase {
             throw new AlreadyRegisteredEmailException(email);
         }
 
-        verificationTokenRepository.deleteByUser(user);
-        verificationTokenRepository.flush();
+        verificationTokenRepository.deleteByUserId(user.getId());
 
-        EmailVerificationToken newToken = new EmailVerificationToken(user);
-        verificationTokenRepository.save(newToken);
+        String token = UuidUtil.createV7().toString();
+        verificationTokenRepository.save(user.getId(), token);
 
-        emailPort.sendVerificationEmail(
-                user.getEmail(),
-                newToken.getToken(),
-                redirectPage
-        );
+        emailPort.sendVerificationEmail(user.getEmail(), token, redirectPage);
     }
 
     @Override
     public void verifyEmail(String tokenStr) {
-        EmailVerificationToken token = verificationTokenRepository.findByToken(tokenStr)
+        Long userId = verificationTokenRepository.findUserIdByToken(tokenStr)
                 .orElseThrow(() -> new VerificationTokenNotFoundException("유효하지 않거나 존재하지 않는 인증 토큰입니다."));
 
-        if (token.isExpired()) {
-            throw new ExpiredTokenException();
-        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
-        User user = token.getUser();
-        Auth localAuth = authRepository.findByUserIdAndProvider(user.getId(), AuthProvider.LOCAL)
+        Auth localAuth = authRepository.findByUserIdAndProvider(userId, AuthProvider.LOCAL)
                 .orElseThrow(() -> new AuthNotFoundException("존재하지 않는 인증 정보입니다."));
 
         localAuth.verify();
         user.activate();
         authRepository.save(localAuth);
         userRepository.save(user);
-        verificationTokenRepository.delete(token);
+        verificationTokenRepository.deleteByUserId(userId);
     }
 }

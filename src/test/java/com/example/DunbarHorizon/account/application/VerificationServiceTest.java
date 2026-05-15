@@ -2,7 +2,11 @@ package com.example.DunbarHorizon.account.application;
 
 import com.example.DunbarHorizon.account.application.port.out.EmailPort;
 import com.example.DunbarHorizon.account.application.service.VerificationService;
-import com.example.DunbarHorizon.account.domain.model.*;
+import com.example.DunbarHorizon.account.domain.exception.AlreadyRegisteredEmailException;
+import com.example.DunbarHorizon.account.domain.exception.VerificationTokenNotFoundException;
+import com.example.DunbarHorizon.account.domain.model.Auth;
+import com.example.DunbarHorizon.account.domain.model.AuthProvider;
+import com.example.DunbarHorizon.account.domain.model.User;
 import com.example.DunbarHorizon.account.domain.repository.AuthRepository;
 import com.example.DunbarHorizon.account.domain.repository.EmailVerificationTokenRepository;
 import com.example.DunbarHorizon.account.domain.repository.UserRepository;
@@ -16,10 +20,11 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
-
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class VerificationServiceTest {
@@ -32,21 +37,77 @@ class VerificationServiceTest {
     @Mock private EmailPort emailPort;
 
     @Test
-    @DisplayName("인증 메일 발송 시 미인증 상태여야 하며 기존 토큰을 삭제 후 재생성한다")
-    void sendVerificationEmail_Success() {
+    @DisplayName("인증 메일 발송 시 기존 토큰을 무효화하고 새 토큰을 저장 후 메일을 발송한다")
+    void sendVerificationEmail_기존_토큰_무효화_후_재발송() {
         // given
+        Long userId = 1L;
         User user = User.builder().email("test@test.com").build();
-        ReflectionTestUtils.setField(user, "id", 1L);
-        Auth localAuth = Auth.createLocalAuth(1L, "pw"); // verified = false
+        ReflectionTestUtils.setField(user, "id", userId);
+        Auth localAuth = Auth.createLocalAuth(userId, "pw");
 
         given(userRepository.findByEmail(anyString())).willReturn(Optional.of(user));
-        given(authRepository.findByUserIdAndProvider(1L, AuthProvider.LOCAL)).willReturn(Optional.of(localAuth));
+        given(authRepository.findByUserIdAndProvider(userId, AuthProvider.LOCAL)).willReturn(Optional.of(localAuth));
 
         // when
         verificationService.sendVerificationEmail("test@test.com", "redirect-url");
 
         // then
-        verify(verificationTokenRepository).deleteByUser(user);
+        verify(verificationTokenRepository).deleteByUserId(userId);
+        verify(verificationTokenRepository).save(eq(userId), anyString());
         verify(emailPort).sendVerificationEmail(eq("test@test.com"), anyString(), eq("redirect-url"));
+    }
+
+    @Test
+    @DisplayName("이미 인증된 이메일로 발송 요청 시 예외를 던진다")
+    void sendVerificationEmail_이미_인증된_이메일_예외() {
+        // given
+        Long userId = 1L;
+        User user = User.builder().email("test@test.com").build();
+        ReflectionTestUtils.setField(user, "id", userId);
+        Auth verifiedAuth = Auth.createLocalAuth(userId, "pw");
+        verifiedAuth.verify();
+
+        given(userRepository.findByEmail(anyString())).willReturn(Optional.of(user));
+        given(authRepository.findByUserIdAndProvider(userId, AuthProvider.LOCAL)).willReturn(Optional.of(verifiedAuth));
+
+        // when & then
+        assertThatThrownBy(() -> verificationService.sendVerificationEmail("test@test.com", "redirect-url"))
+                .isInstanceOf(AlreadyRegisteredEmailException.class);
+
+        verify(verificationTokenRepository, never()).save(any(), any());
+    }
+
+    @Test
+    @DisplayName("유효한 토큰으로 인증 시 Auth와 User를 활성화하고 토큰을 삭제한다")
+    void verifyEmail_정상_인증_처리() {
+        // given
+        Long userId = 1L;
+        String tokenStr = "valid-token";
+        User user = User.builder().email("test@test.com").build();
+        ReflectionTestUtils.setField(user, "id", userId);
+        Auth localAuth = Auth.createLocalAuth(userId, "pw");
+
+        given(verificationTokenRepository.findUserIdByToken(tokenStr)).willReturn(Optional.of(userId));
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(authRepository.findByUserIdAndProvider(userId, AuthProvider.LOCAL)).willReturn(Optional.of(localAuth));
+
+        // when
+        verificationService.verifyEmail(tokenStr);
+
+        // then
+        verify(authRepository).save(localAuth);
+        verify(userRepository).save(user);
+        verify(verificationTokenRepository).deleteByUserId(userId);
+    }
+
+    @Test
+    @DisplayName("존재하지 않거나 만료된 토큰으로 인증 시 예외를 던진다")
+    void verifyEmail_토큰_없음_예외() {
+        // given
+        given(verificationTokenRepository.findUserIdByToken(anyString())).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> verificationService.verifyEmail("expired-or-invalid-token"))
+                .isInstanceOf(VerificationTokenNotFoundException.class);
     }
 }
