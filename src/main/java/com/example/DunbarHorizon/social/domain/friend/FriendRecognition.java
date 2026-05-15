@@ -76,9 +76,6 @@ public class FriendRecognition {
 
     public void updateMuteStatus(boolean isMuted) {
         this.isMuted = isMuted;
-        if (isMuted) {
-            updateRoutableStatus(false);
-        }
     }
 
     public void updateRoutableStatus(boolean isRoutable) {

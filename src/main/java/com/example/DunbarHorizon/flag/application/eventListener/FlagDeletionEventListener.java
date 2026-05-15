@@ -7,8 +7,8 @@ import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepo
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
+import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
-import com.example.DunbarHorizon.global.event.interaction.MutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -74,18 +74,7 @@ public class FlagDeletionEventListener {
 
     private void publishInteractionEvents(List<Long> participantIds, Long hostId, boolean isEncore) {
         InteractionType type = isEncore ? InteractionType.FLAG_ENDED_ENCORE : InteractionType.FLAG_ENDED;
-
-        participantIds.forEach(participantId ->
-                eventPublisher.publishEvent(new MutualInteractionEvent(hostId, participantId, type))
-        );
-
-        for (int i = 0; i < participantIds.size(); i++) {
-            for (int j = i + 1; j < participantIds.size(); j++) {
-                eventPublisher.publishEvent(new MutualInteractionEvent(
-                        participantIds.get(i), participantIds.get(j), type
-                ));
-            }
-        }
+        eventPublisher.publishEvent(new BatchMutualInteractionEvent(participantIds, hostId, type));
     }
 
     private void publishNotification(List<Long> receiverIds, String title) {

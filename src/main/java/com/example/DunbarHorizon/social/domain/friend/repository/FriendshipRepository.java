@@ -6,6 +6,7 @@ import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -28,4 +29,10 @@ public interface FriendshipRepository {
     Set<UserReference> findFriendsByMuteStatus(Long userId, boolean isMuted);
 
     void applyDecay(double rate, double threshold, LocalDateTime decayTime);
+
+    void updateUserFields(Friendship friendship, Long userId);
+
+    List<Friendship> findAllByIds(List<String> ids);
+
+    void batchUpdateInterestScores(List<Map<String, Object>> updates, LocalDateTime lastInteractedAt);
 }

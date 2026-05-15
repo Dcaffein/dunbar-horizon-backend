@@ -7,7 +7,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.PersistenceCreator;
-import org.springframework.data.annotation.Version;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
@@ -26,9 +25,6 @@ public class Friendship {
     @Getter
     @Id
     private String id;
-
-    @Version
-    private Long version;
 
     @Getter
     private LocalDate createdAt;
@@ -151,5 +147,12 @@ public class Friendship {
 
     public boolean isRoutable(Long myId) {
         return getSelfRecognition(myId).isRoutable();
+    }
+
+    public void updateUserFields(Long userId, String alias, Boolean isMuted, Boolean isRoutable) {
+        FriendRecognition rec = getSelfRecognition(userId);
+        if (alias != null)      rec.updateFriendAlias(alias);
+        if (isMuted != null)    rec.updateMuteStatus(isMuted);
+        if (isRoutable != null) rec.updateRoutableStatus(isRoutable);
     }
 }

@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.application;
 
-import com.example.DunbarHorizon.social.application.service.FriendRequesterActionService;
+import com.example.DunbarHorizon.social.application.service.FriendRequestRequesterActionService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
@@ -24,10 +24,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class FriendRequesterActionServiceTest {
+class FriendRequestRequesterActionServiceTest {
 
     @InjectMocks
-    private FriendRequesterActionService requesterService;
+    private FriendRequestRequesterActionService requesterService;
 
     @Mock
     private FriendRequestRepository friendRequestRepository;

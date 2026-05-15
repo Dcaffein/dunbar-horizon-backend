@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.example.DunbarHorizon.support.TestContainerConfig;
 import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -22,7 +23,7 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataMongoTest
-@Import(BuzzMongoTemplateRepository.class)
+@Import({BuzzMongoTemplateRepository.class, TestContainerConfig.class})
 class BuzzMongoTemplateRepositoryTest {
 
     @Autowired
