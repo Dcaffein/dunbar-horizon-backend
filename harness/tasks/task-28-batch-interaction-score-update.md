@@ -54,3 +54,36 @@
 ### Out of Scope
 * Flush 실패(Neo4j 장애 등) 시 Redis 버퍼 재투입 전략은 별도 태스크로 처리.
 * Redis 버퍼 TTL 및 최대 적재량 제한은 별도 태스크로 처리.
+
+## Result
+
+* 브랜치: `ai/feat-batch-interaction-score`
+* 커밋: `cba490b`
+
+### 구현 요약
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| `global/event/interaction/BatchMutualInteractionEvent.java` | 신규 — 참여자 목록 + 호스트 + InteractionType |
+| `social/application/port/out/InteractionScoreDeltaPort.java` | 신규 포트 — accumulate / drainAll |
+| `social/adapter/out/InteractionScoreRedisAdapter.java` | 신규 — HINCRBYFLOAT 누적, keys+HGETALL+DEL drain |
+| `social/application/service/InteractionScoreFlushService.java` | 신규 — drainAll → findAllByIds → adjustInterestScore → batchUpdate |
+| `social/adapter/in/scheduler/InteractionScoreFlushScheduler.java` | 신규 — @Scheduled(5s) + @SchedulerLock |
+| `global/config/RedisConfig.java` | ShedLock LockProvider 빈 추가 |
+| `DunbarHorizonBackendApplication.java` | @EnableSchedulerLock 추가 |
+| `social/application/eventListener/FriendInteractionEventListener.java` | FriendshipRepository 제거, deltaPort 위임, BatchMutualInteractionEvent 처리 추가 |
+| `flag/application/eventListener/FlagDeletionEventListener.java` | O(N²) 이벤트 → BatchMutualInteractionEvent 1개 |
+| `social/application/service/FriendshipCommandService.java` | updateFriendship: Friendship.updateUserFields() + repo.updateUserFields() |
+| `social/domain/friend/Friendship.java` | @Version 제거, updateUserFields() 추가 |
+| `social/domain/friend/FriendRecognition.java` | isMuted→isRoutable 강제 규칙 제거 |
+| `social/domain/friend/repository/FriendshipRepository.java` | findAllByIds, batchUpdateInterestScores, updateUserFields 추가 |
+| `social/adapter/out/neo4j/springData/FriendshipNeo4jRepository.java` | 대응 @Query 메서드 3개 추가 |
+| `social/adapter/out/FriendshipRepositoryAdapter.java` | 3개 포트 메서드 구현 추가 |
+| `build.gradle` | shedlock-spring, shedlock-provider-redis-spring 6.9.1 추가 |
+
+### 테스트 결과
+
+* `FriendInteractionEventListenerTest` — 3개 통과 (deltaPort mock 기반으로 전면 재작성)
+* `InteractionScoreFlushServiceTest` — 2개 신규 통과
+* `FriendshipServiceTest` — updateUserFields 호출 검증으로 업데이트, 2개 통과
+* 전체: 327개 통과, 6개 실패 (BuzzMongoTemplateRepositoryTest — Docker 미연결 사전 실패, task-28 무관)
