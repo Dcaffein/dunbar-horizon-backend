@@ -13,5 +13,6 @@ public interface LabelRepository {
     void delete(Label label);
     Optional<Label> findById(String labelId);
     void saveAll(List<Label> labels);
+    List<Label> findLabelsByOwnerAndMember(Long ownerId, Long memberId);
     Set<Long> findMemberIdsByOwnerAndLabelIds(Long ownerId, List<String> labelIds);
 }

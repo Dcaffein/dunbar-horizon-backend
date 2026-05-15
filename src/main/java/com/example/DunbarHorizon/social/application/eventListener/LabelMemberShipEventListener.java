@@ -3,9 +3,6 @@ package com.example.DunbarHorizon.social.application.eventListener;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendShipDeletedEvent;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.repository.LabelRepository;
-import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
-import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -20,7 +17,6 @@ import java.util.List;
 public class LabelMemberShipEventListener {
 
     private final LabelRepository labelRepository;
-    private final SocialUserRepository socialUserRepository;
 
     @EventListener
     @Transactional
@@ -30,15 +26,15 @@ public class LabelMemberShipEventListener {
     }
 
     private void removeFriendFromLabels(Long ownerId, Long memberIdToRemove) {
-        List<Label> labels = labelRepository.findAllByOwner_Id(ownerId);
-
-        UserReference memberToRemove = socialUserRepository.findById(memberIdToRemove)
-                .orElseThrow(() -> new UserReferenceNotFoundException(memberIdToRemove));
-
+        List<Label> labels = labelRepository.findLabelsByOwnerAndMember(ownerId, memberIdToRemove);
         for (Label label : labels) {
-            log.debug("Label '{}'에서 멤버 '{}' 제거 시도", label.getLabelName(), memberIdToRemove);
-            label.removeMember(memberToRemove);
+            label.getMembers().stream()
+                    .filter(m -> m.getId().equals(memberIdToRemove))
+                    .findFirst()
+                    .ifPresent(label::removeMember);
         }
-        labelRepository.saveAll(labels);
+        if (!labels.isEmpty()) {
+            labelRepository.saveAll(labels);
+        }
     }
 }
