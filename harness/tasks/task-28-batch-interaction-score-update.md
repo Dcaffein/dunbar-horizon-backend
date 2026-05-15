@@ -86,4 +86,5 @@
 * `FriendInteractionEventListenerTest` — 3개 통과 (deltaPort mock 기반으로 전면 재작성)
 * `InteractionScoreFlushServiceTest` — 2개 신규 통과
 * `FriendshipServiceTest` — updateUserFields 호출 검증으로 업데이트, 2개 통과
-* 전체: 327개 통과, 6개 실패 (BuzzMongoTemplateRepositoryTest — Docker 미연결 사전 실패, task-28 무관)
+* `BuzzMongoTemplateRepositoryTest` — TestContainerConfig 누락 버그 수정, 6개 통과
+* 전체: 333개 통과, 0개 실패
