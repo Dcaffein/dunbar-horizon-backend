@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Neo4jTransactional
-public class FriendRequesterActionService implements FriendRequesterActionUseCase {
+public class FriendRequestRequesterActionService implements FriendRequesterActionUseCase {
     private final FriendRequestRepository friendRequestRepository;
     private final SocialUserRepository socialUserRepository;
     private final FriendshipBroker friendshipBroker;

@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.adapter.out.neo4j;
 
 import com.example.DunbarHorizon.social.adapter.out.neo4j.springData.FriendRequestNeo4jRepository;
 import com.example.DunbarHorizon.social.adapter.out.neo4j.springData.SocialUserNeo4jRepository;
-import com.example.DunbarHorizon.social.application.service.FriendRequesterActionService;
+import com.example.DunbarHorizon.social.application.service.FriendRequestRequesterActionService;
 import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.support.TestContainerConfig;
@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import(TestContainerConfig.class)
 class FriendRequestConcurrencyTest {
 
-    @Autowired private FriendRequesterActionService friendRequesterActionService;
+    @Autowired private FriendRequestRequesterActionService friendRequestRequesterActionService;
     @Autowired private FriendRequestNeo4jRepository friendRequestNeo4jRepository;
     @Autowired private SocialUserNeo4jRepository socialUserNeo4jRepository;
 
@@ -60,7 +60,7 @@ class FriendRequestConcurrencyTest {
         Runnable taskAtoB = () -> {
             try {
                 startLatch.await();
-                friendRequesterActionService.sendRequest(userA.getId(), userB.getId());
+                friendRequestRequesterActionService.sendRequest(userA.getId(), userB.getId());
                 successCount.incrementAndGet();
             } catch (DuplicateFriendRequestException e) {
                 failCount.incrementAndGet();
@@ -74,7 +74,7 @@ class FriendRequestConcurrencyTest {
         Runnable taskBtoA = () -> {
             try {
                 startLatch.await();
-                friendRequesterActionService.sendRequest(userB.getId(), userA.getId());
+                friendRequestRequesterActionService.sendRequest(userB.getId(), userA.getId());
                 successCount.incrementAndGet();
             } catch (DuplicateFriendRequestException e) {
                 failCount.incrementAndGet();
