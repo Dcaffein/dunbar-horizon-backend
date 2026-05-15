@@ -57,14 +57,8 @@ class FriendshipServiceTest {
         friendshipService.updateFriendship(myId, friendId, command);
 
         // then
-        // 1. 별명 수정은 호출되어야 함
-        verify(mockFriendship).updateFriendAlias(myId, "새별명");
-
-        // 2. null인 필드들은 절대 호출되면 안 됨 (핵심 검증)
-        verify(mockFriendship, never()).updateMuteStatus(anyLong(), anyBoolean());
-        verify(mockFriendship, never()).updateRoutableStatus(anyLong(), anyBoolean());
-
-        verify(friendshipRepository).save(mockFriendship);
+        verify(mockFriendship).updateUserFields(myId, "새별명", null, null);
+        verify(friendshipRepository).updateUserFields(mockFriendship, myId);
     }
 
     @Test
@@ -92,14 +86,8 @@ class FriendshipServiceTest {
         friendshipService.updateFriendship(myId, friendId, command);
 
         // then
-        // 1. 별명 수정은 호출되지 않아야 함
-        verify(mockFriendship, never()).updateFriendAlias(anyLong(), anyString());
-
-        // 2. 상태 수정 메서드들은 호출되어야 함
-        verify(mockFriendship).updateMuteStatus(myId, true);
-        verify(mockFriendship).updateRoutableStatus(myId, false);
-
-        verify(friendshipRepository).save(mockFriendship);
+        verify(mockFriendship).updateUserFields(myId, null, true, false);
+        verify(friendshipRepository).updateUserFields(mockFriendship, myId);
     }
     @Test
     @DisplayName("친구 관계 해제 시 복합 ID로 조회 후 물리 삭제하며 이벤트를 발행한다")

@@ -13,7 +13,6 @@ import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 @RequiredArgsConstructor
 @Service
@@ -23,13 +22,9 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
 
     @Neo4jTransactional
     public void updateFriendship(Long currentUserId, Long friendId, FriendshipUpdateCommand command) {
-        Friendship friendship = findById(currentUserId,friendId);
-
-        applyIfPresent(command.friendAlias(), alias -> friendship.updateFriendAlias(currentUserId, alias));
-        applyIfPresent(command.isMuted(), alias -> friendship.updateMuteStatus(currentUserId, alias));
-        applyIfPresent(command.isRoutable(), alias -> friendship.updateRoutableStatus(currentUserId, alias));
-
-        friendshipRepository.save(friendship);
+        Friendship friendship = findById(currentUserId, friendId);
+        friendship.updateUserFields(currentUserId, command.friendAlias(), command.isMuted(), command.isRoutable());
+        friendshipRepository.updateUserFields(friendship, currentUserId);
     }
 
     @Neo4jTransactional
@@ -40,12 +35,6 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
         friendshipRepository.delete(friendShip.getId());
 
         eventPublisher.publishEvent(new FriendShipDeletedEvent(userIds.getFirst().getId(), userIds.getLast().getId()));
-    }
-
-    private <T> void applyIfPresent(T value, Consumer<T> action) {
-        if (value != null) {
-            action.accept(value);
-        }
     }
 
     private Friendship findById(Long userId, Long friendId) {
