@@ -20,9 +20,7 @@ public class FlagParticipationService implements FlagParticipationUseCase {
 
     @Override
     public void participateInFlag(Long flagId, Long userId) {
-        Flag flag = flagRepository.findByIdExclusive(flagId)
-                .orElseThrow(() -> new FlagNotFoundException(flagId));
-        FlagParticipant newParticipant = flagParticipationPolicy.participate(flag, userId);
+        FlagParticipant newParticipant = flagParticipationPolicy.participate(flagId, userId);
         participantRepository.save(newParticipant);
     }
 

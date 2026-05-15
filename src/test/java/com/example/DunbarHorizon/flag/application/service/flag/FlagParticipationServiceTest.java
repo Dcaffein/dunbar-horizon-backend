@@ -5,8 +5,6 @@ import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipationPolicy;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
-import com.example.DunbarHorizon.flag.domain.flag.exception.FlagDeadlinePassedException;
-import com.example.DunbarHorizon.flag.domain.flag.exception.FlagFullCapacityException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipantNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipationDuplicateException;
@@ -24,7 +22,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
@@ -55,11 +53,8 @@ class FlagParticipationServiceTest {
     @DisplayName("정상적으로 플래그에 참여할 수 있다")
     void participateInFlag_Success() {
         // given
-        Flag flag = recruitingFlag();
         FlagParticipant mockParticipant = mock(FlagParticipant.class);
-
-        given(flagRepository.findByIdExclusive(FLAG_ID)).willReturn(Optional.of(flag));
-        given(flagParticipationPolicy.participate(flag, USER_ID)).willReturn(mockParticipant);
+        given(flagParticipationPolicy.participate(FLAG_ID, USER_ID)).willReturn(mockParticipant);
 
         // when
         flagParticipationService.participateInFlag(FLAG_ID, USER_ID);
@@ -69,56 +64,27 @@ class FlagParticipationServiceTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 플래그에 참여하면 FlagNotFoundException이 발생한다")
-    void participateInFlag_FlagNotFound_ThrowsException() {
+    @DisplayName("Policy에서 FlagNotFoundException이 발생하면 서비스에서 그대로 전파된다")
+    void participateInFlag_PolicyThrowsFlagNotFoundException_Propagates() {
         // given
-        given(flagRepository.findByIdExclusive(999L)).willReturn(Optional.empty());
+        willThrow(new FlagNotFoundException(FLAG_ID))
+                .given(flagParticipationPolicy).participate(FLAG_ID, USER_ID);
 
         // when / then
-        assertThatThrownBy(() -> flagParticipationService.participateInFlag(999L, USER_ID))
+        assertThatThrownBy(() -> flagParticipationService.participateInFlag(FLAG_ID, USER_ID))
                 .isInstanceOf(FlagNotFoundException.class);
     }
 
     @Test
-    @DisplayName("이미 참여 중인 플래그에 참여하면 FlagParticipationDuplicateException이 발생한다")
-    void participateInFlag_Duplicate_ThrowsException() {
+    @DisplayName("Policy에서 FlagParticipationDuplicateException이 발생하면 서비스에서 그대로 전파된다")
+    void participateInFlag_PolicyThrowsDuplicateException_Propagates() {
         // given
-        Flag flag = recruitingFlag();
-        given(flagRepository.findByIdExclusive(FLAG_ID)).willReturn(Optional.of(flag));
         willThrow(new FlagParticipationDuplicateException(FLAG_ID, USER_ID))
-                .given(flagParticipationPolicy).participate(flag, USER_ID);
+                .given(flagParticipationPolicy).participate(FLAG_ID, USER_ID);
 
         // when / then
         assertThatThrownBy(() -> flagParticipationService.participateInFlag(FLAG_ID, USER_ID))
                 .isInstanceOf(FlagParticipationDuplicateException.class);
-    }
-
-    @Test
-    @DisplayName("마감일이 지난 플래그에 참여하면 FlagDeadlinePassedException이 발생한다")
-    void participateInFlag_DeadlinePassed_ThrowsException() {
-        // given
-        Flag flag = recruitingFlag();
-        given(flagRepository.findByIdExclusive(FLAG_ID)).willReturn(Optional.of(flag));
-        willThrow(new FlagDeadlinePassedException())
-                .given(flagParticipationPolicy).participate(flag, USER_ID);
-
-        // when / then
-        assertThatThrownBy(() -> flagParticipationService.participateInFlag(FLAG_ID, USER_ID))
-                .isInstanceOf(FlagDeadlinePassedException.class);
-    }
-
-    @Test
-    @DisplayName("정원이 가득 찬 플래그에 참여하면 FlagFullCapacityException이 발생한다")
-    void participateInFlag_FullCapacity_ThrowsException() {
-        // given
-        Flag flag = recruitingFlag();
-        given(flagRepository.findByIdExclusive(FLAG_ID)).willReturn(Optional.of(flag));
-        willThrow(new FlagFullCapacityException())
-                .given(flagParticipationPolicy).participate(flag, USER_ID);
-
-        // when / then
-        assertThatThrownBy(() -> flagParticipationService.participateInFlag(FLAG_ID, USER_ID))
-                .isInstanceOf(FlagFullCapacityException.class);
     }
 
     @Test
