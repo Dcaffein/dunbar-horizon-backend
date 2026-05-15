@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.social.application;
 
-import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.social.application.eventListener.FriendEventListener;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestNotFoundException;
@@ -15,12 +14,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -36,12 +34,10 @@ class FriendEventListenerTest {
     private FriendshipRepository friendshipRepository;
     @Mock
     private FriendRequestRepository friendRequestRepository;
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
 
     @Test
-    @DisplayName("친구 수락 이벤트 수신 시 Friendship을 생성 저장하고 알림을 발행한다")
-    void onFriendRequestAccepted_Success() {
+    @DisplayName("친구 수락 이벤트 수신 시 Friendship을 생성하고 저장한다")
+    void onFriendRequestAccepted_Friendship_생성_저장() {
         // given
         String requestId = "newRequest";
         FriendRequestAcceptedEvent event = new FriendRequestAcceptedEvent(requestId, 1L, 2L, "수신자닉네임");
@@ -57,12 +53,11 @@ class FriendEventListenerTest {
 
         // then
         verify(friendshipRepository).save(mockFriendship);
-        verify(eventPublisher).publishEvent(any(NotificationEvent.class));
     }
 
     @Test
     @DisplayName("요청을 찾을 수 없는 경우 예외를 던진다")
-    void onFriendRequestAccepted_NotFound_ThrowsException() {
+    void onFriendRequestAccepted_NotFound_예외_발생() {
         // given
         FriendRequestAcceptedEvent event = new FriendRequestAcceptedEvent("newReqeust", 1L, 2L, "닉네임");
         given(friendRequestRepository.findById(anyString())).willReturn(Optional.empty());
