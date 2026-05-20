@@ -47,7 +47,10 @@ public class SecurityConfig {
                                 "/api/auth/tokens",
                                 "/api/auth/verifications",
                                 "/oauth2/**",
-                                "/login/oauth2/**"
+                                "/login/oauth2/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html"
                         ).permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/auth/tokens").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/auth/tokens").permitAll()
@@ -68,7 +71,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "https://your-domain.com"));
+        configuration.setAllowedOrigins(List.of("http://localhost:3000", "https://dunbarhorizon.link"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

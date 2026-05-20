@@ -10,6 +10,6 @@ import java.util.List;
 public interface SocialNetworkQueryUseCase {
     List<NetworkFriendEdgeResult> getFriendsNetwork(Long userId, DunbarCircle circleSize);
     List<NetworkFriendEdgeResult> getLabelNetwork(Long userId, String labelId);
-    List<MutualFriendEdgeResult> getIntersectionByOneHop(Long userId, Long targetId, String labelName, int limitSize);
-    List<NetworkOneHopsByTwoHopResult> getIntersectionByTwoHop(Long userId, Long targetId, String labelName, int limitSize);
+    List<MutualFriendEdgeResult> getIntersectionByOneHop(Long userId, Long targetId, String labelId, int limitSize);
+    List<NetworkOneHopsByTwoHopResult> getIntersectionByTwoHop(Long userId, Long targetId, String labelId, int limitSize);
 }
