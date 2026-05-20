@@ -54,11 +54,11 @@ public class SocialQueryController {
     public ResponseEntity<List<MutualFriendEdgeResult>> getOneHopMutualFriendEdges(
             @CurrentUserId Long currentUserId,
             @RequestParam Long targetId,
-            @RequestParam(required = false) String labelName,
+            @RequestParam(required = false) String labelId,
             @RequestParam(defaultValue = "DUNBAR") DunbarCircle circleSize
     ) {
         return ResponseEntity.ok(networkQueryUseCase.getIntersectionByOneHop(
-                currentUserId, targetId, labelName, circleSize.getLimitSize()
+                currentUserId, targetId, labelId, circleSize.getLimitSize()
         ));
     }
 
@@ -70,11 +70,11 @@ public class SocialQueryController {
     public ResponseEntity<List<NetworkOneHopsByTwoHopResult>> getTwoHopMutualFriends(
             @CurrentUserId Long currentUserId,
             @RequestParam Long targetId,
-            @RequestParam(required = false) String labelName,
+            @RequestParam(required = false) String labelId,
             @RequestParam(defaultValue = "DUNBAR") DunbarCircle circleSize
     ) {
         return ResponseEntity.ok(networkQueryUseCase.getIntersectionByTwoHop(
-                currentUserId, targetId, labelName, circleSize.getLimitSize()
+                currentUserId, targetId, labelId, circleSize.getLimitSize()
         ));
     }
 

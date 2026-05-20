@@ -194,7 +194,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
 
     @Override
     public List<NetworkOneHopsByTwoHopResult> getIntersectionOneHops(
-            Long userId, Long targetId, String labelName, int limitSize) {
+            Long userId, Long targetId, String labelId, int limitSize) {
 
         Node targetUser = user().named("targetUser");
         Node mutual = user().named("mutual");
@@ -202,7 +202,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
         Relationship targetRelationship = targetUser.relationshipTo(targetFriendship, HAS_FRIENDSHIP).named("targetRelationship");
         SymbolicName currentSkeleton = Cypher.name("currentSkeleton");
 
-        StatementBuilder.OngoingReadingAndWith withSkeleton = buildCurrentSkeleton(userId, labelName);
+        StatementBuilder.OngoingReadingAndWith withSkeleton = buildCurrentSkeleton(userId, labelId);
 
         Statement statement = withSkeleton
                 .match(targetUser).where(idEquals(targetUser, targetId))
@@ -219,7 +219,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
         return neo4jClient.query(cypher)
                 .bind(targetId).to("targetId")
                 .bind(limitSize).to("limitSize")
-                .bind(labelName == null ? "" : labelName).to("labelName")
+                .bind(labelId == null ? "" : labelId).to("labelId")
                 .fetchAs(NetworkOneHopsByTwoHopResult.class)
                 .mappedBy((typeSystem, record) -> new NetworkOneHopsByTwoHopResult(
                         record.get("friendId").asLong()
@@ -229,7 +229,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
 
     @Override
     public List<MutualFriendEdgeResult> getIntersectionByOneHop(
-            Long userId, Long targetId, String labelName, int limitSize) {
+            Long userId, Long targetId, String labelId, int limitSize) {
 
         Node target = user().named("target");
         Node mutual = user().named("mutual");
@@ -237,7 +237,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
         Relationship targetRelationship = target.relationshipTo(targetFriendship, HAS_FRIENDSHIP).named("targetRelationship");
         SymbolicName currentSkeleton = Cypher.name("currentSkeleton");
 
-        StatementBuilder.OngoingReadingAndWith withSkeleton = buildCurrentSkeleton(userId, labelName);
+        StatementBuilder.OngoingReadingAndWith withSkeleton = buildCurrentSkeleton(userId, labelId);
 
         Statement statement = withSkeleton
                 .match(target).where(idEquals(target, targetId))
@@ -256,7 +256,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
         return neo4jClient.query(cypher)
                 .bind(targetId).to("targetId")
                 .bind(limitSize).to("limitSize")
-                .bind(labelName == null ? "" : labelName).to("labelName")
+                .bind(labelId == null ? "" : labelId).to("labelId")
                 .fetchAs(MutualFriendEdgeResult.class)
                 .mappedBy((typeSystem, record) -> new MutualFriendEdgeResult(
                         record.get("friendAId").asLong(),
@@ -266,17 +266,17 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
                 .all().stream().toList();
     }
 
-    private StatementBuilder.OngoingReadingAndWith buildCurrentSkeleton(Long userId, String labelName) {
+    private StatementBuilder.OngoingReadingAndWith buildCurrentSkeleton(Long userId, String labelId) {
         Node me = user().named("me");
         Node myFriend = user().named("myFriend");
         Node myFriendship = friendship().named("myFriendship");
         StatementBuilder.OngoingReading builder = matchUserWithId(userId, "me")
                 .match(friendshipBetween(me, myFriendship, myFriend));
 
-        if (labelName != null && !labelName.isBlank()) {
+        if (labelId != null && !labelId.isBlank()) {
             Node label = label().named("label");
             builder = builder.match(me.relationshipTo(label, "HAS_LABEL").relationshipTo(myFriend, "HAS_MEMBER"))
-                    .where(label.property("name").isEqualTo(Cypher.parameter("labelName")));
+                    .where(label.property("id").isEqualTo(Cypher.parameter("labelId")));
         }
 
         return builder.with(myFriend, myFriendship)
