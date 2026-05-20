@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.global.config;
 
+import com.example.DunbarHorizon.global.annotation.CurrentUserIdArgumentResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;

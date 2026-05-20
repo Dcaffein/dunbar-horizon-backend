@@ -1,7 +1,6 @@
-package com.example.DunbarHorizon.global.config;
+package com.example.DunbarHorizon.global.annotation;
 
 import com.example.DunbarHorizon.global.security.AuthPrincipal;
-import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
