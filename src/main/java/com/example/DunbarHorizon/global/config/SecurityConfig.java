@@ -1,9 +1,7 @@
-package com.example.DunbarHorizon.global.config.seucirty;
+package com.example.DunbarHorizon.global.security;
 
 import com.example.DunbarHorizon.account.adapter.in.web.OAuth2.CustomOAuth2UserService;
 import com.example.DunbarHorizon.account.adapter.in.web.OAuth2.OAuth2AuthenticationSuccessHandler;
-import com.example.DunbarHorizon.global.security.JwtAuthenticationEntryPoint;
-import com.example.DunbarHorizon.global.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
