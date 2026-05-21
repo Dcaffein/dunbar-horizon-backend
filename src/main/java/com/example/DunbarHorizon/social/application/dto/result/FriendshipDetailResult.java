@@ -9,7 +9,8 @@ public record FriendshipDetailResult(
         String friendAlias,
         double intimacy,
         double myInterestScore,
-        boolean isMuted
+        boolean isMuted,
+        boolean isRoutable
 ) {
     public static FriendshipDetailResult from(com.example.DunbarHorizon.social.domain.friend.Friendship friendship, Long myId) {
         UserReference friend = friendship.getFriend(myId);
@@ -21,7 +22,8 @@ public record FriendshipDetailResult(
                 friendship.getFriendAlias(myId),
                 friendship.getIntimacy(),
                 friendship.getMyNormalizedInterestScore(myId),
-                friendship.isMuted(myId)
+                friendship.isMuted(myId),
+                friendship.isRoutable(myId)
         );
     }
 }

@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendUpdateRequest;
 import com.example.DunbarHorizon.social.application.dto.result.FriendshipDetailResult;
 import com.example.DunbarHorizon.social.application.port.in.FriendshipCommandUseCase;
 import com.example.DunbarHorizon.social.application.port.in.FriendshipQueryUseCase;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.application.dto.result.FriendshipDetailResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -29,11 +29,11 @@ public class FriendshipController {
     }
 
     @GetMapping("/{friendId}")
-    public ResponseEntity<Friendship> getFriendDetails(
+    public ResponseEntity<FriendshipDetailResult> getFriendDetails(
             @CurrentUserId Long currentUserId,
             @PathVariable Long friendId
     ) {
-        return ResponseEntity.ok(friendshipQueryUseCase.getFriend(currentUserId,friendId));
+        return ResponseEntity.ok(friendshipQueryUseCase.getFriend(currentUserId, friendId));
     }
 
     @PatchMapping("/{friendId}")

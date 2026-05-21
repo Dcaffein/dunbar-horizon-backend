@@ -37,9 +37,10 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
     }
 
     @Override
-    public Friendship getFriend(Long userId, Long targetId) {
+    public FriendshipDetailResult getFriend(Long userId, Long targetId) {
         String friendshipId = Friendship.generateCompositeId(userId, targetId);
-        return friendshipRepository.findById(friendshipId).orElseThrow(()-> new FriendshipNotFoundException(userId, targetId));
+        Friendship friendship = friendshipRepository.findById(friendshipId).orElseThrow(() -> new FriendshipNotFoundException(userId, targetId));
+        return FriendshipDetailResult.from(friendship, userId);
     }
 
     @Override
