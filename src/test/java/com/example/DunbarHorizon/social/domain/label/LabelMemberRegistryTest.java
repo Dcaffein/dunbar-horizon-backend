@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepos
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
+import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,7 +53,7 @@ class LabelMemberRegistryTest {
         given(friendshipRepository.existsFriendshipBetween(owner.getId(), friend.getId())).willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> labelMemberRegistry.addNewMember(label, friend))
+        assertThatThrownBy(() -> labelMemberRegistry.addNewMember(label, friend.getId()))
                 .isInstanceOf(FriendshipNotFoundException.class);
     }
 
@@ -63,8 +65,23 @@ class LabelMemberRegistryTest {
         given(friendshipRepository.existsFriendshipBetween(owner.getId(), friend.getId())).willReturn(true);
 
         // when & then
-        assertThatThrownBy(() -> labelMemberRegistry.addNewMember(label, friend))
+        assertThatThrownBy(() -> labelMemberRegistry.addNewMember(label, friend.getId()))
                 .isInstanceOf(DuplicateLabelMemberException.class);
+    }
+
+    @Test
+    @DisplayName("정상 조건에서 멤버를 라벨에 추가할 수 있다")
+    void addNewMember_Success() {
+        // given
+        given(friendshipRepository.existsFriendshipBetween(owner.getId(), friend.getId())).willReturn(true);
+        given(socialUserRepository.findById(friend.getId())).willReturn(Optional.of(friend));
+
+        // when
+        labelMemberRegistry.addNewMember(label, friend.getId());
+
+        // then
+        assertThat(label.getMembers()).hasSize(1);
+        assertThat(label.getMembers().stream().anyMatch(m -> m.getId().equals(friend.getId()))).isTrue();
     }
 
     @Test

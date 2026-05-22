@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.social.domain.friend;
 
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
-import com.example.DunbarHorizon.social.domain.friend.exception.CannotRequestToSelfException;
 import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestNotAcceptedException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
@@ -35,18 +34,6 @@ class FriendshipBrokerTest {
     @Nested
     @DisplayName("propose (친구 요청 제안) 테스트")
     class ProposeTest {
-
-        @Test
-        @DisplayName("자기 자신에게는 친구 요청을 보낼 수 없다")
-        void propose_SelfRequest_Fail() {
-            // given
-            UserReference me = mock(UserReference.class);
-            given(me.getId()).willReturn(1L);
-
-            // when & then
-            assertThatThrownBy(() -> friendshipBroker.propose(me, me))
-                    .isInstanceOf(CannotRequestToSelfException.class);
-        }
 
         @Test
         @DisplayName("이미 친구 관계인 경우 예외가 발생한다")
@@ -95,24 +82,42 @@ class FriendshipBrokerTest {
     }
 
     @Nested
-    @DisplayName("settle (친구 관계 확정) 테스트")
-    class SettleTest {
+    @DisplayName("createFrom (친구 관계 확정) 테스트")
+    class CreateFromTest {
 
         @Test
         @DisplayName("수락되지 않은 요청은 Friendship으로 바꿀 수 없다")
-        void settle_NotAccepted_Fail() {
+        void createFrom_NotAccepted_Fail() {
             // given
             FriendRequest request = mock(FriendRequest.class);
             given(request.isAccepted()).willReturn(false);
 
             // when & then
-            assertThatThrownBy(() -> friendshipBroker.establish(request))
+            assertThatThrownBy(() -> friendshipBroker.createFrom(request))
                     .isInstanceOf(FriendRequestNotAcceptedException.class);
         }
 
         @Test
+        @DisplayName("이미 친구 관계인 경우 예외가 발생한다")
+        void createFrom_AlreadyFriends_Fail() {
+            // given
+            UserReference requester = createMockUser(1L);
+            UserReference receiver = createMockUser(2L);
+            FriendRequest request = mock(FriendRequest.class);
+
+            given(request.isAccepted()).willReturn(true);
+            given(request.getRequester()).willReturn(requester);
+            given(request.getReceiver()).willReturn(receiver);
+            given(friendshipRepository.existsFriendshipBetween(1L, 2L)).willReturn(true);
+
+            // when & then
+            assertThatThrownBy(() -> friendshipBroker.createFrom(request))
+                    .isInstanceOf(AlreadyFriendsException.class);
+        }
+
+        @Test
         @DisplayName("수락된 요청을 통해 정상적으로 Friendship이 생성된다")
-        void settle_Success() {
+        void createFrom_Success() {
             // given
             UserReference requester = createMockUser(1L);
             UserReference receiver = createMockUser(2L);
@@ -124,11 +129,11 @@ class FriendshipBrokerTest {
             given(friendshipRepository.existsFriendshipBetween(1L, 2L)).willReturn(false);
 
             // when
-            Friendship result = friendshipBroker.establish(request);
+            Friendship result = friendshipBroker.createFrom(request);
 
             // then
             assertThat(result).isNotNull();
-            // Friendship 생성자 로직에 따라 검증...
+            assertThat(result.getId()).isEqualTo("1_2");
         }
     }
 

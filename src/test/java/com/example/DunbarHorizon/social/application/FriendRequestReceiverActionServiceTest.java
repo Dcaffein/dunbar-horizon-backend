@@ -1,13 +1,16 @@
 package com.example.DunbarHorizon.social.application;
 
+import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.social.application.service.FriendRequestReceiverActionService;
-import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
-import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
+import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
+import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipBroker;
+import com.example.DunbarHorizon.social.domain.friend.event.FriendshipCreatedEvent;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,32 +37,41 @@ class FriendRequestReceiverActionServiceTest {
     private FriendRequestRepository friendRequestRepository;
 
     @Mock
+    private FriendshipRepository friendshipRepository;
+
+    @Mock
     private FriendshipBroker friendshipBroker;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
     @Test
-    @DisplayName("수신자가 요청을 수락하면 Friendship이 수립되고 요청은 물리 삭제된다")
+    @DisplayName("수신자가 요청을 수락하면 Friendship이 저장되고 요청은 삭제되며 이벤트가 발행된다")
     void acceptFriendRequest_Success() {
         // given
         String requestId = "uuid-v7-id";
         Long receiverId = 2L;
-        SocialUser req = mock(SocialUser.class);
-        SocialUser res = mock(SocialUser.class);
-        given(res.getId()).willReturn(receiverId);
-        given(res.getNickname()).willReturn("수신자");
+        SocialUser requester = mock(SocialUser.class);
+        SocialUser receiver = mock(SocialUser.class);
+        given(requester.getId()).willReturn(1L);
+        given(receiver.getId()).willReturn(receiverId);
+        given(receiver.getNickname()).willReturn("수신자");
 
-        FriendRequest request = FriendTestFactory.createRequest(req, res);
+        FriendRequest request = FriendTestFactory.createRequest(requester, receiver);
+        Friendship mockFriendship = mock(Friendship.class);
+
         given(friendRequestRepository.findById(requestId)).willReturn(Optional.of(request));
+        given(friendshipBroker.createFrom(request)).willReturn(mockFriendship);
 
         // when
         receiverService.acceptRequest(requestId, receiverId);
 
         // then
-        verify(friendshipBroker).establish(request);
+        verify(friendshipBroker).createFrom(request);
+        verify(friendshipRepository).save(mockFriendship);
         verify(friendRequestRepository).deleteById(requestId);
-        verify(eventPublisher).publishEvent(any(FriendRequestAcceptedEvent.class));
+        verify(eventPublisher).publishEvent(any(FriendshipCreatedEvent.class));
+        verify(eventPublisher).publishEvent(any(NotificationEvent.class));
     }
 
     @Test
@@ -68,20 +80,24 @@ class FriendRequestReceiverActionServiceTest {
         // given
         String requestId = "uuid-v7-id";
         Long receiverId = 2L;
-        SocialUser res = mock(SocialUser.class);
-        given(res.getId()).willReturn(receiverId);
-        given(res.getNickname()).willReturn("수신자");
+        SocialUser requester = mock(SocialUser.class);
+        SocialUser receiver = mock(SocialUser.class);
+        given(requester.getId()).willReturn(1L);
+        given(receiver.getId()).willReturn(receiverId);
+        given(receiver.getNickname()).willReturn("수신자");
 
-        FriendRequest request = FriendTestFactory.createRequest(mock(SocialUser.class), res);
+        FriendRequest request = FriendTestFactory.createRequest(requester, receiver);
         request.hide(receiverId);
+
         given(friendRequestRepository.findById(requestId)).willReturn(Optional.of(request));
+        given(friendshipBroker.createFrom(request)).willReturn(mock(Friendship.class));
 
         // when
         receiverService.acceptRequest(requestId, receiverId);
 
         // then
         assertThat(request.getStatus()).isEqualTo(FriendRequestStatus.ACCEPTED);
-        verify(friendshipBroker).establish(request);
+        verify(friendshipBroker).createFrom(request);
         verify(friendRequestRepository).deleteById(requestId);
     }
 
@@ -91,10 +107,10 @@ class FriendRequestReceiverActionServiceTest {
         // given
         String requestId = "uuid-v7-id";
         Long receiverId = 2L;
-        SocialUser res = mock(SocialUser.class);
-        given(res.getId()).willReturn(receiverId);
+        SocialUser receiver = mock(SocialUser.class);
+        given(receiver.getId()).willReturn(receiverId);
 
-        FriendRequest request = FriendTestFactory.createRequest(mock(SocialUser.class), res);
+        FriendRequest request = FriendTestFactory.createRequest(mock(SocialUser.class), receiver);
         given(friendRequestRepository.findById(requestId)).willReturn(Optional.of(request));
 
         // when

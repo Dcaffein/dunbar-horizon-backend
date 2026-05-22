@@ -103,24 +103,21 @@ class LabelServiceTest {
     }
 
     @Test
-    @DisplayName("라벨에 멤버 추가 시 유저를 찾고 도메인 서비스를 호출한 뒤 저장한다")
+    @DisplayName("라벨에 멤버 추가 시 도메인 서비스에 ID를 전달하고 저장한다")
     void addMemberToLabel_Success() {
         // given
         Long newMemberId = 2L;
-        SocialUser newMember = mock(SocialUser.class);
         SocialUser owner = mock(SocialUser.class);
         given(owner.getId()).willReturn(currentUserId);
 
         given(labelRepository.findById(labelId)).willReturn(Optional.of(mockLabel));
         given(mockLabel.getOwner()).willReturn(owner);
-        given(socialUserRepository.findById(newMemberId)).willReturn(Optional.of(newMember));
 
         // when
-        // 🌟 수정된 부분: 인자 개수 3개로 맞춤 (currentUserId 추가)
         labelService.addMemberToLabel(currentUserId, labelId, newMemberId);
 
         // then
-        verify(labelMemberRegistry).addNewMember(mockLabel, newMember);
+        verify(labelMemberRegistry).addNewMember(mockLabel, newMemberId);
         verify(labelRepository).save(mockLabel);
     }
 

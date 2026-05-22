@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.social.domain.friend;
 
+import com.example.DunbarHorizon.social.domain.friend.exception.CannotRequestToSelfException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestAuthorizationException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestInvalidException;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
@@ -21,6 +22,14 @@ class FriendRequestTest {
     void setUp() {
         requester = new SocialUser(1L, "요청자", "");
         receiver = new SocialUser(2L, "수신자", "");
+    }
+
+    @Test
+    @DisplayName("자기 자신에게 친구 요청을 보내면 예외가 발생한다")
+    void constructor_SelfRequest_Fail() {
+        // when & then
+        assertThatThrownBy(() -> new FriendRequest(requester, requester))
+                .isInstanceOf(CannotRequestToSelfException.class);
     }
 
     @Test

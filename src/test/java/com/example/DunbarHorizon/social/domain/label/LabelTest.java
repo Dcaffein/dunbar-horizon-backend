@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.social.domain.label.exception.InvalidLabelNameE
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import org.junit.jupiter.api.BeforeEach;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -82,5 +83,36 @@ class LabelTest {
 
         // then
         assertThat(label.isExposure()).isFalse();
+    }
+
+    @Test
+    @DisplayName("멤버 전체 교체 시 기존 멤버가 제거되고 새 멤버로 대체된다")
+    void updateMembers_ReplacesExistingMembers() {
+        // given
+        Label label = new Label(owner, "친구들", true);
+        SocialUser newFriend = new SocialUser(3L, "newFriend", "profile3");
+        label.addNewMember(friend);
+
+        // when
+        label.updateMembers(Set.of(newFriend));
+
+        // then
+        assertThat(label.getMembers()).hasSize(1);
+        assertThat(label.getMembers()).contains(newFriend);
+        assertThat(label.getMembers()).doesNotContain(friend);
+    }
+
+    @Test
+    @DisplayName("빈 Set으로 교체 시 모든 멤버가 제거된다")
+    void updateMembers_EmptySet_ClearsAll() {
+        // given
+        Label label = new Label(owner, "친구들", true);
+        label.addNewMember(friend);
+
+        // when
+        label.updateMembers(Set.of());
+
+        // then
+        assertThat(label.getMembers()).isEmpty();
     }
 }

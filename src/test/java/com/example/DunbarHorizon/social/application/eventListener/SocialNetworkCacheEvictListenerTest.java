@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.application.eventListener;
 
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkCacheManager;
-import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
+import com.example.DunbarHorizon.social.domain.friend.event.FriendshipCreatedEvent;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendShipDeletedEvent;
 import com.example.DunbarHorizon.social.domain.label.event.LabelMemberChangedEvent;
 import org.junit.jupiter.api.DisplayName;
@@ -25,13 +25,13 @@ class SocialNetworkCacheEvictListenerTest {
     private SocialNetworkCacheEvictListener listener;
 
     @Test
-    @DisplayName("친구 수락 이벤트: 요청자·수신자 양측의 Default 네트워크 캐시를 무효화한다")
-    void 친구_수락_이벤트_발생_시_양측_Default_네트워크를_무효화한다() {
+    @DisplayName("친구 생성 이벤트: 양측의 Default 네트워크 캐시를 무효화한다")
+    void 친구_생성_이벤트_발생_시_양측_Default_네트워크를_무효화한다() {
         // given
-        FriendRequestAcceptedEvent event = new FriendRequestAcceptedEvent("req-1", 10L, 20L, "수신자닉네임");
+        FriendshipCreatedEvent event = new FriendshipCreatedEvent(10L, 20L);
 
         // when
-        listener.onFriendRequestAccepted(event);
+        listener.onFriendshipCreated(event);
 
         // then
         verify(cacheManager).evictDefaultNetwork(10L);
@@ -40,13 +40,13 @@ class SocialNetworkCacheEvictListenerTest {
     }
 
     @Test
-    @DisplayName("친구 수락 이벤트: 라벨 네트워크 캐시는 무효화하지 않는다")
-    void 친구_수락_이벤트_발생_시_라벨_캐시는_건드리지_않는다() {
+    @DisplayName("친구 생성 이벤트: 라벨 네트워크 캐시는 무효화하지 않는다")
+    void 친구_생성_이벤트_발생_시_라벨_캐시는_건드리지_않는다() {
         // given
-        FriendRequestAcceptedEvent event = new FriendRequestAcceptedEvent("req-1", 10L, 20L, "닉네임");
+        FriendshipCreatedEvent event = new FriendshipCreatedEvent(10L, 20L);
 
         // when
-        listener.onFriendRequestAccepted(event);
+        listener.onFriendshipCreated(event);
 
         // then
         verify(cacheManager, never()).evictLabelNetwork(anyLong(), anyString());
