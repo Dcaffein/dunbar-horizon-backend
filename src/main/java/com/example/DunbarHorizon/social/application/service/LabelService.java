@@ -55,9 +55,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     public void addMemberToLabel(Long currentUserId, String labelId, Long newMemberId) {
         Label label = getLabel(labelId);
         validateOwner(label, currentUserId);
-        UserReference newMember = socialUserRepository.findById(newMemberId)
-                .orElseThrow(() -> new UserReferenceNotFoundException(newMemberId));
-        labelMemberRegistry.addNewMember(label, newMember);
+        labelMemberRegistry.addNewMember(label, newMemberId);
         labelRepository.save(label);
         eventPublisher.publishEvent(new LabelMemberChangedEvent(currentUserId, labelId));
     }

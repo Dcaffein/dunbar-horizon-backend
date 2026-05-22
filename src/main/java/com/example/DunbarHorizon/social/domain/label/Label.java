@@ -53,12 +53,10 @@ public class Label {
     }
 
     void updateMembers(Set<UserReference> newMembers) {
-        if (newMembers == null || newMembers.isEmpty()) {
-            this.members.clear();
-            return;
+        this.members.clear();
+        if (newMembers != null) {
+            this.members.addAll(newMembers);
         }
-        this.members.removeIf(existing -> !newMembers.contains(existing));
-        this.members.addAll(newMembers);
     }
 
     void applyNewLabelName(String newLabelName) {

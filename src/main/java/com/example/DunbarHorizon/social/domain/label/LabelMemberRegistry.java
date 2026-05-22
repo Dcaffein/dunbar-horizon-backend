@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFou
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
+import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import lombok.RequiredArgsConstructor;
@@ -19,16 +20,18 @@ public class LabelMemberRegistry {
     private final FriendshipRepository friendshipRepository;
     private final SocialUserRepository socialUserRepository;
 
-    public void addNewMember(Label label, UserReference potentialNewMember) {
-        if (!friendshipRepository.existsFriendshipBetween(label.getOwner().getId(), potentialNewMember.getId())) {
-            throw new FriendshipNotFoundException(label.getOwner().getId(), potentialNewMember.getId());
+    public void addNewMember(Label label, Long newMemberId) {
+        if (!friendshipRepository.existsFriendshipBetween(label.getOwner().getId(), newMemberId)) {
+            throw new FriendshipNotFoundException(label.getOwner().getId(), newMemberId);
         }
 
-        if (label.getMembers().contains(potentialNewMember)) {
-            throw new DuplicateLabelMemberException(potentialNewMember.getId());
+        if (label.getMembers().stream().anyMatch(m -> m.getId().equals(newMemberId))) {
+            throw new DuplicateLabelMemberException(newMemberId);
         }
 
-        label.addNewMember(potentialNewMember);
+        UserReference newMember = socialUserRepository.findById(newMemberId)
+                .orElseThrow(() -> new UserReferenceNotFoundException(newMemberId));
+        label.addNewMember(newMember);
     }
 
     public void updateMembers(Label label, List<Long> newMemberIds) {
