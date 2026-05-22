@@ -17,10 +17,6 @@ public class FriendshipBroker {
         Long requesterId = requester.getId();
         Long receiverId = receiver.getId();
 
-        if(requester.getId().equals(receiver.getId())) {
-            throw new CannotRequestToSelfException(requesterId);
-        }
-
         if (friendshipRepository.existsFriendshipBetween(requesterId, receiverId)) {
             throw new AlreadyFriendsException(requesterId, receiverId);
         }
@@ -32,13 +28,9 @@ public class FriendshipBroker {
         return new FriendRequest(requester, receiver);
     }
 
-    public Friendship establish(FriendRequest friendRequest) {
+    public Friendship createFrom(FriendRequest friendRequest) {
         if (!friendRequest.isAccepted()) {
             throw new FriendRequestNotAcceptedException(friendRequest.getId());
-        }
-
-        if(friendRequest.getRequester()==null || friendRequest.getReceiver()==null){
-            throw new FriendRequestInvalidException(friendRequest.getId());
         }
 
         if (friendshipRepository.existsFriendshipBetween(

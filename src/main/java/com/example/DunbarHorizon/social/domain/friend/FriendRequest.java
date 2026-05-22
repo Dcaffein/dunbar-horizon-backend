@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.social.domain.friend;
 
+import com.example.DunbarHorizon.social.domain.friend.exception.CannotRequestToSelfException;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -31,6 +32,9 @@ public class FriendRequest {
     private FriendRequestStatus status;
 
     FriendRequest(UserReference requester, UserReference receiver) {
+        if (requester.getId().equals(receiver.getId())) {
+            throw new CannotRequestToSelfException(requester.getId());
+        }
         this.id = generateId(requester.getId(), receiver.getId());
         this.requester = requester;
         this.receiver = receiver;
