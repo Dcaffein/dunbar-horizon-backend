@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.flag.domain.memorial.repository;
 
-import com.example.DunbarHorizon.flag.domain.memorial.DeletableFlagMemorial;
 import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorial;
 
 import java.util.List;
@@ -10,6 +9,6 @@ public interface FlagMemorialRepository {
     FlagMemorial save(FlagMemorial memorial);
     Optional<FlagMemorial> findById(Long id);
     boolean existsByFlagId(Long flagId);
-    void delete(DeletableFlagMemorial memorial);
+    void delete(FlagMemorial memorial);
     List<FlagMemorial> findAllMemorialsIfMemorialized(Long flagId, Long viewerId);
 }

@@ -111,7 +111,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
         return new FlagParticipant(this.id, userId);
     }
 
-    DeletableParticipant unparticipate(FlagParticipant participant, Long requesterId) {
+    void unparticipate(FlagParticipant participant, Long requesterId) {
         if (!participant.getParticipantId().equals(requesterId)) {
             throw new FlagAuthorizationException("본인의 참여만 취소할 수 있습니다.");
         }
@@ -119,8 +119,6 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
         if (!this.calculateCurrentStatus().isBeforeActivity()) {
             throw new IllegalStateException("모집 기간이 종료된 이후에는 참여를 취소할 수 없습니다.");
         }
-
-        return new DeletableParticipant(participant);
     }
 
     public void delete(Long requesterId) {

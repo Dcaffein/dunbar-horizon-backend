@@ -5,7 +5,6 @@ import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
-import com.example.DunbarHorizon.flag.domain.memorial.DeletableFlagMemorial;
 import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorial;
 import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorialCreator;
 import com.example.DunbarHorizon.flag.domain.memorial.event.MemorialCreatedEvent;
@@ -129,16 +128,15 @@ class FlagMemorialCommandServiceTest {
     void deleteMemorial_ByWriter_Success() {
         // given
         FlagMemorial mockMemorial = mock(FlagMemorial.class);
-        DeletableFlagMemorial mockTicket = mock(DeletableFlagMemorial.class);
         given(mockMemorial.getFlagId()).willReturn(FLAG_ID);
         given(memorialRepository.findById(1L)).willReturn(Optional.of(mockMemorial));
-        given(mockMemorial.verifyForDeletion(WRITER_ID)).willReturn(mockTicket);
 
         // when
         flagMemorialCommandService.deleteMemorial(1L, WRITER_ID);
 
         // then
-        verify(memorialRepository).delete(any(DeletableFlagMemorial.class));
+        verify(mockMemorial).validateDeletion(WRITER_ID);
+        verify(memorialRepository).delete(mockMemorial);
         verify(eventPublisher).publishEvent(any(MemorialDeletedEvent.class));
     }
 
@@ -149,7 +147,7 @@ class FlagMemorialCommandServiceTest {
         FlagMemorial mockMemorial = mock(FlagMemorial.class);
         given(memorialRepository.findById(1L)).willReturn(Optional.of(mockMemorial));
         willThrow(new FlagAuthorizationException("후기 작성자만 접근 가능합니다."))
-                .given(mockMemorial).verifyForDeletion(OTHER_ID);
+                .given(mockMemorial).validateDeletion(OTHER_ID);
 
         // when / then
         assertThatThrownBy(() -> flagMemorialCommandService.deleteMemorial(1L, OTHER_ID))
