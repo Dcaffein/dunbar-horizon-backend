@@ -61,3 +61,16 @@ Policy.unparticipate(flagId, userId)
 ## 브랜치
 
 `ai/refactor-flag-participation-policy`
+
+## Result
+
+- 브랜치: `ai/refactor-flag-participation-policy`
+- 커밋: `1d8d054`
+- 변경 파일:
+  - `flag/domain/flag/FlagParticipationPolicy.java` — `flagId` 수신, 이중 조회(non-exclusive → Neo4j → exclusive), `validateParticipationEligibility` 인라인, `unparticipate` 추가, `updateCapacity` 제거, `FlagRepository` 추가
+  - `flag/domain/flag/Flag.java` — `unparticipate()` public → package-private, `updateCapacity()` package-private → public
+  - `flag/application/service/flag/FlagParticipationService.java` — Policy 단일 창구 위임, `FlagRepository` 의존성 제거
+  - `flag/application/service/flag/FlagManagementService.java` — `updateCapacity` 직접 처리, `FlagParticipationPolicy` 의존성 제거, `FlagParticipantRepository` 추가
+  - `FlagParticipationServiceTest.java` — Policy 위임 검증으로 단순화
+  - `FlagManagementServiceTest.java` — Policy mock 제거, `modifyFlagCapacity` 테스트 추가
+  - `FlagParticipationPolicyTest.java` — 신규 생성 (비즈니스 규칙 전체 검증)

@@ -43,3 +43,11 @@ Flag 내부 상태를 확인하는 책임은 Flag에 있으므로 `Flag.createEn
 ## 브랜치
 
 `ai/fix-encore-duplicate-validation`
+
+## Result
+
+- 브랜치: `ai/fix-encore-duplicate-validation`
+- 커밋: `4e437d5`
+- 변경 파일:
+  - `flag/domain/flag/FlagEncoreCreator.java` — `isEnded()` 중복 검증 제거
+  - `flag/domain/memorial/FlagMemorialCreator.java` — 영어 예외 메시지 한국어로 변환

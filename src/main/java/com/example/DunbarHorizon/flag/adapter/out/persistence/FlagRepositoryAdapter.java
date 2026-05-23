@@ -17,7 +17,6 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class FlagRepositoryAdapter implements FlagRepository {
 
-    // JPA 인터페이스를 주입받아 사용 (의존성 숨김)
     private final FlagJpaRepository jpaRepository;
 
     @Override

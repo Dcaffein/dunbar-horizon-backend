@@ -51,3 +51,16 @@ DELETE FROM FlagComment c WHERE c.id = :id OR c.parentId = :id
 ## 브랜치
 
 `ai/refactor-remove-comment-deletion-scope`
+
+## Result
+
+- 브랜치: `ai/refactor-remove-comment-deletion-scope`
+- 커밋: `5760526`
+- 변경 파일:
+  - `flag/domain/comment/CommentDeletionScope.java` — 삭제
+  - `flag/domain/comment/FlagComment.java` — `issueDeletionScope()` 제거
+  - `flag/domain/comment/repository/FlagCommentRepository.java` — `delete(CommentDeletionScope)` → `deleteWithReplies(Long)`
+  - `flag/adapter/out/persistence/FlagCommentRepositoryAdapter.java` — 분기 제거, 단일 경로
+  - `flag/application/service/comment/FlagCommentCommandService.java` — `validateDeletionAuthority` + `deleteWithReplies` 직접 호출
+  - `FlagCommentTest.java` — `issueDeletionScope_*` 테스트 → `validateDeletionAuthority_*` 테스트로 교체
+  - `FlagCommentCommandServiceTest.java` — `delete(any())` → `deleteWithReplies(1L)`
