@@ -1,13 +1,15 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
+import com.example.DunbarHorizon.flag.application.port.in.command.FlagCapacityUpdateCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagDetailsUpdateCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagScheduleUpdateCommand;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagParticipationPolicy;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagScheduleInvalidException;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,7 +33,7 @@ class FlagManagementServiceTest {
     @InjectMocks private FlagManagementService flagManagementService;
 
     @Mock private FlagRepository flagRepository;
-    @Mock private FlagParticipationPolicy flagParticipationPolicy;
+    @Mock private FlagParticipantRepository participantRepository;
 
     private static final Long HOST_ID = 1L;
     private static final Long OTHER_ID = 99L;
@@ -83,6 +85,36 @@ class FlagManagementServiceTest {
         // when / then
         assertThatThrownBy(() -> flagManagementService.modifyFlagDetails(command))
                 .isInstanceOf(FlagNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("호스트가 현재 참여 인원 이상으로 정원을 변경할 수 있다")
+    void modifyFlagCapacity_ByHost_Success() {
+        // given
+        Flag flag = recruitingFlag();
+        given(participantRepository.countByFlagId(1L)).willReturn(3);
+        given(flagRepository.findByIdExclusive(1L)).willReturn(Optional.of(flag));
+        FlagCapacityUpdateCommand command = new FlagCapacityUpdateCommand(1L, HOST_ID, 5);
+
+        // when
+        flagManagementService.modifyFlagCapacity(command);
+
+        // then
+        assertThat(flag.getCapacity()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("현재 참여 인원보다 적은 정원으로 변경하면 FlagInvalidStatusException이 발생한다")
+    void modifyFlagCapacity_BelowCurrentCount_ThrowsException() {
+        // given
+        Flag flag = recruitingFlag();
+        given(participantRepository.countByFlagId(1L)).willReturn(5);
+        given(flagRepository.findByIdExclusive(1L)).willReturn(Optional.of(flag));
+        FlagCapacityUpdateCommand command = new FlagCapacityUpdateCommand(1L, HOST_ID, 3);
+
+        // when / then
+        assertThatThrownBy(() -> flagManagementService.modifyFlagCapacity(command))
+                .isInstanceOf(FlagInvalidStatusException.class);
     }
 
     @Test
