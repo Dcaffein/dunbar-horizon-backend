@@ -102,51 +102,33 @@ class FlagCommentTest {
     }
 
     @Test
-    @DisplayName("루트 댓글 작성자가 삭제 스코프를 발급받으면 답글 포함 삭제 스코프가 반환된다")
-    void issueDeletionScope_RootByWriter_IncludesReplies() {
-        // given
-        FlagComment root = FlagComment.createRoot(FLAG_ID, WRITER_ID, "루트 댓글", false);
-
-        // when
-        CommentDeletionScope scope = root.issueDeletionScope(WRITER_ID, HOST_ID);
-
-        // then
-        assertThat(scope.isIncludeReplies()).isTrue();
-    }
-
-    @Test
-    @DisplayName("답글 작성자가 삭제 스코프를 발급받으면 답글 제외 삭제 스코프가 반환된다")
-    void issueDeletionScope_ReplyByWriter_NoReplies() {
-        // given
-        FlagComment root = FlagComment.createRoot(FLAG_ID, WRITER_ID, "루트", false);
-        ReflectionTestUtils.setField(root, "id", 1L);
-        FlagComment reply = root.createReply(WRITER_ID, "답글", false);
-
-        // when
-        CommentDeletionScope scope = reply.issueDeletionScope(WRITER_ID, HOST_ID);
-
-        // then
-        assertThat(scope.isIncludeReplies()).isFalse();
-    }
-
-    @Test
-    @DisplayName("호스트는 다른 사람의 댓글을 삭제할 수 있다")
-    void issueDeletionScope_ByHost_Success() {
+    @DisplayName("작성자는 삭제 권한 검증을 통과할 수 있다")
+    void validateDeletionAuthority_ByWriter_Success() {
         // given
         FlagComment comment = FlagComment.createRoot(FLAG_ID, WRITER_ID, "내용", false);
 
         // when / then
-        assertThatNoException().isThrownBy(() -> comment.issueDeletionScope(HOST_ID, HOST_ID));
+        assertThatNoException().isThrownBy(() -> comment.validateDeletionAuthority(WRITER_ID, HOST_ID));
     }
 
     @Test
-    @DisplayName("작성자와 호스트가 아닌 사용자가 삭제 스코프를 요청하면 예외가 발생한다")
-    void issueDeletionScope_ByStranger_ThrowsException() {
+    @DisplayName("호스트는 다른 사람의 댓글에 대한 삭제 권한 검증을 통과할 수 있다")
+    void validateDeletionAuthority_ByHost_Success() {
         // given
         FlagComment comment = FlagComment.createRoot(FLAG_ID, WRITER_ID, "내용", false);
 
         // when / then
-        assertThatThrownBy(() -> comment.issueDeletionScope(STRANGER_ID, HOST_ID))
+        assertThatNoException().isThrownBy(() -> comment.validateDeletionAuthority(HOST_ID, HOST_ID));
+    }
+
+    @Test
+    @DisplayName("작성자와 호스트가 아닌 사용자가 삭제 권한을 검증하면 예외가 발생한다")
+    void validateDeletionAuthority_ByStranger_ThrowsException() {
+        // given
+        FlagComment comment = FlagComment.createRoot(FLAG_ID, WRITER_ID, "내용", false);
+
+        // when / then
+        assertThatThrownBy(() -> comment.validateDeletionAuthority(STRANGER_ID, HOST_ID))
                 .isInstanceOf(FlagCommentAuthorizationException.class);
     }
 

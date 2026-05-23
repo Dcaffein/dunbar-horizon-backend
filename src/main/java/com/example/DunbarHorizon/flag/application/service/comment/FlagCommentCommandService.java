@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.application.service.comment;
 
 import com.example.DunbarHorizon.flag.application.port.in.FlagCommentCommandUseCase;
-import com.example.DunbarHorizon.flag.domain.comment.CommentDeletionScope;
 import com.example.DunbarHorizon.flag.domain.comment.FlagComment;
 import com.example.DunbarHorizon.flag.domain.comment.exception.FlagCommentNotFoundException;
 import com.example.DunbarHorizon.flag.domain.comment.repository.FlagCommentRepository;
@@ -55,8 +54,8 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
 
         Flag flag = flagRepository.findById(comment.getFlagId()).orElseThrow();
 
-        CommentDeletionScope scope = comment.issueDeletionScope(userId, flag.getHostId());
+        comment.validateDeletionAuthority(userId, flag.getHostId());
 
-        commentRepository.delete(scope);
+        commentRepository.deleteWithReplies(comment.getId());
     }
 }

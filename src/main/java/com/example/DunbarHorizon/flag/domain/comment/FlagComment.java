@@ -64,15 +64,6 @@ public class FlagComment extends BaseTimeAggregateRoot {
         this.isPrivate = isPrivate;
     }
 
-    public CommentDeletionScope issueDeletionScope(Long requesterId, Long hostId) {
-
-        validateDeletionAuthority(requesterId, hostId);
-
-        boolean includeReplies = !isReply();
-
-        return new CommentDeletionScope(this.id, includeReplies);
-    }
-
     private void validateAsParent() {
         if (this.isReply()) {
             throw new FlagCommentReplyDepthException();
