@@ -43,6 +43,7 @@ public abstract class BaseControllerTest {
     @MockitoBean protected LoginUseCase loginUseCase;
     @MockitoBean protected VerificationUseCase verificationUseCase;
     @MockitoBean protected UserProfileUpdateUseCase userProfileUpdateUseCase;
+    @MockitoBean protected com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase userQueryUseCase;
 
     @MockitoBean protected BuzzCommandUseCase buzzCommandUseCase;
     @MockitoBean protected BuzzQueryUseCase buzzQueryUseCase;
