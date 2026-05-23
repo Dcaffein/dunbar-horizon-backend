@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.adapter.out.persistence;
 
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagCommentJpaRepository;
-import com.example.DunbarHorizon.flag.domain.comment.CommentDeletionScope;
 import com.example.DunbarHorizon.flag.domain.comment.FlagComment;
 import com.example.DunbarHorizon.flag.domain.comment.repository.FlagCommentRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,12 +36,8 @@ public class FlagCommentRepositoryAdapter implements FlagCommentRepository {
     }
 
     @Override
-    public void delete(CommentDeletionScope scope) {
-        if (scope.isIncludeReplies()) {
-            jpaRepository.deleteTargetAndReplies(scope.getTargetId());
-        } else {
-            jpaRepository.deleteById(scope.getTargetId());
-        }
+    public void deleteWithReplies(Long commentId) {
+        jpaRepository.deleteTargetAndReplies(commentId);
     }
 
     @Override

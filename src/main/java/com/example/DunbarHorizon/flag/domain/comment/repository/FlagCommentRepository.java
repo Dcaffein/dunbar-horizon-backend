@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.flag.domain.comment.repository;
 
-import com.example.DunbarHorizon.flag.domain.comment.CommentDeletionScope;
 import com.example.DunbarHorizon.flag.domain.comment.FlagComment;
 
 import java.util.List;
@@ -11,6 +10,6 @@ public interface FlagCommentRepository {
     Optional<FlagComment> findById(Long id);
     List<FlagComment> findAllByFlagId(Long flagId);
     Optional<FlagComment> findByIdForUpdate(Long id);
-    void delete(CommentDeletionScope scope);
+    void deleteWithReplies(Long commentId);
     long countByFlagId(Long flagId);
 }

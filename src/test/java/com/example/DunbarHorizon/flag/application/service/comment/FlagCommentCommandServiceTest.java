@@ -174,7 +174,7 @@ class FlagCommentCommandServiceTest {
         flagCommentCommandService.deleteComment(1L, USER_ID);
 
         // then
-        verify(commentRepository).delete(any());
+        verify(commentRepository).deleteWithReplies(1L);
     }
 
     @Test
