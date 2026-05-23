@@ -20,7 +20,7 @@ public enum FriendRequestStatus {
         }
 
         @Override
-        public void validateCancelBy(FriendRequest request, Long userId) {
+        public void cancel(FriendRequest request, Long userId) {
             validateRequester(request, userId);
         }
     },
@@ -44,7 +44,7 @@ public enum FriendRequestStatus {
     public FriendRequestStatus accept(FriendRequest request, Long userId) { return throwInvalidException("수락"); }
     public FriendRequestStatus hide(FriendRequest request, Long userId) { return throwInvalidException("숨김"); }
     public FriendRequestStatus undoHide(FriendRequest request, Long userId) { return throwInvalidException("숨김 해제"); }
-    public void validateCancelBy(FriendRequest request, Long userId) { throwInvalidException("취소"); }
+    public void cancel(FriendRequest request, Long userId) { throwInvalidException("취소"); }
 
     protected void validateReceiver(FriendRequest request, Long userId) {
         if (!request.getReceiver().getId().equals(userId)) {

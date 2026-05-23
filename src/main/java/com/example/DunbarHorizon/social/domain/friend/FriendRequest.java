@@ -61,7 +61,7 @@ public class FriendRequest {
     }
 
     public void cancel(Long userId) {
-        this.status.validateCancelBy(this, userId);
+        this.status.cancel(this, userId);
     }
 
     public boolean isAccepted() {
