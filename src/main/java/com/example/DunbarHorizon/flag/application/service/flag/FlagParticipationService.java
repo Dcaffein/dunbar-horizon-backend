@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
 import com.example.DunbarHorizon.flag.application.port.in.FlagParticipationUseCase;
-import com.example.DunbarHorizon.flag.domain.flag.DeletableParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipationPolicy;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
@@ -24,7 +23,7 @@ public class FlagParticipationService implements FlagParticipationUseCase {
 
     @Override
     public void leaveFlag(Long flagId, Long userId) {
-        DeletableParticipant ticket = flagParticipationPolicy.unparticipate(flagId, userId);
-        participantRepository.delete(ticket);
+        FlagParticipant participant = flagParticipationPolicy.unparticipate(flagId, userId);
+        participantRepository.delete(participant);
     }
 }

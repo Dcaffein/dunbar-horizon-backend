@@ -45,8 +45,7 @@ public class FlagMemorial extends BaseTimeAggregateRoot {
         this.content = newContent;
     }
 
-    public DeletableFlagMemorial verifyForDeletion(Long requesterId) {
+    public void validateDeletion(Long requesterId) {
         validateOwner(requesterId);
-        return new DeletableFlagMemorial(this);
     }
 }

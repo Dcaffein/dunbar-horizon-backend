@@ -35,12 +35,13 @@ public class FlagParticipationPolicy {
         return lockedFlag.participate(userId, count);
     }
 
-    public DeletableParticipant unparticipate(Long flagId, Long userId) {
+    public FlagParticipant unparticipate(Long flagId, Long userId) {
         Flag flag = flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
         FlagParticipant participant = flagParticipantRepository
                 .findByFlagIdAndParticipantId(flagId, userId)
                 .orElseThrow(() -> new FlagParticipantNotFoundException(userId));
-        return flag.unparticipate(participant, userId);
+        flag.unparticipate(participant, userId);
+        return participant;
     }
 }

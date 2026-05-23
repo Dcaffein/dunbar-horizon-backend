@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
-import com.example.DunbarHorizon.flag.domain.flag.DeletableParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipationPolicy;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
@@ -42,17 +41,17 @@ class FlagParticipationServiceTest {
     }
 
     @Test
-    @DisplayName("Policy가 반환한 DeletableParticipant를 삭제한다")
-    void leaveFlag_DeletesTicketFromPolicy() {
+    @DisplayName("Policy가 반환한 FlagParticipant를 삭제한다")
+    void leaveFlag_DeletesParticipantFromPolicy() {
         // given
-        DeletableParticipant mockTicket = mock(DeletableParticipant.class);
-        given(flagParticipationPolicy.unparticipate(FLAG_ID, USER_ID)).willReturn(mockTicket);
+        FlagParticipant mockParticipant = mock(FlagParticipant.class);
+        given(flagParticipationPolicy.unparticipate(FLAG_ID, USER_ID)).willReturn(mockParticipant);
 
         // when
         flagParticipationService.leaveFlag(FLAG_ID, USER_ID);
 
         // then
         verify(flagParticipationPolicy).unparticipate(FLAG_ID, USER_ID);
-        verify(participantRepository).delete(mockTicket);
+        verify(participantRepository).delete(mockParticipant);
     }
 }

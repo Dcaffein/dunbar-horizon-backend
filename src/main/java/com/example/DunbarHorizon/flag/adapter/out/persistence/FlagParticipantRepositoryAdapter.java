@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.adapter.out.persistence;
 
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagParticipantJpaRepository;
-import com.example.DunbarHorizon.flag.domain.flag.DeletableParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +21,8 @@ public class FlagParticipantRepositoryAdapter implements FlagParticipantReposito
     }
 
     @Override
-    public void delete(DeletableParticipant participant) {
-        jpaRepository.delete(participant.getEntity());
+    public void delete(FlagParticipant participant) {
+        jpaRepository.delete(participant);
     }
 
     @Override

@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.adapter.out.persistence;
 
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagMemorialJpaRepository;
-import com.example.DunbarHorizon.flag.domain.memorial.DeletableFlagMemorial;
 import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorial;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,8 +31,8 @@ public class FlagMemorialRepositoryAdapter implements FlagMemorialRepository {
     }
 
     @Override
-    public void delete(DeletableFlagMemorial memorial) {
-        jpaRepository.delete(memorial.getEntity());
+    public void delete(FlagMemorial memorial) {
+        jpaRepository.delete(memorial);
     }
 
     @Override
