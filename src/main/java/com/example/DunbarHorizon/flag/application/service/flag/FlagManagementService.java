@@ -5,9 +5,9 @@ import com.example.DunbarHorizon.flag.application.port.in.command.FlagCapacityUp
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagDetailsUpdateCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagScheduleUpdateCommand;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagParticipationPolicy;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class FlagManagementService implements FlagManagementUseCase {
     private final FlagRepository flagRepository;
-    private final FlagParticipationPolicy flagParticipationPolicy;
+    private final FlagParticipantRepository participantRepository;
 
     @Override
     public void modifyFlagDetails(FlagDetailsUpdateCommand command) {
@@ -28,9 +28,10 @@ public class FlagManagementService implements FlagManagementUseCase {
 
     @Override
     public void modifyFlagCapacity(FlagCapacityUpdateCommand command) {
+        int currentCount = participantRepository.countByFlagId(command.flagId());
         Flag flag = flagRepository.findByIdExclusive(command.flagId())
                 .orElseThrow(() -> new FlagNotFoundException(command.flagId()));
-        flagParticipationPolicy.updateCapacity(flag, command.hostId(), command.capacity());
+        flag.updateCapacity(command.hostId(), command.capacity(), currentCount);
     }
 
     @Override
