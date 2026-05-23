@@ -60,7 +60,7 @@ public class FriendRequest {
         this.status = this.status.undoHide(this, userId);
     }
 
-    public void validateCancelBy(Long userId) {
+    public void cancel(Long userId) {
         this.status.validateCancelBy(this, userId);
     }
 
