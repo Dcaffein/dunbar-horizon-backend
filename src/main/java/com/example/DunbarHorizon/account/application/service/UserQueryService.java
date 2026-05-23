@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.account.application.service;
 
 import com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase;
 import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
+import com.example.DunbarHorizon.account.domain.model.UserStatus;
 import com.example.DunbarHorizon.account.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,13 @@ public class UserQueryService implements UserQueryUseCase {
     @Override
     public Optional<UserProfileInfo> getActiveUserProfile(Long id) {
         return userRepository.findActivatedUser(id)
+                .map(UserProfileInfo::from);
+    }
+
+    @Override
+    public Optional<UserProfileInfo> findActiveUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .filter(user -> user.getStatus() == UserStatus.ACTIVE)
                 .map(UserProfileInfo::from);
     }
 }

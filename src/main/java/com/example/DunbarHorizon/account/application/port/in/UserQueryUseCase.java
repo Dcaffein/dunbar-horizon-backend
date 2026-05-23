@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface UserQueryUseCase {
     List<UserProfileInfo> getUserProfiles(Collection<Long> ids);
     Optional<UserProfileInfo> getActiveUserProfile(Long id);
+    Optional<UserProfileInfo> findActiveUserByEmail(String email);
 }
