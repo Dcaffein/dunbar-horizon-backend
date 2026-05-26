@@ -12,6 +12,7 @@ import java.util.Set;
 
 import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.ATTACHED_TO;
 import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.LABEL;
+import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.OWNS_LABEL;
 import static com.example.DunbarHorizon.social.domain.socialUser.constant.SocialUserConstants.USER_REFERENCE;
 
 public interface LabelNeo4jRepository extends Neo4jRepository<Label, String> {
@@ -23,8 +24,17 @@ public interface LabelNeo4jRepository extends Neo4jRepository<Label, String> {
 
     List<Label> findAllByOwner_Id(Long ownerId);
 
-    @Query("MATCH (label:" + LABEL + ")-[:" + ATTACHED_TO + "]->(member:" + USER_REFERENCE + ") " +
-            "WHERE label.ownerId = $ownerId AND label.id IN $labelIds " +
+    @Query("MATCH (owner:" + USER_REFERENCE + " {id: $ownerId})-[:" + OWNS_LABEL + "]->(label:" + LABEL + ")" +
+            "-[:" + ATTACHED_TO + "]->(member:" + USER_REFERENCE + " {id: $memberId}) " +
+            "RETURN label")
+    List<Label> findLabelsByOwnerAndMember(
+            @Param("ownerId") Long ownerId,
+            @Param("memberId") Long memberId
+    );
+
+    @Query("MATCH (owner:" + USER_REFERENCE + " {id: $ownerId})-[:" + OWNS_LABEL + "]->(label:" + LABEL + ")" +
+            "-[:" + ATTACHED_TO + "]->(member:" + USER_REFERENCE + ") " +
+            "WHERE label.id IN $labelIds " +
             "RETURN DISTINCT member.id")
     Set<Long> findMemberIdsByOwnerAndLabelIds(
             @Param("ownerId") Long ownerId,

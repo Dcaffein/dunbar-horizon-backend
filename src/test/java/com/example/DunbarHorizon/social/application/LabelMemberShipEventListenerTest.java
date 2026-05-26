@@ -5,7 +5,6 @@ import com.example.DunbarHorizon.social.domain.friend.event.FriendShipDeletedEve
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.repository.LabelRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
-import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,12 +12,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class LabelMemberShipEventListenerTest {
@@ -27,39 +27,51 @@ class LabelMemberShipEventListenerTest {
     private LabelMemberShipEventListener labelMemberShipEventListener;
     @Mock
     private LabelRepository labelRepository;
-    @Mock private SocialUserRepository socialUserRepository;
 
     @Test
-    @DisplayName("친구 삭제 이벤트 발생 시 양쪽 사용자의 라벨에서 서로를 제거한다")
-    void handleFriendShipDeleted_Success() {
+    @DisplayName("친구 삭제 이벤트 발생 시 해당 멤버가 속한 라벨에서만 멤버를 제거한다")
+    void handleFriendShipDeleted_양쪽_라벨에서_상대방_제거() {
         // given
-        Long userA_Id = 1L;
-        Long userB_Id = 2L;
-        FriendShipDeletedEvent event = new FriendShipDeletedEvent(userA_Id, userB_Id);
+        Long userAId = 1L;
+        Long userBId = 2L;
+        FriendShipDeletedEvent event = new FriendShipDeletedEvent(userAId, userBId);
 
-        SocialUser userA = new SocialUser(userA_Id, "userA", null);
-        SocialUser userB = new SocialUser(userB_Id, "userB", null);
+        SocialUser userA = new SocialUser(userAId, "userA", null);
+        SocialUser userB = new SocialUser(userBId, "userB", null);
 
-        // UserA의 라벨들 준비
-        Label labelA1 = mock(Label.class);
-        given(labelA1.getLabelName()).willReturn("라벨A1");
-        given(socialUserRepository.findById(userA_Id)).willReturn(Optional.of(userA));
-        given(socialUserRepository.findById(userB_Id)).willReturn(Optional.of(userB));
-        given(labelRepository.findAllByOwner_Id(userA_Id)).willReturn(List.of(labelA1));
+        Label labelA = mock(Label.class);
+        given(labelA.getMembers()).willReturn(new HashSet<>(Set.of(userB)));
+        given(labelRepository.findLabelsByOwnerAndMember(userAId, userBId)).willReturn(List.of(labelA));
 
-        // UserB의 라벨들 준비
-        Label labelB1 = mock(Label.class);
-        given(labelB1.getLabelName()).willReturn("라벨B1");
-        given(labelRepository.findAllByOwner_Id(userB_Id)).willReturn(List.of(labelB1));
+        Label labelB = mock(Label.class);
+        given(labelB.getMembers()).willReturn(new HashSet<>(Set.of(userA)));
+        given(labelRepository.findLabelsByOwnerAndMember(userBId, userAId)).willReturn(List.of(labelB));
 
         // when
         labelMemberShipEventListener.handleFriendShipDeleted(event);
 
         // then
-        // 1. UserA의 라벨A1에서 UserB가 제거되었는지 확인
-        verify(labelA1).removeMember(userB);
+        verify(labelA).removeMember(userB);
+        verify(labelB).removeMember(userA);
+        verify(labelRepository).saveAll(List.of(labelA));
+        verify(labelRepository).saveAll(List.of(labelB));
+    }
 
-        // 2. UserB의 라벨B1에서 UserA가 제거되었는지 확인
-        verify(labelB1).removeMember(userA);
+    @Test
+    @DisplayName("멤버가 어떤 라벨에도 속하지 않은 경우 saveAll을 호출하지 않는다")
+    void handleFriendShipDeleted_라벨_없으면_saveAll_미호출() {
+        // given
+        Long userAId = 1L;
+        Long userBId = 2L;
+        FriendShipDeletedEvent event = new FriendShipDeletedEvent(userAId, userBId);
+
+        given(labelRepository.findLabelsByOwnerAndMember(userAId, userBId)).willReturn(List.of());
+        given(labelRepository.findLabelsByOwnerAndMember(userBId, userAId)).willReturn(List.of());
+
+        // when
+        labelMemberShipEventListener.handleFriendShipDeleted(event);
+
+        // then
+        verify(labelRepository, never()).saveAll(any());
     }
 }

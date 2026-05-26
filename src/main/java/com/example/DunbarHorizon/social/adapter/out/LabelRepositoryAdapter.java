@@ -47,6 +47,11 @@ public class LabelRepositoryAdapter implements LabelRepository {
     }
 
     @Override
+    public List<Label> findLabelsByOwnerAndMember(Long ownerId, Long memberId) {
+        return labelNeo4jRepository.findLabelsByOwnerAndMember(ownerId, memberId);
+    }
+
+    @Override
     public Set<Long> findMemberIdsByOwnerAndLabelIds(Long ownerId, List<String> labelIds) {
         return labelNeo4jRepository.findMemberIdsByOwnerAndLabelIds(ownerId, labelIds);
     }

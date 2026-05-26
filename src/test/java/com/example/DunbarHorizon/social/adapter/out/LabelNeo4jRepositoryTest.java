@@ -69,6 +69,57 @@ class LabelNeo4jRepositoryTest {
     }
 
     @Test
+    @DisplayName("ownerId + memberId 기준으로 해당 멤버가 속한 라벨만 조회한다")
+    void findLabelsByOwnerAndMember_멤버가_속한_라벨만_반환() {
+        // given
+        Label labelWithFriend1 = LabelTestFactory.createLabel(owner, "라벨A", true);
+        LabelTestFactory.addMember(labelWithFriend1, friend1);
+        labelRepository.save(labelWithFriend1);
+
+        Label labelWithFriend2 = LabelTestFactory.createLabel(owner, "라벨B", true);
+        LabelTestFactory.addMember(labelWithFriend2, friend2);
+        labelRepository.save(labelWithFriend2);
+
+        // when
+        List<Label> result = labelRepository.findLabelsByOwnerAndMember(owner.getId(), friend1.getId());
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getLabelName()).isEqualTo("라벨A");
+    }
+
+    @Test
+    @DisplayName("멤버가 어떤 라벨에도 속하지 않으면 빈 리스트를 반환한다")
+    void findLabelsByOwnerAndMember_멤버가_없으면_빈_리스트() {
+        // given
+        Label label = LabelTestFactory.createLabel(owner, "라벨A", true);
+        labelRepository.save(label);
+
+        // when
+        List<Label> result = labelRepository.findLabelsByOwnerAndMember(owner.getId(), friend1.getId());
+
+        // then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("OWNS_LABEL 관계 기반으로 소유자와 라벨 ID에 해당하는 멤버 ID를 조회한다")
+    void findMemberIdsByOwnerAndLabelIds_올바른_멤버_ID_반환() {
+        // given
+        Label label = LabelTestFactory.createLabel(owner, "라벨A", true);
+        LabelTestFactory.addMember(label, friend1);
+        LabelTestFactory.addMember(label, friend2);
+        Label saved = labelRepository.save(label);
+
+        // when
+        Set<Long> memberIds = labelRepository.findMemberIdsByOwnerAndLabelIds(
+                owner.getId(), List.of(saved.getId()));
+
+        // then
+        assertThat(memberIds).containsExactlyInAnyOrder(friend1.getId(), friend2.getId());
+    }
+
+    @Test
     @DisplayName("멤버 교체 시 그래프 상의 HAS_MEMBER 관계가 갱신되어야 한다")
     void updateMembers_Graph_Consistency() {
         // given
