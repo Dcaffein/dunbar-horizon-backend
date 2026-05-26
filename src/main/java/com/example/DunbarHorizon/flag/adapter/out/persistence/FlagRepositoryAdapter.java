@@ -30,6 +30,11 @@ public class FlagRepositoryAdapter implements FlagRepository {
     }
 
     @Override
+    public Optional<Long> findHostIdById(Long id) {
+        return jpaRepository.findHostIdById(id);
+    }
+
+    @Override
     public Optional<Flag> findByIdExclusive(Long id) {
         return jpaRepository.findByIdExclusive(id);
     }

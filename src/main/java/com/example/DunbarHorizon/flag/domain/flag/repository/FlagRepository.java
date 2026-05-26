@@ -12,6 +12,7 @@ import java.util.Set;
 public interface FlagRepository {
     Flag save(Flag flag);
     Optional<Flag> findById(Long id);
+    Optional<Long> findHostIdById(Long id);
     Optional<Flag> findByIdExclusive(Long id);
     Optional<Flag> findByParentId(Long parentId);
     boolean existsById(Long id);

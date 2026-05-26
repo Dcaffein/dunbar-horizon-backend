@@ -17,10 +17,10 @@ public class FlagParticipationPolicy {
     private final FriendshipChecker friendshipChecker;
 
     public FlagParticipant participate(Long flagId, Long userId) {
-        Flag flag = flagRepository.findById(flagId)
+        Long hostId = flagRepository.findHostIdById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
 
-        if (!friendshipChecker.areFriends(flag.getHostId(), userId)) {
+        if (!friendshipChecker.areFriends(hostId, userId)) {
             throw new FlagAuthorizationException("호스트의 친구만 참여할 수 있는 플래그입니다.");
         }
 

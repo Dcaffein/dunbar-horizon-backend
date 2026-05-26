@@ -23,6 +23,9 @@ public interface FlagJpaRepository extends JpaRepository<Flag, Long> {
 
     List<Flag> findAllByHostId(Long hostId);
 
+    @Query("SELECT f.hostId FROM Flag f WHERE f.id = :id")
+    Optional<Long> findHostIdById(@Param("id") Long id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT f FROM Flag f WHERE f.id = :id")
     Optional<Flag> findByIdExclusive(@Param("id") Long id);
