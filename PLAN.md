@@ -1,30 +1,20 @@
-# PLAN: task-29 — 네트워크 조회 쿼리 성능 개선 (interestScore 재탐색 제거)
+# PLAN: task-44 — Buzz 도메인 버그 수정 및 도메인 규칙 강화
 
 ## 작업 목표
 
-`buildDynamicPruningNetwork()`의 마지막 두 MATCH(각 행마다 `me`의 전체 HAS_FRIENDSHIP 재스캔)를 제거한다.
-Step 1에서 `r_me.interestScore`를 map으로 수집하고, CALL 서브쿼리로 Step 3를 격리해 메모리 병목도 해소한다.
-
-- **목표 DB hits**: 5,047,039 → ~190,134 (원본 대비 96% 감소)
-- **목표 메모리**: ~12 MB → ~172 KB (원본 대비 99% 감소)
+Buzz 도메인에서 발견된 버그 4건을 수정하고, 서비스 계층에 흩어진 권한 검증 로직을 도메인으로 이동한다.
 
 ---
 
 ## 현황 분석
 
-`buildDynamicPruningNetwork()` 마지막 부분 (L183~192):
-
-```java
-.match(relationshipA.relationshipFrom(member, "HAS_FRIENDSHIP"))    // ← 병목: 3,000행 × 재스캔
-.match(relationshipB.relationshipFrom(targetNode, "HAS_FRIENDSHIP")) // ← 병목: 3,000행 × 재스캔
-.returning(
-    ...
-    relationshipA.property("interestScore").as("friendA_Interest"),
-    relationshipB.property("interestScore").as("friendB_Interest")
-)
-```
-
-Step 1에서 `r_me`(HAS_FRIENDSHIP 관계 변수)를 수집하지 않아, 마지막 단계에서 동일 경로를 다시 탐색해야 하는 구조.
+| # | 위치 | 문제 |
+|---|------|------|
+| 1 | `BuzzDetailResult.from()` L24 | `buzz.getComments()` 전체를 그대로 반환 — `isPublic=false` 댓글이 모두에게 노출 |
+| 2 | `BuzzNotificationDispatcher.dispatch(BuzzCommentedEvent)` | `creatorId == commenterId` 조건 없음 — 작성자가 자신의 Buzz에 댓글 달면 자기 자신에게 알림 |
+| 3 | `BuzzService.commentOnBuzz` L74, `updateComment` L91 | `upload()` 이후 도메인 검증 — 만료/권한 오류 시 S3 파일 고아 발생 |
+| 4 | `Buzz.validateCommentDeletion()` L120 | `isExpired()` 체크 없음 — `createComment`, `updateComment`와 불일치 |
+| 5 | `BuzzService.deleteBuzz` L106, `getBuzzDetail` L123 | 권한 검증 로직이 서비스 계층에 인라인 위치 |
 
 ---
 
@@ -32,91 +22,44 @@ Step 1에서 `r_me`(HAS_FRIENDSHIP 관계 변수)를 수집하지 않아, 마지
 
 | 파일 | 변경 내용 |
 |------|-----------|
-| `SocialNetworkRepositoryAdapter.java` | baseBuilder에 `r_me` 추가, `buildDynamicPruningNetwork` 리팩터링 |
-| `SocialNetworkRepositoryAdapterTest.java` | 테스트 데이터 interestScore 값 분화, interestScore 반환값 검증 케이스 추가 |
+| `buzz/domain/Buzz.java` | `getVisibleComments(Long viewerId)` 추가, `validateAccess` / `validateDeletion` / `validateCommentCreation` / `validateCommentUpdate` 추가, `validateCommentDeletion`에 만료 체크 추가 |
+| `buzz/application/dto/result/BuzzDetailResult.java` | `getComments()` → `getVisibleComments(currentUserId)` |
+| `buzz/application/service/BuzzService.java` | upload 순서 변경, 권한 검증 도메인 위임 |
+| `buzz/application/eventListener/BuzzNotificationDispatcher.java` | 자기 자신 알림 가드 추가 |
 
 ---
 
 ## 구현 방향
 
-### 1. baseBuilder 변경 (두 caller 모두)
+### isPublic 필터
 
-`friendshipBetween(me, myFriendship, member)` 대신 명명된 관계 `r_me`를 직접 선언:
-
+`Buzz`에 `getVisibleComments(Long viewerId)` 추가:
 ```java
-Relationship rMe = me.relationshipTo(myFriendship, "HAS_FRIENDSHIP").named("r_me");
-// getDefaultIntimacyNetwork
-.match(rMe.relationshipFrom(member, "HAS_FRIENDSHIP"))
-
-// getLabelCustomNetwork (기존 label MATCH 뒤에 그대로 추가)
-.match(rMe.relationshipFrom(member, "HAS_FRIENDSHIP"))
+public List<BuzzComment> getVisibleComments(Long viewerId) {
+    return comments.stream()
+            .filter(c -> c.isPublic() || creatorId.equals(viewerId) || c.getCommenterId().equals(viewerId))
+            .toList();
+}
 ```
 
-### 2. `buildDynamicPruningNetwork` 시그니처 변경
+`BuzzDetailResult.from()`에서 `buzz.getComments()` → `buzz.getVisibleComments(currentUserId)`.
 
-```java
-private Statement buildDynamicPruningNetwork(
-    StatementBuilder.OngoingReading baseBuilder,
-    Node me, Node member, Node myFriendship, Relationship rMe)
-```
+### S3 업로드 순서
 
-### 3. 새 쿼리 흐름
+`commentOnBuzz`: `validateCommentCreation()` (만료 + 접근 검증) → `upload()` → `createComment()`  
+`updateComment`: `validateCommentUpdate()` (만료 + 작성자 검증) → `upload()` → persist
 
-`ApocPatterns.idMapOf()`와 동일한 list comprehension 패턴, `SocialExpansionRepositoryAdapter`의 CALL 서브쿼리 패턴을 그대로 사용:
+`createComment()` 내부 검증은 그대로 유지 — 사전 검증 메서드는 upload 이전 guard 역할만.
 
-```
-Step A: WITH me, member, myFriendship, r_me ORDER BY intimacy DESC LIMIT $limitSize
+### 권한 검증 도메인 이동
 
-Step B: WITH me,
-             collect({member, friendship, interestScore: coalesce(r_me.interestScore, 0.0)}) AS friendData
-
-Step C: WITH friendData,
-             apoc.coll.union([x IN friendData | x.member], [me]) AS boundary,
-             apoc.map.fromPairs([x IN friendData | [toString(x.member.id), x.interestScore]]) AS interestMap
-
-Step D: UNWIND friendData AS item
-        WITH boundary, interestMap,
-             item.member AS member, item.friendship AS myFriendship
-
-Step E: WITH boundary, interestMap, member,
-             toInteger(5 + coalesce(myFriendship.intimacy, 0.0) * 25) AS dynamicLimit
-
-Step F: CALL {                         ← SocialExpansionRepositoryAdapter 동일 패턴
-            WITH member, boundary, dynamicLimit
-            MATCH (member)-[:HAS_FRIENDSHIP]->(innerFriendship)<-[:HAS_FRIENDSHIP]-(targetMember)
-            WHERE targetMember IN boundary AND member <> targetMember
-            WITH innerFriendship, targetMember, dynamicLimit
-            ORDER BY innerFriendship.intimacy DESC
-            RETURN collect({innerFriendship, targetMember})[0..dynamicLimit] AS topEdges
-        }
-
-Step G: UNWIND topEdges AS edgeData
-
-Step H: RETURN member.id, edgeData.targetMember.id, edgeData.innerFriendship.intimacy,
-              interestMap[toString(member.id)], interestMap[toString(edgeData.targetMember.id)]
-```
-
-**DSL 핵심 구현 포인트:**
-- list comprehension: `Cypher.listWith(x).in(friendData).returning(...)` — `ApocPatterns.idMapOf()`와 동일
-- map subscript: `Cypher.valueAt(interestMap, key)` — 기존 `Cypher.valueAt()` 확장
-- CALL 서브쿼리: `Cypher.with(member, boundary, dynamicLimit).match(...).build()` + `.call(innerStatement)` — `SocialExpansionRepositoryAdapter` 동일
-
-### 4. 제거되는 DSL 변수들
-
-`friendshipA`, `friendshipB`, `relationshipA`, `relationshipB`, `targetNode`, `members`, `friendshipList`, `index`, `allEdges`
+`Buzz`에 `validateAccess(Long userId)`, `validateDeletion(Long requesterId)` 추가.  
+서비스의 인라인 `if (!...) throw` 블록을 해당 메서드 호출로 교체.
 
 ---
 
 ## 예상 사이드 이펙트
 
-- `getIntersectionOneHops`, `getIntersectionByOneHop`, `buildCurrentSkeleton` — 미변경
-- `@Cacheable` 및 Redis 캐시 키 — 변경 없음 (반환 타입 동일)
-- `NetworkFriendEdgeResult` DTO — 변경 없음
-
----
-
-## 테스트 전략
-
-기존 5개 케이스(엣지 수, boundary 필터)를 유지하면서:
-- 테스트 데이터 일부 `interestScore` 값 분화 (현재 전부 0.0)
-- 신규 케이스: `friendA_Interest`가 `interestMap` lookup으로 올바르게 반환되는지 검증
+- `getBuzzDetail` 응답에서 `isPublic=false` 댓글이 필터링되므로, 댓글 작성자 본인과 Buzz 작성자가 아닌 수신자는 해당 댓글을 더 이상 받지 못함 — **의도된 변경**
+- `BuzzComment`의 `isPublic()` getter는 Lombok `@Getter`로 이미 생성됨 — 별도 추가 불필요
+- 사전 검증 메서드(`validateCommentCreation`, `validateCommentUpdate`)와 기존 도메인 메서드(`createComment`, `updateComment`)의 검증 로직이 중복되나, upload guard 목적이 분리되어 있으므로 허용
