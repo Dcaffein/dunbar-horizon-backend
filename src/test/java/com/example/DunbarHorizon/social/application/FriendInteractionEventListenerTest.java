@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.social.application;
 
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
-import com.example.DunbarHorizon.global.event.interaction.MutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import com.example.DunbarHorizon.social.application.eventListener.FriendInteractionEventListener;
 import com.example.DunbarHorizon.social.application.port.out.InteractionScoreDeltaPort;
@@ -34,8 +33,8 @@ class FriendInteractionEventListenerTest {
     private static final Long HOST = 10L;
 
     @Test
-    @DisplayName("단방향 상호작용 이벤트 수신 시 actorId 방향으로 delta를 누적한다")
-    void handleUserInteraction_accumulatesDelta() {
+    @DisplayName("mutual=false 타입 수신 시 userA 방향으로만 delta를 누적한다")
+    void handleUserInteraction_unilateral_accumulatesOnlyUserA() {
         UserInteractionEvent event = new UserInteractionEvent(USER_A, USER_B, InteractionType.VISIT);
         String friendshipId = Friendship.generateCompositeId(USER_A, USER_B);
         double delta = InteractionScorePolicy.scoreOf(InteractionType.VISIT);
@@ -43,16 +42,19 @@ class FriendInteractionEventListenerTest {
         listener.handleUserInteraction(event);
 
         verify(deltaPort).accumulate(friendshipId, USER_A, delta);
+        verify(deltaPort, times(1)).accumulate(org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.anyDouble());
     }
 
     @Test
-    @DisplayName("양방향 상호작용 이벤트 수신 시 양쪽 모두 delta를 누적한다")
-    void handleMutualInteraction_accumulatesBothSides() {
-        MutualInteractionEvent event = new MutualInteractionEvent(USER_A, USER_B, InteractionType.BUZZ_SEND);
+    @DisplayName("mutual=true 타입 수신 시 userA·userB 양쪽 모두 delta를 누적한다")
+    void handleUserInteraction_mutual_accumulatesBothSides() {
+        UserInteractionEvent event = new UserInteractionEvent(USER_A, USER_B, InteractionType.FLAG_ENDED);
         String friendshipId = Friendship.generateCompositeId(USER_A, USER_B);
-        double delta = InteractionScorePolicy.scoreOf(InteractionType.BUZZ_SEND);
+        double delta = InteractionScorePolicy.scoreOf(InteractionType.FLAG_ENDED);
 
-        listener.handleMutualInteraction(event);
+        listener.handleUserInteraction(event);
 
         verify(deltaPort).accumulate(friendshipId, USER_A, delta);
         verify(deltaPort).accumulate(friendshipId, USER_B, delta);
