@@ -7,6 +7,8 @@ import com.example.DunbarHorizon.account.domain.outbox.repository.UserEventOutbo
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -30,5 +32,13 @@ public class UserEventOutboxRepositoryAdapter implements UserEventOutboxReposito
     @Override
     public List<UserEventOutbox> findPendingOlderThan(LocalDateTime threshold) {
         return jpaRepository.findByStatusAndCreatedAtBefore(UserOutboxStatus.PENDING, threshold);
+    }
+
+    @Override
+    public void deleteProcessedOlderThan(LocalDateTime threshold) {
+        jpaRepository.deleteByStatusInAndCreatedAtBefore(
+                List.of(UserOutboxStatus.COMPLETED, UserOutboxStatus.FAILED),
+                threshold
+        );
     }
 }

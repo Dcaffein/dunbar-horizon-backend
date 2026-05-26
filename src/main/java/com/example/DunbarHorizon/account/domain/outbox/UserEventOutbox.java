@@ -10,7 +10,9 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Table(name = "user_event_outbox")
+@Table(name = "user_event_outbox", indexes = {
+        @Index(columnList = "status, createdAt")
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserEventOutbox {
 
