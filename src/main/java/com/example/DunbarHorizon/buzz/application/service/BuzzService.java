@@ -13,7 +13,6 @@ import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
@@ -71,6 +70,7 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
                 .orElseThrow(() -> new EntityNotFoundException("사용자 정보를 찾을 수 없습니다."));
 
         Buzz buzz = getBuzzOrThrow(buzzId);
+        buzz.validateCommentCreation(commenterId);
         List<String> imageUrls = imageStoragePort.upload(images);
 
         BuzzComment comment = buzz.createComment(
@@ -88,6 +88,7 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     @Override
     public void updateComment(Long requesterId, String buzzId, String commentId, String commentText, List<MultipartFile> images) {
         Buzz buzz = getBuzzOrThrow(buzzId);
+        buzz.validateCommentUpdate(requesterId, commentId);
         List<String> imageUrls = imageStoragePort.upload(images);
         buzz.updateComment(requesterId, commentId, commentText, imageUrls);
         buzzRepository.updateComment(buzzId, commentId, commentText, imageUrls);
@@ -103,9 +104,7 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     @Override
     public void deleteBuzz(Long requesterId, String buzzId) {
         Buzz buzz = getBuzzOrThrow(buzzId);
-        if (!buzz.getCreatorId().equals(requesterId)) {
-            throw new BuzzAccessDeniedException("버즈 삭제 권한이 없습니다.");
-        }
+        buzz.validateDeletion(requesterId);
         buzzRepository.deleteById(buzzId);
     }
 
@@ -119,11 +118,7 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     @Override
     public BuzzDetailResult getBuzzDetail(Long userId, String buzzId) {
         Buzz buzz = getBuzzOrThrow(buzzId);
-
-        if (!buzz.isRecipient(userId) && !buzz.getCreatorId().equals(userId)) {
-            throw new BuzzAccessDeniedException("접근 권한이 없습니다.");
-        }
-
+        buzz.validateAccess(userId);
         eventPublisher.publishEvent(new BuzzReadEvent(buzzId, userId));
         return BuzzDetailResult.from(buzz, userId);
     }

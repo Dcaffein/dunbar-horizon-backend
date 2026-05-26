@@ -33,6 +33,7 @@ public class BuzzNotificationDispatcher {
 
     @EventListener
     public void dispatch(BuzzCommentedEvent event) {
+        if (event.creatorId().equals(event.commenterId())) return;
         NotificationEvent notification = NotificationEvent.builder()
                 .receiverId(event.creatorId())
                 .title("Buzz 댓글")
