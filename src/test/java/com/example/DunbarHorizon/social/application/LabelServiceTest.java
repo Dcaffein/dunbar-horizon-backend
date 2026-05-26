@@ -9,7 +9,7 @@ import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserR
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelCreator;
 import com.example.DunbarHorizon.social.domain.label.repository.LabelRepository;
-import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistry;
+import com.example.DunbarHorizon.social.domain.label.LabelMemberEnroller;
 import com.example.DunbarHorizon.social.domain.label.LabelNamePolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -46,7 +46,7 @@ class LabelServiceTest {
     private LabelNamePolicy labelNamePolicy;
 
     @Mock
-    private LabelMemberRegistry labelMemberRegistry;
+    private LabelMemberEnroller labelMemberEnroller;
 
     @Mock
     private LabelCreator labelCreator;
@@ -117,7 +117,7 @@ class LabelServiceTest {
         labelService.addMemberToLabel(currentUserId, labelId, newMemberId);
 
         // then
-        verify(labelMemberRegistry).addNewMember(mockLabel, newMemberId);
+        verify(labelMemberEnroller).addNewMember(mockLabel, newMemberId);
         verify(labelRepository).save(mockLabel);
     }
 

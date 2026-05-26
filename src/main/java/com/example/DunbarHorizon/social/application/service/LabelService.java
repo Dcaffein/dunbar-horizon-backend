@@ -10,7 +10,7 @@ import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizatio
 import com.example.DunbarHorizon.social.domain.label.exception.LabelNotFoundException;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelCreator;
-import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistry;
+import com.example.DunbarHorizon.social.domain.label.LabelMemberEnroller;
 import com.example.DunbarHorizon.social.domain.label.LabelNamePolicy;
 import com.example.DunbarHorizon.social.domain.label.repository.LabelRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
@@ -30,7 +30,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     private final LabelRepository labelRepository;
     private final SocialUserRepository socialUserRepository;
     private final LabelNamePolicy labelNamePolicy;
-    private final LabelMemberRegistry labelMemberRegistry;
+    private final LabelMemberEnroller labelMemberEnroller;
     private final LabelCreator labelCreator;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -55,7 +55,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     public void addMemberToLabel(Long currentUserId, String labelId, Long newMemberId) {
         Label label = getLabel(labelId);
         validateOwner(label, currentUserId);
-        labelMemberRegistry.addNewMember(label, newMemberId);
+        labelMemberEnroller.addNewMember(label, newMemberId);
         labelRepository.save(label);
         eventPublisher.publishEvent(new LabelMemberChangedEvent(currentUserId, labelId));
     }
@@ -75,7 +75,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     public void replaceLabelMembers(Long currentUserId, String labelId, List<Long> potentialMemberIds) {
         Label label = getLabel(labelId);
         validateOwner(label, currentUserId);
-        labelMemberRegistry.updateMembers(label, potentialMemberIds);
+        labelMemberEnroller.updateMembers(label, potentialMemberIds);
         labelRepository.save(label);
         eventPublisher.publishEvent(new LabelMemberChangedEvent(currentUserId, labelId));
     }

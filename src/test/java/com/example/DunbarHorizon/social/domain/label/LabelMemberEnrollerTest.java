@@ -24,10 +24,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
-class LabelMemberRegistryTest {
+class LabelMemberEnrollerTest {
 
     @InjectMocks
-    private LabelMemberRegistry labelMemberRegistry;
+    private LabelMemberEnroller labelMemberEnroller;
 
     @Mock
     private FriendshipRepository friendshipRepository;
@@ -53,7 +53,7 @@ class LabelMemberRegistryTest {
         given(friendshipRepository.existsFriendshipBetween(owner.getId(), friend.getId())).willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> labelMemberRegistry.addNewMember(label, friend.getId()))
+        assertThatThrownBy(() -> labelMemberEnroller.addNewMember(label, friend.getId()))
                 .isInstanceOf(FriendshipNotFoundException.class);
     }
 
@@ -65,7 +65,7 @@ class LabelMemberRegistryTest {
         given(friendshipRepository.existsFriendshipBetween(owner.getId(), friend.getId())).willReturn(true);
 
         // when & then
-        assertThatThrownBy(() -> labelMemberRegistry.addNewMember(label, friend.getId()))
+        assertThatThrownBy(() -> labelMemberEnroller.addNewMember(label, friend.getId()))
                 .isInstanceOf(DuplicateLabelMemberException.class);
     }
 
@@ -77,7 +77,7 @@ class LabelMemberRegistryTest {
         given(socialUserRepository.findById(friend.getId())).willReturn(Optional.of(friend));
 
         // when
-        labelMemberRegistry.addNewMember(label, friend.getId());
+        labelMemberEnroller.addNewMember(label, friend.getId());
 
         // then
         assertThat(label.getMembers()).hasSize(1);
@@ -92,7 +92,7 @@ class LabelMemberRegistryTest {
         given(friendshipRepository.findFriendIdsIn(owner.getId(), requestedIds)).willReturn(Set.of(2L));
 
         // when & then
-        assertThatThrownBy(() -> labelMemberRegistry.updateMembers(label, requestedIds))
+        assertThatThrownBy(() -> labelMemberEnroller.updateMembers(label, requestedIds))
                 .isInstanceOf(NonFriendLabelMemberException.class)
                 .hasMessageContaining("3");
     }
@@ -106,7 +106,7 @@ class LabelMemberRegistryTest {
         given(socialUserRepository.findAllUserReferencesById(Set.of(2L))).willReturn(Set.of(friend));
 
         // when
-        labelMemberRegistry.updateMembers(label, requestedIds);
+        labelMemberEnroller.updateMembers(label, requestedIds);
 
         // then
         assertThat(label.getMembers()).hasSize(1).contains(friend);
@@ -119,7 +119,7 @@ class LabelMemberRegistryTest {
         label.addNewMember(friend);
 
         // when
-        labelMemberRegistry.updateMembers(label, List.of());
+        labelMemberEnroller.updateMembers(label, List.of());
 
         // then
         assertThat(label.getMembers()).isEmpty();

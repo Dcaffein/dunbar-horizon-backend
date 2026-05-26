@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.flag.application.eventListener;
 
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagPreservationDomainService;
+import com.example.DunbarHorizon.flag.domain.flag.FlagPreservationPolicy;
 import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
@@ -29,7 +29,7 @@ public class FlagDeletionEventListener {
 
     private final FlagRepository flagRepository;
     private final FlagParticipantRepository participantRepository;
-    private final FlagPreservationDomainService flagPreservationDomainService;
+    private final FlagPreservationPolicy flagPreservationPolicy;
     private final ApplicationEventPublisher eventPublisher;
 
     @Async
@@ -42,7 +42,7 @@ public class FlagDeletionEventListener {
         processParticipantCleanup(event, event.hostId());
 
         if (event.parentId() != null) {
-            flagPreservationDomainService.refresh(event.parentId());
+            flagPreservationPolicy.refresh(event.parentId());
         }
     }
 
