@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.flag.domain.flag;
 
+import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagDeadlinePassedException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagFullCapacityException;
@@ -161,6 +162,26 @@ class FlagTest {
         // then
         assertThat(flag.isDeleted()).isTrue();
         assertThat(flag.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("플래그 삭제 시 FlagDeletedEvent에 hostId가 포함된다")
+    @SuppressWarnings("unchecked")
+    void delete_PublishesEventWithHostId() {
+        // given
+        Flag flag = recruitingFlag();
+
+        // when
+        flag.delete(HOST_ID);
+
+        // then
+        java.util.Collection<Object> events = (java.util.Collection<Object>)
+                ReflectionTestUtils.invokeMethod(flag, "domainEvents");
+        FlagDeletedEvent event = (FlagDeletedEvent) events.stream()
+                .filter(e -> e instanceof FlagDeletedEvent)
+                .findFirst().orElseThrow();
+        assertThat(event.hostId()).isEqualTo(HOST_ID);
+        assertThat(event.flagId()).isEqualTo(flag.getId());
     }
 
     @Test

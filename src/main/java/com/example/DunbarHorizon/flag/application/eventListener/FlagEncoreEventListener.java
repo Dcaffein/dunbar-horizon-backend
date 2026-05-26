@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +37,7 @@ public class FlagEncoreEventListener {
                 .title("앵콜 플래그 생성!")
                 .content(String.format("[%s] 플래그가 다시 열렸습니다. 지금 확인해보세요!", event.title()))
                 .type(NotificationType.FLAG_ENCORE)
+                .occurredAt(LocalDateTime.now())
                 .metadata(Map.of(
                         "parentFlagId", event.parentFlagId()
                 ))

@@ -130,6 +130,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
         softDelete();
         registerEvent(new FlagDeletedEvent(
                 this.id,
+                this.hostId,
                 this.parentId,
                 this.title,
                 calculateCurrentStatus()
