@@ -118,11 +118,51 @@ public class Buzz {
     }
 
     public void validateCommentDeletion(Long requesterId, String commentId) {
+        if (isExpired()) {
+            throw new BuzzInvalidStateException("만료된 Buzz의 댓글은 삭제할 수 없습니다.");
+        }
         BuzzComment target = findComments(commentId);
 
         if (!target.getCommenterId().equals(requesterId) && !this.creatorId.equals(requesterId)) {
             throw new BuzzAccessDeniedException("댓글 삭제 권한이 없습니다.");
         }
+    }
+
+    public void validateAccess(Long userId) {
+        if (!isRecipient(userId) && !creatorId.equals(userId)) {
+            throw new BuzzAccessDeniedException("접근 권한이 없습니다.");
+        }
+    }
+
+    public void validateDeletion(Long requesterId) {
+        if (!creatorId.equals(requesterId)) {
+            throw new BuzzAccessDeniedException("버즈 삭제 권한이 없습니다.");
+        }
+    }
+
+    public void validateCommentCreation(Long commenterId) {
+        if (isExpired()) {
+            throw new BuzzInvalidStateException("만료된 Buzz에는 댓글을 남길 수 없습니다.");
+        }
+        if (!isRecipient(commenterId) && !creatorId.equals(commenterId)) {
+            throw new BuzzAccessDeniedException("이 Buzz에 댓글을 남길 권한이 없습니다.");
+        }
+    }
+
+    public void validateCommentUpdate(Long requesterId, String commentId) {
+        if (isExpired()) {
+            throw new BuzzInvalidStateException("만료된 Buzz의 댓글은 수정할 수 없습니다.");
+        }
+        BuzzComment target = findComments(commentId);
+        if (!target.getCommenterId().equals(requesterId)) {
+            throw new BuzzAccessDeniedException("댓글 수정 권한이 없습니다.");
+        }
+    }
+
+    public List<BuzzComment> getVisibleComments(Long viewerId) {
+        return comments.stream()
+                .filter(c -> c.isPublic() || creatorId.equals(viewerId) || c.getCommenterId().equals(viewerId))
+                .toList();
     }
 
     private BuzzComment findComments(String commentId) {

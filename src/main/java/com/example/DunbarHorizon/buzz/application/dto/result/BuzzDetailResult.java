@@ -21,7 +21,7 @@ public record BuzzDetailResult(
                 new BuzzProfileResult(buzz.getCreatorId(), buzz.getCreatorNickname(), buzz.getCreatorProfileImageUrl()),
                 buzz.getText(),
                 buzz.getImageUrls(),
-                buzz.getComments().stream().map(BuzzCommentResult::from).toList(),
+                buzz.getVisibleComments(currentUserId).stream().map(BuzzCommentResult::from).toList(),
                 Math.max(0L, Duration.between(LocalDateTime.now(), buzz.getExpiresAt()).toMinutes()),
                 buzz.isUnreadBy(currentUserId)
         );

@@ -9,6 +9,7 @@ import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -19,12 +20,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
@@ -112,6 +116,40 @@ class BuzzServiceTest {
 
             // then
             verify(imageStoragePort).upload(null);
+        }
+    }
+
+    @Nested
+    @DisplayName("만료된 버즈 댓글 작성 시 S3 업로드가 호출되지 않는다")
+    class CommentOnExpiredBuzz {
+
+        private Buzz expiredBuzz;
+
+        @BeforeEach
+        void setUp() {
+            expiredBuzz = Buzz.builder()
+                    .creatorId(creatorId)
+                    .creatorNickname("작성자")
+                    .creatorProfileImageUrl("p.png")
+                    .text("Buzz")
+                    .recipientIds(List.of(recipientId))
+                    .build();
+            ReflectionTestUtils.setField(expiredBuzz, "expiresAt", expiredBuzz.getCreatedAt().minusMinutes(1));
+            ReflectionTestUtils.setField(expiredBuzz, "id", "buzz-id");
+
+            given(buzzRepository.findById("buzz-id")).willReturn(expiredBuzz);
+            given(buzzSocialPort.getCreatorProfiles(any()))
+                    .willReturn(List.of(new BuzzCreatorInfo(recipientId, "수신자", "p.png")));
+        }
+
+        @Test
+        @DisplayName("만료된 버즈에 댓글을 달면 S3 업로드 없이 예외가 발생한다")
+        void commentOnExpiredBuzz_ThrowsWithoutUpload() {
+            assertThatThrownBy(() ->
+                    buzzService.commentOnBuzz(recipientId, "buzz-id", "댓글", List.of(), true))
+                    .isInstanceOf(BuzzInvalidStateException.class);
+
+            verify(imageStoragePort, never()).upload(any());
         }
     }
 }
