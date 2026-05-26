@@ -22,7 +22,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +38,7 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
-    public void createBuzz(CreateBuzzCommand command, List<MultipartFile> images) {
+    public void createBuzz(CreateBuzzCommand command, List<String> imageKeys) {
         BuzzCreatorInfo author = buzzSocialPort.getCreatorProfiles(List.of(command.creatorId()))
                 .stream()
                 .findFirst()
@@ -47,7 +46,7 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
         RecipientStrategyPort strategy = strategyProvider.getStrategy(command.spec().getType());
         Set<Long> recipientIds = strategy.fetchRecipientIds(command.creatorId(), command.spec());
 
-        List<String> imageUrls = imageStoragePort.upload(images);
+        List<String> imageUrls = imageStoragePort.resolveUrls(imageKeys);
 
         Buzz buzz = Buzz.builder()
                 .creatorId(command.creatorId())
@@ -63,7 +62,7 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     }
 
     @Override
-    public void commentOnBuzz(Long commenterId, String buzzId, String commentText, List<MultipartFile> images, boolean isPublic) {
+    public void commentOnBuzz(Long commenterId, String buzzId, String commentText, List<String> imageKeys, boolean isPublic) {
         BuzzCreatorInfo commenterProfile = buzzSocialPort.getCreatorProfiles(List.of(commenterId))
                 .stream()
                 .findFirst()
@@ -71,7 +70,7 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
 
         Buzz buzz = getBuzzOrThrow(buzzId);
         buzz.validateCommentCreation(commenterId);
-        List<String> imageUrls = imageStoragePort.upload(images);
+        List<String> imageUrls = imageStoragePort.resolveUrls(imageKeys);
 
         BuzzComment comment = buzz.createComment(
                 commenterId,
@@ -86,10 +85,10 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     }
 
     @Override
-    public void updateComment(Long requesterId, String buzzId, String commentId, String commentText, List<MultipartFile> images) {
+    public void updateComment(Long requesterId, String buzzId, String commentId, String commentText, List<String> imageKeys) {
         Buzz buzz = getBuzzOrThrow(buzzId);
         buzz.validateCommentUpdate(requesterId, commentId);
-        List<String> imageUrls = imageStoragePort.upload(images);
+        List<String> imageUrls = imageStoragePort.resolveUrls(imageKeys);
         buzz.updateComment(requesterId, commentId, commentText, imageUrls);
         buzzRepository.updateComment(buzzId, commentId, commentText, imageUrls);
     }

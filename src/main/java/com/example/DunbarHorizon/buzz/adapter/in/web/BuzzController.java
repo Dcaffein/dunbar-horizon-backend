@@ -6,7 +6,10 @@ import com.example.DunbarHorizon.buzz.application.port.in.BuzzCommandUseCase;
 import com.example.DunbarHorizon.buzz.application.port.in.BuzzQueryUseCase;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
+import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
+import com.example.DunbarHorizon.global.model.PresignRequest;
+import com.example.DunbarHorizon.global.model.PresignedUploadResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -14,10 +17,8 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -28,13 +29,21 @@ public class BuzzController {
 
     private final BuzzCommandUseCase buzzCommandUseCase;
     private final BuzzQueryUseCase buzzQueryUseCase;
+    private final ImageStoragePort imageStoragePort;
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping("/images/presign")
+    public ResponseEntity<List<PresignedUploadResult>> presignImages(
+            @CurrentUserId Long currentUserId,
+            @RequestBody List<PresignRequest> requests) {
+        return ResponseEntity.ok(imageStoragePort.presignUploads(requests));
+    }
+
+    @PostMapping
     public ResponseEntity<Void> createBuzz(
             @CurrentUserId Long currentUserId,
-            @RequestPart("request") @Valid BuzzCreateRequest request,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
-        buzzCommandUseCase.createBuzz(request.toCommand(currentUserId), images);
+            @RequestBody @Valid BuzzCreateRequest request) {
+        List<String> imageKeys = request.imageKeys() != null ? request.imageKeys() : List.of();
+        buzzCommandUseCase.createBuzz(request.toCommand(currentUserId), imageKeys);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -57,24 +66,24 @@ public class BuzzController {
         return ResponseEntity.ok(buzzQueryUseCase.getUnreadSenderIds(currentUserId));
     }
 
-    @PostMapping(value = "/{buzzId}/comments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping("/{buzzId}/comments")
     public ResponseEntity<Void> comment(
             @CurrentUserId Long currentUserId,
             @PathVariable String buzzId,
-            @RequestPart("request") @Valid BuzzCommentRequest dto,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
-        buzzCommandUseCase.commentOnBuzz(currentUserId, buzzId, dto.text(), images, dto.isPublic());
+            @RequestBody @Valid BuzzCommentRequest dto) {
+        List<String> imageKeys = dto.imageKeys() != null ? dto.imageKeys() : List.of();
+        buzzCommandUseCase.commentOnBuzz(currentUserId, buzzId, dto.text(), imageKeys, dto.isPublic());
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @PatchMapping(value = "/{buzzId}/comments/{commentId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PatchMapping("/{buzzId}/comments/{commentId}")
     public ResponseEntity<Void> updateComment(
             @CurrentUserId Long currentUserId,
             @PathVariable String buzzId,
             @PathVariable String commentId,
-            @RequestPart("request") @Valid BuzzCommentRequest dto,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
-        buzzCommandUseCase.updateComment(currentUserId, buzzId, commentId, dto.text(), images);
+            @RequestBody @Valid BuzzCommentRequest dto) {
+        List<String> imageKeys = dto.imageKeys() != null ? dto.imageKeys() : List.of();
+        buzzCommandUseCase.updateComment(currentUserId, buzzId, commentId, dto.text(), imageKeys);
         return ResponseEntity.noContent().build();
     }
 

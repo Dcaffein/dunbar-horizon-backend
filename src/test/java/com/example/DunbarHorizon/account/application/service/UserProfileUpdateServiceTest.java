@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.account.application.service;
 
-import com.example.DunbarHorizon.account.application.model.UploadFile;
 import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
 import com.example.DunbarHorizon.account.domain.exception.UserNotFoundException;
 import com.example.DunbarHorizon.account.domain.model.User;
@@ -31,27 +30,26 @@ class UserProfileUpdateServiceTest {
     }
 
     @Test
-    @DisplayName("이미지 파일이 있으면 S3에 업로드하고 반환된 URL로 프로필을 업데이트한다")
-    void updateProfile_withImage_uploadsAndUpdates() {
+    @DisplayName("profileImageKey가 있으면 presigned GET URL을 조회하고 프로필을 업데이트한다")
+    void updateProfile_withImageKey_resolvesUrlAndUpdates() {
         User user = spy(User.builder()
                 .email("test@example.com")
                 .nickname("기존닉네임")
                 .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
                 .build());
-        UploadFile uploadFile = new UploadFile("bytes".getBytes(), "photo.jpg", "image/jpeg");
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(profileImageStoragePort.upload(uploadFile)).willReturn("https://s3.example.com/profiles/photo.jpg");
+        given(profileImageStoragePort.resolveUrl("profiles/uuid-photo")).willReturn("https://bucket.s3.amazonaws.com/profiles/uuid-photo?X-Amz-Signature=abc");
 
-        userProfileUpdateService.updateProfile(1L, "새닉네임", uploadFile);
+        userProfileUpdateService.updateProfile(1L, "새닉네임", "profiles/uuid-photo");
 
-        verify(profileImageStoragePort).upload(uploadFile);
-        verify(user).updateProfile("새닉네임", "https://s3.example.com/profiles/photo.jpg");
+        verify(profileImageStoragePort).resolveUrl("profiles/uuid-photo");
+        verify(user).updateProfile("새닉네임", "https://bucket.s3.amazonaws.com/profiles/uuid-photo?X-Amz-Signature=abc");
     }
 
     @Test
-    @DisplayName("이미지 파일이 없으면 S3 업로드 없이 null URL로 프로필을 업데이트한다")
-    void updateProfile_withoutImage_updatesWithNullUrl() {
+    @DisplayName("profileImageKey가 없으면 resolveUrl 호출 없이 null URL로 프로필을 업데이트한다")
+    void updateProfile_withoutImageKey_updatesWithNullUrl() {
         User user = spy(User.builder()
                 .email("test@example.com")
                 .nickname("기존닉네임")
@@ -62,7 +60,7 @@ class UserProfileUpdateServiceTest {
 
         userProfileUpdateService.updateProfile(1L, "새닉네임", null);
 
-        verify(profileImageStoragePort, never()).upload(any());
+        verify(profileImageStoragePort, never()).resolveUrl(any());
         verify(user).updateProfile("새닉네임", null);
     }
 

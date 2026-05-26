@@ -19,11 +19,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -57,8 +54,8 @@ class BuzzServiceTest {
     }
 
     @Nested
-    @DisplayName("버즈 생성 시 이미지 업로드")
-    class CreateBuzzImageUpload {
+    @DisplayName("버즈 생성 시 이미지 URL 변환")
+    class CreateBuzzImageResolve {
 
         private CreateBuzzCommand command;
 
@@ -74,53 +71,34 @@ class BuzzServiceTest {
         }
 
         @Test
-        @DisplayName("이미지 파일이 있으면 S3에 업로드하고 반환된 URL을 Buzz에 저장한다")
-        void createBuzz_WithImages_UploadsAndSavesUrls() {
-            // given
-            MultipartFile file = new MockMultipartFile("images", "photo.jpg", "image/jpeg", new byte[]{1, 2, 3});
-            List<String> expectedUrls = List.of("https://bucket.s3.ap-northeast-2.amazonaws.com/uuid_photo.jpg");
-            given(imageStoragePort.upload(anyList())).willReturn(expectedUrls);
+        @DisplayName("imageKeys가 있으면 presigned GET URL로 변환하여 Buzz에 저장한다")
+        void createBuzz_WithImageKeys_ResolvesAndSavesUrls() {
+            List<String> imageKeys = List.of("buzz/uuid-photo");
+            List<String> expectedUrls = List.of("https://bucket.s3.amazonaws.com/buzz/uuid-photo?X-Amz-Signature=abc");
+            given(imageStoragePort.resolveUrls(imageKeys)).willReturn(expectedUrls);
 
-            // when
-            buzzService.createBuzz(command, List.of(file));
+            buzzService.createBuzz(command, imageKeys);
 
-            // then
             ArgumentCaptor<Buzz> buzzCaptor = ArgumentCaptor.forClass(Buzz.class);
             verify(buzzRepository).save(buzzCaptor.capture());
             assertThat(buzzCaptor.getValue().getImageUrls()).isEqualTo(expectedUrls);
         }
 
         @Test
-        @DisplayName("이미지 파일이 없으면 imageUrls가 빈 리스트로 저장된다")
-        void createBuzz_WithoutImages_SavesEmptyUrls() {
-            // given
-            given(imageStoragePort.upload(any())).willReturn(List.of());
+        @DisplayName("imageKeys가 없으면 imageUrls가 빈 리스트로 저장된다")
+        void createBuzz_WithoutImageKeys_SavesEmptyUrls() {
+            given(imageStoragePort.resolveUrls(List.of())).willReturn(List.of());
 
-            // when
             buzzService.createBuzz(command, List.of());
 
-            // then
             ArgumentCaptor<Buzz> buzzCaptor = ArgumentCaptor.forClass(Buzz.class);
             verify(buzzRepository).save(buzzCaptor.capture());
             assertThat(buzzCaptor.getValue().getImageUrls()).isEmpty();
         }
-
-        @Test
-        @DisplayName("images가 null이면 imageStoragePort.upload에 null이 전달된다")
-        void createBuzz_NullImages_UploadCalledWithNull() {
-            // given
-            given(imageStoragePort.upload(null)).willReturn(List.of());
-
-            // when
-            buzzService.createBuzz(command, null);
-
-            // then
-            verify(imageStoragePort).upload(null);
-        }
     }
 
     @Nested
-    @DisplayName("만료된 버즈 댓글 작성 시 S3 업로드가 호출되지 않는다")
+    @DisplayName("만료된 버즈 댓글 작성 시 resolveUrls가 호출되지 않는다")
     class CommentOnExpiredBuzz {
 
         private Buzz expiredBuzz;
@@ -143,13 +121,13 @@ class BuzzServiceTest {
         }
 
         @Test
-        @DisplayName("만료된 버즈에 댓글을 달면 S3 업로드 없이 예외가 발생한다")
-        void commentOnExpiredBuzz_ThrowsWithoutUpload() {
+        @DisplayName("만료된 버즈에 댓글을 달면 resolveUrls 호출 없이 예외가 발생한다")
+        void commentOnExpiredBuzz_ThrowsWithoutResolve() {
             assertThatThrownBy(() ->
                     buzzService.commentOnBuzz(recipientId, "buzz-id", "댓글", List.of(), true))
                     .isInstanceOf(BuzzInvalidStateException.class);
 
-            verify(imageStoragePort, never()).upload(any());
+            verify(imageStoragePort, never()).resolveUrls(anyList());
         }
     }
 }

@@ -9,19 +9,16 @@ import com.example.DunbarHorizon.account.adapter.in.web.dto.LoginRequestDto;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.SignupRequestDto;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.UserProfileUpdateRequest;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.VerificationEmailRequestDto;
-import com.example.DunbarHorizon.account.application.model.UploadFile;
+import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
+import com.example.DunbarHorizon.global.model.PresignedUploadResult;
 import com.example.DunbarHorizon.global.security.AuthCookieManager;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -32,6 +29,7 @@ public class AccountController {
     private final LoginUseCase loginUseCase;
     private final VerificationUseCase verificationUseCase;
     private final UserProfileUpdateUseCase userProfileUpdateUseCase;
+    private final ProfileImageStoragePort profileImageStoragePort;
     private final AuthCookieManager authCookieManager;
 
     @PostMapping("/users")
@@ -81,15 +79,18 @@ public class AccountController {
         return ResponseEntity.ok().build();
     }
 
-    @PatchMapping(value = "/users/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping("/users/me/profile-image/presign")
+    public ResponseEntity<PresignedUploadResult> presignProfileImage(
+            @CurrentUserId Long userId,
+            @RequestParam String contentType) {
+        return ResponseEntity.ok(profileImageStoragePort.presignUpload(contentType));
+    }
+
+    @PatchMapping("/users/me")
     public ResponseEntity<Void> updateProfile(
             @CurrentUserId Long userId,
-            @RequestPart @Valid UserProfileUpdateRequest request,
-            @RequestPart(required = false) MultipartFile profileImage) throws IOException {
-        UploadFile uploadFile = profileImage != null && !profileImage.isEmpty()
-                ? new UploadFile(profileImage.getBytes(), profileImage.getOriginalFilename(), profileImage.getContentType())
-                : null;
-        userProfileUpdateUseCase.updateProfile(userId, request.nickname(), uploadFile);
+            @RequestBody @Valid UserProfileUpdateRequest request) {
+        userProfileUpdateUseCase.updateProfile(userId, request.nickname(), request.profileImageKey());
         return ResponseEntity.ok().build();
     }
 
