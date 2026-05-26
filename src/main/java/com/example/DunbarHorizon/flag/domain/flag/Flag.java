@@ -55,7 +55,8 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
     private Long parentId;
 
     @Getter
-    private boolean isPreserved = false;
+    @Column(name = "is_preserved")
+    private boolean softDeleteProtected = false;
 
     @Getter
     private LocalDateTime deletedAt;
@@ -85,7 +86,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
             throw new FlagInvalidStatusException("종료된 플래그만 앵코르를 생성할 수 있습니다.");
         }
 
-        this.isPreserved = true;
+        this.softDeleteProtected = true;
 
         FlagSchedule newSchedule = FlagSchedule.of(deadline, start, end);
         Flag encoreFlag = new Flag(hostId, this.title, this.description,
@@ -180,8 +181,8 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
         this.schedule = this.schedule.withDeadline(LocalDateTime.now());
     }
 
-    public void updatePreservation(FlagPreservationCriteria criteria) {
-        this.isPreserved = criteria.isSatisfied();
+    void updateSoftDeleteProtection(boolean value) {
+        this.softDeleteProtected = value;
     }
 
     public void severParentLink() {
