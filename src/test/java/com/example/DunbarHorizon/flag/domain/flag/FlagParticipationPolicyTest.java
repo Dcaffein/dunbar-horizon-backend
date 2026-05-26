@@ -47,7 +47,7 @@ class FlagParticipationPolicyTest {
     void participate_Success() {
         // given
         Flag flag = recruitingFlag();
-        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findHostIdById(FLAG_ID)).willReturn(Optional.of(HOST_ID));
         given(friendshipChecker.areFriends(HOST_ID, USER_ID)).willReturn(true);
         given(flagRepository.findByIdExclusive(FLAG_ID)).willReturn(Optional.of(flag));
         given(flagParticipantRepository.isParticipating(FLAG_ID, USER_ID)).willReturn(false);
@@ -65,7 +65,7 @@ class FlagParticipationPolicyTest {
     @DisplayName("존재하지 않는 플래그에 참여하면 FlagNotFoundException이 발생한다")
     void participate_FlagNotFound_ThrowsException() {
         // given
-        given(flagRepository.findById(999L)).willReturn(Optional.empty());
+        given(flagRepository.findHostIdById(999L)).willReturn(Optional.empty());
 
         // when / then
         assertThatThrownBy(() -> policy.participate(999L, USER_ID))
@@ -76,8 +76,7 @@ class FlagParticipationPolicyTest {
     @DisplayName("호스트와 친구가 아닌 사용자가 참여하면 FlagAuthorizationException이 발생한다")
     void participate_NotFriend_ThrowsException() {
         // given
-        Flag flag = recruitingFlag();
-        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findHostIdById(FLAG_ID)).willReturn(Optional.of(HOST_ID));
         given(friendshipChecker.areFriends(HOST_ID, USER_ID)).willReturn(false);
 
         // when / then
@@ -90,7 +89,7 @@ class FlagParticipationPolicyTest {
     void participate_Duplicate_ThrowsException() {
         // given
         Flag flag = recruitingFlag();
-        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findHostIdById(FLAG_ID)).willReturn(Optional.of(HOST_ID));
         given(friendshipChecker.areFriends(HOST_ID, USER_ID)).willReturn(true);
         given(flagRepository.findByIdExclusive(FLAG_ID)).willReturn(Optional.of(flag));
         given(flagParticipantRepository.isParticipating(FLAG_ID, USER_ID)).willReturn(true);

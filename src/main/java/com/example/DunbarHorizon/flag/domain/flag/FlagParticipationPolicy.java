@@ -44,4 +44,9 @@ public class FlagParticipationPolicy {
         flag.unparticipate(participant, userId);
         return participant;
     }
+
+    public void updateCapacity(Flag flag, Long requesterId, Integer newMaxCapacity) {
+        int currentCount = flagParticipantRepository.countByFlagId(flag.getId());
+        flag.updateCapacity(requesterId, newMaxCapacity, currentCount);
+    }
 }
