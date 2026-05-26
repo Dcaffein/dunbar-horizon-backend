@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.account.adapter.out.persistence.jpa;
 import com.example.DunbarHorizon.account.domain.outbox.UserEventOutbox;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -14,6 +15,13 @@ public interface UserEventOutboxJpaRepository extends JpaRepository<UserEventOut
     @Query("SELECT o FROM UserEventOutbox o WHERE o.status = :status AND o.createdAt < :threshold")
     List<UserEventOutbox> findByStatusAndCreatedAtBefore(
             @Param("status") UserOutboxStatus status,
+            @Param("threshold") LocalDateTime threshold
+    );
+
+    @Modifying
+    @Query("DELETE FROM UserEventOutbox o WHERE o.status IN :statuses AND o.createdAt < :threshold")
+    void deleteByStatusInAndCreatedAtBefore(
+            @Param("statuses") List<UserOutboxStatus> statuses,
             @Param("threshold") LocalDateTime threshold
     );
 }

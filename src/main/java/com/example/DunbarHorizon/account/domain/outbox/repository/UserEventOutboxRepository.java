@@ -10,4 +10,6 @@ public interface UserEventOutboxRepository {
     UserEventOutbox save(UserEventOutbox outbox);
     Optional<UserEventOutbox> findById(String id);
     List<UserEventOutbox> findPendingOlderThan(LocalDateTime threshold);
+
+    void deleteProcessedOlderThan(LocalDateTime threshold);
 }
