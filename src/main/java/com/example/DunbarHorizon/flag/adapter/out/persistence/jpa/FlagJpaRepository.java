@@ -27,10 +27,11 @@ public interface FlagJpaRepository extends JpaRepository<Flag, Long> {
     @Query("SELECT f FROM Flag f WHERE f.id = :id")
     Optional<Flag> findByIdExclusive(@Param("id") Long id);
 
-    @Modifying
-    @Query("DELETE FROM Flag f " +
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Flag f SET f.deletedAt = CURRENT_TIMESTAMP " +
             "WHERE f.schedule.endDateTime < :threshold " +
-            "AND NOT EXISTS (SELECT 1 FROM FlagMemorial m WHERE m.flagId = f.id)")
+            "AND f.softDeleteProtected = false " +
+            "AND f.deletedAt IS NULL")
     int expireAllExceedingThreshold(@Param("threshold") LocalDateTime threshold);
 
     @Query("SELECT f FROM Flag f WHERE f.hostId IN :hostIds AND f.schedule.deadline > :now")
