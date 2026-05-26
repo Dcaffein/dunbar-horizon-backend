@@ -1,87 +1,144 @@
-# PLAN: Task-46 Flag 초대 기능
+# PLAN: Task-47 친밀도 감쇄 우정 Neo4j → MySQL 이관
 
 ## 작업 목표
 
-호스트가 참여자에게 초대 권한을 부여하면 해당 참여자가 자신의 친구를 초대할 수 있다. 초대받은 사람은 수락/거절할 수 있으며, 수락 시 호스트-친구 검증 없이 참여자가 된다. Flag 모집 중(`RECRUITING`) 상태에서만 초대 가능.
+교류 없이 약 4개월이 지나 intimacy = 0.0으로 감쇄된 Friendship을 Neo4j에서 삭제하고, MySQL `archived_friendships` 테이블에 이력을 보존한다. 초기 친밀도 의미를 부여하기 위해 `FriendRecognition` 초기값 및 `FriendshipDecayPolicy` 수치도 함께 조정한다.
 
 ---
 
 ## 현황 분석
 
-- `FlagParticipant`에 `canInvite` 필드 없음
-- `FlagInvitation` 도메인 없음
-- 현재 참여 경로(`FlagParticipationPolicy.participate`)는 항상 친구 검증 포함
-- `Flag.participate(userId, count)`는 패키지-프라이빗 → `FlagInvitationPolicy`도 같은 패키지에 두면 재사용 가능
-- `FlagMaintenanceAdapter.purgeFlagsAndRelatedData`는 flag 물리 삭제 시 연관 데이터 삭제 — 초대 테이블도 추가 필요
+- `FriendRecognition.INITIAL_RAW_SCORE = 5.5`, 생성자 `interestScore = 0.0` → 초기 intimacy = 0.0
+- `FriendshipDecayPolicy`: `GRACE_PERIOD_DAYS=7`, `ACTUAL_DECAY_DAYS=30`, `MIN_RAW_THRESHOLD=0.1`, `INITIAL_RAW` = `FriendRecognition.INITIAL_RAW_SCORE` (결합)
+- `applyDecay` Cypher: score * rate < threshold → 0.0으로 설정 (threshold에 고정하지 않음)
+  → 이관 기준은 `intimacy = 0.0` (score가 0으로 귀결된 Friendship)
+- `JpaConfig.basePackages`에 `social` 패키지 없음 → `ArchivedFriendship` JPA 엔티티를 넣기 위해 추가 필요
+- ShedLock Redis 프로바이더 이미 존재 (`InteractionScoreFlushScheduler` 사용 중)
 
 ---
 
 ## 변경 파일 목록
 
-### 신규 생성
-
-| 파일 | 내용 |
-|------|------|
-| `flag/domain/flag/FlagInvitationStatus.java` | `PENDING / ACCEPTED / REJECTED` enum |
-| `flag/domain/flag/FlagInvitation.java` | JPA 엔티티. `create()`, `accept()`, `reject()`, `isExpired()` |
-| `flag/domain/flag/repository/FlagInvitationRepository.java` | 도메인 포트 |
-| `flag/domain/flag/FlagInvitationPolicy.java` | @Component. `updateInvitePermission`, `invite`, `accept`, `reject` |
-| `flag/domain/flag/exception/FlagInvitationNotFoundException.java` | 404 |
-| `flag/domain/flag/exception/FlagInvitationDuplicateException.java` | 409 |
-| `flag/domain/flag/exception/FlagInvitationExpiredException.java` | 400 |
-| `flag/domain/flag/exception/FlagInvitationAccessException.java` | 403 |
-| `flag/application/port/in/FlagInvitationUseCase.java` | 인터페이스 |
-| `flag/application/service/flag/FlagInvitationService.java` | @Service, 정책 위임 + 이벤트 발행 |
-| `flag/application/port/in/command/FlagInviteCommand.java` | flagId, inviterId, inviteeId |
-| `flag/application/port/in/command/FlagInvitePermissionCommand.java` | flagId, requesterId, participantUserId, canInvite |
-| `flag/adapter/in/web/FlagInvitationController.java` | `POST /api/v1/flag-invitations/{id}/accept`, `/reject` |
-| `flag/adapter/in/web/dto/FlagInviteRequest.java` | `{ inviteeId }` |
-| `flag/adapter/in/web/dto/FlagInvitePermissionRequest.java` | `{ canInvite }` |
-| `flag/adapter/out/persistence/FlagInvitationRepositoryAdapter.java` | 어댑터 |
-| `flag/adapter/out/persistence/jpa/FlagInvitationJpaRepository.java` | JPA |
-| `flag/application/eventListener/FlagInvitationEventListener.java` | AFTER_COMMIT + @Async, 초대 알림 발행 |
-| `flag/domain/flag/event/FlagInvitationSentEvent.java` | record(flagId, invitationId, inviteeId, flagTitle) |
-
 ### 수정
 
 | 파일 | 변경 내용 |
 |------|-----------|
-| `FlagParticipant.java` | `canInvite` 필드 추가, `grantInvitePermission()` / `revokeInvitePermission()` |
-| `Flag.java` | `grantInvitePermission(requesterId, participant)`, `revokeInvitePermission(requesterId, participant)` — 호스트 검증 후 위임 |
-| `FlagController.java` | `PATCH /{flagId}/participants/{participantId}/invite-permission`, `POST /{flagId}/invitations` 엔드포인트 추가 |
-| `FlagMaintenanceAdapter.java` | `purgeFlagsAndRelatedData`에 `FlagInvitationJpaRepository.hardDeleteByFlagIdsIn` 추가 |
-| `NotificationType.java` | `FLAG_INVITATION` 추가 |
+| `FriendRecognition.java` | `INITIAL_RAW_SCORE` 5.5→21.4, 생성자 `interestScore = INITIAL_RAW_SCORE` |
+| `FriendshipDecayPolicy.java` | `DECAY_FROM = 21.4` 상수 추가 및 `INITIAL_RAW` 참조 제거, `getDecayRate()`에서 `DECAY_FROM` 사용, `GRACE_PERIOD_DAYS` 7→30, `ACTUAL_DECAY_DAYS` 30→90, `MIN_RAW_THRESHOLD` 0.1→1.0 |
+| `FriendshipNeo4jRepository.java` | `applyDecay` Cypher: `THEN 0.0` → `THEN $threshold` (하한선 보존), intimacy 재계산 시 normalized 공식 적용 (`scores[i] / (scores[i] + 50.0)`), `deleteAllByIdIn` @Query 추가 |
+| `FriendshipRepository.java` (port) | `findArchiveCandidates(double threshold)`, `deleteAllByIds(Collection<String> ids)` 추가 |
+| `FriendshipRepositoryAdapter.java` | Neo4jClient 주입, 두 신규 메서드 구현 (`findArchiveCandidates`는 Neo4jClient 사용) |
+| `JpaConfig.java` | `basePackages`에 `com.example.DunbarHorizon.social.adapter.out.persistence.jpa` 추가 |
+
+### 신규 생성
+
+| 파일 | 내용 |
+|------|------|
+| `social/domain/friend/FriendshipArchiveCandidate.java` | record(id, userAId, userBId, friendedAt) — Neo4j 쿼리 반환 DTO |
+| `social/domain/friend/FriendshipArchivePolicy.java` | `archiveThreshold()` → 0.0 반환 |
+| `social/adapter/out/persistence/jpa/ArchivedFriendship.java` | JPA 엔티티 |
+| `social/adapter/out/persistence/jpa/ArchivedFriendshipJpaRepository.java` | JpaRepository |
+| `social/domain/friend/repository/ArchivedFriendshipRepository.java` | 도메인 포트 |
+| `social/adapter/out/ArchivedFriendshipRepositoryAdapter.java` | 어댑터 |
+| `social/application/service/FriendshipArchiveService.java` | 이관 로직 (find+save: JPA @Transactional, delete: @Neo4jTransactional) |
+| `social/adapter/in/scheduler/FriendshipArchiveScheduler.java` | @Scheduled + @SchedulerLock |
 
 ---
 
 ## 구현 방향
 
-### 패키지 배치
-`FlagInvitationPolicy`를 `flag.domain.flag` 패키지에 둔다. `Flag.participate()`가 패키지-프라이빗이므로 별도 공개 경로 추가 없이 재사용 가능.
+### 수치 변경 요약
 
-### invite-permission URL의 participantId
-`PATCH /flags/{flagId}/participants/{participantId}/invite-permission`에서 `participantId`는 **참여자의 userId** (auto-id가 아님). `FlagParticipantRepository.findByFlagIdAndParticipantId`로 조회.
+```
+INITIAL_RAW_SCORE  : 5.5 → 21.4  (초기 intimacy 0.0 → ≈0.30)
+DECAY_FROM         : 신규 상수 21.4 (INITIAL_RAW_SCORE와 분리)
+GRACE_PERIOD_DAYS  : 7 → 30
+ACTUAL_DECAY_DAYS  : 30 → 90
+MIN_RAW_THRESHOLD  : 0.1 → 1.0
+```
 
-### accept 흐름 (race condition 처리)
-1. `FlagInvitation` 로드 → PENDING/미만료/inviteeId 검증
-2. `isParticipating` 중복 참여 검증
-3. `flagRepository.findByIdExclusive` (pessimistic lock)
-4. `flag.participate(inviteeId, count)` — 상태·정원 검증 + `FlagParticipant` 생성
-5. `invitation.accept()` 상태 전환
+### 이관 흐름 (FriendshipArchiveService)
 
-### expiresAt
-`FlagInvitation.expiresAt = flag.schedule.deadline` — flag 모집 마감 = 초대 만료.
+MySQL INSERT 완료 후 Neo4j DELETE — 두 저장소가 별개 트랜잭션이므로 순서로 유실 방지.
 
-### 알림
-`FlagInvitationService`에서 초대 저장 후 `FlagInvitationSentEvent` 발행 → `FlagInvitationEventListener`가 AFTER_COMMIT으로 `NotificationEvent` 발행 (invitee에게 `FLAG_INVITATION` 푸시).
+```
+archiveFriendships() [@Transactional JPA]
+  1. findArchiveCandidates(0.0) → Neo4j에서 intimacy=0.0인 Friendship 목록 조회
+  2. ArchivedFriendship 리스트 생성
+  3. archivedFriendshipRepository.saveAll(...)
+  4. 이관된 friendshipIds 반환
+
+deleteArchivedFromNeo4j(ids) [@Neo4jTransactional]
+  5. friendshipRepository.deleteAllByIds(ids)
+```
+
+스케줄러가 두 메서드를 순서대로 호출.
+
+### applyDecay Cypher 수정
+
+기존 `THEN 0.0`을 `THEN $threshold`로 교체하여 interestScore가 MIN_RAW_THRESHOLD(1.0) 아래로 내려가지 않도록 함.
+intimacy 재계산도 normalized 공식으로 수정: `normalize(raw) = raw / (raw + CONVERGENCE_K=50.0)`.
+
+```cypher
+-- 수정 전
+WHEN r.interestScore * $rate < $threshold THEN 0.0
+
+-- 수정 후
+WHEN r.interestScore * $rate < $threshold THEN $threshold
+
+-- intimacy 재계산 수정 전 (raw 직접 사용 → 버그)
+SET f.intimacy = sqrt(scores[0] * scores[1])
+
+-- 수정 후 (normalize 적용)
+SET f.intimacy = sqrt((scores[0]/(scores[0]+50.0)) * (scores[1]/(scores[1]+50.0)))
+```
+
+이 수정 후 floor 상태(양쪽 모두 1.0)의 intimacy = sqrt(normalize(1.0)²) = 1.0/51.0 ≈ 0.0196.
+
+### findArchiveCandidates Cypher (Neo4jClient)
+
+```cypher
+MATCH (u:UserReference)-[:HAS_FRIENDSHIP]->(f:Friendship)<-[:HAS_FRIENDSHIP]-(v:UserReference)
+WHERE f.intimacy <= $threshold AND u.id < v.id
+RETURN f.id AS id, u.id AS userAId, v.id AS userBId, f.createdAt AS friendedAt
+```
+
+`u.id < v.id` 조건으로 양방향 중복 제거.
+
+### ArchivedFriendship 스키마
+
+```sql
+id           VARCHAR(64) PRIMARY KEY  -- Neo4j composite id (minId_maxId)
+user_a_id    BIGINT NOT NULL
+user_b_id    BIGINT NOT NULL
+friended_at  DATE
+archived_at  DATETIME NOT NULL
+```
+
+`peak_intimacy` 제외 — 감쇄 후 항상 floor(≈0.02)이므로 의미 없음.
+
+### FriendshipArchivePolicy.archiveThreshold()
+
+```java
+// normalize(MIN_RAW_THRESHOLD) = normalize(1.0) = 1.0 / (1.0 + 50.0) = 1/51 ≈ 0.0196
+return FriendRecognition.normalize(decayPolicy.getMinThreshold());
+```
+
+decay Cypher 수정 후, floor 상태의 f.intimacy = normalize(1.0) ≈ 0.0196.
+
+### 스케줄러
+
+```java
+@Scheduled(cron = "0 0 4 * * *")  // 새벽 4시 (FriendshipDecayScheduler 새벽 3시 이후)
+@SchedulerLock(name = "friendshipArchive", lockAtMostFor = "PT30M", lockAtLeastFor = "PT1M")
+```
 
 ---
 
 ## 예상 사이드 이펙트
 
-- `flag_participants` 테이블에 `can_invite BOOLEAN DEFAULT FALSE` 컬럼 추가 (Hibernate DDL auto)
-- `flag_invitations` 신규 테이블 생성
-- `FlagMaintenanceAdapter` 미수정 시 flag 물리 삭제 시 초대 데이터 고아 레코드 발생
+- 기존에 `interestScore = 0.0`으로 생성된 Friendship(task-47 이전 데이터)은 이미 `intimacy = 0.0`이므로, 첫 배치 실행 시 일괄 이관 대상에 포함됨. 의도된 동작으로 수용.
+- `JpaConfig.basePackages`에 `social.adapter.out.persistence.jpa` 추가 시, 해당 패키지의 JPA 엔티티·리포지토리만 스캔됨 (Neo4j 레포와 충돌 없음).
 
 ---
 
@@ -89,19 +146,10 @@
 
 **단위 테스트**
 
-`FlagInvitationPolicyTest` (MockitoExtension):
-- `invite_Success`
-- `invite_InviterHasNoPermission_Throws`
-- `invite_DuplicatePending_Throws`
-- `invite_InviteeIsHost_Throws`
-- `invite_InviteeAlreadyParticipating_Throws`
-- `accept_Success`
-- `accept_AlreadyParticipating_Throws`
-- `accept_Expired_Throws`
-- `accept_NotInvitee_Throws`
-- `reject_Success`
-- `updateInvitePermission_Grant_Success`
-- `updateInvitePermission_NotHost_Throws`
+`FriendshipDecayPolicyTest` (MockitoExtension):
+- `getDecayRate_사용값_검증` — DECAY_FROM=21.4, ACTUAL_DECAY_DAYS=90 기준 rate 계산
 
-`FlagInvitationServiceTest` (MockitoExtension):
-- 정책 위임 및 이벤트 발행 검증
+`FriendshipArchiveServiceTest` (MockitoExtension):
+- `archiveFriendships_후보없으면_저장안함`
+- `archiveFriendships_후보있으면_MySQL저장후_IDs반환`
+- `deleteArchivedFromNeo4j_IDs전달_검증`
