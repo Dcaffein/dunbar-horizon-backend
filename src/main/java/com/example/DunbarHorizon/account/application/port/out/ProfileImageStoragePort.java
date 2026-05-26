@@ -1,7 +1,8 @@
 package com.example.DunbarHorizon.account.application.port.out;
 
-import com.example.DunbarHorizon.account.application.model.UploadFile;
+import com.example.DunbarHorizon.global.model.PresignedUploadResult;
 
 public interface ProfileImageStoragePort {
-    String upload(UploadFile file);
+    PresignedUploadResult presignUpload(String contentType);
+    String resolveUrl(String key);
 }

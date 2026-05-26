@@ -1,9 +1,11 @@
 package com.example.DunbarHorizon.buzz.application.port.out;
 
-import org.springframework.web.multipart.MultipartFile;
+import com.example.DunbarHorizon.global.model.PresignRequest;
+import com.example.DunbarHorizon.global.model.PresignedUploadResult;
 
 import java.util.List;
 
 public interface ImageStoragePort {
-    List<String> upload(List<MultipartFile> files);
+    List<PresignedUploadResult> presignUploads(List<PresignRequest> requests);
+    List<String> resolveUrls(List<String> keys);
 }

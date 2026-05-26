@@ -1,12 +1,12 @@
 package com.example.DunbarHorizon.buzz.adapter.out.infrastructure;
 
+import com.example.DunbarHorizon.global.model.PresignRequest;
+import com.example.DunbarHorizon.global.model.PresignedUploadResult;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.multipart.MultipartFile;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -16,6 +16,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.util.List;
 
@@ -33,66 +34,75 @@ class S3StorageAdapterTest {
             DockerImageName.parse("localstack/localstack:3.0"))
             .withServices(S3);
 
-    private static S3Client s3Client;
+    private static S3Presigner s3Presigner;
     private S3StorageAdapter adapter;
 
     @BeforeAll
     static void setUpContainer() {
-        s3Client = S3Client.builder()
+        StaticCredentialsProvider credentials = StaticCredentialsProvider.create(
+                AwsBasicCredentials.create(localStack.getAccessKey(), localStack.getSecretKey()));
+
+        S3Client s3Client = S3Client.builder()
                 .endpointOverride(localStack.getEndpointOverride(S3))
                 .region(Region.of(REGION))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(localStack.getAccessKey(), localStack.getSecretKey())))
+                .credentialsProvider(credentials)
                 .build();
-
         s3Client.createBucket(CreateBucketRequest.builder().bucket(BUCKET).build());
+
+        s3Presigner = S3Presigner.builder()
+                .endpointOverride(localStack.getEndpointOverride(S3))
+                .region(Region.of(REGION))
+                .credentialsProvider(credentials)
+                .build();
     }
 
     @BeforeEach
     void setUp() {
-        adapter = new S3StorageAdapter(s3Client);
+        adapter = new S3StorageAdapter(s3Presigner);
         ReflectionTestUtils.setField(adapter, "bucket", BUCKET);
-        ReflectionTestUtils.setField(adapter, "region", REGION);
     }
 
     @Test
-    @DisplayName("파일을 업로드하면 S3 URL 형식의 문자열을 반환한다")
-    void upload_ReturnsS3Url() {
-        // given
-        MultipartFile file = new MockMultipartFile(
-                "images", "test.jpg", "image/jpeg", "image-content".getBytes());
+    @DisplayName("presignUploads 호출 시 buzz/ 접두사를 가진 key와 uploadUrl을 반환한다")
+    void presignUploads_ReturnsBuzzKeyAndUploadUrl() {
+        List<PresignedUploadResult> results = adapter.presignUploads(
+                List.of(new PresignRequest("image/jpeg", 1024)));
 
-        // when
-        List<String> urls = adapter.upload(List.of(file));
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).objectKey()).startsWith("buzz/");
+        assertThat(results.get(0).uploadUrl()).isNotBlank();
+    }
 
-        // then
+    @Test
+    @DisplayName("presignUploads에 여러 요청을 전달하면 각각의 결과를 반환한다")
+    void presignUploads_MultipleRequests_ReturnsMultipleResults() {
+        List<PresignedUploadResult> results = adapter.presignUploads(List.of(
+                new PresignRequest("image/jpeg", 1024),
+                new PresignRequest("image/png", 2048)));
+
+        assertThat(results).hasSize(2);
+        assertThat(results.get(0).objectKey()).isNotEqualTo(results.get(1).objectKey());
+    }
+
+    @Test
+    @DisplayName("resolveUrls 호출 시 presigned GET URL을 반환한다")
+    void resolveUrls_ReturnsPresignedGetUrl() {
+        String key = "buzz/some-uuid";
+
+        List<String> urls = adapter.resolveUrls(List.of(key));
+
         assertThat(urls).hasSize(1);
-        assertThat(urls.get(0)).contains(BUCKET).contains(REGION).endsWith("test.jpg");
+        assertThat(urls.get(0)).isNotBlank();
+        assertThat(urls.get(0)).contains(key);
     }
 
     @Test
-    @DisplayName("빈 파일 목록을 전달하면 빈 리스트를 반환한다")
-    void upload_EmptyList_ReturnsEmptyList() {
-        // when
-        List<String> urls = adapter.upload(List.of());
+    @DisplayName("resolveUrls에 https:// 로 시작하는 기존 URL을 전달하면 그대로 반환한다")
+    void resolveUrls_LegacyHttpsUrl_ReturnedAsIs() {
+        String legacyUrl = "https://bucket.s3.ap-northeast-2.amazonaws.com/profiles/old-photo.jpg";
 
-        // then
-        assertThat(urls).isEmpty();
-    }
+        List<String> urls = adapter.resolveUrls(List.of(legacyUrl));
 
-    @Test
-    @DisplayName("여러 파일을 업로드하면 각 파일에 대한 URL을 반환한다")
-    void upload_MultipleFiles_ReturnsMultipleUrls() {
-        // given
-        MultipartFile file1 = new MockMultipartFile("images", "a.jpg", "image/jpeg", "a".getBytes());
-        MultipartFile file2 = new MockMultipartFile("images", "b.jpg", "image/jpeg", "b".getBytes());
-
-        // when
-        List<String> urls = adapter.upload(List.of(file1, file2));
-
-        // then
-        assertThat(urls).hasSize(2);
-        assertThat(urls.get(0)).endsWith("a.jpg");
-        assertThat(urls.get(1)).endsWith("b.jpg");
+        assertThat(urls).containsExactly(legacyUrl);
     }
 }

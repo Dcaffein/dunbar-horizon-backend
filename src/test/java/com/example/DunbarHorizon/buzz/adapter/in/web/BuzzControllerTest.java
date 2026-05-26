@@ -6,12 +6,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockMultipartFile;
 
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -39,11 +38,9 @@ class BuzzControllerTest extends BaseControllerTest {
                     }
                     """.formatted(memberIds);
 
-            MockMultipartFile requestPart = new MockMultipartFile(
-                    "request", "", MediaType.APPLICATION_JSON_VALUE, body.getBytes());
-
-            mockMvc.perform(multipart("/api/v1/buzzes")
-                            .file(requestPart))
+            mockMvc.perform(post("/api/v1/buzzes")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.validation['recipient.memberIds']").exists());
         }
@@ -66,11 +63,9 @@ class BuzzControllerTest extends BaseControllerTest {
                     }
                     """.formatted(memberIds);
 
-            MockMultipartFile requestPart = new MockMultipartFile(
-                    "request", "", MediaType.APPLICATION_JSON_VALUE, body.getBytes());
-
-            mockMvc.perform(multipart("/api/v1/buzzes")
-                            .file(requestPart))
+            mockMvc.perform(post("/api/v1/buzzes")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
                     .andExpect(status().isCreated());
         }
     }

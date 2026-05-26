@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.account.application.service;
 
-import com.example.DunbarHorizon.account.application.model.UploadFile;
 import com.example.DunbarHorizon.account.application.port.in.UserProfileUpdateUseCase;
 import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
 import com.example.DunbarHorizon.account.domain.exception.UserNotFoundException;
@@ -18,9 +17,9 @@ public class UserProfileUpdateService implements UserProfileUpdateUseCase {
     private final ProfileImageStoragePort profileImageStoragePort;
 
     @Override
-    public void updateProfile(Long userId, String nickname, UploadFile profileImage) {
-        String imageUrl = profileImage != null
-                ? profileImageStoragePort.upload(profileImage)
+    public void updateProfile(Long userId, String nickname, String profileImageKey) {
+        String imageUrl = profileImageKey != null
+                ? profileImageStoragePort.resolveUrl(profileImageKey)
                 : null;
 
         userRepository.findById(userId)

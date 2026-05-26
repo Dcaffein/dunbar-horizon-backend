@@ -10,9 +10,7 @@ import com.example.DunbarHorizon.support.WithMockCustomUser;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockMultipartFile;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -109,32 +107,27 @@ class AccountControllerTest extends BaseControllerTest {
 
     @Test
     @WithMockCustomUser
-    @DisplayName("이미지 파일과 함께 프로필을 수정하면 200 OK를 반환하고 updateProfile()을 호출한다")
-    void updateProfile_withImage_Success() throws Exception {
-        MockMultipartFile requestPart = new MockMultipartFile(
-                "request", "", MediaType.APPLICATION_JSON_VALUE,
-                objectMapper.writeValueAsBytes(new UserProfileUpdateRequest("새닉네임")));
-        MockMultipartFile imagePart = new MockMultipartFile(
-                "profileImage", "photo.jpg", MediaType.IMAGE_JPEG_VALUE, "image-bytes".getBytes());
+    @DisplayName("profileImageKey와 함께 프로필을 수정하면 200 OK를 반환하고 updateProfile()을 호출한다")
+    void updateProfile_withImageKey_Success() throws Exception {
+        UserProfileUpdateRequest request = new UserProfileUpdateRequest("새닉네임", "profiles/uuid-photo");
 
-        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/auth/users/me")
-                        .file(requestPart)
-                        .file(imagePart))
+        mockMvc.perform(patch("/api/auth/users/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
 
-        verify(userProfileUpdateUseCase).updateProfile(any(), eq("새닉네임"), any());
+        verify(userProfileUpdateUseCase).updateProfile(any(), eq("새닉네임"), eq("profiles/uuid-photo"));
     }
 
     @Test
     @WithMockCustomUser
-    @DisplayName("이미지 없이 닉네임만 수정하면 200 OK를 반환하고 profileImage=null로 updateProfile()을 호출한다")
-    void updateProfile_withoutImage_Success() throws Exception {
-        MockMultipartFile requestPart = new MockMultipartFile(
-                "request", "", MediaType.APPLICATION_JSON_VALUE,
-                objectMapper.writeValueAsBytes(new UserProfileUpdateRequest("새닉네임")));
+    @DisplayName("profileImageKey 없이 닉네임만 수정하면 200 OK를 반환하고 profileImageKey=null로 updateProfile()을 호출한다")
+    void updateProfile_withoutImageKey_Success() throws Exception {
+        UserProfileUpdateRequest request = new UserProfileUpdateRequest("새닉네임", null);
 
-        mockMvc.perform(multipart(HttpMethod.PATCH, "/api/auth/users/me")
-                        .file(requestPart))
+        mockMvc.perform(patch("/api/auth/users/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
 
         verify(userProfileUpdateUseCase).updateProfile(any(), eq("새닉네임"), isNull());

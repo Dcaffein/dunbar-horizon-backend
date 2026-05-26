@@ -1,16 +1,18 @@
 package com.example.DunbarHorizon.buzz.adapter.out.infrastructure;
 
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
+import com.example.DunbarHorizon.global.model.PresignRequest;
+import com.example.DunbarHorizon.global.model.PresignedUploadResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,38 +20,52 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class S3StorageAdapter implements ImageStoragePort {
 
-    private final S3Client s3Client;
+    private static final Duration PRESIGN_TTL = Duration.ofHours(1);
+
+    private final S3Presigner s3Presigner;
 
     @Value("${aws.s3.bucket}")
     private String bucket;
 
-    @Value("${aws.s3.region}")
-    private String region;
+    @Override
+    public List<PresignedUploadResult> presignUploads(List<PresignRequest> requests) {
+        return requests.stream()
+                .map(request -> {
+                    String key = "buzz/" + UUID.randomUUID();
+                    String uploadUrl = s3Presigner.presignPutObject(PutObjectPresignRequest.builder()
+                                    .signatureDuration(PRESIGN_TTL)
+                                    .putObjectRequest(PutObjectRequest.builder()
+                                            .bucket(bucket)
+                                            .key(key)
+                                            .contentType(request.contentType())
+                                            .build())
+                                    .build())
+                            .url()
+                            .toString();
+                    return new PresignedUploadResult(uploadUrl, key);
+                })
+                .toList();
+    }
 
     @Override
-    public List<String> upload(List<MultipartFile> files) {
-        if (files == null || files.isEmpty()) {
-            return List.of();
-        }
+    public List<String> resolveUrls(List<String> keys) {
+        return keys.stream()
+                .map(this::resolveUrl)
+                .toList();
+    }
 
-        List<String> urls = new ArrayList<>();
-        for (MultipartFile file : files) {
-            String key = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            try {
-                s3Client.putObject(
-                        PutObjectRequest.builder()
+    private String resolveUrl(String key) {
+        if (key.startsWith("https://")) {
+            return key;
+        }
+        return s3Presigner.presignGetObject(GetObjectPresignRequest.builder()
+                        .signatureDuration(PRESIGN_TTL)
+                        .getObjectRequest(GetObjectRequest.builder()
                                 .bucket(bucket)
                                 .key(key)
-                                .contentType(file.getContentType())
-                                .contentLength(file.getSize())
-                                .build(),
-                        RequestBody.fromBytes(file.getBytes())
-                );
-            } catch (IOException e) {
-                throw new RuntimeException("이미지 업로드 중 오류가 발생했습니다.", e);
-            }
-            urls.add("https://%s.s3.%s.amazonaws.com/%s".formatted(bucket, region, key));
-        }
-        return urls;
+                                .build())
+                        .build())
+                .url()
+                .toString();
     }
 }

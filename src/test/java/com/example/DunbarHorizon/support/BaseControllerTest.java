@@ -4,6 +4,8 @@ import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
 import com.example.DunbarHorizon.account.application.port.in.SignupUseCase;
 import com.example.DunbarHorizon.account.application.port.in.UserProfileUpdateUseCase;
 import com.example.DunbarHorizon.account.application.port.in.VerificationUseCase;
+import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
+import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.notification.application.NotificationService;
 import com.example.DunbarHorizon.buzz.application.port.in.BuzzCommandUseCase;
 import com.example.DunbarHorizon.buzz.application.port.in.BuzzQueryUseCase;
@@ -44,6 +46,9 @@ public abstract class BaseControllerTest {
     @MockitoBean protected VerificationUseCase verificationUseCase;
     @MockitoBean protected UserProfileUpdateUseCase userProfileUpdateUseCase;
     @MockitoBean protected com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase userQueryUseCase;
+
+    @MockitoBean protected ProfileImageStoragePort profileImageStoragePort;
+    @MockitoBean protected ImageStoragePort imageStoragePort;
 
     @MockitoBean protected BuzzCommandUseCase buzzCommandUseCase;
     @MockitoBean protected BuzzQueryUseCase buzzQueryUseCase;
