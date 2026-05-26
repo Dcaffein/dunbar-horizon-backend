@@ -5,8 +5,10 @@ import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostComman
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagEncoreCreator;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -67,6 +69,28 @@ class FlagHostServiceTest {
         // when / then
         assertThatThrownBy(() -> flagHostService.encoreFlag(command))
                 .isInstanceOf(FlagNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("동시 요청으로 DB unique 제약 위반 시 FlagInvalidStatusException이 발생한다")
+    void encoreFlag_UniqueConstraintViolation_ThrowsException() {
+        // given
+        FlagSchedule parentSchedule = FlagSchedule.of(NOW.minusHours(3), NOW.minusHours(2), NOW.minusHours(1));
+        Flag parentFlag = Flag.create(1L, "원본 플래그", "설명", 10, parentSchedule);
+        ReflectionTestUtils.setField(parentFlag, "id", 1L);
+
+        FlagSchedule encoreSchedule = FlagSchedule.of(NOW.plusHours(2), NOW.plusHours(3), NOW.plusHours(4));
+        Flag encoreFlag = Flag.create(1L, "원본 플래그", "설명", 10, encoreSchedule);
+
+        given(flagRepository.findById(1L)).willReturn(Optional.of(parentFlag));
+        given(flagEncoreCreator.encore(any(), any(), any(), any(), any())).willReturn(encoreFlag);
+        given(flagRepository.save(encoreFlag)).willThrow(new DataIntegrityViolationException("unique constraint violation"));
+
+        FlagEncoreCommand command = new FlagEncoreCommand(1L, 1L, NOW.plusHours(2), NOW.plusHours(3), NOW.plusHours(4));
+
+        // when / then
+        assertThatThrownBy(() -> flagHostService.encoreFlag(command))
+                .isInstanceOf(FlagInvalidStatusException.class);
     }
 
     @Test

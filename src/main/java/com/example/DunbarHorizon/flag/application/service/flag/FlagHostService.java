@@ -6,9 +6,11 @@ import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagEncoreCreator;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,10 @@ public class FlagHostService implements FlagHostUseCase {
                 command.deadline(),
                 command.startDateTime(),
                 command.endDateTime());
-        return flagRepository.save(encoreFlag).getId();
+        try {
+            return flagRepository.save(encoreFlag).getId();
+        } catch (DataIntegrityViolationException e) {
+            throw new FlagInvalidStatusException("이미 앵콜이 존재하는 플래그입니다.");
+        }
     }
 }
