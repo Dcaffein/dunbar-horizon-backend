@@ -16,7 +16,7 @@ import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
-public class LabelMemberRegistry {
+public class LabelMemberEnroller {
     private final FriendshipRepository friendshipRepository;
     private final SocialUserRepository socialUserRepository;
 

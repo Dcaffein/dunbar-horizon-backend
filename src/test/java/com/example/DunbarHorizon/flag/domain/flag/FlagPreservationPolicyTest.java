@@ -19,10 +19,10 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class FlagPreservationDomainServiceTest {
+class FlagPreservationPolicyTest {
 
     @InjectMocks
-    private FlagPreservationDomainService flagPreservationDomainService;
+    private FlagPreservationPolicy flagPreservationPolicy;
 
     @Mock
     private FlagRepository flagRepository;
@@ -50,7 +50,7 @@ class FlagPreservationDomainServiceTest {
         given(flagRepository.save(flag)).willReturn(flag);
 
         // when
-        flagPreservationDomainService.refresh(FLAG_ID);
+        flagPreservationPolicy.refresh(FLAG_ID);
 
         // then
         assertThat(flag.isSoftDeleteProtected()).isTrue();
@@ -68,7 +68,7 @@ class FlagPreservationDomainServiceTest {
         given(flagRepository.save(flag)).willReturn(flag);
 
         // when
-        flagPreservationDomainService.refresh(FLAG_ID);
+        flagPreservationPolicy.refresh(FLAG_ID);
 
         // then
         assertThat(flag.isSoftDeleteProtected()).isTrue();
@@ -87,7 +87,7 @@ class FlagPreservationDomainServiceTest {
         given(flagRepository.save(flag)).willReturn(flag);
 
         // when
-        flagPreservationDomainService.refresh(FLAG_ID);
+        flagPreservationPolicy.refresh(FLAG_ID);
 
         // then
         assertThat(flag.isSoftDeleteProtected()).isFalse();
@@ -101,7 +101,7 @@ class FlagPreservationDomainServiceTest {
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> flagPreservationDomainService.refresh(FLAG_ID))
+        assertThatThrownBy(() -> flagPreservationPolicy.refresh(FLAG_ID))
                 .isInstanceOf(FlagNotFoundException.class);
     }
 }
