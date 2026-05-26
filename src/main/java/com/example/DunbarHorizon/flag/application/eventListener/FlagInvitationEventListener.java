@@ -1,0 +1,41 @@
+package com.example.DunbarHorizon.flag.application.eventListener;
+
+import com.example.DunbarHorizon.flag.domain.flag.event.FlagInvitationSentEvent;
+import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
+import com.example.DunbarHorizon.global.event.notification.NotificationType;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+
+import java.util.List;
+import java.util.Map;
+
+@Component
+@RequiredArgsConstructor
+public class FlagInvitationEventListener {
+
+    private final ApplicationEventPublisher eventPublisher;
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handle(FlagInvitationSentEvent event) {
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .receiverIds(List.of(event.inviteeId()))
+                .title("플래그 초대")
+                .content(String.format("[%s] 플래그에 초대받았습니다. 수락 여부를 선택해주세요!", event.flagTitle()))
+                .type(NotificationType.FLAG_INVITATION)
+                .metadata(Map.of(
+                        "flagId", event.flagId(),
+                        "invitationId", event.invitationId()
+                ))
+                .build();
+
+        eventPublisher.publishEvent(notificationEvent);
+    }
+}

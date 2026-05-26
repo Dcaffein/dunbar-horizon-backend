@@ -1,0 +1,262 @@
+package com.example.DunbarHorizon.flag.domain.flag;
+
+import com.example.DunbarHorizon.flag.domain.flag.exception.*;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagInvitationRepository;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
+
+@ExtendWith(MockitoExtension.class)
+class FlagInvitationPolicyTest {
+
+    @InjectMocks private FlagInvitationPolicy policy;
+
+    @Mock private FlagRepository flagRepository;
+    @Mock private FlagParticipantRepository participantRepository;
+    @Mock private FlagInvitationRepository invitationRepository;
+
+    private static final Long FLAG_ID = 1L;
+    private static final Long HOST_ID = 1L;
+    private static final Long INVITER_ID = 2L;
+    private static final Long INVITEE_ID = 3L;
+    private static final LocalDateTime NOW = LocalDateTime.now();
+
+    private Flag recruitingFlag() {
+        FlagSchedule schedule = FlagSchedule.of(NOW.plusHours(2), NOW.plusHours(3), NOW.plusHours(4));
+        Flag flag = Flag.create(HOST_ID, "테스트 플래그", "설명", 10, schedule);
+        ReflectionTestUtils.setField(flag, "id", FLAG_ID);
+        return flag;
+    }
+
+    private FlagParticipant inviterWithPermission() {
+        FlagParticipant participant = new FlagParticipant(FLAG_ID, INVITER_ID);
+        participant.grantInvitePermission();
+        return participant;
+    }
+
+    private FlagParticipant inviterWithoutPermission() {
+        return new FlagParticipant(FLAG_ID, INVITER_ID);
+    }
+
+    // ==================== updateInvitePermission ====================
+
+    @Test
+    @DisplayName("호스트가 참여자에게 초대 권한을 부여할 수 있다")
+    void updateInvitePermission_Grant_Success() {
+        // given
+        Flag flag = recruitingFlag();
+        FlagParticipant participant = inviterWithoutPermission();
+
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(participantRepository.findByFlagIdAndParticipantId(FLAG_ID, INVITER_ID))
+                .willReturn(Optional.of(participant));
+
+        // when
+        policy.updateInvitePermission(FLAG_ID, HOST_ID, INVITER_ID, true);
+
+        // then
+        assertThat(participant.isCanInvite()).isTrue();
+    }
+
+    @Test
+    @DisplayName("호스트가 아닌 사용자가 권한 변경을 시도하면 FlagAuthorizationException이 발생한다")
+    void updateInvitePermission_NotHost_Throws() {
+        // given
+        Flag flag = recruitingFlag();
+        FlagParticipant participant = inviterWithoutPermission();
+
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(participantRepository.findByFlagIdAndParticipantId(FLAG_ID, INVITER_ID))
+                .willReturn(Optional.of(participant));
+
+        // when / then
+        assertThatThrownBy(() -> policy.updateInvitePermission(FLAG_ID, INVITER_ID, INVITER_ID, true))
+                .isInstanceOf(FlagAuthorizationException.class);
+    }
+
+    // ==================== invite ====================
+
+    @Test
+    @DisplayName("초대 권한이 있는 참여자가 친구를 초대할 수 있다")
+    void invite_Success() {
+        // given
+        Flag flag = recruitingFlag();
+        FlagParticipant inviter = inviterWithPermission();
+
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(participantRepository.findByFlagIdAndParticipantId(FLAG_ID, INVITER_ID))
+                .willReturn(Optional.of(inviter));
+        given(participantRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(false);
+        given(invitationRepository.existsPendingByFlagIdAndInviteeId(FLAG_ID, INVITEE_ID)).willReturn(false);
+
+        // when
+        FlagInvitation result = policy.invite(FLAG_ID, INVITER_ID, INVITEE_ID);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.getInviteeId()).isEqualTo(INVITEE_ID);
+        assertThat(result.getStatus()).isEqualTo(FlagInvitationStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("초대 권한이 없는 참여자가 초대하면 FlagAuthorizationException이 발생한다")
+    void invite_InviterHasNoPermission_Throws() {
+        // given
+        Flag flag = recruitingFlag();
+        FlagParticipant inviter = inviterWithoutPermission();
+
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(participantRepository.findByFlagIdAndParticipantId(FLAG_ID, INVITER_ID))
+                .willReturn(Optional.of(inviter));
+
+        // when / then
+        assertThatThrownBy(() -> policy.invite(FLAG_ID, INVITER_ID, INVITEE_ID))
+                .isInstanceOf(FlagAuthorizationException.class);
+    }
+
+    @Test
+    @DisplayName("동일 (flagId, inviteeId) 쌍의 PENDING 초대가 이미 있으면 FlagInvitationDuplicateException이 발생한다")
+    void invite_DuplicatePending_Throws() {
+        // given
+        Flag flag = recruitingFlag();
+        FlagParticipant inviter = inviterWithPermission();
+
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(participantRepository.findByFlagIdAndParticipantId(FLAG_ID, INVITER_ID))
+                .willReturn(Optional.of(inviter));
+        given(participantRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(false);
+        given(invitationRepository.existsPendingByFlagIdAndInviteeId(FLAG_ID, INVITEE_ID)).willReturn(true);
+
+        // when / then
+        assertThatThrownBy(() -> policy.invite(FLAG_ID, INVITER_ID, INVITEE_ID))
+                .isInstanceOf(FlagInvitationDuplicateException.class);
+    }
+
+    @Test
+    @DisplayName("호스트를 초대하면 FlagAuthorizationException이 발생한다")
+    void invite_InviteeIsHost_Throws() {
+        // given
+        Flag flag = recruitingFlag();
+
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+
+        // when / then
+        assertThatThrownBy(() -> policy.invite(FLAG_ID, INVITER_ID, HOST_ID))
+                .isInstanceOf(FlagAuthorizationException.class);
+    }
+
+    @Test
+    @DisplayName("이미 참여 중인 사용자를 초대하면 FlagParticipationDuplicateException이 발생한다")
+    void invite_InviteeAlreadyParticipating_Throws() {
+        // given
+        Flag flag = recruitingFlag();
+        FlagParticipant inviter = inviterWithPermission();
+
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(participantRepository.findByFlagIdAndParticipantId(FLAG_ID, INVITER_ID))
+                .willReturn(Optional.of(inviter));
+        given(participantRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(true);
+
+        // when / then
+        assertThatThrownBy(() -> policy.invite(FLAG_ID, INVITER_ID, INVITEE_ID))
+                .isInstanceOf(FlagParticipationDuplicateException.class);
+    }
+
+    // ==================== accept ====================
+
+    @Test
+    @DisplayName("초대받은 사람이 수락하면 FlagParticipant가 생성된다")
+    void accept_Success() {
+        // given
+        Flag flag = recruitingFlag();
+        FlagInvitation invitation = FlagInvitation.create(FLAG_ID, INVITER_ID, INVITEE_ID, NOW.plusHours(2));
+        ReflectionTestUtils.setField(invitation, "id", 10L);
+
+        given(invitationRepository.findById(10L)).willReturn(Optional.of(invitation));
+        given(participantRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(false);
+        given(flagRepository.findByIdExclusive(FLAG_ID)).willReturn(Optional.of(flag));
+        given(participantRepository.countByFlagId(FLAG_ID)).willReturn(0);
+
+        // when
+        FlagParticipant result = policy.accept(10L, INVITEE_ID);
+
+        // then
+        assertThat(result.getParticipantId()).isEqualTo(INVITEE_ID);
+        assertThat(invitation.getStatus()).isEqualTo(FlagInvitationStatus.ACCEPTED);
+    }
+
+    @Test
+    @DisplayName("초대 수락 시 이미 참여 중이면 FlagParticipationDuplicateException이 발생한다")
+    void accept_AlreadyParticipating_Throws() {
+        // given
+        FlagInvitation invitation = FlagInvitation.create(FLAG_ID, INVITER_ID, INVITEE_ID, NOW.plusHours(2));
+        ReflectionTestUtils.setField(invitation, "id", 10L);
+
+        given(invitationRepository.findById(10L)).willReturn(Optional.of(invitation));
+        given(participantRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(true);
+
+        // when / then
+        assertThatThrownBy(() -> policy.accept(10L, INVITEE_ID))
+                .isInstanceOf(FlagParticipationDuplicateException.class);
+    }
+
+    @Test
+    @DisplayName("만료된 초대를 수락하면 FlagInvitationExpiredException이 발생한다")
+    void accept_Expired_Throws() {
+        // given
+        FlagInvitation invitation = FlagInvitation.create(FLAG_ID, INVITER_ID, INVITEE_ID, NOW.minusSeconds(1));
+        ReflectionTestUtils.setField(invitation, "id", 10L);
+
+        given(invitationRepository.findById(10L)).willReturn(Optional.of(invitation));
+
+        // when / then
+        assertThatThrownBy(() -> policy.accept(10L, INVITEE_ID))
+                .isInstanceOf(FlagInvitationExpiredException.class);
+    }
+
+    @Test
+    @DisplayName("초대받지 않은 사람이 수락하면 FlagInvitationAccessException이 발생한다")
+    void accept_NotInvitee_Throws() {
+        // given
+        FlagInvitation invitation = FlagInvitation.create(FLAG_ID, INVITER_ID, INVITEE_ID, NOW.plusHours(2));
+        ReflectionTestUtils.setField(invitation, "id", 10L);
+
+        given(invitationRepository.findById(10L)).willReturn(Optional.of(invitation));
+
+        // when / then
+        Long otherId = 99L;
+        assertThatThrownBy(() -> policy.accept(10L, otherId))
+                .isInstanceOf(FlagInvitationAccessException.class);
+    }
+
+    // ==================== reject ====================
+
+    @Test
+    @DisplayName("초대받은 사람이 거절하면 상태가 REJECTED로 변경된다")
+    void reject_Success() {
+        // given
+        FlagInvitation invitation = FlagInvitation.create(FLAG_ID, INVITER_ID, INVITEE_ID, NOW.plusHours(2));
+        ReflectionTestUtils.setField(invitation, "id", 10L);
+
+        given(invitationRepository.findById(10L)).willReturn(Optional.of(invitation));
+
+        // when
+        policy.reject(10L, INVITEE_ID);
+
+        // then
+        assertThat(invitation.getStatus()).isEqualTo(FlagInvitationStatus.REJECTED);
+    }
+}

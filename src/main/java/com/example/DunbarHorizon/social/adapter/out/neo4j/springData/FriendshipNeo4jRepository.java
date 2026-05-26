@@ -61,17 +61,24 @@ public interface FriendshipNeo4jRepository extends Neo4jRepository<Friendship, S
     List<Friendship> findFriendshipsIn(@Param("userId") Long userId, @Param("targetIds") Collection<Long> targetIds);
 
     @Query("MATCH (u:" + USER_REFERENCE + ")-[r:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ") " +
-            "WHERE r.interestScore > 0 " +
+            "WHERE r.interestScore > $threshold " +
             "AND r.lastInteractedAt <= $decayTime " +
             "SET r.interestScore = CASE " +
-            "WHEN r.interestScore * $rate < $threshold THEN 0.0 " +
+            "WHEN r.interestScore * $rate < $threshold THEN $threshold " +
             "ELSE r.interestScore * $rate " +
             "END " +
             "WITH f, collect(r.interestScore) as scores " +
             "SET f.intimacy = sqrt(" +
-            "CASE WHEN size(scores) >= 2 THEN scores[0] * scores[1] ELSE 0.0 END" +
+            "CASE WHEN size(scores) >= 2 " +
+            "THEN (scores[0] / (scores[0] + 50.0)) * (scores[1] / (scores[1] + 50.0)) " +
+            "ELSE 0.0 END" +
             ")")
     void applyDecay(@Param("rate") double rate, @Param("threshold") double threshold, @Param("decayTime") LocalDateTime decayTime);
+
+    @Query("MATCH (u:" + USER_REFERENCE + ")-[:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(v:" + USER_REFERENCE + ") " +
+            "WHERE f.id IN $ids " +
+            "DETACH DELETE f")
+    void deleteAllByIdIn(@Param("ids") Collection<String> ids);
 
     @Query("MATCH (u:" + USER_REFERENCE + ")-[r:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ") " +
             "WHERE f.id IN $ids " +

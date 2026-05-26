@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.domain.friend.repository;
 
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 
 import java.time.LocalDateTime;
@@ -35,4 +36,8 @@ public interface FriendshipRepository {
     List<Friendship> findAllByIds(List<String> ids);
 
     void batchUpdateInterestScores(List<Map<String, Object>> updates, LocalDateTime lastInteractedAt);
+
+    List<FriendshipArchiveCandidate> findArchiveCandidates(double threshold);
+
+    void deleteAllByIds(Collection<String> ids);
 }

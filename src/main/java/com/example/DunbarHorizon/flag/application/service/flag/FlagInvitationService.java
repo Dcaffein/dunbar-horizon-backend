@@ -1,0 +1,58 @@
+package com.example.DunbarHorizon.flag.application.service.flag;
+
+import com.example.DunbarHorizon.flag.application.port.in.FlagInvitationUseCase;
+import com.example.DunbarHorizon.flag.domain.flag.FlagInvitation;
+import com.example.DunbarHorizon.flag.domain.flag.FlagInvitationPolicy;
+import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
+import com.example.DunbarHorizon.flag.domain.flag.event.FlagInvitationSentEvent;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagInvitationRepository;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class FlagInvitationService implements FlagInvitationUseCase {
+
+    private final FlagInvitationPolicy invitationPolicy;
+    private final FlagInvitationRepository invitationRepository;
+    private final FlagParticipantRepository participantRepository;
+    private final FlagRepository flagRepository;
+    private final ApplicationEventPublisher eventPublisher;
+
+    @Override
+    public void updateInvitePermission(Long flagId, Long requesterId, Long participantUserId, boolean canInvite) {
+        invitationPolicy.updateInvitePermission(flagId, requesterId, participantUserId, canInvite);
+    }
+
+    @Override
+    public Long invite(Long flagId, Long inviterId, Long inviteeId) {
+        FlagInvitation invitation = invitationPolicy.invite(flagId, inviterId, inviteeId);
+        FlagInvitation saved = invitationRepository.save(invitation);
+
+        String flagTitle = flagRepository.findById(flagId)
+                .map(f -> f.getTitle())
+                .orElse("");
+
+        eventPublisher.publishEvent(new FlagInvitationSentEvent(
+                flagId, saved.getId(), inviteeId, flagTitle
+        ));
+
+        return saved.getId();
+    }
+
+    @Override
+    public void accept(Long invitationId, Long acceptorId) {
+        FlagParticipant newParticipant = invitationPolicy.accept(invitationId, acceptorId);
+        participantRepository.save(newParticipant);
+    }
+
+    @Override
+    public void reject(Long invitationId, Long rejectorId) {
+        invitationPolicy.reject(invitationId, rejectorId);
+    }
+}

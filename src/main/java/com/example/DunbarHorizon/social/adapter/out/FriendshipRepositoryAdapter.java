@@ -2,10 +2,12 @@ package com.example.DunbarHorizon.social.adapter.out;
 
 import com.example.DunbarHorizon.social.adapter.out.neo4j.springData.FriendshipNeo4jRepository;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -22,6 +24,7 @@ import java.util.stream.StreamSupport;
 public class FriendshipRepositoryAdapter implements FriendshipRepository {
 
     private final FriendshipNeo4jRepository friendshipNeo4jRepository;
+    private final Neo4jClient neo4jClient;
 
     @Override
     public List<Friendship> findFriendships(Long userId) {
@@ -116,5 +119,32 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
     @Override
     public void batchUpdateInterestScores(List<Map<String, Object>> updates, LocalDateTime lastInteractedAt) {
         friendshipNeo4jRepository.batchUpdateInterestScores(updates, lastInteractedAt);
+    }
+
+    @Override
+    public List<FriendshipArchiveCandidate> findArchiveCandidates(double threshold) {
+        return neo4jClient.query(
+                "MATCH (u:UserReference)-[:HAS_FRIENDSHIP]->(f:Friendship)<-[:HAS_FRIENDSHIP]-(v:UserReference) " +
+                "WHERE f.intimacy <= $threshold AND u.id < v.id " +
+                "RETURN f.id AS id, u.id AS userAId, v.id AS userBId, f.createdAt AS friendedAt"
+        )
+                .bind(threshold).to("threshold")
+                .fetchAs(FriendshipArchiveCandidate.class)
+                .mappedBy((typeSystem, record) -> new FriendshipArchiveCandidate(
+                        record.get("id").asString(),
+                        record.get("userAId").asLong(),
+                        record.get("userBId").asLong(),
+                        record.get("friendedAt").isNull() ? null
+                                : record.get("friendedAt").asLocalDate()
+                ))
+                .all()
+                .stream()
+                .toList();
+    }
+
+    @Override
+    public void deleteAllByIds(Collection<String> ids) {
+        if (ids.isEmpty()) return;
+        friendshipNeo4jRepository.deleteAllByIdIn(ids);
     }
 }

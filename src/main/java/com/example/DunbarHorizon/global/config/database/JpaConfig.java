@@ -17,7 +17,8 @@ import org.springframework.transaction.PlatformTransactionManager;
                 "com.example.DunbarHorizon.buzz",
                 "com.example.DunbarHorizon.trace",
                 "com.example.DunbarHorizon.notification.adapter.out.persistence.jpa",
-                "com.example.DunbarHorizon.flag"
+                "com.example.DunbarHorizon.flag",
+                "com.example.DunbarHorizon.social.adapter.out.persistence.jpa"
         }
 )
 public class JpaConfig {

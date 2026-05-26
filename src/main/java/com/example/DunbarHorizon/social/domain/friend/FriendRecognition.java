@@ -15,7 +15,7 @@ public class FriendRecognition {
 
     public static final double CONVERGENCE_K = 50.0;
 
-    public static final double INITIAL_RAW_SCORE = 5.5;
+    public static final double INITIAL_RAW_SCORE = 21.4;
 
     @Id @GeneratedValue()
     private String id;
@@ -36,7 +36,7 @@ public class FriendRecognition {
     public FriendRecognition(UserReference user) {
         this.user = user;
         this.friendAlias = null;
-        this.interestScore = 0.0;
+        this.interestScore = INITIAL_RAW_SCORE;
         this.lastInteractedAt = LocalDateTime.now();
     }
 

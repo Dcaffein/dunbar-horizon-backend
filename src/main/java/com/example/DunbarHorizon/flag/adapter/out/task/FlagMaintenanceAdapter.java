@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.flag.adapter.out.task;
 
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagCommentJpaRepository;
+import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagInvitationJpaRepository;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagJpaRepository;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagMemorialJpaRepository;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagParticipantJpaRepository;
@@ -24,6 +25,7 @@ public class FlagMaintenanceAdapter implements FlagMaintenancePort {
     private final FlagParticipantJpaRepository participantRepositoryAdapter;
     private final FlagMemorialJpaRepository memorialRepositoryAdapter;
     private final FlagCommentJpaRepository commentRepositoryAdapter;
+    private final FlagInvitationJpaRepository invitationJpaRepository;
     private final TransactionTemplate transactionTemplate;
 
     @Override
@@ -44,6 +46,7 @@ public class FlagMaintenanceAdapter implements FlagMaintenancePort {
                 participantRepositoryAdapter.hardDeleteByFlagIdsIn(chunk);
                 memorialRepositoryAdapter.hardDeleteByFlagIdsIn(chunk);
                 commentRepositoryAdapter.hardDeleteByFlagIdsIn(chunk);
+                invitationJpaRepository.hardDeleteByFlagIdsIn(chunk);
                 flagJpaRepository.hardDeleteByIdsIn(chunk);
                 return null;
             });
