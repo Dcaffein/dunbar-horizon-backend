@@ -36,11 +36,12 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
         Node me = user().named("me");
         Node member = user().named("member");
         Node myFriendship = friendship().named("myFriendship");
+        Relationship rMe = me.relationshipTo(myFriendship, "HAS_FRIENDSHIP").named("r_me");
 
         StatementBuilder.OngoingReading baseBuilder = matchUserWithId(userId, "me")
-                .match(friendshipBetween(me, myFriendship, member));
+                .match(rMe.relationshipFrom(member, "HAS_FRIENDSHIP"));
 
-        Statement statement = buildDynamicPruningNetwork(baseBuilder, me, member, myFriendship);
+        Statement statement = buildDynamicPruningNetwork(baseBuilder, me, member, myFriendship, rMe);
 
         String cypher = renderer.render(statement);
 
@@ -68,13 +69,14 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
         Node label = label().named("label");
         Node member = user().named("member");
         Node myFriendship = friendship().named("myFriendship");
+        Relationship rMe = me.relationshipTo(myFriendship, "HAS_FRIENDSHIP").named("r_me");
 
         StatementBuilder.OngoingReading baseBuilder = matchUserWithId(userId, "me")
                 .match(me.relationshipTo(label, "HAS_LABEL").relationshipTo(member, "HAS_MEMBER"))
                 .where(label.property("id").isEqualTo(Cypher.parameter("labelId")))
-                .match(friendshipBetween(me, myFriendship, member));
+                .match(rMe.relationshipFrom(member, "HAS_FRIENDSHIP"));
 
-        Statement statement = buildDynamicPruningNetwork(baseBuilder, me, member, myFriendship);
+        Statement statement = buildDynamicPruningNetwork(baseBuilder, me, member, myFriendship, rMe);
 
         String cypher = renderer.render(statement);
 
@@ -97,97 +99,117 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
 
     private Statement buildDynamicPruningNetwork(
             StatementBuilder.OngoingReading baseBuilder,
-            Node me, Node member, Node myFriendship) {
+            Node me, Node member, Node myFriendship, Relationship rMe) {
 
         Node innerFriendship = friendship().named("innerFriendship");
         Node targetMember = user().named("targetMember");
-        Node friendshipA = friendship().named("friendshipA");
-        Node friendshipB = friendship().named("friendshipB");
-        Node targetNode = user().named("targetNode");
-
-        Relationship relationshipA = me.relationshipTo(friendshipA, "HAS_FRIENDSHIP").named("relationshipA");
-        Relationship relationshipB = me.relationshipTo(friendshipB, "HAS_FRIENDSHIP").named("relationshipB");
 
         SymbolicName boundary = Cypher.name("boundary");
-        SymbolicName members = Cypher.name("members");
-        SymbolicName friendshipList = Cypher.name("friendshipList");
-        SymbolicName index = Cypher.name("index");
+        SymbolicName friendData = Cypher.name("friendData");
+        SymbolicName interestMap = Cypher.name("interestMap");
         SymbolicName dynamicLimit = Cypher.name("dynamicLimit");
-        SymbolicName allEdges = Cypher.name("allEdges");
         SymbolicName topEdges = Cypher.name("topEdges");
         SymbolicName edgeData = Cypher.name("edgeData");
+        SymbolicName item = Cypher.name("item");
+        SymbolicName x = Cypher.name("x");
 
-        StatementBuilder.OngoingReadingAndWith withBoundary = baseBuilder
-                .with(me, member, myFriendship)
+        // Step A: ORDER BY intimacy LIMIT $limitSize 후 friendData map으로 수집
+        Expression friendDataElement = Cypher.mapOf(
+                "member", member.getRequiredSymbolicName(),
+                "friendship", myFriendship.getRequiredSymbolicName(),
+                "interestScore", Cypher.coalesce(rMe.property(PROP_INTEREST_SCORE), Cypher.literalOf(0.0))
+        );
+
+        StatementBuilder.OngoingReadingAndWith withFriendData = baseBuilder
+                .with(me, member, myFriendship, rMe)
                 .orderBy(myFriendship.property(PROP_INTIMACY).descending())
                 .limit(Cypher.parameter("limitSize"))
+                .with(me, Cypher.collect(friendDataElement).as("friendData"));
+
+        // Step B: boundary = union(members, [me]), interestMap = fromPairs([toString(id) → interestScore])
+        Expression memberList = Cypher.listWith(x).in(friendData)
+                .returning(Cypher.property(x, "member"));
+
+        Expression pairList = Cypher.listWith(x).in(friendData)
+                .returning(Cypher.listOf(
+                        Cypher.call("toString")
+                                .withArgs(Cypher.property(Cypher.property(x, "member"), PROP_ID))
+                                .asFunction(),
+                        Cypher.property(x, "interestScore")
+                ));
+
+        // me를 WITH 체인 끝까지 전달: CALL 서브쿼리에서 targetMember = me 엣지를 명시적으로 제외하기 위해
+        StatementBuilder.OngoingReadingAndWith withMaps = withFriendData
                 .with(
                         me,
-                        Cypher.collect(member.getRequiredSymbolicName()).as("members"),
-                        Cypher.collect(myFriendship.getRequiredSymbolicName()).as("friendshipList")
-                )
-                .with(
-                        me,
+                        friendData,
                         Cypher.call("apoc.coll.union")
-                                .withArgs(members, Cypher.listOf(me.getRequiredSymbolicName()))
+                                .withArgs(memberList, Cypher.listOf(me.getRequiredSymbolicName()))
                                 .asFunction().as("boundary"),
-                        members,
-                        friendshipList
+                        Cypher.call("apoc.map.fromPairs").withArgs(pairList).asFunction().as("interestMap")
                 );
 
+        // Step C: UNWIND friendData → 개별 member·myFriendship 복원 후 dynamicLimit 계산
         Expression myIntimacy = Cypher.coalesce(myFriendship.property(PROP_INTIMACY), Cypher.literalOf(0.0));
         Expression limitCalc = Cypher.call("toInteger").withArgs(
                 Cypher.literalOf(5).add(myIntimacy.multiply(Cypher.literalOf(25)))
         ).asFunction();
 
-        StatementBuilder.OngoingReadingAndWith withLimit = withBoundary
-                .unwind(
-                        Cypher.call("range")
-                                .withArgs(Cypher.literalOf(0), Cypher.size(members).subtract(Cypher.literalOf(1)))
-                                .asFunction()
-                ).as("index")
+        StatementBuilder.OngoingReadingAndWith withLimit = withMaps
+                .unwind(friendData).as("item")
                 .with(
                         me,
                         boundary,
-                        Cypher.valueAt(members, index).as(member.getRequiredSymbolicName().getValue()),
-                        Cypher.valueAt(friendshipList, index).as(myFriendship.getRequiredSymbolicName().getValue())
+                        interestMap,
+                        Cypher.property(item, "member").as(member.getRequiredSymbolicName().getValue()),
+                        Cypher.property(item, "friendship").as(myFriendship.getRequiredSymbolicName().getValue())
                 )
-                .with(me, boundary, member, limitCalc.as("dynamicLimit"));
+                .with(me, boundary, interestMap, member, limitCalc.as("dynamicLimit"));
+
+        // Step D: CALL 서브쿼리 — member 1명분 내부 엣지를 독립 실행으로 격리 (메모리 병목 해소)
+        // collect()와 [0..dynamicLimit] 슬라이스를 WITH으로 분리해야 집계 implicit grouping 오류 회피
+        // targetMember = me 조건: 기존 코드의 마지막 두 MATCH가 암묵적으로 걸렀던 me-to-friend 엣지를 명시적으로 제외
+        SymbolicName allEdges = Cypher.name("allEdges");
 
         Expression edgeMap = Cypher.mapOf(
                 "innerFriendship", innerFriendship.getRequiredSymbolicName(),
                 "targetMember", targetMember.getRequiredSymbolicName()
         );
 
-        return withLimit
+        Statement innerStatement = Cypher.with(me, member, boundary, dynamicLimit)
                 .match(friendshipBetween(member, innerFriendship, targetMember))
-                .where(targetMember.getRequiredSymbolicName().in(boundary))
-                .with(me, member, dynamicLimit, innerFriendship, targetMember)
+                .where(targetMember.getRequiredSymbolicName().in(boundary)
+                        .and(member.isNotEqualTo(targetMember))
+                        .and(targetMember.isNotEqualTo(me)))
+                .with(innerFriendship, targetMember, dynamicLimit)
                 .orderBy(innerFriendship.property(PROP_INTIMACY).descending())
-                .with(
-                        me,
-                        member,
-                        dynamicLimit,
-                        Cypher.collect(edgeMap).as("allEdges")
-                )
-                .with(
-                        me,
-                        member,
+                .with(Cypher.collect(edgeMap).as("allEdges"), dynamicLimit)
+                .returning(
                         Cypher.subList(allEdges, Cypher.literalOf(0), dynamicLimit).as("topEdges")
                 )
+                .build();
+
+        // Step E: UNWIND topEdges → RETURN (interestMap 룩업으로 재탐색 제거)
+        Expression friendAInterest = Cypher.valueAt(
+                interestMap,
+                Cypher.call("toString").withArgs(member.property(PROP_ID)).asFunction()
+        );
+        Expression friendBInterest = Cypher.valueAt(
+                interestMap,
+                Cypher.call("toString")
+                        .withArgs(Cypher.property(Cypher.property(edgeData, "targetMember"), PROP_ID))
+                        .asFunction()
+        );
+
+        return withLimit
+                .call(innerStatement)
                 .unwind(topEdges).as("edgeData")
-                .with(
-                        me, member, edgeData,
-                        Cypher.property(edgeData, "targetMember").as(targetNode.getRequiredSymbolicName().getValue())
-                )
-                .match(relationshipA.relationshipFrom(member, "HAS_FRIENDSHIP"))
-                .match(relationshipB.relationshipFrom(targetNode, "HAS_FRIENDSHIP"))
                 .returning(
                         member.property(PROP_ID).as("friendA_Id"),
-                        targetNode.property(PROP_ID).as("friendB_Id"),
+                        Cypher.property(Cypher.property(edgeData, "targetMember"), PROP_ID).as("friendB_Id"),
                         Cypher.property(Cypher.property(edgeData, "innerFriendship"), PROP_INTIMACY).as("intimacy"),
-                        relationshipA.property("interestScore").as("friendA_Interest"),
-                        relationshipB.property("interestScore").as("friendB_Interest")
+                        friendAInterest.as("friendA_Interest"),
+                        friendBInterest.as("friendB_Interest")
                 )
                 .build();
     }

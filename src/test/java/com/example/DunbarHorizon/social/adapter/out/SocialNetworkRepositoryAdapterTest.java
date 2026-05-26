@@ -48,8 +48,8 @@ class SocialNetworkRepositoryAdapterTest {
                 CREATE (ff:UserReference {id: 60})
                 CREATE (tx:UserReference {id: 100})
 
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.9})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fa)
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.8})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fb)
+                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.7}]->(:Friendship {intimacy: 0.9})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fa)
+                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.3}]->(:Friendship {intimacy: 0.8})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fb)
                 CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.7})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fc)
                 CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.6})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fd)
                 CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.5})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fe)
@@ -96,6 +96,25 @@ class SocialNetworkRepositoryAdapterTest {
         assertThat(result).allMatch(e ->
                 (e.friendAId().equals(10L) && e.friendBId().equals(20L)) ||
                 (e.friendAId().equals(20L) && e.friendBId().equals(10L))
+        );
+    }
+
+    @Test
+    @DisplayName("interestScore가 interestMap lookup으로 올바르게 반환된다")
+    void getDefaultIntimacyNetwork_interestScore가_interestMap_lookup으로_올바르게_반환된다() {
+        // given: me→A interestScore=0.7, me→B interestScore=0.3 (setupGraph에서 설정)
+        // A-B 엣지에서 friendA=A(10), friendB=B(20) or friendA=B(20), friendB=A(10)
+
+        List<NetworkFriendEdgeResult> result = repository.getDefaultIntimacyNetwork(1L, DunbarCircle.DUNBAR);
+
+        // then — A(10)가 friendA인 엣지: friendA_Interest=0.7, B(20)이 friendA인 엣지: friendA_Interest=0.3
+        assertThat(result).anyMatch(e ->
+                e.friendAId().equals(10L) && e.friendBId().equals(20L)
+                && e.friendAInterest() == 0.7 && e.friendBInterest() == 0.3
+        );
+        assertThat(result).anyMatch(e ->
+                e.friendAId().equals(20L) && e.friendBId().equals(10L)
+                && e.friendAInterest() == 0.3 && e.friendBInterest() == 0.7
         );
     }
 
