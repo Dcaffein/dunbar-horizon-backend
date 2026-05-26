@@ -22,6 +22,7 @@ public class FlagController {
     private final FlagManagementUseCase flagManagementUseCase;
     private final FlagParticipationUseCase flagParticipationUseCase;
     private final FlagQueryUseCase flagQueryUseCase;
+    private final FlagInvitationUseCase flagInvitationUseCase;
 
     @PostMapping
     public ResponseEntity<Long> createFlag(
@@ -121,5 +122,26 @@ public class FlagController {
     ) {
         flagParticipationUseCase.leaveFlag(id, currentUserId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{flagId}/participants/{participantId}/invite-permission")
+    public ResponseEntity<Void> updateInvitePermission(
+            @PathVariable Long flagId,
+            @PathVariable Long participantId,
+            @CurrentUserId Long currentUserId,
+            @RequestBody @Valid FlagInvitePermissionRequest request
+    ) {
+        flagInvitationUseCase.updateInvitePermission(flagId, currentUserId, participantId, request.canInvite());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{flagId}/invitations")
+    public ResponseEntity<Long> invite(
+            @PathVariable Long flagId,
+            @CurrentUserId Long currentUserId,
+            @RequestBody @Valid FlagInviteRequest request
+    ) {
+        Long invitationId = flagInvitationUseCase.invite(flagId, currentUserId, request.inviteeId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(invitationId);
     }
 }

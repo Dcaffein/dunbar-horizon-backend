@@ -8,5 +8,6 @@ public enum NotificationType {
     BUZZ_RESPONSE,
     FLAG_ENCORE,
     FLAG_CANCELED,
-    FLAG_SCHEDULE_CHANGED
+    FLAG_SCHEDULE_CHANGED,
+    FLAG_INVITATION
 }

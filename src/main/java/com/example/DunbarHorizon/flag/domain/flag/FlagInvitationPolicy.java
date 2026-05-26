@@ -1,0 +1,86 @@
+package com.example.DunbarHorizon.flag.domain.flag;
+
+import com.example.DunbarHorizon.flag.domain.flag.exception.*;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagInvitationRepository;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
+@Component
+@RequiredArgsConstructor
+public class FlagInvitationPolicy {
+
+    private final FlagRepository flagRepository;
+    private final FlagParticipantRepository participantRepository;
+    private final FlagInvitationRepository invitationRepository;
+
+    public void updateInvitePermission(Long flagId, Long requesterId, Long participantUserId, boolean canInvite) {
+        Flag flag = flagRepository.findById(flagId)
+                .orElseThrow(() -> new FlagNotFoundException(flagId));
+        FlagParticipant participant = participantRepository
+                .findByFlagIdAndParticipantId(flagId, participantUserId)
+                .orElseThrow(() -> new FlagParticipantNotFoundException(participantUserId));
+
+        if (canInvite) {
+            flag.grantInvitePermission(requesterId, participant);
+        } else {
+            flag.revokeInvitePermission(requesterId, participant);
+        }
+    }
+
+    public FlagInvitation invite(Long flagId, Long inviterId, Long inviteeId) {
+        Flag flag = flagRepository.findById(flagId)
+                .orElseThrow(() -> new FlagNotFoundException(flagId));
+
+        if (!flag.isRecruiting()) {
+            throw new FlagInvalidStatusException("모집 중인 플래그에만 초대할 수 있습니다.");
+        }
+
+        if (flag.getHostId().equals(inviteeId)) {
+            throw new FlagAuthorizationException("호스트는 초대 대상이 될 수 없습니다.");
+        }
+
+        FlagParticipant inviter = participantRepository
+                .findByFlagIdAndParticipantId(flagId, inviterId)
+                .orElseThrow(() -> new FlagParticipantNotFoundException(inviterId));
+
+        if (!inviter.isCanInvite()) {
+            throw new FlagAuthorizationException("초대 권한이 없습니다.");
+        }
+
+        if (participantRepository.isParticipating(flagId, inviteeId)) {
+            throw new FlagParticipationDuplicateException(flagId, inviteeId);
+        }
+
+        if (invitationRepository.existsPendingByFlagIdAndInviteeId(flagId, inviteeId)) {
+            throw new FlagInvitationDuplicateException(flagId, inviteeId);
+        }
+
+        return FlagInvitation.create(flagId, inviterId, inviteeId, flag.getSchedule().getDeadline());
+    }
+
+    public FlagParticipant accept(Long invitationId, Long acceptorId) {
+        FlagInvitation invitation = invitationRepository.findById(invitationId)
+                .orElseThrow(() -> new FlagInvitationNotFoundException(invitationId));
+
+        invitation.accept(acceptorId);
+
+        if (participantRepository.isParticipating(invitation.getFlagId(), acceptorId)) {
+            throw new FlagParticipationDuplicateException(invitation.getFlagId(), acceptorId);
+        }
+
+        Flag flag = flagRepository.findByIdExclusive(invitation.getFlagId())
+                .orElseThrow(() -> new FlagNotFoundException(invitation.getFlagId()));
+
+        int count = participantRepository.countByFlagId(invitation.getFlagId());
+        return flag.participate(acceptorId, count);
+    }
+
+    public void reject(Long invitationId, Long rejectorId) {
+        FlagInvitation invitation = invitationRepository.findById(invitationId)
+                .orElseThrow(() -> new FlagInvitationNotFoundException(invitationId));
+
+        invitation.reject(rejectorId);
+    }
+}

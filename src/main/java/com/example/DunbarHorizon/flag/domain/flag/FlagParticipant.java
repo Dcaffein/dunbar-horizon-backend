@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.flag.domain.flag;
 
 import com.example.DunbarHorizon.global.common.BaseTimeEntity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -20,10 +21,21 @@ public class FlagParticipant extends BaseTimeEntity {
 
     private Long participantId;
 
+    @Column(nullable = false)
+    private boolean canInvite = false;
+
     FlagParticipant(Long flagId, Long participantId) {
         validate(flagId, participantId);
         this.flagId = flagId;
         this.participantId = participantId;
+    }
+
+    public void grantInvitePermission() {
+        this.canInvite = true;
+    }
+
+    public void revokeInvitePermission() {
+        this.canInvite = false;
     }
 
     private void validate(Long flagId, Long participantId) {

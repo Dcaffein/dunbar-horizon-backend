@@ -211,6 +211,16 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
             throw new FlagAuthorizationException("플래그 참여자만 댓글을 작성할 수 있습니다.");
     }
 
+    public void grantInvitePermission(Long requesterId, FlagParticipant participant) {
+        validateHost(requesterId);
+        participant.grantInvitePermission();
+    }
+
+    public void revokeInvitePermission(Long requesterId, FlagParticipant participant) {
+        validateHost(requesterId);
+        participant.revokeInvitePermission();
+    }
+
     private void validateHost(Long userId) {
         if (!this.hostId.equals(userId)) throw new FlagAuthorizationException("호스트 권한이 없습니다.");
     }
