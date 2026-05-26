@@ -7,6 +7,7 @@ import com.example.DunbarHorizon.flag.application.port.in.FlagCommentQueryUseCas
 import com.example.DunbarHorizon.flag.application.dto.result.CommentResult;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,7 +40,7 @@ public class FlagCommentController {
     public ResponseEntity<Long> createRootComment(
             @PathVariable Long flagId,
             @CurrentUserId Long currentUserId,
-            @RequestBody CommentCreateRequest request
+            @Valid @RequestBody CommentCreateRequest request
     ) {
         Long commentId = flagCommentCommandUseCase.createRootComment(
                 flagId, currentUserId, request.content(), request.isPrivate()
@@ -51,7 +52,7 @@ public class FlagCommentController {
     public ResponseEntity<Long> createReply(
             @PathVariable Long parentId,
             @CurrentUserId Long currentUserId,
-            @RequestBody CommentCreateRequest request
+            @Valid @RequestBody CommentCreateRequest request
     ) {
         Long replyId = flagCommentCommandUseCase.createReply(
                 parentId, currentUserId, request.content(), request.isPrivate()
@@ -63,7 +64,7 @@ public class FlagCommentController {
     public ResponseEntity<Void> updateComment(
             @PathVariable Long commentId,
             @CurrentUserId Long currentUserId,
-            @RequestBody CommentUpdateRequest request
+            @Valid @RequestBody CommentUpdateRequest request
     ) {
         flagCommentCommandUseCase.updateComment(
                 commentId, currentUserId, request.content(), request.isPrivate()

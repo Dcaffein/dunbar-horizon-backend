@@ -1,20 +1,11 @@
-# PLAN: task-44 — Buzz 도메인 버그 수정 및 도메인 규칙 강화
+# PLAN: task-45 — Flag 도메인 취약점 수정
+
+## Branch
+`ai/fix-flag-domain-issues`
 
 ## 작업 목표
 
-Buzz 도메인에서 발견된 버그 4건을 수정하고, 서비스 계층에 흩어진 권한 검증 로직을 도메인으로 이동한다.
-
----
-
-## 현황 분석
-
-| # | 위치 | 문제 |
-|---|------|------|
-| 1 | `BuzzDetailResult.from()` L24 | `buzz.getComments()` 전체를 그대로 반환 — `isPublic=false` 댓글이 모두에게 노출 |
-| 2 | `BuzzNotificationDispatcher.dispatch(BuzzCommentedEvent)` | `creatorId == commenterId` 조건 없음 — 작성자가 자신의 Buzz에 댓글 달면 자기 자신에게 알림 |
-| 3 | `BuzzService.commentOnBuzz` L74, `updateComment` L91 | `upload()` 이후 도메인 검증 — 만료/권한 오류 시 S3 파일 고아 발생 |
-| 4 | `Buzz.validateCommentDeletion()` L120 | `isExpired()` 체크 없음 — `createComment`, `updateComment`와 불일치 |
-| 5 | `BuzzService.deleteBuzz` L106, `getBuzzDetail` L123 | 권한 검증 로직이 서비스 계층에 인라인 위치 |
+Flag 도메인의 접근 권한 검증 누락, 입력 검증 누락, bare orElseThrow를 수정한다.
 
 ---
 
@@ -22,44 +13,44 @@ Buzz 도메인에서 발견된 버그 4건을 수정하고, 서비스 계층에 
 
 | 파일 | 변경 내용 |
 |------|-----------|
-| `buzz/domain/Buzz.java` | `getVisibleComments(Long viewerId)` 추가, `validateAccess` / `validateDeletion` / `validateCommentCreation` / `validateCommentUpdate` 추가, `validateCommentDeletion`에 만료 체크 추가 |
-| `buzz/application/dto/result/BuzzDetailResult.java` | `getComments()` → `getVisibleComments(currentUserId)` |
-| `buzz/application/service/BuzzService.java` | upload 순서 변경, 권한 검증 도메인 위임 |
-| `buzz/application/eventListener/BuzzNotificationDispatcher.java` | 자기 자신 알림 가드 추가 |
+| `flag/domain/flag/Flag.java` | `validateAccess`, `validateCommentCreation` 도메인 메서드 추가 |
+| `flag/application/service/flag/FlagQueryService.java` | `getFlagDetail`에 `flag.validateAccess` 호출 추가 |
+| `flag/application/service/comment/FlagCommentQueryService.java` | `FlagParticipantRepository` 의존성 추가, `getCommentTree`에 `flag.validateAccess` 호출 추가 |
+| `flag/application/service/comment/FlagCommentCommandService.java` | `FlagParticipantRepository` 의존성 추가, `createRootComment`/`createReply`에 `validateCommentCreation` 호출, `deleteComment` bare orElseThrow 수정 |
+| `flag/adapter/in/web/FlagCommentController.java` | `createRootComment`, `createReply`, `updateComment`에 `@Valid` 추가 |
 
 ---
 
 ## 구현 방향
 
-### isPublic 필터
+### Flag.java — 도메인 메서드 추가
 
-`Buzz`에 `getVisibleComments(Long viewerId)` 추가:
 ```java
-public List<BuzzComment> getVisibleComments(Long viewerId) {
-    return comments.stream()
-            .filter(c -> c.isPublic() || creatorId.equals(viewerId) || c.getCommenterId().equals(viewerId))
-            .toList();
+public void validateAccess(Long viewerId, Set<Long> participantIds) {
+    if (!hostId.equals(viewerId) && !participantIds.contains(viewerId))
+        throw new FlagAuthorizationException("플래그에 접근 권한이 없습니다.");
+}
+
+public void validateCommentCreation(Long commenterId, Set<Long> participantIds) {
+    if (!hostId.equals(commenterId) && !participantIds.contains(commenterId))
+        throw new FlagAuthorizationException("플래그 참여자만 댓글을 작성할 수 있습니다.");
 }
 ```
 
-`BuzzDetailResult.from()`에서 `buzz.getComments()` → `buzz.getVisibleComments(currentUserId)`.
+### FlagQueryService.getFlagDetail
 
-### S3 업로드 순서
+이미 participants를 로드하므로 `flag.validateAccess(viewerId, participantIds)` 한 줄 추가.
 
-`commentOnBuzz`: `validateCommentCreation()` (만료 + 접근 검증) → `upload()` → `createComment()`  
-`updateComment`: `validateCommentUpdate()` (만료 + 작성자 검증) → `upload()` → persist
+### FlagCommentQueryService.getCommentTree
 
-`createComment()` 내부 검증은 그대로 유지 — 사전 검증 메서드는 upload 이전 guard 역할만.
+`FlagParticipantRepository` 주입 후 participants 로드, `flag.validateAccess(viewerId, participantIds)` 호출.
 
-### 권한 검증 도메인 이동
+### FlagCommentCommandService
 
-`Buzz`에 `validateAccess(Long userId)`, `validateDeletion(Long requesterId)` 추가.  
-서비스의 인라인 `if (!...) throw` 블록을 해당 메서드 호출로 교체.
+- `createRootComment`: `existsById` → `findById` + participants 로드 + `flag.validateCommentCreation(userId, participantIds)`
+- `createReply`: parent에서 flagId 추출 → flag + participants 로드 + `flag.validateCommentCreation(userId, participantIds)`
+- `deleteComment`: `orElseThrow()` → `orElseThrow(() -> new FlagNotFoundException(comment.getFlagId()))`
 
----
+### FlagCommentController
 
-## 예상 사이드 이펙트
-
-- `getBuzzDetail` 응답에서 `isPublic=false` 댓글이 필터링되므로, 댓글 작성자 본인과 Buzz 작성자가 아닌 수신자는 해당 댓글을 더 이상 받지 못함 — **의도된 변경**
-- `BuzzComment`의 `isPublic()` getter는 Lombok `@Getter`로 이미 생성됨 — 별도 추가 불필요
-- 사전 검증 메서드(`validateCommentCreation`, `validateCommentUpdate`)와 기존 도메인 메서드(`createComment`, `updateComment`)의 검증 로직이 중복되나, upload guard 목적이 분리되어 있으므로 허용
+`@RequestBody` 앞에 `@Valid` 추가 (3곳).

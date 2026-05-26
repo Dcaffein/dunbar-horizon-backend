@@ -6,10 +6,13 @@ import com.example.DunbarHorizon.flag.domain.comment.exception.FlagCommentNotFou
 import com.example.DunbarHorizon.flag.domain.comment.repository.FlagCommentRepository;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -17,13 +20,16 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
 
     private final FlagCommentRepository commentRepository;
     private final FlagRepository flagRepository;
+    private final FlagParticipantRepository participantRepository;
 
     @Override
     @Transactional
     public Long createRootComment(Long flagId, Long userId, String content, boolean isPrivate) {
-        if(!flagRepository.existsById(flagId)){
-            throw new FlagNotFoundException(flagId);
-        }
+        Flag flag = flagRepository.findById(flagId)
+                .orElseThrow(() -> new FlagNotFoundException(flagId));
+        List<Long> participantIds = participantRepository.findAllParticipantIdsByFlagId(flagId);
+        flag.validateCommentCreation(userId, participantIds);
+
         FlagComment comment = FlagComment.createRoot(flagId, userId, content, isPrivate);
         return commentRepository.save(comment).getId();
     }
@@ -33,6 +39,11 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
     public Long createReply(Long parentId, Long userId, String content, boolean isPrivate) {
         FlagComment parent = commentRepository.findById(parentId)
                 .orElseThrow(() -> new FlagCommentNotFoundException(parentId));
+
+        Flag flag = flagRepository.findById(parent.getFlagId())
+                .orElseThrow(() -> new FlagNotFoundException(parent.getFlagId()));
+        List<Long> participantIds = participantRepository.findAllParticipantIdsByFlagId(parent.getFlagId());
+        flag.validateCommentCreation(userId, participantIds);
 
         FlagComment reply = parent.createReply(userId, content, isPrivate);
         return commentRepository.save(reply).getId();
@@ -53,7 +64,8 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
         FlagComment comment = commentRepository.findByIdForUpdate(commentId)
                 .orElseThrow(() -> new FlagCommentNotFoundException(commentId));
 
-        Flag flag = flagRepository.findById(comment.getFlagId()).orElseThrow();
+        Flag flag = flagRepository.findById(comment.getFlagId())
+                .orElseThrow(() -> new FlagNotFoundException(comment.getFlagId()));
 
         comment.validateDeletionAuthority(userId, flag.getHostId());
 

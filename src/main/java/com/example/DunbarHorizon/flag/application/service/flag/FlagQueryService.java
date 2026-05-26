@@ -18,11 +18,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.HashSet;
 
 @Service
 @RequiredArgsConstructor
@@ -55,12 +55,13 @@ public class FlagQueryService implements FlagQueryUseCase {
 
         List<FlagParticipant> participants = participantRepository.findAllByFlagId(flagId);
 
-        boolean isHost = flag.getHostId().equals(viewerId);
-        boolean isParticipant = participants.stream().anyMatch(p -> p.getParticipantId().equals(viewerId));
+        List<Long> participantIds = participants.stream().map(FlagParticipant::getParticipantId).toList();
+        flag.validateAccess(viewerId, participantIds);
 
-        Set<Long> allUserIds = participants.stream()
-                .map(FlagParticipant::getParticipantId)
-                .collect(Collectors.toCollection(HashSet::new));
+        boolean isHost = flag.getHostId().equals(viewerId);
+        boolean isParticipant = participantIds.contains(viewerId);
+
+        Set<Long> allUserIds = new HashSet<>(participantIds);
         allUserIds.add(flag.getHostId());
 
         Map<Long, FlagUserInfo> userInfoMap = flagUserPort.findUserInfosByIds(allUserIds);

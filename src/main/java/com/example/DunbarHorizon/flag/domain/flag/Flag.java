@@ -17,6 +17,7 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -199,6 +200,16 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
     public boolean isEnded() { return calculateCurrentStatus().isEnded(); }
 
     public boolean isRecruiting() { return calculateCurrentStatus().isRecruiting(); }
+
+    public void validateAccess(Long viewerId, List<Long> participantIds) {
+        if (!hostId.equals(viewerId) && !participantIds.contains(viewerId))
+            throw new FlagAuthorizationException("플래그에 접근 권한이 없습니다.");
+    }
+
+    public void validateCommentCreation(Long commenterId, List<Long> participantIds) {
+        if (!hostId.equals(commenterId) && !participantIds.contains(commenterId))
+            throw new FlagAuthorizationException("플래그 참여자만 댓글을 작성할 수 있습니다.");
+    }
 
     private void validateHost(Long userId) {
         if (!this.hostId.equals(userId)) throw new FlagAuthorizationException("호스트 권한이 없습니다.");
