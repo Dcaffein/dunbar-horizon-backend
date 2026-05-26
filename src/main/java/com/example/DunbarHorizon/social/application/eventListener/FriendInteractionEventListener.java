@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.application.eventListener;
 
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
-import com.example.DunbarHorizon.global.event.interaction.MutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import com.example.DunbarHorizon.social.application.port.out.InteractionScoreDeltaPort;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
@@ -26,26 +25,15 @@ public class FriendInteractionEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleUserInteraction(UserInteractionEvent event) {
         try {
-            String friendshipId = Friendship.generateCompositeId(event.actorId(), event.targetId());
+            String friendshipId = Friendship.generateCompositeId(event.userA(), event.userB());
             double delta = InteractionScorePolicy.scoreOf(event.type());
-            deltaPort.accumulate(friendshipId, event.actorId(), delta);
-            log.debug("Interaction delta buffered: {} -> {}, type={}", event.actorId(), event.targetId(), event.type());
+            deltaPort.accumulate(friendshipId, event.userA(), delta);
+            if (event.type().isMutual()) {
+                deltaPort.accumulate(friendshipId, event.userB(), delta);
+            }
+            log.debug("Interaction delta buffered: {} <-> {}, type={}, mutual={}", event.userA(), event.userB(), event.type(), event.type().isMutual());
         } catch (Exception e) {
-            log.error("Failed to buffer interaction delta: {} -> {}", event.actorId(), event.targetId(), e);
-        }
-    }
-
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleMutualInteraction(MutualInteractionEvent event) {
-        try {
-            String friendshipId = Friendship.generateCompositeId(event.userIdA(), event.userIdB());
-            double delta = InteractionScorePolicy.scoreOf(event.type());
-            deltaPort.accumulate(friendshipId, event.userIdA(), delta);
-            deltaPort.accumulate(friendshipId, event.userIdB(), delta);
-            log.debug("Mutual delta buffered: {} <-> {}, type={}", event.userIdA(), event.userIdB(), event.type());
-        } catch (Exception e) {
-            log.error("Failed to buffer mutual interaction delta: {} <-> {}", event.userIdA(), event.userIdB(), e);
+            log.error("Failed to buffer interaction delta: {} <-> {}", event.userA(), event.userB(), e);
         }
     }
 
