@@ -134,7 +134,7 @@ class FlagTest {
         // then
         assertThat(encore.getTitle()).isEqualTo(parent.getTitle());
         assertThat(encore.getCapacity()).isEqualTo(parent.getCapacity());
-        assertThat(parent.isPreserved()).isTrue();
+        assertThat(parent.isSoftDeleteProtected()).isTrue();
     }
 
     @Test

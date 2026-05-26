@@ -1,12 +1,11 @@
 package com.example.DunbarHorizon.flag.application.eventListener;
 
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagPreservationCriteria;
+import com.example.DunbarHorizon.flag.domain.flag.FlagPreservationDomainService;
 import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
-import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
@@ -30,7 +29,7 @@ public class FlagDeletionEventListener {
 
     private final FlagRepository flagRepository;
     private final FlagParticipantRepository participantRepository;
-    private final FlagMemorialRepository memorialRepository;
+    private final FlagPreservationDomainService flagPreservationDomainService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Async
@@ -45,12 +44,8 @@ public class FlagDeletionEventListener {
 
         processParticipantCleanup(event, deletedFlag.getHostId());
 
-        if (deletedFlag.getParentId() != null) {
-            flagRepository.findById(deletedFlag.getParentId()).ifPresent(grandParent -> {
-                boolean hasMemorial = memorialRepository.existsByFlagId(deletedFlag.getId());
-                boolean hasEncore = encoreResult.isPresent();
-                grandParent.updatePreservation(new FlagPreservationCriteria(hasMemorial,hasEncore));
-            });
+        if (event.parentId() != null) {
+            flagPreservationDomainService.refresh(event.parentId());
         }
     }
 
