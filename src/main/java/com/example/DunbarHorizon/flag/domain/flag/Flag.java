@@ -21,7 +21,9 @@ import java.util.UUID;
 
 @Entity
 @DynamicUpdate
-@Table(name = "flags")
+@Table(name = "flags", uniqueConstraints = {
+        @UniqueConstraint(name = "uq_flags_parent_id", columnNames = "parent_id")
+})
 @SQLDelete(sql = "UPDATE flags SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
