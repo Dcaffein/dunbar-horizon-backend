@@ -270,7 +270,35 @@ RETURN
 
 ## Result
 
-> 구현 완료 후 작성
+**브랜치:** `ai/refactor-optimize-network-query-interest-score`
+**커밋:** `2ffa4e4`
 
-- 브랜치:
-- 커밋:
+### 변경 내용
+
+#### SocialNetworkRepositoryAdapter
+
+- `getDefaultIntimacyNetwork` / `getLabelCustomNetwork`: `friendshipBetween()` 대신 명명된 관계 `r_me` 선언, `buildDynamicPruningNetwork`에 전달
+- `buildDynamicPruningNetwork` 시그니처에 `Relationship rMe` 추가
+
+**제거된 DSL 변수:** `friendshipA`, `friendshipB`, `relationshipA`, `relationshipB`, `targetNode`, `members`, `friendshipList`, `index`, `allEdges`(외부 스코프)
+
+**새 쿼리 흐름:**
+1. `WITH me, member, myFriendship, r_me ORDER BY intimacy LIMIT $limitSize`
+2. `WITH me, collect({member, friendship, interestScore: coalesce(r_me.interestScore, 0.0)}) AS friendData`
+3. `WITH me, friendData, apoc.coll.union(...) AS boundary, apoc.map.fromPairs(...) AS interestMap`
+4. `UNWIND friendData AS item → WITH me, boundary, interestMap, member, myFriendship`
+5. `WITH me, boundary, interestMap, member, toInteger(5 + ...) AS dynamicLimit`
+6. CALL 서브쿼리: `member <> targetMember AND targetMember <> me` 조건으로 self-loop 및 me-edge 제외
+7. `UNWIND topEdges AS edgeData → RETURN ... interestMap[toString(member.id)] ...`
+
+**수정 포인트 (spec 대비):**
+- 태스크 spec의 After Cypher는 `targetMember <> me` 조건 누락 — 기존 코드의 마지막 두 MATCH가 암묵적으로 걸렀던 me-to-friend 엣지를 CALL 서브쿼리 WHERE에 명시적으로 추가
+
+#### SocialNetworkRepositoryAdapterTest
+
+- `me→A interestScore: 0.7`, `me→B interestScore: 0.3` 으로 테스트 데이터 분화
+- 신규 케이스: `interestScore가 interestMap lookup으로 올바르게 반환된다`
+
+### 테스트 결과
+
+- `SocialNetworkRepositoryAdapterTest`: 9/9 PASSED (Testcontainers Neo4j 5.12)
