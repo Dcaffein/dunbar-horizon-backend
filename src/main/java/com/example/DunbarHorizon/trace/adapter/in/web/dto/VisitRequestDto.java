@@ -1,4 +1,6 @@
 package com.example.DunbarHorizon.trace.adapter.in.web.dto;
 
-public record VisitRequestDto(Long targetId) {
+import jakarta.validation.constraints.NotNull;
+
+public record VisitRequestDto(@NotNull Long targetId) {
 }

@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.trace.domain.model;
 import com.example.DunbarHorizon.global.common.BaseTimeAggregateRoot;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.trace.domain.event.TraceRevealedEvent;
+import com.example.DunbarHorizon.trace.domain.exception.TraceSelfVisitException;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -148,7 +149,7 @@ public class Trace extends BaseTimeAggregateRoot {
 
     private void validateNotSelf(Long visitorId, Long targetId) {
         if (Objects.equals(visitorId, targetId)) {
-            throw new IllegalArgumentException("Cannot trace self.");
+            throw new TraceSelfVisitException();
         }
     }
 }
