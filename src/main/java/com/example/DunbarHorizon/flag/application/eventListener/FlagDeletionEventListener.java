@@ -37,19 +37,16 @@ public class FlagDeletionEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleFlagDeletion(FlagDeletedEvent event) {
-        Flag deletedFlag = flagRepository.findById(event.flagId())
-                .orElseThrow(() -> new IllegalStateException("삭제된 플래그를 찾을 수 없습니다."));
-
-        Optional<Flag> encoreResult = flagRepository.findByParentId(deletedFlag.getId());
+        Optional<Flag> encoreResult = flagRepository.findByParentId(event.flagId());
         encoreResult.ifPresent(Flag::severParentLink);
 
-        processParticipantCleanup(event, deletedFlag.getHostId());
+        processParticipantCleanup(event, event.hostId());
 
-        if (deletedFlag.getParentId() != null) {
-            flagRepository.findById(deletedFlag.getParentId()).ifPresent(grandParent -> {
-                boolean hasMemorial = memorialRepository.existsByFlagId(deletedFlag.getId());
+        if (event.parentId() != null) {
+            flagRepository.findById(event.parentId()).ifPresent(grandParent -> {
+                boolean hasMemorial = memorialRepository.existsByFlagId(event.flagId());
                 boolean hasEncore = encoreResult.isPresent();
-                grandParent.updatePreservation(new FlagPreservationCriteria(hasMemorial,hasEncore));
+                grandParent.updatePreservation(new FlagPreservationCriteria(hasMemorial, hasEncore));
             });
         }
     }

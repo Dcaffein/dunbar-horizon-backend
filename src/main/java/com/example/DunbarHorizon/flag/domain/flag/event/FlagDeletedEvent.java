@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 
 public record FlagDeletedEvent(
         Long flagId,
+        Long hostId,
         Long parentId,
         String flagTitle,
         FlagStatus statusAtDeletion
