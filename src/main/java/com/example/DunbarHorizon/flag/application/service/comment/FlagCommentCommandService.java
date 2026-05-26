@@ -19,6 +19,7 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
     private final FlagRepository flagRepository;
 
     @Override
+    @Transactional
     public Long createRootComment(Long flagId, Long userId, String content, boolean isPrivate) {
         if(!flagRepository.existsById(flagId)){
             throw new FlagNotFoundException(flagId);
@@ -28,10 +29,10 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
     }
 
     @Override
+    @Transactional
     public Long createReply(Long parentId, Long userId, String content, boolean isPrivate) {
-
-        FlagComment parent = commentRepository.findByIdForUpdate(parentId)
-                .orElseThrow(() -> new FlagNotFoundException(parentId));
+        FlagComment parent = commentRepository.findById(parentId)
+                .orElseThrow(() -> new FlagCommentNotFoundException(parentId));
 
         FlagComment reply = parent.createReply(userId, content, isPrivate);
         return commentRepository.save(reply).getId();
