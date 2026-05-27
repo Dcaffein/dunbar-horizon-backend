@@ -4,5 +4,6 @@ import java.util.Map;
 
 public interface InteractionScoreDeltaPort {
     void accumulate(String friendshipId, Long userId, double delta);
-    Map<String, Map<String, Double>> drainAll();
+    void accumulateMutual(String friendshipId, double delta);
+    Map<String, FriendshipDelta> drainAll();
 }

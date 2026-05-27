@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipDelta;
 import com.example.DunbarHorizon.social.application.port.out.InteractionScoreDeltaPort;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
@@ -23,34 +24,42 @@ public class InteractionScoreFlushService {
 
     @Neo4jTransactional
     public void flush() {
-        Map<String, Map<String, Double>> deltas = deltaPort.drainAll();
+        Map<String, FriendshipDelta> deltas = deltaPort.drainAll();
         if (deltas.isEmpty()) return;
 
-        List<String> friendshipIds = new ArrayList<>(deltas.keySet());
-        List<Friendship> friendships = friendshipRepository.findAllByIds(friendshipIds);
-
+        List<Friendship> friendships = friendshipRepository.findAllByIds(new ArrayList<>(deltas.keySet()));
         if (friendships.isEmpty()) return;
 
         LocalDateTime now = LocalDateTime.now();
         List<Map<String, Object>> updates = new ArrayList<>();
 
         for (Friendship friendship : friendships) {
-            Map<String, Double> friendshipDeltas = deltas.get(friendship.getId());
-            if (friendshipDeltas == null) continue;
+            FriendshipDelta delta = deltas.get(friendship.getId());
+            if (delta == null) continue;
 
-            friendshipDeltas.forEach((userIdStr, delta) ->
-                    friendship.adjustInterestScore(Long.parseLong(userIdStr), delta)
+            delta.unilateral().forEach((userId, d) ->
+                    friendship.adjustInterestScore(userId, d)
             );
 
-            friendshipDeltas.keySet().forEach(userIdStr -> {
-                Long userId = Long.parseLong(userIdStr);
-                updates.add(Map.of(
+            if (delta.hasMutual()) {
+                friendship.adjustMutualInterestScore(delta.mutual());
+            }
+
+            delta.unilateral().keySet().forEach(userId -> updates.add(Map.of(
+                    "friendshipId", friendship.getId(),
+                    "userId", userId,
+                    "interestScore", friendship.getMyInterestScore(userId),
+                    "intimacy", friendship.getIntimacy()
+            )));
+
+            if (delta.hasMutual()) {
+                friendship.getUsers().forEach(user -> updates.add(Map.of(
                         "friendshipId", friendship.getId(),
-                        "userId", userId,
-                        "interestScore", friendship.getMyInterestScore(userId),
+                        "userId", user.getId(),
+                        "interestScore", friendship.getMyInterestScore(user.getId()),
                         "intimacy", friendship.getIntimacy()
-                ));
-            });
+                )));
+            }
         }
 
         if (!updates.isEmpty()) {
