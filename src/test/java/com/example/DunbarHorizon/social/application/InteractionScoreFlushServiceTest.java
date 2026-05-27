@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class InteractionScoreFlushServiceTest {
@@ -94,14 +95,14 @@ class InteractionScoreFlushServiceTest {
     private Friendship mockFriendship(String id) {
         Friendship friendship = mock(Friendship.class);
         given(friendship.getId()).willReturn(id);
-        given(friendship.getMyInterestScore(USER_A)).willReturn(10.0);
-        given(friendship.getMyInterestScore(USER_B)).willReturn(10.0);
-        given(friendship.getIntimacy()).willReturn(0.1);
+        lenient().when(friendship.getMyInterestScore(USER_A)).thenReturn(10.0);
+        lenient().when(friendship.getMyInterestScore(USER_B)).thenReturn(10.0);
+        lenient().when(friendship.getIntimacy()).thenReturn(0.1);
         UserReference refA = mock(UserReference.class);
         UserReference refB = mock(UserReference.class);
-        given(refA.getId()).willReturn(USER_A);
-        given(refB.getId()).willReturn(USER_B);
-        given(friendship.getUsers()).willReturn(Set.of(refA, refB));
+        lenient().when(refA.getId()).thenReturn(USER_A);
+        lenient().when(refB.getId()).thenReturn(USER_B);
+        lenient().when(friendship.getUsers()).thenReturn(Set.of(refA, refB));
         return friendship;
     }
 }

@@ -33,19 +33,21 @@ class FriendshipTest {
         SocialUser userB = new SocialUser(2L, "B", "");
         Friendship friendship = new Friendship(userA, userB);
 
-        double rawA = 4.0;
-        double rawB = 9.0;
+        double deltaA = 4.0;
+        double deltaB = 9.0;
         double k = FriendRecognition.CONVERGENCE_K; // 50.0
 
         // when
-        friendship.adjustInterestScore(1L, rawA);
-        friendship.adjustInterestScore(2L, rawB);
+        friendship.adjustInterestScore(1L, deltaA);
+        friendship.adjustInterestScore(2L, deltaB);
 
         // then
-        // 정규화 점수 계산: raw / (raw + 50)
-        double normA = rawA / (rawA + k); // 4 / 54 ≈ 0.07407
-        double normB = rawB / (rawB + k); // 9 / 59 ≈ 0.15254
-        double expectedIntimacy = Math.sqrt(normA * normB); // sqrt(0.07407 * 0.15254) ≈ 0.1063
+        // adjustInterestScore는 delta를 더하므로 최종 score = INITIAL_RAW_SCORE + delta
+        double scoreA = FriendRecognition.INITIAL_RAW_SCORE + deltaA;
+        double scoreB = FriendRecognition.INITIAL_RAW_SCORE + deltaB;
+        double normA = scoreA / (scoreA + k);
+        double normB = scoreB / (scoreB + k);
+        double expectedIntimacy = Math.sqrt(normA * normB);
 
         assertThat(friendship.getIntimacy())
                 .isCloseTo(expectedIntimacy, within(0.0001));
@@ -83,7 +85,7 @@ class FriendshipTest {
 
         // when
         friendship.adjustInterestScore(1L, 100.0);
-        friendship.adjustInterestScore(2L, 0.0); // 0 / (0 + 50) = 0
+        friendship.adjustInterestScore(2L, -FriendRecognition.INITIAL_RAW_SCORE); // INITIAL_RAW_SCORE - INITIAL_RAW_SCORE = 0
 
         // then
         assertThat(friendship.getIntimacy()).isEqualTo(0.0);
