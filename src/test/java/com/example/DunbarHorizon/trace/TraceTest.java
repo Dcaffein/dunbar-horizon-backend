@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.trace;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import com.example.DunbarHorizon.trace.domain.event.TraceRevealedEvent;
+import com.example.DunbarHorizon.trace.domain.exception.TraceSelfVisitException;
 import com.example.DunbarHorizon.trace.domain.model.Trace;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,8 +38,7 @@ class TraceTest {
     @DisplayName("자기 자신을 방문하려고 하면 예외가 발생한다")
     void constructor_Fail_SelfVisit() {
         assertThatThrownBy(() -> new Trace(user1, user1))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Cannot trace self.");
+                .isInstanceOf(TraceSelfVisitException.class);
     }
 
     @Test

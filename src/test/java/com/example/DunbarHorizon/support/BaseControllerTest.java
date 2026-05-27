@@ -57,6 +57,7 @@ public abstract class BaseControllerTest {
     @MockitoBean protected FlagManagementUseCase flagManagementUseCase;
     @MockitoBean protected FlagParticipationUseCase flagParticipationUseCase;
     @MockitoBean protected FlagQueryUseCase flagQueryUseCase;
+    @MockitoBean protected FlagInvitationUseCase flagInvitationUseCase;
 
     @MockitoBean protected FlagCommentCommandUseCase flagCommentCommandUseCase;
     @MockitoBean protected FlagCommentQueryUseCase flagCommentQueryUseCase;

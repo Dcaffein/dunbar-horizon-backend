@@ -24,7 +24,7 @@ class TraceControllerTest extends BaseControllerTest {
         mockMvc.perform(post("/api/v1/social/traces")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
 
         verify(traceCommandUseCase).recordTrace(eq(1L), eq(targetId));
     }
