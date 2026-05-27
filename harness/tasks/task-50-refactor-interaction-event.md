@@ -38,3 +38,26 @@ flush 시점에 `friendship.adjustInterestScore`도 두 번 호출되고, `recal
 
 - 같은 Friendship에 unilateral과 mutual이 동시에 쌓일 수 있다 (방문 + 플래그 동시 발생).
 - `BatchMutualInteractionEvent`: N명 참여자 각 쌍이 모두 mutual 처리 대상이다.
+
+---
+
+## Result (task-50, 2026-05-27)
+
+**브랜치:** `ai/refactor-interaction-event` → `main` 머지
+
+### 변경 내역
+
+| 파일 | 내용 |
+|---|---|
+| `InteractionType.java` | `mutual` 플래그 추가 (FLAG_ENDED, FLAG_ENDED_ENCORE = true) |
+| `UserInteractionEvent.java` | 필드명 `actorId/targetId` → `userA/userB` 중립화 |
+| `MutualInteractionEvent.java` | 삭제 (발행 지점 없는 데드코드) |
+| `Friendship.java` | `adjustMutualInterestScore(delta)` 추가 — 양쪽 동시 적용 후 `recalculateIntimacy()` 1회 |
+| `FriendshipDelta.java` | 신규 record — `unilateral(Map<Long,Double>)` + `mutual(double)` |
+| `InteractionScoreDeltaPort.java` | `accumulateMutual` 추가, `drainAll` 반환 타입 `FriendshipDelta`로 변경 |
+| `InteractionScoreRedisAdapter.java` | `uni:` / `mutual:` 키 분리로 flush까지 mutual 여부 보존 |
+| `InteractionScoreFlushService.java` | `FriendshipDelta` 기준 분기 후 Friendship 메서드 위임 |
+| `FriendInteractionEventListener.java` | `handleMutualInteraction` 제거, `type.isMutual()`로 port 분기 |
+| `FriendshipTest.java` | `adjustMutualInterestScore` 테스트 추가, 기존 버그 수정 (INITIAL_RAW_SCORE 미반영) |
+| `FriendInteractionEventListenerTest.java` | mutual 케이스 → `accumulateMutual` 호출 검증으로 교체 |
+| `InteractionScoreFlushServiceTest.java` | unilateral/mutual 분기 검증으로 재작성 |
