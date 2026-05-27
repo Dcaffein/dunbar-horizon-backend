@@ -1,9 +1,13 @@
-package com.example.DunbarHorizon.flag.domain.flag;
+package com.example.DunbarHorizon.flag.domain.invitation;
 
+import com.example.DunbarHorizon.flag.domain.flag.Flag;
+import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
+import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.*;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagInvitationRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
+import com.example.DunbarHorizon.flag.domain.invitation.exception.*;
+import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitationRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

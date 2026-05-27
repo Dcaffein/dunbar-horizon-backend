@@ -1,6 +1,6 @@
-package com.example.DunbarHorizon.flag.domain.flag.repository;
+package com.example.DunbarHorizon.flag.domain.invitation.repository;
 
-import com.example.DunbarHorizon.flag.domain.flag.FlagInvitation;
+import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitation;
 
 import java.util.Collection;
 import java.util.Optional;

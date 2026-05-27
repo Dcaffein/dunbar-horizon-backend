@@ -1,13 +1,13 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
 import com.example.DunbarHorizon.flag.application.port.in.FlagInvitationUseCase;
-import com.example.DunbarHorizon.flag.domain.flag.FlagInvitation;
-import com.example.DunbarHorizon.flag.domain.flag.FlagInvitationManager;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
-import com.example.DunbarHorizon.flag.domain.flag.event.FlagInvitationSentEvent;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagInvitationRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
+import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitation;
+import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationManager;
+import com.example.DunbarHorizon.flag.domain.invitation.event.FlagInvitationSentEvent;
+import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
