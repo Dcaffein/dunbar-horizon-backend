@@ -117,6 +117,11 @@ public class Friendship {
         recalculateIntimacy();
     }
 
+    public void adjustMutualInterestScore(double scoreDelta) {
+        recognitions.forEach(r -> r.adjustInterestScore(scoreDelta));
+        recalculateIntimacy();
+    }
+
     public void updateMuteStatus(Long myId, boolean isMuted) {
         getSelfRecognition(myId).updateMuteStatus(isMuted);
     }

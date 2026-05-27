@@ -52,6 +52,30 @@ class FriendshipTest {
     }
 
     @Test
+    @DisplayName("adjustMutualInterestScore는 양쪽 모두 동일한 delta를 적용하고 intimacy를 1회 재계산한다")
+    void adjustMutualInterestScore_updatesBothSides() {
+        // given
+        SocialUser userA = new SocialUser(1L, "A", "");
+        SocialUser userB = new SocialUser(2L, "B", "");
+        Friendship friendship = new Friendship(userA, userB);
+        double delta = 10.0;
+        double k = FriendRecognition.CONVERGENCE_K;
+        double initialScore = FriendRecognition.INITIAL_RAW_SCORE;
+
+        // when
+        friendship.adjustMutualInterestScore(delta);
+
+        // then
+        double expectedScore = initialScore + delta;
+        assertThat(friendship.getMyInterestScore(1L)).isCloseTo(expectedScore, within(0.0001));
+        assertThat(friendship.getMyInterestScore(2L)).isCloseTo(expectedScore, within(0.0001));
+
+        double norm = expectedScore / (expectedScore + k);
+        double expectedIntimacy = Math.sqrt(norm * norm);
+        assertThat(friendship.getIntimacy()).isCloseTo(expectedIntimacy, within(0.0001));
+    }
+
+    @Test
     @DisplayName("한 명의 관심도가 0이라면 정규화 후에도 친밀도는 0이어야 한다")
     void recalculateIntimacy_WithZero() {
         // given
