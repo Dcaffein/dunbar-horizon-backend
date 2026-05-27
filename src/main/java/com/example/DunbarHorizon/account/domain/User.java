@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.account.domain.model;
+package com.example.DunbarHorizon.account.domain;
 
 import com.example.DunbarHorizon.global.event.user.UserActivatedEvent;
 import com.example.DunbarHorizon.global.event.user.UserDeactivatedEvent;

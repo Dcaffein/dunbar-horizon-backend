@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.account.domain.model;
+package com.example.DunbarHorizon.account.domain;
 
 import com.example.DunbarHorizon.account.domain.exception.AlreadyRegisteredEmailException;
 import com.example.DunbarHorizon.global.common.BaseTimeAggregateRoot;

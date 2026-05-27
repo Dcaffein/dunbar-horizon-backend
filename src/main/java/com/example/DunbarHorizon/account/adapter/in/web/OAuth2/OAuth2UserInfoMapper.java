@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.account.adapter.in.web.OAuth2;
 
 import com.example.DunbarHorizon.account.adapter.in.web.OAuth2.OAuth2UserInfo.GoogleOAuth2UserInfo;
 import com.example.DunbarHorizon.account.adapter.in.web.OAuth2.OAuth2UserInfo.OAuth2UserInfo;
-import com.example.DunbarHorizon.account.domain.model.AuthProvider;
+import com.example.DunbarHorizon.account.domain.AuthProvider;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;

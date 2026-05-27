@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.account.domain.repository;
 
-import com.example.DunbarHorizon.account.domain.model.User;
+import com.example.DunbarHorizon.account.domain.User;
 
 import java.time.LocalDateTime;
 import java.util.Collection;

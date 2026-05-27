@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.account.domain.outbox.repository;
+package com.example.DunbarHorizon.account.domain.repository;
 
 import com.example.DunbarHorizon.account.domain.outbox.UserEventOutbox;
 

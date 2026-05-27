@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.account.application.dto.AuthTokenResult;
 import com.example.DunbarHorizon.account.application.port.out.AuthTokenProvider;
 import com.example.DunbarHorizon.account.application.port.out.PasswordHasher;
 import com.example.DunbarHorizon.account.application.service.LoginService;
-import com.example.DunbarHorizon.account.domain.model.*;
+import com.example.DunbarHorizon.account.domain.*;
 import com.example.DunbarHorizon.account.domain.repository.AuthRepository;
 import com.example.DunbarHorizon.account.domain.repository.RefreshTokenRepository;
 import com.example.DunbarHorizon.account.domain.repository.UserRepository;

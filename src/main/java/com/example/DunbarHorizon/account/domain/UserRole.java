@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.account.domain.model;
+package com.example.DunbarHorizon.account.domain;
 
 import lombok.Getter;
 

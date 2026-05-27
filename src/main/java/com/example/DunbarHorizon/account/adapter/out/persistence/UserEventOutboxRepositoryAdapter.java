@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.account.adapter.out.persistence;
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserEventOutboxJpaRepository;
 import com.example.DunbarHorizon.account.domain.outbox.UserEventOutbox;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxStatus;
-import com.example.DunbarHorizon.account.domain.outbox.repository.UserEventOutboxRepository;
+import com.example.DunbarHorizon.account.domain.repository.UserEventOutboxRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 

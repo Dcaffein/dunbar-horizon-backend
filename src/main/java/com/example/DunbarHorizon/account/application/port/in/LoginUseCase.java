@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.account.application.port.in;
 
 import com.example.DunbarHorizon.account.application.dto.AuthTokenResult;
-import com.example.DunbarHorizon.account.domain.model.User;
+import com.example.DunbarHorizon.account.domain.User;
 
 public interface LoginUseCase {
     AuthTokenResult login(String email, String password);

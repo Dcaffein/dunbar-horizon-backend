@@ -2,9 +2,9 @@ package com.example.DunbarHorizon.account.application.service;
 
 import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
 import com.example.DunbarHorizon.account.domain.exception.UserNotFoundException;
-import com.example.DunbarHorizon.account.domain.model.User;
-import com.example.DunbarHorizon.account.domain.model.UserRole;
-import com.example.DunbarHorizon.account.domain.model.UserStatus;
+import com.example.DunbarHorizon.account.domain.User;
+import com.example.DunbarHorizon.account.domain.UserRole;
+import com.example.DunbarHorizon.account.domain.UserStatus;
 import com.example.DunbarHorizon.account.domain.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

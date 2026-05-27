@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.account.adapter.in.web.OAuth2;
 
-import com.example.DunbarHorizon.account.domain.model.User;
+import com.example.DunbarHorizon.account.domain.User;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

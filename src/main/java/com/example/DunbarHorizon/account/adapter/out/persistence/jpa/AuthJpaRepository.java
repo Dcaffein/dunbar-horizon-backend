@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.account.adapter.out.persistence.jpa;
 
-import com.example.DunbarHorizon.account.domain.model.Auth;
-import com.example.DunbarHorizon.account.domain.model.AuthProvider;
+import com.example.DunbarHorizon.account.domain.Auth;
+import com.example.DunbarHorizon.account.domain.AuthProvider;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

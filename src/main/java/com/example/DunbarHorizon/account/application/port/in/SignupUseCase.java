@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.account.application.port.in;
 
-import com.example.DunbarHorizon.account.domain.model.AuthProvider;
-import com.example.DunbarHorizon.account.domain.model.User;
+import com.example.DunbarHorizon.account.domain.AuthProvider;
+import com.example.DunbarHorizon.account.domain.User;
 
 public interface SignupUseCase {
     void signup(String email, String password, String nickname);

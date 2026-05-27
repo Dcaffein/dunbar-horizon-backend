@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.account.application.service;
 import com.example.DunbarHorizon.account.domain.outbox.UserEventOutbox;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxEventType;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxStatus;
-import com.example.DunbarHorizon.account.domain.outbox.repository.UserEventOutboxRepository;
+import com.example.DunbarHorizon.account.domain.repository.UserEventOutboxRepository;
 import com.example.DunbarHorizon.global.event.user.UserSyncCompletedEvent;
 import com.example.DunbarHorizon.global.event.user.UserSyncIntegrationEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;

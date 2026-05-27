@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.account.application.service;
 
 import com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase;
 import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
-import com.example.DunbarHorizon.account.domain.model.UserStatus;
+import com.example.DunbarHorizon.account.domain.UserStatus;
 import com.example.DunbarHorizon.account.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

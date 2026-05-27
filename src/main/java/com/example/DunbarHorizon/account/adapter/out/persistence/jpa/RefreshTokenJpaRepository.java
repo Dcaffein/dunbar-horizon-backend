@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.account.adapter.out.persistence.jpa;
 
-import com.example.DunbarHorizon.account.domain.model.RefreshToken;
+import com.example.DunbarHorizon.account.domain.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

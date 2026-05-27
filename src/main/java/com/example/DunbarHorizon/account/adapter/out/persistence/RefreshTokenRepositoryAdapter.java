@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.account.adapter.out.persistence;
 
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.RefreshTokenJpaRepository;
-import com.example.DunbarHorizon.account.domain.model.RefreshToken;
+import com.example.DunbarHorizon.account.domain.RefreshToken;
 import com.example.DunbarHorizon.account.domain.repository.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

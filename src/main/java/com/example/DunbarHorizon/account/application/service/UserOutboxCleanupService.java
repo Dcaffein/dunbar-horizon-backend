@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.account.application.service;
 
-import com.example.DunbarHorizon.account.domain.outbox.repository.UserEventOutboxRepository;
+import com.example.DunbarHorizon.account.domain.repository.UserEventOutboxRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

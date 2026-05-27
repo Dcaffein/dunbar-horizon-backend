@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.account.domain.repository;
 
-import com.example.DunbarHorizon.account.domain.model.RefreshToken;
+import com.example.DunbarHorizon.account.domain.RefreshToken;
 
 import java.util.Optional;
 

@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.account.adapter.out.persistence;
 
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.AuthJpaRepository;
-import com.example.DunbarHorizon.account.domain.model.Auth;
-import com.example.DunbarHorizon.account.domain.model.AuthProvider;
+import com.example.DunbarHorizon.account.domain.Auth;
+import com.example.DunbarHorizon.account.domain.AuthProvider;
 import com.example.DunbarHorizon.account.domain.repository.AuthRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

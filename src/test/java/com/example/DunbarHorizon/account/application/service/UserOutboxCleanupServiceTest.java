@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.account.application.service;
 
-import com.example.DunbarHorizon.account.domain.outbox.repository.UserEventOutboxRepository;
+import com.example.DunbarHorizon.account.domain.repository.UserEventOutboxRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

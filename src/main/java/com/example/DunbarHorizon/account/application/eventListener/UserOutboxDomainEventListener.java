@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.account.application.eventListener;
 
 import com.example.DunbarHorizon.account.domain.outbox.UserEventOutbox;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxEventType;
-import com.example.DunbarHorizon.account.domain.outbox.repository.UserEventOutboxRepository;
+import com.example.DunbarHorizon.account.domain.repository.UserEventOutboxRepository;
 import com.example.DunbarHorizon.global.event.user.UserActivatedEvent;
 import com.example.DunbarHorizon.global.event.user.UserDeactivatedEvent;
 import com.example.DunbarHorizon.global.event.user.UserProfileUpdatedEvent;

@@ -2,8 +2,8 @@ package com.example.DunbarHorizon.account.adapter.in.web.OAuth2;
 
 import com.example.DunbarHorizon.account.adapter.in.web.OAuth2.OAuth2UserInfo.OAuth2UserInfo;
 import com.example.DunbarHorizon.account.application.port.in.SignupUseCase;
-import com.example.DunbarHorizon.account.domain.model.AuthProvider;
-import com.example.DunbarHorizon.account.domain.model.User;
+import com.example.DunbarHorizon.account.domain.AuthProvider;
+import com.example.DunbarHorizon.account.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;

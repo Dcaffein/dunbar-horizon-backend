@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.account.application.dto;
 
-import com.example.DunbarHorizon.account.domain.model.User;
+import com.example.DunbarHorizon.account.domain.User;
 
 public record UserProfileInfo(Long id, String nickname, String profileImage) {
     public static UserProfileInfo from(User user) {

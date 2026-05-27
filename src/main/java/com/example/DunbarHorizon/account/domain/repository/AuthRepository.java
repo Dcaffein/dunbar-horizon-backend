@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.account.domain.repository;
 
-import com.example.DunbarHorizon.account.domain.model.Auth;
-import com.example.DunbarHorizon.account.domain.model.AuthProvider;
+import com.example.DunbarHorizon.account.domain.Auth;
+import com.example.DunbarHorizon.account.domain.AuthProvider;
 
 import java.time.LocalDateTime;
 import java.util.Optional;

@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.account.application.service;
 
 import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
-import com.example.DunbarHorizon.account.domain.model.User;
-import com.example.DunbarHorizon.account.domain.model.UserStatus;
+import com.example.DunbarHorizon.account.domain.User;
+import com.example.DunbarHorizon.account.domain.UserStatus;
 import com.example.DunbarHorizon.account.domain.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

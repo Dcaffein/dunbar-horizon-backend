@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.account.adapter.out.persistence;
 
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
-import com.example.DunbarHorizon.account.domain.model.User;
-import com.example.DunbarHorizon.account.domain.model.UserStatus;
+import com.example.DunbarHorizon.account.domain.User;
+import com.example.DunbarHorizon.account.domain.UserStatus;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
