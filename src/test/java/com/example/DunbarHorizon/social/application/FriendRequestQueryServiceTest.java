@@ -36,6 +36,8 @@ class FriendRequestQueryServiceTest {
         Long userId = 1L;
         SocialUser req = mock(SocialUser.class);
         SocialUser res = mock(SocialUser.class);
+        given(req.getId()).willReturn(1L);
+        given(res.getId()).willReturn(2L);
         FriendRequest request = FriendTestFactory.createRequest(req, res);
 
         given(friendRequestRepository.findAllByReceiver_IdAndStatus(userId, FriendRequestStatus.PENDING))
@@ -70,6 +72,7 @@ class FriendRequestQueryServiceTest {
         Long userId = 2L;
         SocialUser req = mock(SocialUser.class);
         SocialUser res = mock(SocialUser.class);
+        given(req.getId()).willReturn(1L);
         given(res.getId()).willReturn(userId);
         FriendRequest request = FriendTestFactory.createRequest(req, res);
         request.hide(userId);
@@ -91,6 +94,8 @@ class FriendRequestQueryServiceTest {
         Long userId = 1L;
         SocialUser req = mock(SocialUser.class);
         SocialUser res = mock(SocialUser.class);
+        given(req.getId()).willReturn(1L);
+        given(res.getId()).willReturn(2L);
         FriendRequest request = FriendTestFactory.createRequest(req, res);
 
         given(friendRequestRepository.findAllByRequester_IdAndStatus(userId, FriendRequestStatus.PENDING))

@@ -1,12 +1,12 @@
 package com.example.DunbarHorizon.flag.application.eventListener;
 
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
+import com.example.DunbarHorizon.flag.domain.flag.FlagPreservationPolicy;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
-import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,7 +32,7 @@ class FlagDeletionEventListenerTest {
 
     @Mock private FlagRepository flagRepository;
     @Mock private FlagParticipantRepository participantRepository;
-    @Mock private FlagMemorialRepository memorialRepository;
+    @Mock private FlagPreservationPolicy flagPreservationPolicy;
     @Mock private ApplicationEventPublisher eventPublisher;
 
     private static final Long FLAG_ID = 1L;
@@ -86,20 +86,13 @@ class FlagDeletionEventListenerTest {
         Long parentId = 99L;
         FlagDeletedEvent event = endedEventWithParent(parentId);
 
-        Flag parentFlag = Flag.create(HOST_ID, "부모", "설명", 5,
-                FlagSchedule.of(NOW.minusHours(3), NOW.minusHours(2), NOW.minusHours(1)));
-        ReflectionTestUtils.setField(parentFlag, "id", parentId);
-
         given(flagRepository.findByParentId(FLAG_ID)).willReturn(Optional.empty());
         given(participantRepository.findAllParticipantIdsByFlagId(FLAG_ID)).willReturn(List.of());
-        given(flagRepository.findById(parentId)).willReturn(Optional.of(parentFlag));
-        given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
 
         // when
         listener.handleFlagDeletion(event);
 
         // then
-        verify(flagRepository).findById(parentId);
-        verify(memorialRepository).existsByFlagId(FLAG_ID);
+        verify(flagPreservationPolicy).refresh(parentId);
     }
 }

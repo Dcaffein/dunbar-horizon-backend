@@ -7,6 +7,7 @@ import com.example.DunbarHorizon.flag.domain.comment.repository.FlagCommentRepos
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +34,7 @@ class FlagCommentQueryServiceTest {
 
     @Mock private FlagCommentRepository commentRepository;
     @Mock private FlagRepository flagRepository;
+    @Mock private FlagParticipantRepository participantRepository;
     @Mock private FlagUserPort flagUserPort;
 
     private static final Long FLAG_ID = 1L;
@@ -71,6 +73,7 @@ class FlagCommentQueryServiceTest {
         // given
         Flag flag = createFlag();
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(participantRepository.findAllParticipantIdsByFlagId(FLAG_ID)).willReturn(List.of(VIEWER_ID));
         given(commentRepository.findAllByFlagId(FLAG_ID)).willReturn(List.of());
         given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of());
 
@@ -89,13 +92,14 @@ class FlagCommentQueryServiceTest {
         FlagComment publicComment = createComment(10L, VIEWER_ID, false);
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(participantRepository.findAllParticipantIdsByFlagId(FLAG_ID)).willReturn(List.of(VIEWER_ID));
         given(commentRepository.findAllByFlagId(FLAG_ID)).willReturn(List.of(publicComment));
         given(flagUserPort.findUserInfosByIds(anySet()))
                 .willReturn(Map.of(VIEWER_ID, new FlagUserInfo(VIEWER_ID, "사용자", null),
                                    HOST_ID, new FlagUserInfo(HOST_ID, "호스트", null)));
 
         // when
-        List<CommentResult> result = flagCommentQueryService.getCommentTree(FLAG_ID, 99L); // stranger
+        List<CommentResult> result = flagCommentQueryService.getCommentTree(FLAG_ID, VIEWER_ID);
 
         // then
         assertThat(result).hasSize(1);
@@ -109,10 +113,11 @@ class FlagCommentQueryServiceTest {
         FlagComment privateComment = createComment(10L, VIEWER_ID, true); // writer = VIEWER_ID
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(participantRepository.findAllParticipantIdsByFlagId(FLAG_ID)).willReturn(List.of(99L, VIEWER_ID));
         given(commentRepository.findAllByFlagId(FLAG_ID)).willReturn(List.of(privateComment));
         given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of());
 
-        // when: viewed by stranger (99L)
+        // when: viewed by 99L (participant, not the comment writer)
         List<CommentResult> result = flagCommentQueryService.getCommentTree(FLAG_ID, 99L);
 
         // then

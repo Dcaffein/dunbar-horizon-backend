@@ -8,6 +8,7 @@ import com.example.DunbarHorizon.flag.application.port.out.FlagUserPort;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
@@ -150,18 +151,15 @@ class FlagQueryServiceTest {
     }
 
     @Test
-    @DisplayName("플래그 상세 조회 시 호스트도 참여자도 아닌 사용자는 role이 null로 응답받는다")
-    void getFlagDetail_ViewerHasNoRelation_ReturnsNullRole() {
+    @DisplayName("플래그 상세 조회 시 호스트도 참여자도 아닌 사용자는 FlagAuthorizationException이 발생한다")
+    void getFlagDetail_ViewerHasNoRelation_ThrowsException() {
         Long viewerId = 999L;
         Flag flag = createRecruitingFlag(1L);
 
         given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
         given(participantRepository.findAllByFlagId(1L)).willReturn(List.of());
-        given(flagUserPort.findUserInfosByIds(anySet()))
-                .willReturn(Map.of(USER_ID, userInfo(USER_ID)));
 
-        FlagDetailResult result = flagQueryService.getFlagDetail(1L, viewerId);
-
-        assertThat(result.role()).isNull();
+        assertThatThrownBy(() -> flagQueryService.getFlagDetail(1L, viewerId))
+                .isInstanceOf(FlagAuthorizationException.class);
     }
 }
