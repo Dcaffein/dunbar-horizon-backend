@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.flag.application.eventListener;
 
+import com.example.DunbarHorizon.flag.domain.flag.FlagPreservationPolicy;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagEncoreEvent;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
@@ -23,6 +24,12 @@ public class FlagEncoreEventListener {
 
     private final FlagParticipantRepository participantRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final FlagPreservationPolicy flagPreservationPolicy;
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void handleEncoreCreated(FlagEncoreEvent event) {
+        flagPreservationPolicy.refresh(event.parentFlagId());
+    }
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)

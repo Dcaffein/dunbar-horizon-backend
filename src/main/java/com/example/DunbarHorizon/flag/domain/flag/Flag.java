@@ -89,8 +89,6 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
             throw new FlagInvalidStatusException("종료된 플래그만 앵코르를 생성할 수 있습니다.");
         }
 
-        this.softDeleteProtected = true;
-
         FlagSchedule newSchedule = FlagSchedule.of(deadline, start, end);
         Flag encoreFlag = new Flag(hostId, this.title, this.description,
                 this.capacity, newSchedule, this.id, this.groupId);
