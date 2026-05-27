@@ -9,7 +9,7 @@ import com.example.DunbarHorizon.social.domain.label.event.LabelMemberChangedEve
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelNotFoundException;
 import com.example.DunbarHorizon.social.domain.label.Label;
-import com.example.DunbarHorizon.social.domain.label.LabelCreator;
+import com.example.DunbarHorizon.social.domain.label.LabelFactory;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberEnroller;
 import com.example.DunbarHorizon.social.domain.label.LabelNamePolicy;
 import com.example.DunbarHorizon.social.domain.label.repository.LabelRepository;
@@ -31,7 +31,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     private final SocialUserRepository socialUserRepository;
     private final LabelNamePolicy labelNamePolicy;
     private final LabelMemberEnroller labelMemberEnroller;
-    private final LabelCreator labelCreator;
+    private final LabelFactory labelFactory;
     private final ApplicationEventPublisher eventPublisher;
 
     @Neo4jTransactional
@@ -39,7 +39,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
         labelNamePolicy.validateLabelNameUniqueness(currentUserId, labelName);
         UserReference owner = socialUserRepository.findById(currentUserId)
                 .orElseThrow(() -> new UserReferenceNotFoundException(currentUserId));
-        return labelRepository.save(labelCreator.create(owner, labelName, exposure));
+        return labelRepository.save(labelFactory.create(owner, labelName, exposure));
     }
 
     @Neo4jTransactional

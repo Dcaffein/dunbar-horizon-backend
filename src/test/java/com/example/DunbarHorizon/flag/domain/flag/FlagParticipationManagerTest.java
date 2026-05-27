@@ -22,9 +22,9 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
-class FlagParticipationPolicyTest {
+class FlagParticipationManagerTest {
 
-    @InjectMocks private FlagParticipationPolicy policy;
+    @InjectMocks private FlagParticipationManager policy;
 
     @Mock private FlagRepository flagRepository;
     @Mock private FlagParticipantRepository flagParticipantRepository;

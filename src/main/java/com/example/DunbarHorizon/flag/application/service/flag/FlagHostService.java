@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.flag.application.port.in.command.FlagEncoreComm
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
 import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagEncoreCreator;
+import com.example.DunbarHorizon.flag.domain.flag.FlagEncoreFactory;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class FlagHostService implements FlagHostUseCase {
     private final FlagRepository flagRepository;
-    private final FlagEncoreCreator flagEncoreCreator;
+    private final FlagEncoreFactory flagEncoreFactory;
 
     @Override
     public Long hostFlag(FlagHostCommand command) {
@@ -32,7 +32,7 @@ public class FlagHostService implements FlagHostUseCase {
     public Long encoreFlag(FlagEncoreCommand command) {
         Flag parentFlag = flagRepository.findById(command.parentFlagId())
                 .orElseThrow(() -> new FlagNotFoundException(command.parentFlagId()));
-        Flag encoreFlag = flagEncoreCreator.encore(
+        Flag encoreFlag = flagEncoreFactory.encore(
                 parentFlag,
                 command.hostId(),
                 command.deadline(),

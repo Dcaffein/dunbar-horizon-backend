@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class LabelCreator {
+public class LabelFactory {
 
     private final LabelNamePolicy labelNamePolicy;
 

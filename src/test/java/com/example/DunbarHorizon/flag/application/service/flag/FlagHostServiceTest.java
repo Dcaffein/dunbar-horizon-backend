@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.flag.application.service.flag;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagEncoreCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagEncoreCreator;
+import com.example.DunbarHorizon.flag.domain.flag.FlagEncoreFactory;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
@@ -31,7 +31,7 @@ class FlagHostServiceTest {
     @InjectMocks private FlagHostService flagHostService;
 
     @Mock private FlagRepository flagRepository;
-    @Mock private FlagEncoreCreator flagEncoreCreator;
+    @Mock private FlagEncoreFactory flagEncoreFactory;
 
     private static final LocalDateTime NOW = LocalDateTime.now();
 
@@ -83,7 +83,7 @@ class FlagHostServiceTest {
         Flag encoreFlag = Flag.create(1L, "원본 플래그", "설명", 10, encoreSchedule);
 
         given(flagRepository.findById(1L)).willReturn(Optional.of(parentFlag));
-        given(flagEncoreCreator.encore(any(), any(), any(), any(), any())).willReturn(encoreFlag);
+        given(flagEncoreFactory.encore(any(), any(), any(), any(), any())).willReturn(encoreFlag);
         given(flagRepository.save(encoreFlag)).willThrow(new DataIntegrityViolationException("unique constraint violation"));
 
         FlagEncoreCommand command = new FlagEncoreCommand(1L, 1L, NOW.plusHours(2), NOW.plusHours(3), NOW.plusHours(4));
@@ -106,7 +106,7 @@ class FlagHostServiceTest {
         ReflectionTestUtils.setField(encoreFlag, "id", 2L);
 
         given(flagRepository.findById(1L)).willReturn(Optional.of(parentFlag));
-        given(flagEncoreCreator.encore(any(), any(), any(), any(), any())).willReturn(encoreFlag);
+        given(flagEncoreFactory.encore(any(), any(), any(), any(), any())).willReturn(encoreFlag);
         given(flagRepository.save(encoreFlag)).willReturn(encoreFlag);
 
         FlagEncoreCommand command = new FlagEncoreCommand(1L, 1L, NOW.plusHours(2), NOW.plusHours(3), NOW.plusHours(4));
@@ -116,6 +116,6 @@ class FlagHostServiceTest {
 
         // then
         assertThat(result).isEqualTo(2L);
-        verify(flagEncoreCreator).encore(any(), any(), any(), any(), any());
+        verify(flagEncoreFactory).encore(any(), any(), any(), any(), any());
     }
 }

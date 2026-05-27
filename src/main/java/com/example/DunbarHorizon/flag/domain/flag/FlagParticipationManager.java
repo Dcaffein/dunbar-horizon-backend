@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class FlagParticipationPolicy {
+public class FlagParticipationManager {
     private final FlagRepository flagRepository;
     private final FlagParticipantRepository flagParticipantRepository;
     private final FriendshipChecker friendshipChecker;

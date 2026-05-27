@@ -29,7 +29,7 @@ class FlagInvitationServiceTest {
 
     @InjectMocks private FlagInvitationService flagInvitationService;
 
-    @Mock private FlagInvitationPolicy invitationPolicy;
+    @Mock private FlagInvitationManager invitationManager;
     @Mock private FlagInvitationRepository invitationRepository;
     @Mock private FlagParticipantRepository participantRepository;
     @Mock private FlagRepository flagRepository;
@@ -42,7 +42,7 @@ class FlagInvitationServiceTest {
     private static final LocalDateTime NOW = LocalDateTime.now();
 
     @Test
-    @DisplayName("초대 생성 시 정책에 위임하고 저장 후 이벤트를 발행한다")
+    @DisplayName("초대 생성 시 Manager에 위임하고 저장 후 이벤트를 발행한다")
     void invite_DelegatesToPolicyAndPublishesEvent() {
         // given
         FlagInvitation invitation = FlagInvitation.create(FLAG_ID, INVITER_ID, INVITEE_ID, NOW.plusHours(2));
@@ -52,7 +52,7 @@ class FlagInvitationServiceTest {
         FlagSchedule schedule = FlagSchedule.of(NOW.plusHours(2), NOW.plusHours(3), NOW.plusHours(4));
         Flag flag = Flag.create(HOST_ID, "테스트 플래그", "설명", 10, schedule);
 
-        given(invitationPolicy.invite(FLAG_ID, INVITER_ID, INVITEE_ID)).willReturn(invitation);
+        given(invitationManager.invite(FLAG_ID, INVITER_ID, INVITEE_ID)).willReturn(invitation);
         given(invitationRepository.save(invitation)).willReturn(savedInvitation);
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
 
@@ -61,7 +61,7 @@ class FlagInvitationServiceTest {
 
         // then
         assertThat(resultId).isEqualTo(10L);
-        verify(invitationPolicy).invite(FLAG_ID, INVITER_ID, INVITEE_ID);
+        verify(invitationManager).invite(FLAG_ID, INVITER_ID, INVITEE_ID);
         verify(invitationRepository).save(invitation);
 
         ArgumentCaptor<FlagInvitationSentEvent> eventCaptor = ArgumentCaptor.forClass(FlagInvitationSentEvent.class);
@@ -73,27 +73,27 @@ class FlagInvitationServiceTest {
     }
 
     @Test
-    @DisplayName("수락 시 정책에 위임하고 FlagParticipant를 저장한다")
+    @DisplayName("수락 시 Manager에 위임하고 FlagParticipant를 저장한다")
     void accept_DelegatesToPolicyAndSavesParticipant() {
         // given
         FlagParticipant newParticipant = mock(FlagParticipant.class);
-        given(invitationPolicy.accept(10L, INVITEE_ID)).willReturn(newParticipant);
+        given(invitationManager.accept(10L, INVITEE_ID)).willReturn(newParticipant);
 
         // when
         flagInvitationService.accept(10L, INVITEE_ID);
 
         // then
-        verify(invitationPolicy).accept(10L, INVITEE_ID);
+        verify(invitationManager).accept(10L, INVITEE_ID);
         verify(participantRepository).save(newParticipant);
     }
 
     @Test
-    @DisplayName("거절 시 정책에 위임한다")
+    @DisplayName("거절 시 Manager에 위임한다")
     void reject_DelegatesToPolicy() {
         // when
         flagInvitationService.reject(10L, INVITEE_ID);
 
         // then
-        verify(invitationPolicy).reject(10L, INVITEE_ID);
+        verify(invitationManager).reject(10L, INVITEE_ID);
     }
 }

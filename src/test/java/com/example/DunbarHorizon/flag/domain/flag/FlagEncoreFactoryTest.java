@@ -18,9 +18,9 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
-class FlagEncoreCreatorTest {
+class FlagEncoreFactoryTest {
 
-    @InjectMocks private FlagEncoreCreator flagEncoreCreator;
+    @InjectMocks private FlagEncoreFactory flagEncoreFactory;
     @Mock private FlagRepository flagRepository;
 
     private static final Long HOST_ID = 1L;
@@ -41,7 +41,7 @@ class FlagEncoreCreatorTest {
         given(flagRepository.existsByParentId(parent.getId())).willReturn(false);
 
         assertThatNoException().isThrownBy(() ->
-                flagEncoreCreator.encore(parent, HOST_ID, NOW.plusHours(1), NOW.plusHours(2), NOW.plusHours(3)));
+                flagEncoreFactory.encore(parent, HOST_ID, NOW.plusHours(1), NOW.plusHours(2), NOW.plusHours(3)));
     }
 
     @Test
@@ -50,7 +50,7 @@ class FlagEncoreCreatorTest {
         Flag parent = endedParentFlag();
 
         assertThatThrownBy(() ->
-                flagEncoreCreator.encore(parent, OTHER_ID, NOW.plusHours(1), NOW.plusHours(2), NOW.plusHours(3)))
+                flagEncoreFactory.encore(parent, OTHER_ID, NOW.plusHours(1), NOW.plusHours(2), NOW.plusHours(3)))
                 .isInstanceOf(FlagAuthorizationException.class);
     }
 
@@ -61,7 +61,7 @@ class FlagEncoreCreatorTest {
         given(flagRepository.existsByParentId(parent.getId())).willReturn(true);
 
         assertThatThrownBy(() ->
-                flagEncoreCreator.encore(parent, HOST_ID, NOW.plusHours(1), NOW.plusHours(2), NOW.plusHours(3)))
+                flagEncoreFactory.encore(parent, HOST_ID, NOW.plusHours(1), NOW.plusHours(2), NOW.plusHours(3)))
                 .isInstanceOf(FlagInvalidStatusException.class);
     }
 }

@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
-public class FlagEncoreCreator {
+public class FlagEncoreFactory {
 
     private final FlagRepository flagRepository;
 

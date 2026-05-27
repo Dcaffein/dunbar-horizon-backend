@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class FlagInvitationPolicy {
+public class FlagInvitationManager {
 
     private final FlagRepository flagRepository;
     private final FlagParticipantRepository participantRepository;

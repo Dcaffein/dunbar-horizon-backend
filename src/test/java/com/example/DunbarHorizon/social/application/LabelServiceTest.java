@@ -7,7 +7,7 @@ import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizatio
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import com.example.DunbarHorizon.social.domain.label.Label;
-import com.example.DunbarHorizon.social.domain.label.LabelCreator;
+import com.example.DunbarHorizon.social.domain.label.LabelFactory;
 import com.example.DunbarHorizon.social.domain.label.repository.LabelRepository;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberEnroller;
 import com.example.DunbarHorizon.social.domain.label.LabelNamePolicy;
@@ -49,7 +49,7 @@ class LabelServiceTest {
     private LabelMemberEnroller labelMemberEnroller;
 
     @Mock
-    private LabelCreator labelCreator;
+    private LabelFactory labelFactory;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -72,7 +72,7 @@ class LabelServiceTest {
 
         // given(...) 구문 수정: socialUserRepository 사용 및 Optional.of() 타입 일치
         given(socialUserRepository.findById(currentUserId)).willReturn(Optional.of(mockOwner));
-        given(labelCreator.create(any(), anyString(), anyBoolean())).willReturn(mock(Label.class));
+        given(labelFactory.create(any(), anyString(), anyBoolean())).willReturn(mock(Label.class));
         given(labelRepository.save(any(Label.class))).willReturn(mockLabel);
 
         // when

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class FlagMemorialCreator {
+public class FlagMemorialFactory {
     private final FlagParticipantRepository flagParticipantRepository;
 
     public FlagMemorial create(Flag flag, Long writerId, String content) {

@@ -6,7 +6,7 @@ import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationExc
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorial;
-import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorialCreator;
+import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorialFactory;
 import com.example.DunbarHorizon.flag.domain.memorial.event.MemorialCreatedEvent;
 import com.example.DunbarHorizon.flag.domain.memorial.event.MemorialDeletedEvent;
 import com.example.DunbarHorizon.flag.domain.memorial.exception.FlagMemorialNotFoundException;
@@ -38,7 +38,7 @@ class FlagMemorialCommandServiceTest {
 
     @Mock private FlagRepository flagRepository;
     @Mock private FlagMemorialRepository memorialRepository;
-    @Mock private FlagMemorialCreator memorialCreator;
+    @Mock private FlagMemorialFactory memorialFactory;
     @Mock private ApplicationEventPublisher eventPublisher;
 
     private static final Long FLAG_ID = 1L;
@@ -62,7 +62,7 @@ class FlagMemorialCommandServiceTest {
         given(mockMemorial.getId()).willReturn(1L);
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(memorialCreator.create(any(Flag.class), eq(WRITER_ID), eq("추도 내용"))).willReturn(mockMemorial);
+        given(memorialFactory.create(any(Flag.class), eq(WRITER_ID), eq("추도 내용"))).willReturn(mockMemorial);
         given(memorialRepository.save(any(FlagMemorial.class))).willReturn(mockMemorial);
 
         // when
