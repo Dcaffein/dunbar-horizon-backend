@@ -12,8 +12,8 @@ public class InteractionScoreFlushScheduler {
 
     private final InteractionScoreFlushService flushService;
 
-    @Scheduled(fixedDelay = 5000)
-    @SchedulerLock(name = "interactionScoreFlush", lockAtMostFor = "PT30S", lockAtLeastFor = "PT5S")
+    @Scheduled(fixedDelay = 300_000)
+    @SchedulerLock(name = "interactionScoreFlush", lockAtMostFor = "PT10M", lockAtLeastFor = "PT4M30S")
     public void flush() {
         flushService.flush();
     }
