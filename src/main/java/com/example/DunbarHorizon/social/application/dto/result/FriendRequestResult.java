@@ -15,8 +15,8 @@ public record FriendRequestResult(
     public static FriendRequestResult from(FriendRequest friendRequest) {
         return new FriendRequestResult(
                 friendRequest.getId(),
-                FriendResult.from(friendRequest.getRequester()),
-                FriendResult.from(friendRequest.getReceiver()),
+                friendRequest.getRequester() != null ? FriendResult.from(friendRequest.getRequester()) : null,
+                friendRequest.getReceiver() != null ? FriendResult.from(friendRequest.getReceiver()) : null,
                 friendRequest.getStatus(),
                 friendRequest.getCreatedAt()
         );

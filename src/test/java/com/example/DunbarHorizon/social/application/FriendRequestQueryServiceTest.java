@@ -16,7 +16,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
+import org.springframework.test.util.ReflectionTestUtils;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
@@ -85,6 +88,24 @@ class FriendRequestQueryServiceTest {
 
         // then
         assertThat(result).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("requester나 receiver가 null인 고아 요청이 있어도 NPE 없이 응답한다")
+    void getReceivedRequests_WithNullRelations_DoesNotThrow() {
+        // given
+        Long userId = 2L;
+        FriendRequest orphanRequest = mock(FriendRequest.class);
+        given(orphanRequest.getId()).willReturn("orphan-id");
+        given(orphanRequest.getRequester()).willReturn(null);
+        given(orphanRequest.getReceiver()).willReturn(null);
+        given(orphanRequest.getStatus()).willReturn(FriendRequestStatus.PENDING);
+
+        given(friendRequestRepository.findAllByReceiver_IdAndStatus(userId, FriendRequestStatus.PENDING))
+                .willReturn(List.of(orphanRequest));
+
+        // when / then
+        assertThatNoException().isThrownBy(() -> queryService.getReceivedRequests(userId));
     }
 
     @Test

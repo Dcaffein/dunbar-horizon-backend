@@ -32,7 +32,8 @@ public class FriendRequestRequesterActionService implements FriendRequesterActio
         FriendRequest newRequest = friendshipBroker.propose(requester, receiver);
 
         try {
-            return friendRequestRepository.saveRequest(newRequest);
+            friendRequestRepository.saveRequest(newRequest);
+            return newRequest;
         } catch (DataIntegrityViolationException e) {
             throw new DuplicateFriendRequestException(requesterId, receiverId);
         }

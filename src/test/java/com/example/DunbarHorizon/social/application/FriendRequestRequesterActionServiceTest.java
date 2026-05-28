@@ -18,6 +18,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
@@ -57,6 +58,29 @@ class FriendRequestRequesterActionServiceTest {
 
         // then
         verify(friendRequestRepository).saveRequest(mockRequest);
+    }
+
+    @Test
+    @DisplayName("친구 요청 전송 시 저장 전 객체를 반환해 requester/receiver가 null이 아님을 보장한다")
+    void sendRequest_ReturnsPreSaveObject_WithPopulatedRelationships() {
+        // given
+        Long reqId = 1L;
+        Long resId = 2L;
+        SocialUser requester = mock(SocialUser.class);
+        SocialUser receiver = mock(SocialUser.class);
+        FriendRequest mockRequest = mock(FriendRequest.class);
+        FriendRequest savedWithNullRelations = mock(FriendRequest.class);
+
+        given(socialUserRepository.findById(reqId)).willReturn(Optional.of(requester));
+        given(socialUserRepository.findById(resId)).willReturn(Optional.of(receiver));
+        given(friendshipBroker.propose(requester, receiver)).willReturn(mockRequest);
+        given(friendRequestRepository.saveRequest(mockRequest)).willReturn(savedWithNullRelations);
+
+        // when
+        FriendRequest result = requesterService.sendRequest(reqId, resId);
+
+        // then — 저장소가 반환한 객체(null 관계)가 아닌 저장 전 객체를 반환해야 함
+        assertThat(result).isSameAs(mockRequest);
     }
 
     @Test
