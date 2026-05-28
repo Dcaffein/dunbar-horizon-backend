@@ -33,7 +33,7 @@ public interface FlagJpaRepository extends JpaRepository<Flag, Long> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Flag f SET f.deletedAt = CURRENT_TIMESTAMP " +
             "WHERE f.schedule.endDateTime < :threshold " +
-            "AND f.softDeleteProtected = false " +
+            "AND f.autoExpiryExempt = false " +
             "AND f.deletedAt IS NULL")
     int expireAllExceedingThreshold(@Param("threshold") LocalDateTime threshold);
 

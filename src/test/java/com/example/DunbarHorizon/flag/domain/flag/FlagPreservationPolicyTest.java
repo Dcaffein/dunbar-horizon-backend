@@ -41,7 +41,7 @@ class FlagPreservationPolicyTest {
     }
 
     @Test
-    @DisplayName("memorial이 존재하면 softDeleteProtected가 true로 설정된다")
+    @DisplayName("memorial이 존재하면 autoExpiryExempt가 true로 설정된다")
     void refresh_memorialExists_setTrue() {
         // given
         Flag flag = createFlag();
@@ -53,12 +53,12 @@ class FlagPreservationPolicyTest {
         flagPreservationPolicy.refresh(FLAG_ID);
 
         // then
-        assertThat(flag.isSoftDeleteProtected()).isTrue();
+        assertThat(flag.isAutoExpiryExempt()).isTrue();
         verify(flagRepository).save(flag);
     }
 
     @Test
-    @DisplayName("encore가 존재하면 softDeleteProtected가 true로 설정된다")
+    @DisplayName("encore가 존재하면 autoExpiryExempt가 true로 설정된다")
     void refresh_encoreExists_setTrue() {
         // given
         Flag flag = createFlag();
@@ -71,16 +71,16 @@ class FlagPreservationPolicyTest {
         flagPreservationPolicy.refresh(FLAG_ID);
 
         // then
-        assertThat(flag.isSoftDeleteProtected()).isTrue();
+        assertThat(flag.isAutoExpiryExempt()).isTrue();
         verify(flagRepository).save(flag);
     }
 
     @Test
-    @DisplayName("memorial도 encore도 없으면 softDeleteProtected가 false로 설정된다")
+    @DisplayName("memorial도 encore도 없으면 autoExpiryExempt가 false로 설정된다")
     void refresh_neitherExists_setFalse() {
         // given
         Flag flag = createFlag();
-        ReflectionTestUtils.setField(flag, "softDeleteProtected", true);
+        ReflectionTestUtils.setField(flag, "autoExpiryExempt", true);
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
         given(flagRepository.existsByParentId(FLAG_ID)).willReturn(false);
@@ -90,7 +90,7 @@ class FlagPreservationPolicyTest {
         flagPreservationPolicy.refresh(FLAG_ID);
 
         // then
-        assertThat(flag.isSoftDeleteProtected()).isFalse();
+        assertThat(flag.isAutoExpiryExempt()).isFalse();
         verify(flagRepository).save(flag);
     }
 

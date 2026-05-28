@@ -20,7 +20,7 @@ public class FlagPreservationPolicy {
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
         boolean isPreserved = memorialRepository.existsByFlagId(flagId)
                            || flagRepository.existsByParentId(flagId);
-        flag.updateSoftDeleteProtection(isPreserved);
+        flag.updateAutoExpiryExempt(isPreserved);
         flagRepository.save(flag);
     }
 }

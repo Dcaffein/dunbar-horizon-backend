@@ -59,7 +59,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
 
     @Getter
     @Column(name = "is_preserved")
-    private boolean softDeleteProtected = false;
+    private boolean autoExpiryExempt = false;
 
     @Getter
     private LocalDateTime deletedAt;
@@ -183,8 +183,8 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
         this.schedule = this.schedule.withDeadline(LocalDateTime.now());
     }
 
-    void updateSoftDeleteProtection(boolean value) {
-        this.softDeleteProtected = value;
+    void updateAutoExpiryExempt(boolean value) {
+        this.autoExpiryExempt = value;
     }
 
     public void severParentLink() {
