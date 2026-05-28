@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.flag.domain.flag.repository;
 
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
+import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 
 import java.time.LocalDateTime;
@@ -10,6 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface FlagRepository {
+    // Flag
     Flag save(Flag flag);
     Optional<Flag> findById(Long id);
     Optional<Long> findHostIdById(Long id);
@@ -21,4 +23,15 @@ public interface FlagRepository {
     List<Flag> findAllByIdIn(Collection<Long> ids);
     List<Flag> findAllByHostId(Long hostId);
     List<Flag> findAllByHostIdsAndStatus(Set<Long> friendIds, FlagStatus flagStatus);
+
+    // FlagParticipant
+    FlagParticipant saveParticipant(FlagParticipant participant);
+    void deleteParticipant(FlagParticipant participant);
+    Optional<FlagParticipant> findParticipant(Long flagId, Long participantId);
+    int countParticipants(Long flagId);
+    boolean isParticipating(Long flagId, Long participantId);
+    List<Long> findAllParticipantIds(Long flagId);
+    void deleteAllParticipants(Long flagId);
+    List<Long> findFlagIdsByParticipantId(Long participantId);
+    List<FlagParticipant> findAllParticipants(Long flagId);
 }

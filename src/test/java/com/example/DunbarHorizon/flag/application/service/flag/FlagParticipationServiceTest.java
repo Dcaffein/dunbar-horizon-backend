@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipationManager;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipationDuplicateException;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +23,7 @@ class FlagParticipationServiceTest {
 
     @InjectMocks private FlagParticipationService flagParticipationService;
 
-    @Mock private FlagParticipantRepository participantRepository;
+    @Mock private FlagRepository flagRepository;
     @Mock private FlagParticipationManager flagParticipationManager;
 
     private static final Long FLAG_ID = 1L;
@@ -41,7 +41,7 @@ class FlagParticipationServiceTest {
 
         // then
         verify(flagParticipationManager).participate(FLAG_ID, USER_ID);
-        verify(participantRepository).save(mockParticipant);
+        verify(flagRepository).saveParticipant(mockParticipant);
     }
 
     @Test
@@ -80,6 +80,6 @@ class FlagParticipationServiceTest {
 
         // then
         verify(flagParticipationManager).unparticipate(FLAG_ID, USER_ID);
-        verify(participantRepository).delete(mockParticipant);
+        verify(flagRepository).deleteParticipant(mockParticipant);
     }
 }

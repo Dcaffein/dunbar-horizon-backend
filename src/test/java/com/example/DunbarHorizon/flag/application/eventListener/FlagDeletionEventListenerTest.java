@@ -5,7 +5,6 @@ import com.example.DunbarHorizon.flag.domain.flag.FlagPreservationPolicy;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,7 +30,6 @@ class FlagDeletionEventListenerTest {
     private FlagDeletionEventListener listener;
 
     @Mock private FlagRepository flagRepository;
-    @Mock private FlagParticipantRepository participantRepository;
     @Mock private FlagPreservationPolicy flagPreservationPolicy;
     @Mock private ApplicationEventPublisher eventPublisher;
 
@@ -52,7 +50,7 @@ class FlagDeletionEventListenerTest {
     void handleFlagDeletion_doesNotFindDeletedFlag() {
         // given
         given(flagRepository.findByParentId(FLAG_ID)).willReturn(Optional.empty());
-        given(participantRepository.findAllParticipantIdsByFlagId(FLAG_ID)).willReturn(List.of());
+        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of());
 
         // when
         listener.handleFlagDeletion(recruitingEvent());
@@ -70,7 +68,7 @@ class FlagDeletionEventListenerTest {
         ReflectionTestUtils.setField(encoreFlag, "parentId", FLAG_ID);
 
         given(flagRepository.findByParentId(FLAG_ID)).willReturn(Optional.of(encoreFlag));
-        given(participantRepository.findAllParticipantIdsByFlagId(FLAG_ID)).willReturn(List.of());
+        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of());
 
         // when
         listener.handleFlagDeletion(recruitingEvent());
@@ -87,7 +85,7 @@ class FlagDeletionEventListenerTest {
         FlagDeletedEvent event = endedEventWithParent(parentId);
 
         given(flagRepository.findByParentId(FLAG_ID)).willReturn(Optional.empty());
-        given(participantRepository.findAllParticipantIdsByFlagId(FLAG_ID)).willReturn(List.of());
+        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of());
 
         // when
         listener.handleFlagDeletion(event);

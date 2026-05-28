@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationExc
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipantNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipationDuplicateException;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,7 +26,6 @@ class FlagParticipationManagerTest {
     @InjectMocks private FlagParticipationManager policy;
 
     @Mock private FlagRepository flagRepository;
-    @Mock private FlagParticipantRepository flagParticipantRepository;
     @Mock private FriendshipChecker friendshipChecker;
 
     private static final Long FLAG_ID = 1L;
@@ -50,8 +48,8 @@ class FlagParticipationManagerTest {
         given(flagRepository.findHostIdById(FLAG_ID)).willReturn(Optional.of(HOST_ID));
         given(friendshipChecker.areFriends(HOST_ID, USER_ID)).willReturn(true);
         given(flagRepository.findByIdExclusive(FLAG_ID)).willReturn(Optional.of(flag));
-        given(flagParticipantRepository.isParticipating(FLAG_ID, USER_ID)).willReturn(false);
-        given(flagParticipantRepository.countByFlagId(FLAG_ID)).willReturn(0);
+        given(flagRepository.isParticipating(FLAG_ID, USER_ID)).willReturn(false);
+        given(flagRepository.countParticipants(FLAG_ID)).willReturn(0);
 
         // when
         FlagParticipant result = policy.participate(FLAG_ID, USER_ID);
@@ -92,7 +90,7 @@ class FlagParticipationManagerTest {
         given(flagRepository.findHostIdById(FLAG_ID)).willReturn(Optional.of(HOST_ID));
         given(friendshipChecker.areFriends(HOST_ID, USER_ID)).willReturn(true);
         given(flagRepository.findByIdExclusive(FLAG_ID)).willReturn(Optional.of(flag));
-        given(flagParticipantRepository.isParticipating(FLAG_ID, USER_ID)).willReturn(true);
+        given(flagRepository.isParticipating(FLAG_ID, USER_ID)).willReturn(true);
 
         // when / then
         assertThatThrownBy(() -> policy.participate(FLAG_ID, USER_ID))
@@ -108,7 +106,7 @@ class FlagParticipationManagerTest {
         given(participant.getParticipantId()).willReturn(USER_ID);
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(flagParticipantRepository.findByFlagIdAndParticipantId(FLAG_ID, USER_ID))
+        given(flagRepository.findParticipant(FLAG_ID, USER_ID))
                 .willReturn(Optional.of(participant));
 
         // when / then
@@ -121,7 +119,7 @@ class FlagParticipationManagerTest {
         // given
         Flag flag = recruitingFlag();
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(flagParticipantRepository.findByFlagIdAndParticipantId(FLAG_ID, USER_ID))
+        given(flagRepository.findParticipant(FLAG_ID, USER_ID))
                 .willReturn(Optional.empty());
 
         // when / then

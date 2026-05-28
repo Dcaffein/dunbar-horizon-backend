@@ -6,7 +6,6 @@ import com.example.DunbarHorizon.flag.domain.comment.exception.FlagCommentNotFou
 import com.example.DunbarHorizon.flag.domain.comment.repository.FlagCommentRepository;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,14 +19,13 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
 
     private final FlagCommentRepository commentRepository;
     private final FlagRepository flagRepository;
-    private final FlagParticipantRepository participantRepository;
 
     @Override
     @Transactional
     public Long createRootComment(Long flagId, Long userId, String content, boolean isPrivate) {
         Flag flag = flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
-        List<Long> participantIds = participantRepository.findAllParticipantIdsByFlagId(flagId);
+        List<Long> participantIds = flagRepository.findAllParticipantIds(flagId);
         flag.validateCommentCreation(userId, participantIds);
 
         FlagComment comment = FlagComment.createRoot(flagId, userId, content, isPrivate);
@@ -42,7 +40,7 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
 
         Flag flag = flagRepository.findById(parent.getFlagId())
                 .orElseThrow(() -> new FlagNotFoundException(parent.getFlagId()));
-        List<Long> participantIds = participantRepository.findAllParticipantIdsByFlagId(parent.getFlagId());
+        List<Long> participantIds = flagRepository.findAllParticipantIds(parent.getFlagId());
         flag.validateCommentCreation(userId, participantIds);
 
         FlagComment reply = parent.createReply(userId, content, isPrivate);

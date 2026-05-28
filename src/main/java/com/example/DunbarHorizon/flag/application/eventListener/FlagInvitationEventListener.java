@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.flag.application.eventListener;
 
-import com.example.DunbarHorizon.flag.domain.flag.event.FlagInvitationSentEvent;
+import com.example.DunbarHorizon.flag.domain.invitation.event.FlagInvitationSentEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import lombok.RequiredArgsConstructor;

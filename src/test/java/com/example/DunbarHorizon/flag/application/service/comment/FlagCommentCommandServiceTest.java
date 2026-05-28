@@ -8,7 +8,6 @@ import com.example.DunbarHorizon.flag.domain.comment.repository.FlagCommentRepos
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,7 +33,6 @@ class FlagCommentCommandServiceTest {
 
     @Mock private FlagCommentRepository commentRepository;
     @Mock private FlagRepository flagRepository;
-    @Mock private FlagParticipantRepository participantRepository;
 
     private static final Long FLAG_ID = 1L;
     private static final Long HOST_ID = 1L;
@@ -56,7 +54,7 @@ class FlagCommentCommandServiceTest {
         ReflectionTestUtils.setField(saved, "id", 10L);
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(createFlag()));
-        given(participantRepository.findAllParticipantIdsByFlagId(FLAG_ID)).willReturn(List.of(USER_ID));
+        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of(USER_ID));
         given(commentRepository.save(any(FlagComment.class))).willReturn(saved);
 
         // when
@@ -90,7 +88,7 @@ class FlagCommentCommandServiceTest {
 
         given(commentRepository.findById(1L)).willReturn(Optional.of(parent));
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(createFlag()));
-        given(participantRepository.findAllParticipantIdsByFlagId(FLAG_ID)).willReturn(List.of(USER_ID));
+        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of(USER_ID));
         given(commentRepository.save(any(FlagComment.class))).willReturn(savedReply);
 
         // when
@@ -122,7 +120,7 @@ class FlagCommentCommandServiceTest {
 
         given(commentRepository.findById(2L)).willReturn(Optional.of(reply));
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(createFlag()));
-        given(participantRepository.findAllParticipantIdsByFlagId(FLAG_ID)).willReturn(List.of(USER_ID));
+        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of(USER_ID));
 
         // when / then
         assertThatThrownBy(() -> flagCommentCommandService.createReply(2L, USER_ID, "2단 답글", false))

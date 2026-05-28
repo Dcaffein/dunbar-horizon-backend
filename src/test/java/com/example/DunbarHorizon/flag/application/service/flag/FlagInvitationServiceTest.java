@@ -3,12 +3,11 @@ package com.example.DunbarHorizon.flag.application.service.flag;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagInvitationRepository;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
+import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitationRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
-import com.example.DunbarHorizon.flag.domain.flag.FlagInvitation;
-import com.example.DunbarHorizon.flag.domain.flag.FlagInvitationManager;
-import com.example.DunbarHorizon.flag.domain.flag.event.FlagInvitationSentEvent;
+import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitation;
+import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationManager;
+import com.example.DunbarHorizon.flag.domain.invitation.event.FlagInvitationSentEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,7 +34,6 @@ class FlagInvitationServiceTest {
 
     @Mock private FlagInvitationManager invitationManager;
     @Mock private FlagInvitationRepository invitationRepository;
-    @Mock private FlagParticipantRepository participantRepository;
     @Mock private FlagRepository flagRepository;
     @Mock private ApplicationEventPublisher eventPublisher;
 
@@ -88,7 +86,7 @@ class FlagInvitationServiceTest {
 
         // then
         verify(invitationManager).accept(10L, INVITEE_ID);
-        verify(participantRepository).save(newParticipant);
+        verify(flagRepository).saveParticipant(newParticipant);
     }
 
     @Test

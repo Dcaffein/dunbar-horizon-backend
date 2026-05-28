@@ -1,9 +1,17 @@
-package com.example.DunbarHorizon.flag.domain.flag;
+package com.example.DunbarHorizon.flag.domain.invitation;
 
-import com.example.DunbarHorizon.flag.domain.flag.exception.*;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
+import com.example.DunbarHorizon.flag.domain.flag.Flag;
+import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
+import com.example.DunbarHorizon.flag.domain.flag.FlagParticipationManager;
+import static org.mockito.Mockito.mock;
+import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipationDuplicateException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagInvitationRepository;
+import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationAccessException;
+import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationDuplicateException;
+import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationExpiredException;
+import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitationRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +25,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class FlagInvitationManagerTest {
@@ -24,7 +34,6 @@ class FlagInvitationManagerTest {
     @InjectMocks private FlagInvitationManager policy;
 
     @Mock private FlagRepository flagRepository;
-    @Mock private FlagParticipantRepository participantRepository;
     @Mock private FlagInvitationRepository invitationRepository;
     @Mock private FlagParticipationManager flagParticipationManager;
 
@@ -42,13 +51,15 @@ class FlagInvitationManagerTest {
     }
 
     private FlagParticipant inviterWithPermission() {
-        FlagParticipant participant = new FlagParticipant(FLAG_ID, INVITER_ID);
-        participant.grantInvitePermission();
+        FlagParticipant participant = mock(FlagParticipant.class);
+        lenient().when(participant.isCanInvite()).thenReturn(true);
         return participant;
     }
 
     private FlagParticipant inviterWithoutPermission() {
-        return new FlagParticipant(FLAG_ID, INVITER_ID);
+        FlagParticipant participant = mock(FlagParticipant.class);
+        lenient().when(participant.isCanInvite()).thenReturn(false);
+        return participant;
     }
 
     // ==================== updateInvitePermission ====================
@@ -61,14 +72,13 @@ class FlagInvitationManagerTest {
         FlagParticipant participant = inviterWithoutPermission();
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(participantRepository.findByFlagIdAndParticipantId(FLAG_ID, INVITER_ID))
-                .willReturn(Optional.of(participant));
+        given(flagRepository.findParticipant(FLAG_ID, INVITER_ID)).willReturn(Optional.of(participant));
 
         // when
         policy.updateInvitePermission(FLAG_ID, HOST_ID, INVITER_ID, true);
 
         // then
-        assertThat(participant.isCanInvite()).isTrue();
+        verify(participant).grantInvitePermission();
     }
 
     @Test
@@ -79,8 +89,7 @@ class FlagInvitationManagerTest {
         FlagParticipant participant = inviterWithoutPermission();
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(participantRepository.findByFlagIdAndParticipantId(FLAG_ID, INVITER_ID))
-                .willReturn(Optional.of(participant));
+        given(flagRepository.findParticipant(FLAG_ID, INVITER_ID)).willReturn(Optional.of(participant));
 
         // when / then
         assertThatThrownBy(() -> policy.updateInvitePermission(FLAG_ID, INVITER_ID, INVITER_ID, true))
@@ -97,9 +106,8 @@ class FlagInvitationManagerTest {
         FlagParticipant inviter = inviterWithPermission();
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(participantRepository.findByFlagIdAndParticipantId(FLAG_ID, INVITER_ID))
-                .willReturn(Optional.of(inviter));
-        given(participantRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(false);
+        given(flagRepository.findParticipant(FLAG_ID, INVITER_ID)).willReturn(Optional.of(inviter));
+        given(flagRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(false);
         given(invitationRepository.existsPendingByFlagIdAndInviteeId(FLAG_ID, INVITEE_ID)).willReturn(false);
 
         // when
@@ -118,7 +126,7 @@ class FlagInvitationManagerTest {
         Flag flag = recruitingFlag();
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(participantRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(false);
+        given(flagRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(false);
         given(invitationRepository.existsPendingByFlagIdAndInviteeId(FLAG_ID, INVITEE_ID)).willReturn(false);
 
         // when
@@ -137,8 +145,7 @@ class FlagInvitationManagerTest {
         FlagParticipant inviter = inviterWithoutPermission();
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(participantRepository.findByFlagIdAndParticipantId(FLAG_ID, INVITER_ID))
-                .willReturn(Optional.of(inviter));
+        given(flagRepository.findParticipant(FLAG_ID, INVITER_ID)).willReturn(Optional.of(inviter));
 
         // when / then
         assertThatThrownBy(() -> policy.invite(FLAG_ID, INVITER_ID, INVITEE_ID))
@@ -153,9 +160,8 @@ class FlagInvitationManagerTest {
         FlagParticipant inviter = inviterWithPermission();
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(participantRepository.findByFlagIdAndParticipantId(FLAG_ID, INVITER_ID))
-                .willReturn(Optional.of(inviter));
-        given(participantRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(false);
+        given(flagRepository.findParticipant(FLAG_ID, INVITER_ID)).willReturn(Optional.of(inviter));
+        given(flagRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(false);
         given(invitationRepository.existsPendingByFlagIdAndInviteeId(FLAG_ID, INVITEE_ID)).willReturn(true);
 
         // when / then
@@ -184,9 +190,8 @@ class FlagInvitationManagerTest {
         FlagParticipant inviter = inviterWithPermission();
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(participantRepository.findByFlagIdAndParticipantId(FLAG_ID, INVITER_ID))
-                .willReturn(Optional.of(inviter));
-        given(participantRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(true);
+        given(flagRepository.findParticipant(FLAG_ID, INVITER_ID)).willReturn(Optional.of(inviter));
+        given(flagRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(true);
 
         // when / then
         assertThatThrownBy(() -> policy.invite(FLAG_ID, INVITER_ID, INVITEE_ID))
@@ -202,7 +207,8 @@ class FlagInvitationManagerTest {
         FlagInvitation invitation = FlagInvitation.create(FLAG_ID, INVITER_ID, INVITEE_ID, NOW.plusHours(2));
         ReflectionTestUtils.setField(invitation, "id", 10L);
 
-        FlagParticipant participant = new FlagParticipant(FLAG_ID, INVITEE_ID);
+        FlagParticipant participant = mock(FlagParticipant.class);
+        given(participant.getParticipantId()).willReturn(INVITEE_ID);
 
         given(invitationRepository.findById(10L)).willReturn(Optional.of(invitation));
         given(flagParticipationManager.participateByInvitation(FLAG_ID, INVITEE_ID)).willReturn(participant);

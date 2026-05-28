@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.flag.application.eventListener;
 
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagMeetingChangedEvent;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -20,14 +20,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FlagMeetingChangedEventListener {
 
-    private final FlagParticipantRepository participantRepository;
+    private final FlagRepository flagRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handle(FlagMeetingChangedEvent event) {
-        List<Long> participantIds = participantRepository.findAllParticipantIdsByFlagId(event.flagId());
+        List<Long> participantIds = flagRepository.findAllParticipantIds(event.flagId());
 
         if (participantIds.isEmpty()) return;
 

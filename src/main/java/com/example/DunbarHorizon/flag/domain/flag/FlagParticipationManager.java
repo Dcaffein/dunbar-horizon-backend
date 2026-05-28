@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationExc
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipantNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipationDuplicateException;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FlagParticipationManager {
     private final FlagRepository flagRepository;
-    private final FlagParticipantRepository flagParticipantRepository;
     private final FriendshipChecker friendshipChecker;
 
     public FlagParticipant participate(Long flagId, Long userId) {
@@ -27,31 +25,31 @@ public class FlagParticipationManager {
         Flag lockedFlag = flagRepository.findByIdExclusive(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
 
-        if (flagParticipantRepository.isParticipating(flagId, userId)) {
+        if (flagRepository.isParticipating(flagId, userId)) {
             throw new FlagParticipationDuplicateException(flagId, userId);
         }
 
-        int count = flagParticipantRepository.countByFlagId(flagId);
+        int count = flagRepository.countParticipants(flagId);
         return lockedFlag.participate(userId, count);
     }
 
     public FlagParticipant participateByInvitation(Long flagId, Long userId) {
-        if (flagParticipantRepository.isParticipating(flagId, userId)) {
+        if (flagRepository.isParticipating(flagId, userId)) {
             throw new FlagParticipationDuplicateException(flagId, userId);
         }
 
         Flag lockedFlag = flagRepository.findByIdExclusive(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
 
-        int count = flagParticipantRepository.countByFlagId(flagId);
+        int count = flagRepository.countParticipants(flagId);
         return lockedFlag.participate(userId, count);
     }
 
     public FlagParticipant unparticipate(Long flagId, Long userId) {
         Flag flag = flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
-        FlagParticipant participant = flagParticipantRepository
-                .findByFlagIdAndParticipantId(flagId, userId)
+        FlagParticipant participant = flagRepository
+                .findParticipant(flagId, userId)
                 .orElseThrow(() -> new FlagParticipantNotFoundException(userId));
         flag.unparticipate(participant, userId);
         return participant;
