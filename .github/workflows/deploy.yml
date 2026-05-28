@@ -79,6 +79,7 @@ jobs:
           echo "NEO4J_PASSWORD=$NEO4J_PASSWORD" >> .env
           echo "NEO4J_USERNAME=$NEO4J_USERNAME" >> .env
           echo "MONGO_URI=$MONGO_URI" >> .env
+          echo "REDIS_HOST=dunbarhorizon-redis" >> .env
           echo "OAUTH_GOOGLE_CLIENT_ID=$OAUTH_GOOGLE_CLIENT_ID" >> .env
           echo "OAUTH_GOOGLE_CLIENT_SECRET=$OAUTH_GOOGLE_CLIENT_SECRET" >> .env
           echo "SMTP_USER=$SMTP_USER" >> .env   
