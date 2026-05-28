@@ -1,7 +1,7 @@
-package com.example.DunbarHorizon.flag.domain.invitation;
+package com.example.DunbarHorizon.flag.domain.flag;
 
-import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationAccessException;
-import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationExpiredException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvitationAccessException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvitationExpiredException;
 import com.example.DunbarHorizon.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;

@@ -1,6 +1,5 @@
-package com.example.DunbarHorizon.flag.domain.invitation.exception;
+package com.example.DunbarHorizon.flag.domain.flag.exception;
 
-import com.example.DunbarHorizon.flag.domain.flag.exception.FlagException;
 import org.springframework.http.HttpStatus;
 
 public class FlagInvitationAccessException extends FlagException {
