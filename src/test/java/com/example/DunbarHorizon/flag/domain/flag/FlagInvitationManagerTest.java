@@ -1,13 +1,9 @@
-package com.example.DunbarHorizon.flag.domain.invitation;
+package com.example.DunbarHorizon.flag.domain.flag;
 
-import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
-import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.*;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
-import com.example.DunbarHorizon.flag.domain.invitation.exception.*;
-import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitationRepository;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagInvitationRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,7 +17,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class FlagInvitationManagerTest {
@@ -31,6 +26,7 @@ class FlagInvitationManagerTest {
     @Mock private FlagRepository flagRepository;
     @Mock private FlagParticipantRepository participantRepository;
     @Mock private FlagInvitationRepository invitationRepository;
+    @Mock private FlagParticipationManager flagParticipationManager;
 
     private static final Long FLAG_ID = 1L;
     private static final Long HOST_ID = 1L;
@@ -116,6 +112,24 @@ class FlagInvitationManagerTest {
     }
 
     @Test
+    @DisplayName("호스트는 canInvite 없이도 초대할 수 있다")
+    void invite_HostIsInviter_Success() {
+        // given
+        Flag flag = recruitingFlag();
+
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(participantRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(false);
+        given(invitationRepository.existsPendingByFlagIdAndInviteeId(FLAG_ID, INVITEE_ID)).willReturn(false);
+
+        // when
+        FlagInvitation result = policy.invite(FLAG_ID, HOST_ID, INVITEE_ID);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.getInviteeId()).isEqualTo(INVITEE_ID);
+    }
+
+    @Test
     @DisplayName("초대 권한이 없는 참여자가 초대하면 FlagAuthorizationException이 발생한다")
     void invite_InviterHasNoPermission_Throws() {
         // given
@@ -185,14 +199,13 @@ class FlagInvitationManagerTest {
     @DisplayName("초대받은 사람이 수락하면 FlagParticipant가 생성된다")
     void accept_Success() {
         // given
-        Flag flag = recruitingFlag();
         FlagInvitation invitation = FlagInvitation.create(FLAG_ID, INVITER_ID, INVITEE_ID, NOW.plusHours(2));
         ReflectionTestUtils.setField(invitation, "id", 10L);
 
+        FlagParticipant participant = new FlagParticipant(FLAG_ID, INVITEE_ID);
+
         given(invitationRepository.findById(10L)).willReturn(Optional.of(invitation));
-        given(participantRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(false);
-        given(flagRepository.findByIdExclusive(FLAG_ID)).willReturn(Optional.of(flag));
-        given(participantRepository.countByFlagId(FLAG_ID)).willReturn(0);
+        given(flagParticipationManager.participateByInvitation(FLAG_ID, INVITEE_ID)).willReturn(participant);
 
         // when
         FlagParticipant result = policy.accept(10L, INVITEE_ID);
@@ -210,7 +223,8 @@ class FlagInvitationManagerTest {
         ReflectionTestUtils.setField(invitation, "id", 10L);
 
         given(invitationRepository.findById(10L)).willReturn(Optional.of(invitation));
-        given(participantRepository.isParticipating(FLAG_ID, INVITEE_ID)).willReturn(true);
+        given(flagParticipationManager.participateByInvitation(FLAG_ID, INVITEE_ID))
+                .willThrow(new FlagParticipationDuplicateException(FLAG_ID, INVITEE_ID));
 
         // when / then
         assertThatThrownBy(() -> policy.accept(10L, INVITEE_ID))

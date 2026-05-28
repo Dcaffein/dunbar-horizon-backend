@@ -1,12 +1,9 @@
-package com.example.DunbarHorizon.flag.domain.invitation;
+package com.example.DunbarHorizon.flag.domain.flag;
 
-import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.exception.*;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
-import com.example.DunbarHorizon.flag.domain.invitation.exception.*;
-import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitationRepository;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagInvitationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +14,7 @@ public class FlagInvitationManager {
     private final FlagRepository flagRepository;
     private final FlagParticipantRepository participantRepository;
     private final FlagInvitationRepository invitationRepository;
+    private final FlagParticipationManager flagParticipationManager;
 
     public void updateInvitePermission(Long flagId, Long requesterId, Long participantUserId, boolean canInvite) {
         Flag flag = flagRepository.findById(flagId)
@@ -44,12 +42,13 @@ public class FlagInvitationManager {
             throw new FlagAuthorizationException("호스트는 초대 대상이 될 수 없습니다.");
         }
 
-        FlagParticipant inviter = participantRepository
-                .findByFlagIdAndParticipantId(flagId, inviterId)
-                .orElseThrow(() -> new FlagParticipantNotFoundException(inviterId));
-
-        if (!inviter.isCanInvite()) {
-            throw new FlagAuthorizationException("초대 권한이 없습니다.");
+        if (!flag.getHostId().equals(inviterId)) {
+            FlagParticipant inviter = participantRepository
+                    .findByFlagIdAndParticipantId(flagId, inviterId)
+                    .orElseThrow(() -> new FlagParticipantNotFoundException(inviterId));
+            if (!inviter.isCanInvite()) {
+                throw new FlagAuthorizationException("초대 권한이 없습니다.");
+            }
         }
 
         if (participantRepository.isParticipating(flagId, inviteeId)) {
@@ -69,15 +68,7 @@ public class FlagInvitationManager {
 
         invitation.accept(acceptorId);
 
-        if (participantRepository.isParticipating(invitation.getFlagId(), acceptorId)) {
-            throw new FlagParticipationDuplicateException(invitation.getFlagId(), acceptorId);
-        }
-
-        Flag flag = flagRepository.findByIdExclusive(invitation.getFlagId())
-                .orElseThrow(() -> new FlagNotFoundException(invitation.getFlagId()));
-
-        int count = participantRepository.countByFlagId(invitation.getFlagId());
-        return flag.participate(acceptorId, count);
+        return flagParticipationManager.participateByInvitation(invitation.getFlagId(), acceptorId);
     }
 
     public void reject(Long invitationId, Long rejectorId) {

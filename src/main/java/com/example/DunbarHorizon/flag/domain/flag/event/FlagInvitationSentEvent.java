@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.flag.domain.invitation.event;
+package com.example.DunbarHorizon.flag.domain.flag.event;
 
 public record FlagInvitationSentEvent(
         Long flagId,

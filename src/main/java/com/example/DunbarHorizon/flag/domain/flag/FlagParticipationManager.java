@@ -35,6 +35,18 @@ public class FlagParticipationManager {
         return lockedFlag.participate(userId, count);
     }
 
+    public FlagParticipant participateByInvitation(Long flagId, Long userId) {
+        if (flagParticipantRepository.isParticipating(flagId, userId)) {
+            throw new FlagParticipationDuplicateException(flagId, userId);
+        }
+
+        Flag lockedFlag = flagRepository.findByIdExclusive(flagId)
+                .orElseThrow(() -> new FlagNotFoundException(flagId));
+
+        int count = flagParticipantRepository.countByFlagId(flagId);
+        return lockedFlag.participate(userId, count);
+    }
+
     public FlagParticipant unparticipate(Long flagId, Long userId) {
         Flag flag = flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
@@ -45,8 +57,4 @@ public class FlagParticipationManager {
         return participant;
     }
 
-    public void updateCapacity(Flag flag, Long requesterId, Integer newMaxCapacity) {
-        int currentCount = flagParticipantRepository.countByFlagId(flag.getId());
-        flag.updateCapacity(requesterId, newMaxCapacity, currentCount);
-    }
 }
