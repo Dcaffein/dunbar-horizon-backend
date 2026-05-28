@@ -1,9 +1,9 @@
 package com.example.DunbarHorizon.flag.adapter.out.persistence;
 
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagInvitationJpaRepository;
-import com.example.DunbarHorizon.flag.domain.flag.FlagInvitation;
-import com.example.DunbarHorizon.flag.domain.flag.FlagInvitationStatus;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagInvitationRepository;
+import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitation;
+import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationStatus;
+import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 

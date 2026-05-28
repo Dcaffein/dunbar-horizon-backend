@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.flag.application.eventListener;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagPreservationPolicy;
 import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
@@ -28,7 +27,6 @@ import java.util.Optional;
 public class FlagDeletionEventListener {
 
     private final FlagRepository flagRepository;
-    private final FlagParticipantRepository participantRepository;
     private final FlagPreservationPolicy flagPreservationPolicy;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -47,7 +45,7 @@ public class FlagDeletionEventListener {
     }
 
     private void processParticipantCleanup(FlagDeletedEvent event, Long hostId) {
-        List<Long> participantIds = participantRepository.findAllParticipantIdsByFlagId(event.flagId());
+        List<Long> participantIds = flagRepository.findAllParticipantIds(event.flagId());
 
         if (!participantIds.isEmpty() && event.statusAtDeletion() != FlagStatus.RECRUITING) {
             publishNotification(participantIds, event.flagTitle());
@@ -57,7 +55,7 @@ public class FlagDeletionEventListener {
             publishInteractionEvents(participantIds, hostId, event.parentId() != null);
         }
 
-        participantRepository.deleteAllByFlagId(event.flagId());
+        flagRepository.deleteAllParticipants(event.flagId());
     }
 
     private boolean isMeetingHeld(FlagStatus status) {

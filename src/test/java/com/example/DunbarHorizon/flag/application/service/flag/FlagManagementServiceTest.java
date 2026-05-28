@@ -9,7 +9,6 @@ import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationExc
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagScheduleInvalidException;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,7 +32,6 @@ class FlagManagementServiceTest {
     @InjectMocks private FlagManagementService flagManagementService;
 
     @Mock private FlagRepository flagRepository;
-    @Mock private FlagParticipantRepository participantRepository;
 
     private static final Long HOST_ID = 1L;
     private static final Long OTHER_ID = 99L;
@@ -92,7 +90,7 @@ class FlagManagementServiceTest {
     void modifyFlagCapacity_ByHost_Success() {
         // given
         Flag flag = recruitingFlag();
-        given(participantRepository.countByFlagId(1L)).willReturn(3);
+        given(flagRepository.countParticipants(1L)).willReturn(3);
         given(flagRepository.findByIdExclusive(1L)).willReturn(Optional.of(flag));
         FlagCapacityUpdateCommand command = new FlagCapacityUpdateCommand(1L, HOST_ID, 5);
 
@@ -108,7 +106,7 @@ class FlagManagementServiceTest {
     void modifyFlagCapacity_BelowCurrentCount_ThrowsException() {
         // given
         Flag flag = recruitingFlag();
-        given(participantRepository.countByFlagId(1L)).willReturn(5);
+        given(flagRepository.countParticipants(1L)).willReturn(5);
         given(flagRepository.findByIdExclusive(1L)).willReturn(Optional.of(flag));
         FlagCapacityUpdateCommand command = new FlagCapacityUpdateCommand(1L, HOST_ID, 3);
 

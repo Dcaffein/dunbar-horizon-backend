@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.flag.adapter.out.persistence.jpa;
 
-import com.example.DunbarHorizon.flag.domain.flag.FlagInvitation;
-import com.example.DunbarHorizon.flag.domain.flag.FlagInvitationStatus;
+import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitation;
+import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

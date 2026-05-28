@@ -11,7 +11,6 @@ import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +29,6 @@ import java.util.stream.Collectors;
 public class FlagQueryService implements FlagQueryUseCase {
 
     private final FlagRepository flagRepository;
-    private final FlagParticipantRepository participantRepository;
     private final FlagUserPort flagUserPort;
 
     @Override
@@ -53,7 +51,7 @@ public class FlagQueryService implements FlagQueryUseCase {
         Flag flag = flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
 
-        List<FlagParticipant> participants = participantRepository.findAllByFlagId(flagId);
+        List<FlagParticipant> participants = flagRepository.findAllParticipants(flagId);
 
         List<Long> participantIds = participants.stream().map(FlagParticipant::getParticipantId).toList();
         flag.validateAccess(viewerId, participantIds);
@@ -97,7 +95,7 @@ public class FlagQueryService implements FlagQueryUseCase {
 
     @Override
     public List<FlagResult> getParticipatingFlags(Long userId) {
-        List<Long> flagIds = participantRepository.findFlagIdByParticipantId(userId);
+        List<Long> flagIds = flagRepository.findFlagIdsByParticipantId(userId);
         if (flagIds.isEmpty()) return List.of();
 
         List<Flag> flags = flagRepository.findAllByIdIn(flagIds);

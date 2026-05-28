@@ -1,9 +1,17 @@
-package com.example.DunbarHorizon.flag.domain.flag;
+package com.example.DunbarHorizon.flag.domain.invitation;
 
-import com.example.DunbarHorizon.flag.domain.flag.exception.*;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
+import com.example.DunbarHorizon.flag.domain.flag.Flag;
+import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
+import com.example.DunbarHorizon.flag.domain.flag.FlagParticipationManager;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipantNotFoundException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipationDuplicateException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagInvitationRepository;
+import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationDuplicateException;
+import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationNotFoundException;
+import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -12,15 +20,14 @@ import org.springframework.stereotype.Component;
 public class FlagInvitationManager {
 
     private final FlagRepository flagRepository;
-    private final FlagParticipantRepository participantRepository;
     private final FlagInvitationRepository invitationRepository;
     private final FlagParticipationManager flagParticipationManager;
 
     public void updateInvitePermission(Long flagId, Long requesterId, Long participantUserId, boolean canInvite) {
         Flag flag = flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
-        FlagParticipant participant = participantRepository
-                .findByFlagIdAndParticipantId(flagId, participantUserId)
+        FlagParticipant participant = flagRepository
+                .findParticipant(flagId, participantUserId)
                 .orElseThrow(() -> new FlagParticipantNotFoundException(participantUserId));
 
         if (canInvite) {
@@ -43,15 +50,15 @@ public class FlagInvitationManager {
         }
 
         if (!flag.getHostId().equals(inviterId)) {
-            FlagParticipant inviter = participantRepository
-                    .findByFlagIdAndParticipantId(flagId, inviterId)
+            FlagParticipant inviter = flagRepository
+                    .findParticipant(flagId, inviterId)
                     .orElseThrow(() -> new FlagParticipantNotFoundException(inviterId));
             if (!inviter.isCanInvite()) {
                 throw new FlagAuthorizationException("초대 권한이 없습니다.");
             }
         }
 
-        if (participantRepository.isParticipating(flagId, inviteeId)) {
+        if (flagRepository.isParticipating(flagId, inviteeId)) {
             throw new FlagParticipationDuplicateException(flagId, inviteeId);
         }
 

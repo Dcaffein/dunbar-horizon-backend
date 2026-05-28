@@ -1,59 +1,112 @@
-# PLAN: Task-52 FlagInvitationManager Host 초대 버그 수정
+# PLAN: Task-53 Flag 도메인 Aggregate 경계 재정립
 
-## 목표
+## 작업 목표
 
-`FlagInvitationManager.invite()`에서 Host가 `FlagParticipant` 레코드 없이도 초대를 보낼 수 있도록 수정한다.
-아울러 `accept()` 위임 구조 변경에 맞춰 테스트를 정합한다.
+1. `FlagParticipant`를 Flag Aggregate의 내부 엔티티로 전환 — `FlagParticipantRepository` 제거, 기능을 `FlagRepository`로 흡수
+2. `FlagInvitation` 관련 클래스를 `flag.domain.invitation` 패키지로 분리 — 독립 Aggregate임을 구조로 표현
 
 ---
 
 ## 현황 분석
 
-### 버그
-`invite()`의 inviter 권한 검증이 `participantRepository.findByFlagIdAndParticipantId(flagId, inviterId)`에만 의존한다.
-Host는 `FlagParticipant` 테이블에 없으므로 `FlagParticipantNotFoundException` 발생 → Host가 초대 불가.
+### FlagParticipantRepository 의존 클래스 (12곳)
 
-### 테스트 불일치
-`FlagInvitationManagerTest`의 `accept_*` 테스트들이 `participantRepository`, `flagRepository`를 직접 스텁하고 있다.
-그러나 현재 `accept()`는 이 로직을 `FlagParticipationManager`에 위임하므로 `@Mock FlagParticipationManager`가 없어 실행 시 NPE 발생.
+| 클래스 | 사용 메서드 |
+|---|---|
+| `FlagParticipationManager` | `isParticipating`, `countByFlagId`, `findByFlagIdAndParticipantId` |
+| `FlagInvitationManager` | `findByFlagIdAndParticipantId`, `isParticipating` |
+| `FlagParticipationService` | `save`, `delete` |
+| `FlagInvitationService` | `save` |
+| `FlagManagementService` | `countByFlagId` |
+| `FlagQueryService` | `findAllByFlagId`, `findFlagIdByParticipantId` |
+| `FlagMemorialFactory` | `findAllParticipantIdsByFlagId` |
+| `FlagCommentCommandService` | `findAllParticipantIdsByFlagId` |
+| `FlagCommentQueryService` | `findAllParticipantIdsByFlagId` |
+| `FlagDeletionEventListener` | `findAllParticipantIdsByFlagId`, `deleteAllByFlagId` |
+| `FlagEncoreEventListener` | `findAllParticipantIdsByFlagId` |
+| `FlagMeetingChangedEventListener` | `findAllParticipantIdsByFlagId` |
+
+### FlagInvitation 이동 대상 (flag.domain.flag → flag.domain.invitation)
+
+- `FlagInvitation.java`
+- `FlagInvitationStatus.java`
+- `FlagInvitationManager.java`
+- `event/FlagInvitationSentEvent.java`
+- `exception/FlagInvitation{Access,Duplicate,Expired,NotFound}Exception.java`
+- `repository/FlagInvitationRepository.java`
 
 ---
 
 ## 변경 파일 목록
 
+### 수정
 | 파일 | 변경 내용 |
-|------|-----------|
-| `flag/domain/flag/FlagParticipationManager.java` | `participateByInvitation()` 추가, `updateCapacity()` 제거 — 검증 로직이 `Flag.updateCapacity()` 도메인 메서드에 이미 있어 불필요 |
-| `flag/domain/flag/FlagInvitationManager.java` | `invite()` — inviterId가 hostId이면 Participant 조회·canInvite 검증 skip |
-| `flag/domain/flag/FlagInvitationManagerTest.java` | `@Mock FlagParticipationManager` 추가, `accept_*` 스텁 교체, `invite_HostIsInviter_Success` 테스트 추가 |
+|---|---|
+| `flag/domain/flag/repository/FlagRepository.java` | `FlagParticipantRepository`의 모든 메서드 흡수 |
+| `flag/adapter/out/persistence/FlagRepositoryAdapter.java` | `FlagParticipantJpaRepository` 주입 추가, Participant 메서드 구현 |
+| `FlagParticipationManager.java` | `flagParticipantRepository` → `flagRepository` |
+| `FlagInvitationManager.java` | `participantRepository` → `flagRepository` |
+| `FlagParticipationService.java` | `participantRepository` → `flagRepository` |
+| `FlagInvitationService.java` | `participantRepository` → `flagRepository` |
+| `FlagManagementService.java` | `participantRepository` → `flagRepository` |
+| `FlagQueryService.java` | `participantRepository` → `flagRepository` |
+| `FlagMemorialFactory.java` | `flagParticipantRepository` → `flagRepository` |
+| `FlagCommentCommandService.java` | `participantRepository` → `flagRepository` |
+| `FlagCommentQueryService.java` | `participantRepository` → `flagRepository` |
+| `FlagDeletionEventListener.java` | `participantRepository` → `flagRepository` |
+| `FlagEncoreEventListener.java` | `participantRepository` → `flagRepository` |
+| `FlagMeetingChangedEventListener.java` | `participantRepository` → `flagRepository` |
+| `FlagInvitationService.java` | import 경로 수정 (invitation 패키지) |
+| `FlagInvitationEventListener.java` | import 경로 수정 |
+| `FlagInvitationController.java` | import 경로 수정 |
+| `FlagInvitationUseCase.java` | import 경로 수정 |
+
+### 제거
+| 파일 | 이유 |
+|---|---|
+| `flag/domain/flag/repository/FlagParticipantRepository.java` | FlagRepository로 흡수 |
+| `flag/adapter/out/persistence/FlagParticipantRepositoryAdapter.java` | FlagRepositoryAdapter로 통합 |
+
+### 이동 (패키지 변경)
+`flag.domain.flag.*` → `flag.domain.invitation.*`
 
 ---
 
 ## 구현 방향
 
-### FlagInvitationManager.invite()
+### FlagRepository 확장
 
 ```java
-boolean inviterIsHost = flag.getHostId().equals(inviterId);
-if (!inviterIsHost) {
-    FlagParticipant inviter = participantRepository
-        .findByFlagIdAndParticipantId(flagId, inviterId)
-        .orElseThrow(() -> new FlagParticipantNotFoundException(inviterId));
-    if (!inviter.isCanInvite()) {
-        throw new FlagAuthorizationException("초대 권한이 없습니다.");
-    }
-}
+// 기존 Flag 메서드 유지 +
+FlagParticipant saveParticipant(FlagParticipant participant);
+void deleteParticipant(FlagParticipant participant);
+Optional<FlagParticipant> findParticipant(Long flagId, Long participantId);
+int countParticipants(Long flagId);
+boolean isParticipating(Long flagId, Long participantId);
+List<Long> findAllParticipantIds(Long flagId);
+void deleteAllParticipants(Long flagId);
+List<Long> findFlagIdsByParticipantId(Long participantId);
+List<FlagParticipant> findAllParticipants(Long flagId);
 ```
 
-### FlagInvitationManagerTest
+메서드명에 `Participant` 명사를 포함시켜 Flag 자체 메서드와 시각적으로 구분.
 
-- `@Mock FlagParticipationManager flagParticipationManager` 추가
-- `accept_Success`: `participantRepository`·`flagRepository` 스텁 제거 → `given(flagParticipationManager.participateByInvitation(...)).willReturn(participant)` 으로 교체
-- `accept_AlreadyParticipating_Throws`: 위임 후 예외 발생이므로 `given(flagParticipationManager.participateByInvitation(...)).willThrow(FlagParticipationDuplicateException.class)` 로 교체
-- `invite_HostIsInviter_Success` 추가: inviterId = HOST_ID, participantRepository 스텁 없이 성공
+### FlagMaintenanceAdapter
+
+`hardDeleteByFlagIdsIn`은 인프라 레이어 내부에서 직접 `FlagParticipantJpaRepository`를 참조하므로 변경 없음.
+
+### 트랜잭션 일관성
+
+`FlagParticipationService.participate()` / `unparticipate()`는 서비스 레이어에서 `flagRepository.saveParticipant()`를 호출. 도메인 메서드(`Flag.participate()`)가 FlagParticipant 인스턴스를 생성하고, 서비스가 이를 저장하는 현재 흐름 유지.
 
 ---
 
 ## 예상 사이드 이펙트
 
-없음. 호스트가 초대자인 경우는 기존에 예외로 터지던 경로이므로 기존 동작에 영향 없음.
+- `FlagInvitationManager`가 `flag.domain.invitation` 패키지로 이동하면서 `FlagInvitationService`의 import 변경
+- `FlagInvitationManagerTest`도 패키지 이동 필요
+- 컴파일 에러를 따라가며 순차 수정
+
+## 브랜치
+
+`ai/refactor-flag-aggregate-boundary` (from main)

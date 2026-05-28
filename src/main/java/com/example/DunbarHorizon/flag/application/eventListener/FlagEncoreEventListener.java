@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.flag.application.eventListener;
 
 import com.example.DunbarHorizon.flag.domain.flag.FlagPreservationPolicy;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagEncoreEvent;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FlagEncoreEventListener {
 
-    private final FlagParticipantRepository participantRepository;
+    private final FlagRepository flagRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final FlagPreservationPolicy flagPreservationPolicy;
 
@@ -35,7 +35,7 @@ public class FlagEncoreEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handle(FlagEncoreEvent event) {
-        List<Long> oldParticipantIds = participantRepository.findAllParticipantIdsByFlagId(event.parentFlagId());
+        List<Long> oldParticipantIds = flagRepository.findAllParticipantIds(event.parentFlagId());
 
         if (oldParticipantIds.isEmpty()) return;
 

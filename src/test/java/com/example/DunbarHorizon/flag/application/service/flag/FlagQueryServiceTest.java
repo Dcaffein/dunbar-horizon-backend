@@ -10,7 +10,6 @@ import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagParticipantRepository;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,7 +36,6 @@ class FlagQueryServiceTest {
     @InjectMocks private FlagQueryService flagQueryService;
 
     @Mock private FlagRepository flagRepository;
-    @Mock private FlagParticipantRepository participantRepository;
     @Mock private FlagUserPort flagUserPort;
 
     private static final Long USER_ID = 1L;
@@ -75,7 +73,7 @@ class FlagQueryServiceTest {
     void getMyFlagsByRole_Participant_ReturnsParticipatingFlags() {
         // given
         Flag flag = createRecruitingFlag(1L);
-        given(participantRepository.findFlagIdByParticipantId(USER_ID)).willReturn(List.of(1L));
+        given(flagRepository.findFlagIdsByParticipantId(USER_ID)).willReturn(List.of(1L));
         given(flagRepository.findAllByIdIn(List.of(1L))).willReturn(List.of(flag));
         given(flagUserPort.findUserInfosByIds(Set.of(USER_ID))).willReturn(Map.of(USER_ID, userInfo(USER_ID)));
 
@@ -90,7 +88,7 @@ class FlagQueryServiceTest {
     @DisplayName("참여 플래그가 없으면 빈 리스트가 반환된다")
     void getMyFlagsByRole_ParticipantNoFlags_ReturnsEmpty() {
         // given
-        given(participantRepository.findFlagIdByParticipantId(USER_ID)).willReturn(List.of());
+        given(flagRepository.findFlagIdsByParticipantId(USER_ID)).willReturn(List.of());
 
         // when
         List<FlagResult> result = flagQueryService.getMyFlagsByRole(USER_ID, FlagRole.PARTICIPANT);
@@ -116,7 +114,7 @@ class FlagQueryServiceTest {
         // given
         Flag flag = createRecruitingFlag(1L);
         given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
-        given(participantRepository.findAllByFlagId(1L)).willReturn(List.of());
+        given(flagRepository.findAllParticipants(1L)).willReturn(List.of());
         given(flagUserPort.findUserInfosByIds(anySet()))
                 .willReturn(Map.of(USER_ID, userInfo(USER_ID)));
 
@@ -139,7 +137,7 @@ class FlagQueryServiceTest {
         given(mockParticipant.getCreatedAt()).willReturn(NOW);
 
         given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
-        given(participantRepository.findAllByFlagId(1L)).willReturn(List.of(mockParticipant));
+        given(flagRepository.findAllParticipants(1L)).willReturn(List.of(mockParticipant));
         given(flagUserPort.findUserInfosByIds(anySet()))
                 .willReturn(Map.of(USER_ID, userInfo(USER_ID), viewerId, userInfo(viewerId)));
 
@@ -157,7 +155,7 @@ class FlagQueryServiceTest {
         Flag flag = createRecruitingFlag(1L);
 
         given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
-        given(participantRepository.findAllByFlagId(1L)).willReturn(List.of());
+        given(flagRepository.findAllParticipants(1L)).willReturn(List.of());
 
         assertThatThrownBy(() -> flagQueryService.getFlagDetail(1L, viewerId))
                 .isInstanceOf(FlagAuthorizationException.class);
