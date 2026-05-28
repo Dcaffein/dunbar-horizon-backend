@@ -89,14 +89,11 @@ public class SocialQueryController {
         return ResponseEntity.ok(expansionQueryUseCase.getAnchorExpansion(currentUserId, anchorId, 0.3));
     }
 
-    /**
-     * 피벗 친구 기반 2-hop 새 친구 추천
-     */
-    @GetMapping("/suggestions/pivot")
-    public ResponseEntity<List<AnchorExpansionResult>> getTwoHopSuggestionsByPivot(
+    @GetMapping("/suggestions/anchor")
+    public ResponseEntity<List<AnchorExpansionResult>> getTwoHopSuggestionsByAnchor(
             @CurrentUserId Long currentUserId,
-            @RequestParam Long pivotId
+            @RequestParam Long anchorId
     ) {
-        return ResponseEntity.ok(expansionQueryUseCase.getTwoHopSuggestionsByOneHop(currentUserId, pivotId));
+        return ResponseEntity.ok(expansionQueryUseCase.getTwoHopSuggestionsByOneHop(currentUserId, anchorId));
     }
 }

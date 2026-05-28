@@ -6,6 +6,6 @@ import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByT
 import java.util.List;
 
 public interface SocialExpansionQueryUseCase {
-    List<AnchorExpansionResult> getTwoHopSuggestionsByOneHop(Long userId, Long pivotId);
+    List<AnchorExpansionResult> getTwoHopSuggestionsByOneHop(Long userId, Long anchorId);
     List<AnchorExpansionResult> getAnchorExpansion(Long userId, Long anchorFriendId, Double expansionValue);
 }

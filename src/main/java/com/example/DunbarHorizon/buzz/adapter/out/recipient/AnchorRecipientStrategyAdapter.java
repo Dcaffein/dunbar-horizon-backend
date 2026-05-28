@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.adapter.out.recipient;
 
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.PivotRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.info.RecipientSpec;
 import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
 import com.example.DunbarHorizon.buzz.application.dto.info.RecipientType;
@@ -14,16 +14,16 @@ import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
-public class PivotRecipientStrategyAdapter implements RecipientStrategyPort {
+public class AnchorRecipientStrategyAdapter implements RecipientStrategyPort {
 
     private final SocialExpansionQueryUseCase expansionQueryUseCase;
 
-    @Override public RecipientType getSupportType() { return RecipientType.PIVOT; }
+    @Override public RecipientType getSupportType() { return RecipientType.ANCHOR; }
 
     @Override
     public Set<Long> fetchRecipientIds(Long creatorId, RecipientSpec spec) {
-        if (spec instanceof PivotRecipientSpec(var pivotFriendId, var expansionValue)) {
-            return expansionQueryUseCase.getAnchorExpansion(creatorId, pivotFriendId, expansionValue)
+        if (spec instanceof AnchorRecipientSpec(var anchorFriendId, var expansionValue)) {
+            return expansionQueryUseCase.getAnchorExpansion(creatorId, anchorFriendId, expansionValue)
                     .stream()
                     .map(AnchorExpansionResult::id)
                     .collect(Collectors.toSet());

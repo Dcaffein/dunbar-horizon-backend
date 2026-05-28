@@ -8,8 +8,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonSubTypes({
         @JsonSubTypes.Type(value = LabelRecipientRequest.class, name = "LABEL"),
         @JsonSubTypes.Type(value = ManualRecipientRequest.class, name = "MANUAL"),
-        @JsonSubTypes.Type(value = PivotRecipientRequest.class, name = "PIVOT")
+        @JsonSubTypes.Type(value = AnchorRecipientRequest.class, name = "ANCHOR")
 })
-public sealed interface RecipientRequest permits LabelRecipientRequest, ManualRecipientRequest, PivotRecipientRequest {
+public sealed interface RecipientRequest permits LabelRecipientRequest, ManualRecipientRequest, AnchorRecipientRequest {
     RecipientSpec toSpec();
 }

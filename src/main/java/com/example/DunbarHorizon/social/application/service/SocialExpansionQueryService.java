@@ -30,8 +30,8 @@ public class SocialExpansionQueryService implements SocialExpansionQueryUseCase 
     private final SocialExpansionRepository socialExpansionRepository;
 
     @Override
-    public List<AnchorExpansionResult> getTwoHopSuggestionsByOneHop(Long userId, Long pivotId) {
-        return socialExpansionRepository.getRecommendedNetworkByAnchor(userId, pivotId, 1  ,10);
+    public List<AnchorExpansionResult> getTwoHopSuggestionsByOneHop(Long userId, Long anchorId) {
+        return socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, 1, 10);
     }
 
     @Override
