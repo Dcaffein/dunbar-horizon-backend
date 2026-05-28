@@ -61,6 +61,15 @@ public class Auth extends BaseTimeAggregateRoot {
                 .build();
     }
 
+    public static Auth createVerifiedLocalAuth(Long userId, String encodedPassword) {
+        return Auth.builder()
+                .userId(userId)
+                .provider(AuthProvider.LOCAL)
+                .password(encodedPassword)
+                .verified(true)
+                .build();
+    }
+
 
     public static Auth createOAuth(Long userId, AuthProvider provider, String providerId) {
         Auth auth = Auth.builder()
