@@ -20,7 +20,7 @@ public record FlagDetailResult(
             @Nullable FlagRole role
     ) {
         return new FlagDetailResult(
-                FlagResult.of(flag, hostInfo),
+                FlagResult.of(flag, hostInfo, participants.size()),
                 participants,
                 participants.size(),
                 role

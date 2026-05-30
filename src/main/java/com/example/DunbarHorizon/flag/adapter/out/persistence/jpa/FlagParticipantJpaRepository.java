@@ -10,7 +10,18 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+
+
 public interface FlagParticipantJpaRepository extends JpaRepository<FlagParticipant, Long> {
+
+    interface FlagParticipantCountProjection {
+        Long getFlagId();
+        Long getCount();
+    }
+
+    @Query("SELECT fp.flagId as flagId, COUNT(fp) as count FROM FlagParticipant fp WHERE fp.flagId IN :flagIds GROUP BY fp.flagId")
+    List<FlagParticipantCountProjection> countByFlagIdIn(@Param("flagIds") Collection<Long> flagIds);
+
 
     Optional<FlagParticipant> findByFlagIdAndParticipantId(Long flagId, Long participantId);
 

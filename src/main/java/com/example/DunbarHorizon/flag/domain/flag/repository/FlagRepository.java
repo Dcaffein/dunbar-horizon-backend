@@ -7,6 +7,7 @@ import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -29,6 +30,7 @@ public interface FlagRepository {
     void deleteParticipant(FlagParticipant participant);
     Optional<FlagParticipant> findParticipant(Long flagId, Long participantId);
     int countParticipants(Long flagId);
+    Map<Long, Integer> countParticipantsByFlagIds(Collection<Long> flagIds);
     boolean isParticipating(Long flagId, Long participantId);
     List<Long> findAllParticipantIds(Long flagId);
     void deleteAllParticipants(Long flagId);
