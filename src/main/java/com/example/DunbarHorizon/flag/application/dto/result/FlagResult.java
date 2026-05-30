@@ -8,16 +8,18 @@ public record FlagResult(
         String title,
         String description,
         int capacity,
+        int participantCount,
         String status,
         FlagScheduleResult schedule,
         FlagHostResult host
 ) {
-    public static FlagResult of(Flag flag, FlagUserInfo hostInfo) {
+    public static FlagResult of(Flag flag, FlagUserInfo hostInfo, int participantCount) {
         return new FlagResult(
                 flag.getId(),
                 flag.getTitle(),
                 flag.getDescription(),
                 flag.getCapacity(),
+                participantCount,
                 flag.calculateCurrentStatus().name(),
                 FlagScheduleResult.from(flag.getSchedule()),
                 FlagHostResult.from(hostInfo)

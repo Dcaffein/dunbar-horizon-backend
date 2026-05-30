@@ -39,9 +39,12 @@ public class FlagQueryService implements FlagQueryUseCase {
         List<Flag> recruitingFlags = flagRepository.findAllByHostIdsAndStatus(friendIds, FlagStatus.RECRUITING);
 
         Map<Long, FlagUserInfo> hostInfoMap = flagUserPort.findUserInfosByIds(friendIds);
+        List<Long> flagIds = recruitingFlags.stream().map(Flag::getId).toList();
+        Map<Long, Integer> countMap = flagRepository.countParticipantsByFlagIds(flagIds);
 
         return recruitingFlags.stream()
-                .map(flag -> FlagResult.of(flag, hostInfoMap.getOrDefault(flag.getHostId(), null)))
+                .map(flag -> FlagResult.of(flag, hostInfoMap.getOrDefault(flag.getHostId(), null),
+                        countMap.getOrDefault(flag.getId(), 0)))
                 .toList();
     }
 
@@ -88,8 +91,11 @@ public class FlagQueryService implements FlagQueryUseCase {
         List<Flag> managedFlags = flagRepository.findAllByHostId(userId);
         FlagUserInfo myInfo = flagUserPort.findUserInfosByIds(Set.of(userId)).get(userId);
 
+        List<Long> flagIds = managedFlags.stream().map(Flag::getId).toList();
+        Map<Long, Integer> countMap = flagRepository.countParticipantsByFlagIds(flagIds);
+
         return managedFlags.stream()
-                .map(flag -> FlagResult.of(flag, myInfo))
+                .map(flag -> FlagResult.of(flag, myInfo, countMap.getOrDefault(flag.getId(), 0)))
                 .toList();
     }
 
@@ -101,9 +107,11 @@ public class FlagQueryService implements FlagQueryUseCase {
         List<Flag> flags = flagRepository.findAllByIdIn(flagIds);
         Set<Long> hostIds = flags.stream().map(Flag::getHostId).collect(Collectors.toSet());
         Map<Long, FlagUserInfo> hostInfoMap = flagUserPort.findUserInfosByIds(hostIds);
+        Map<Long, Integer> countMap = flagRepository.countParticipantsByFlagIds(flagIds);
 
         return flags.stream()
-                .map(flag -> FlagResult.of(flag, hostInfoMap.get(flag.getHostId())))
+                .map(flag -> FlagResult.of(flag, hostInfoMap.get(flag.getHostId()),
+                        countMap.getOrDefault(flag.getId(), 0)))
                 .toList();
     }
 

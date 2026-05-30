@@ -12,8 +12,10 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -109,6 +111,16 @@ public class FlagRepositoryAdapter implements FlagRepository {
     @Override
     public int countParticipants(Long flagId) {
         return participantJpaRepository.countByFlagId(flagId);
+    }
+
+    @Override
+    public Map<Long, Integer> countParticipantsByFlagIds(Collection<Long> flagIds) {
+        if (flagIds == null || flagIds.isEmpty()) return Map.of();
+        return participantJpaRepository.countByFlagIdIn(flagIds).stream()
+                .collect(Collectors.toMap(
+                        FlagParticipantJpaRepository.FlagParticipantCountProjection::getFlagId,
+                        p -> p.getCount().intValue()
+                ));
     }
 
     @Override
