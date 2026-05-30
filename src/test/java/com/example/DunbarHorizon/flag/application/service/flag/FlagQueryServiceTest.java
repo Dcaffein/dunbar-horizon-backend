@@ -8,7 +8,6 @@ import com.example.DunbarHorizon.flag.application.port.out.FlagUserPort;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
-import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -25,8 +24,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
@@ -38,13 +39,19 @@ class FlagQueryServiceTest {
     @Mock private FlagRepository flagRepository;
     @Mock private FlagUserPort flagUserPort;
 
-    private static final Long USER_ID = 1L;
+    private static final Long HOST_ID = 1L;
     private static final LocalDateTime NOW = LocalDateTime.now();
 
     private Flag createRecruitingFlag(Long id) {
         FlagSchedule schedule = FlagSchedule.of(NOW.plusHours(2), NOW.plusHours(3), NOW.plusHours(4));
-        Flag flag = Flag.create(USER_ID, "테스트 플래그", "설명", 10, schedule);
+        Flag flag = Flag.create(HOST_ID, "테스트 플래그", "설명", 10, schedule);
         ReflectionTestUtils.setField(flag, "id", id);
+        return flag;
+    }
+
+    private Flag createEncoreFlag(Long id, Long parentId) {
+        Flag flag = createRecruitingFlag(id);
+        ReflectionTestUtils.setField(flag, "parentId", parentId);
         return flag;
     }
 
@@ -52,112 +59,142 @@ class FlagQueryServiceTest {
         return new FlagUserInfo(userId, "사용자" + userId, null);
     }
 
+    // ===== 목록 조회 =====
+
     @Test
     @DisplayName("HOST 역할로 조회하면 호스팅 중인 플래그 목록이 반환된다")
     void getMyFlagsByRole_Host_ReturnsManagedFlags() {
-        // given
         Flag flag = createRecruitingFlag(1L);
-        given(flagRepository.findAllByHostId(USER_ID)).willReturn(List.of(flag));
-        given(flagUserPort.findUserInfosByIds(Set.of(USER_ID))).willReturn(Map.of(USER_ID, userInfo(USER_ID)));
+        given(flagRepository.findAllByHostId(HOST_ID)).willReturn(List.of(flag));
+        given(flagRepository.countParticipantsByFlagIds(anyCollection())).willReturn(Map.of(1L, 3));
+        given(flagUserPort.findUserInfosByIds(Set.of(HOST_ID))).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
 
-        // when
-        List<FlagResult> result = flagQueryService.getMyFlagsByRole(USER_ID, FlagRole.HOST);
+        List<FlagResult> result = flagQueryService.getMyFlagsByRole(HOST_ID, FlagRole.HOST);
 
-        // then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).title()).isEqualTo("테스트 플래그");
+        assertThat(result.get(0).participantCount()).isEqualTo(3);
     }
 
     @Test
     @DisplayName("PARTICIPANT 역할로 조회하면 참여 중인 플래그 목록이 반환된다")
     void getMyFlagsByRole_Participant_ReturnsParticipatingFlags() {
-        // given
         Flag flag = createRecruitingFlag(1L);
-        given(flagRepository.findFlagIdsByParticipantId(USER_ID)).willReturn(List.of(1L));
+        given(flagRepository.findFlagIdsByParticipantId(HOST_ID)).willReturn(List.of(1L));
         given(flagRepository.findAllByIdIn(List.of(1L))).willReturn(List.of(flag));
-        given(flagUserPort.findUserInfosByIds(Set.of(USER_ID))).willReturn(Map.of(USER_ID, userInfo(USER_ID)));
+        given(flagRepository.countParticipantsByFlagIds(anyCollection())).willReturn(Map.of(1L, 1));
+        given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
 
-        // when
-        List<FlagResult> result = flagQueryService.getMyFlagsByRole(USER_ID, FlagRole.PARTICIPANT);
+        List<FlagResult> result = flagQueryService.getMyFlagsByRole(HOST_ID, FlagRole.PARTICIPANT);
 
-        // then
         assertThat(result).hasSize(1);
+        assertThat(result.get(0).participantCount()).isEqualTo(1);
     }
 
     @Test
     @DisplayName("참여 플래그가 없으면 빈 리스트가 반환된다")
     void getMyFlagsByRole_ParticipantNoFlags_ReturnsEmpty() {
-        // given
-        given(flagRepository.findFlagIdsByParticipantId(USER_ID)).willReturn(List.of());
+        given(flagRepository.findFlagIdsByParticipantId(HOST_ID)).willReturn(List.of());
 
-        // when
-        List<FlagResult> result = flagQueryService.getMyFlagsByRole(USER_ID, FlagRole.PARTICIPANT);
+        List<FlagResult> result = flagQueryService.getMyFlagsByRole(HOST_ID, FlagRole.PARTICIPANT);
 
-        // then
         assertThat(result).isEmpty();
     }
 
     @Test
+    @DisplayName("참여자가 없는 플래그는 participantCount가 0이다")
+    void getMyFlagsByRole_NoParticipants_CountIsZero() {
+        Flag flag = createRecruitingFlag(1L);
+        given(flagRepository.findAllByHostId(HOST_ID)).willReturn(List.of(flag));
+        given(flagRepository.countParticipantsByFlagIds(anyCollection())).willReturn(Map.of());
+        given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
+
+        List<FlagResult> result = flagQueryService.getMyHostingFlags(HOST_ID);
+
+        assertThat(result.get(0).participantCount()).isEqualTo(0);
+    }
+
+    // ===== 상세 조회 =====
+
+    @Test
     @DisplayName("존재하지 않는 플래그를 상세 조회하면 FlagNotFoundException이 발생한다")
     void getFlagDetail_NotFound_ThrowsException() {
-        // given
         given(flagRepository.findById(999L)).willReturn(Optional.empty());
 
-        // when / then
-        assertThatThrownBy(() -> flagQueryService.getFlagDetail(999L, USER_ID))
+        assertThatThrownBy(() -> flagQueryService.getFlagDetail(999L))
                 .isInstanceOf(FlagNotFoundException.class);
     }
 
     @Test
-    @DisplayName("플래그 상세 조회 시 호스트는 HOST 역할로 응답받는다")
-    void getFlagDetail_ViewerIsHost_ReturnsHostRole() {
-        // given
+    @DisplayName("참여자가 없는 플래그 상세 조회 시 빈 participants와 null parentFlag가 반환된다")
+    void getFlagDetail_NoParticipantsNoParent_ReturnsEmptyParticipantsAndNullParent() {
         Flag flag = createRecruitingFlag(1L);
         given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
         given(flagRepository.findAllParticipants(1L)).willReturn(List.of());
-        given(flagUserPort.findUserInfosByIds(anySet()))
-                .willReturn(Map.of(USER_ID, userInfo(USER_ID)));
+        given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
 
-        // when
-        FlagDetailResult result = flagQueryService.getFlagDetail(1L, USER_ID); // viewerId == hostId
+        FlagDetailResult result = flagQueryService.getFlagDetail(1L);
 
-        // then
-        assertThat(result.role()).isEqualTo(FlagRole.HOST);
+        assertThat(result.participants()).isEmpty();
+        assertThat(result.participantCount()).isEqualTo(0);
+        assertThat(result.parentFlag()).isNull();
+        assertThat(result.parentFlagId()).isNull();
     }
 
     @Test
-    @DisplayName("플래그 상세 조회 시 참여자는 PARTICIPANT 역할로 응답받는다")
-    void getFlagDetail_ViewerIsParticipant_ReturnsParticipantRole() {
-        // given
-        Long viewerId = 99L;
+    @DisplayName("참여자가 있는 플래그 상세 조회 시 participants 목록과 participantCount가 반환된다")
+    void getFlagDetail_WithParticipants_ReturnsParticipantList() {
+        Long participantId = 2L;
         Flag flag = createRecruitingFlag(1L);
 
         FlagParticipant mockParticipant = mock(FlagParticipant.class);
-        given(mockParticipant.getParticipantId()).willReturn(viewerId);
-        given(mockParticipant.getCreatedAt()).willReturn(NOW);
+        given(mockParticipant.getParticipantId()).willReturn(participantId);
 
         given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
         given(flagRepository.findAllParticipants(1L)).willReturn(List.of(mockParticipant));
         given(flagUserPort.findUserInfosByIds(anySet()))
-                .willReturn(Map.of(USER_ID, userInfo(USER_ID), viewerId, userInfo(viewerId)));
+                .willReturn(Map.of(HOST_ID, userInfo(HOST_ID), participantId, userInfo(participantId)));
 
-        // when
-        FlagDetailResult result = flagQueryService.getFlagDetail(1L, viewerId);
+        FlagDetailResult result = flagQueryService.getFlagDetail(1L);
 
-        // then
-        assertThat(result.role()).isEqualTo(FlagRole.PARTICIPANT);
+        assertThat(result.participants()).hasSize(1);
+        assertThat(result.participantCount()).isEqualTo(1);
+        assertThat(result.participants().get(0).id()).isEqualTo(participantId);
+        assertThat(result.participants().get(0).nickname()).isEqualTo("사용자2");
     }
 
     @Test
-    @DisplayName("플래그 상세 조회 시 호스트도 참여자도 아닌 사용자는 FlagAuthorizationException이 발생한다")
-    void getFlagDetail_ViewerHasNoRelation_ThrowsException() {
-        Long viewerId = 999L;
-        Flag flag = createRecruitingFlag(1L);
+    @DisplayName("Encore 플래그 상세 조회 시 parentFlag 정보가 반환된다")
+    void getFlagDetail_EncoreFlag_ReturnsParentFlagInfo() {
+        Flag parentFlag = createRecruitingFlag(10L);
+        Flag encoreFlag = createEncoreFlag(1L, 10L);
 
-        given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
+        given(flagRepository.findById(1L)).willReturn(Optional.of(encoreFlag));
         given(flagRepository.findAllParticipants(1L)).willReturn(List.of());
+        given(flagRepository.findById(10L)).willReturn(Optional.of(parentFlag));
+        given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
 
-        assertThatThrownBy(() -> flagQueryService.getFlagDetail(1L, viewerId))
-                .isInstanceOf(FlagAuthorizationException.class);
+        FlagDetailResult result = flagQueryService.getFlagDetail(1L);
+
+        assertThat(result.parentFlagId()).isEqualTo(10L);
+        assertThat(result.parentFlag()).isNotNull();
+        assertThat(result.parentFlag().id()).isEqualTo(10L);
+        assertThat(result.parentFlag().title()).isEqualTo("테스트 플래그");
+    }
+
+    @Test
+    @DisplayName("Encore 플래그인데 parentFlag가 삭제된 경우 parentFlag는 null이다")
+    void getFlagDetail_EncoreFlagParentDeleted_ReturnsNullParentFlag() {
+        Flag encoreFlag = createEncoreFlag(1L, 10L);
+
+        given(flagRepository.findById(1L)).willReturn(Optional.of(encoreFlag));
+        given(flagRepository.findAllParticipants(1L)).willReturn(List.of());
+        given(flagRepository.findById(10L)).willReturn(Optional.empty());
+        given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
+
+        FlagDetailResult result = flagQueryService.getFlagDetail(1L);
+
+        assertThat(result.parentFlagId()).isEqualTo(10L);
+        assertThat(result.parentFlag()).isNull();
     }
 }
