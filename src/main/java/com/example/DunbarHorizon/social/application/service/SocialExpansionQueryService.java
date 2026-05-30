@@ -41,7 +41,7 @@ public class SocialExpansionQueryService implements SocialExpansionQueryUseCase 
         int limitCount = calculateLimit(expansionValue);
         int threshold = calculateThreshold(expansionValue);
 
-        return socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorFriendId, limitCount, threshold);
+        return socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorFriendId, threshold, limitCount);
     }
 
     private void validateExpansionValue(Double value) {
