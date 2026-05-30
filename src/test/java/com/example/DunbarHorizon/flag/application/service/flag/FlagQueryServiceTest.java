@@ -149,6 +149,7 @@ class FlagQueryServiceTest {
 
         FlagParticipant mockParticipant = mock(FlagParticipant.class);
         given(mockParticipant.getParticipantId()).willReturn(participantId);
+        given(mockParticipant.isCanInvite()).willReturn(true);
 
         given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
         given(flagRepository.findAllParticipants(1L)).willReturn(List.of(mockParticipant));
@@ -161,6 +162,7 @@ class FlagQueryServiceTest {
         assertThat(result.participantCount()).isEqualTo(1);
         assertThat(result.participants().get(0).id()).isEqualTo(participantId);
         assertThat(result.participants().get(0).nickname()).isEqualTo("사용자2");
+        assertThat(result.participants().get(0).canInvite()).isTrue();
     }
 
     @Test

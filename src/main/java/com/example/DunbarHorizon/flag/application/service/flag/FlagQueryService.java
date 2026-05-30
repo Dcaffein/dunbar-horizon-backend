@@ -61,7 +61,7 @@ public class FlagQueryService implements FlagQueryUseCase {
         Map<Long, FlagUserInfo> userInfoMap = flagUserPort.findUserInfosByIds(allUserIds);
 
         List<ParticipantResult> participants = flagParticipants.stream()
-                .map(p -> ParticipantResult.of(userInfoMap.get(p.getParticipantId())))
+                .map(p -> ParticipantResult.of(userInfoMap.get(p.getParticipantId()), p.isCanInvite()))
                 .toList();
 
         FlagUserInfo hostInfo = userInfoMap.get(flag.getHostId());
