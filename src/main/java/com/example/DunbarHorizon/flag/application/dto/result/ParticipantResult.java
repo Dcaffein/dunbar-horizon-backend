@@ -2,20 +2,16 @@ package com.example.DunbarHorizon.flag.application.dto.result;
 
 import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 
-import java.time.LocalDateTime;
-
 public record ParticipantResult(
-        Long userId,
+        Long id,
         String nickname,
-        String profileImageUrl,
-        LocalDateTime joinedAt
+        String profileImageUrl
 ) {
-    public static ParticipantResult of(FlagUserInfo userInfo, LocalDateTime joinedAt) {
+    public static ParticipantResult of(FlagUserInfo userInfo) {
         return new ParticipantResult(
                 userInfo.userId(),
                 userInfo.nickname(),
-                userInfo.profileImageUrl(),
-                joinedAt
+                userInfo.profileImageUrl()
         );
     }
 }
