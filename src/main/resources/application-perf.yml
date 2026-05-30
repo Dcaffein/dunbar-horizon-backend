@@ -1,0 +1,14 @@
+spring:
+  neo4j:
+    uri: bolt://localhost:7688
+    authentication:
+      username: neo4j
+      password: none  # NEO4J_AUTH=none 컨테이너는 임의 값 허용
+  data:
+    redis:
+      host: localhost
+      port: 6380
+
+logging:
+  level:
+    org.springframework.data.neo4j.cypher: DEBUG  # 실행 Cypher 확인용
