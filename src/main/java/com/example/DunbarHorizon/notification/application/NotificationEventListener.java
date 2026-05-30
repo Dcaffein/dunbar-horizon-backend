@@ -41,7 +41,13 @@ public class NotificationEventListener {
         }
 
         // 특정 사용자 알림 (Multicast)
-        // 1. 수신자 설정 조회 및 유효한 토큰 추출 (DB 읽기)
+        // 1. 알림 내역 DB 저장 (Tx)
+        List<Notification> notifications = event.receiverIds().stream()
+                .map(id -> createSingleNotification(id, event))
+                .toList();
+        List<Notification> savedNotifications = notificationService.savePendingNotifications(notifications);
+
+        // 2. 수신자 설정 조회 및 유효한 토큰 추출 (DB 읽기)
         List<NotificationSetting> settings = settingRepository.findAllByUserIdIn(event.receiverIds());
         List<String> validTokens = settings.stream()
                 .filter(NotificationSetting::isAlarmOn) // 알림 켜진 사람만
@@ -50,15 +56,9 @@ public class NotificationEventListener {
                 .toList();
 
         if (validTokens.isEmpty()) {
-            log.info("유효한 FCM 토큰이 없어 알림 발송을 생략합니다. 대상: {}", event.receiverIds());
-            return; // 굳이 빈 토큰으로 진행할 필요 없음
+            log.info("유효한 FCM 토큰이 없어 FCM 발송을 생략합니다. 대상: {}", event.receiverIds());
+            return;
         }
-
-        // 2. 알림 내역 DB 저장 (Tx)
-        List<Notification> notifications = event.receiverIds().stream()
-                .map(id -> createSingleNotification(id, event))
-                .toList();
-        List<Notification> savedNotifications = notificationService.savePendingNotifications(notifications);
 
         try {
             // 3. FCM 발송
