@@ -12,7 +12,6 @@ import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
-import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,32 +49,28 @@ public class FlagQueryService implements FlagQueryUseCase {
 
 
     @Override
-    public FlagDetailResult getFlagDetail(Long flagId, Long viewerId) {
+    public FlagDetailResult getFlagDetail(Long flagId) {
         Flag flag = flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
 
-        List<FlagParticipant> participants = flagRepository.findAllParticipants(flagId);
-
-        List<Long> participantIds = participants.stream().map(FlagParticipant::getParticipantId).toList();
-        flag.validateAccess(viewerId, participantIds);
-
-        boolean isHost = flag.getHostId().equals(viewerId);
-        boolean isParticipant = participantIds.contains(viewerId);
+        List<FlagParticipant> flagParticipants = flagRepository.findAllParticipants(flagId);
+        List<Long> participantIds = flagParticipants.stream().map(FlagParticipant::getParticipantId).toList();
 
         Set<Long> allUserIds = new HashSet<>(participantIds);
         allUserIds.add(flag.getHostId());
-
         Map<Long, FlagUserInfo> userInfoMap = flagUserPort.findUserInfosByIds(allUserIds);
 
-        List<ParticipantResult> participantRespons = participants.stream()
-                .map(p -> ParticipantResult.of(userInfoMap.get(p.getParticipantId()), p.getCreatedAt()))
+        List<ParticipantResult> participants = flagParticipants.stream()
+                .map(p -> ParticipantResult.of(userInfoMap.get(p.getParticipantId())))
                 .toList();
 
         FlagUserInfo hostInfo = userInfoMap.get(flag.getHostId());
 
-        FlagRole role = determineViewerRole(isHost, isParticipant);
+        Flag parentFlag = flag.getParentId() != null
+                ? flagRepository.findById(flag.getParentId()).orElse(null)
+                : null;
 
-        return FlagDetailResult.of(flag, hostInfo, participantRespons, role);
+        return FlagDetailResult.of(flag, hostInfo, parentFlag, participants);
     }
 
     @Override
@@ -115,10 +110,4 @@ public class FlagQueryService implements FlagQueryUseCase {
                 .toList();
     }
 
-    @Nullable
-    private FlagRole determineViewerRole(boolean isHost, boolean isParticipant) {
-        if (isHost) return FlagRole.HOST;
-        if (isParticipant) return FlagRole.PARTICIPANT;
-        return null;
-    }
 }

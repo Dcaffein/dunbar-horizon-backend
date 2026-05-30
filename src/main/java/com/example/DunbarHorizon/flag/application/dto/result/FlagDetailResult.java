@@ -1,29 +1,42 @@
 package com.example.DunbarHorizon.flag.application.dto.result;
 
 import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
-import com.example.DunbarHorizon.flag.application.port.in.FlagRole;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import jakarta.annotation.Nullable;
 
 import java.util.List;
 
 public record FlagDetailResult(
-        FlagResult flag,
-        List<ParticipantResult> participants,
+        Long id,
+        String title,
+        String description,
+        int capacity,
         int participantCount,
-        @Nullable FlagRole role
+        @Nullable Long parentFlagId,
+        String status,
+        FlagScheduleResult schedule,
+        FlagHostResult host,
+        @Nullable ParentFlagResult parentFlag,
+        List<ParticipantResult> participants
 ) {
     public static FlagDetailResult of(
             Flag flag,
             FlagUserInfo hostInfo,
-            List<ParticipantResult> participants,
-            @Nullable FlagRole role
+            @Nullable Flag parentFlag,
+            List<ParticipantResult> participants
     ) {
         return new FlagDetailResult(
-                FlagResult.of(flag, hostInfo, participants.size()),
-                participants,
+                flag.getId(),
+                flag.getTitle(),
+                flag.getDescription(),
+                flag.getCapacity(),
                 participants.size(),
-                role
+                flag.getParentId(),
+                flag.calculateCurrentStatus().name(),
+                FlagScheduleResult.from(flag.getSchedule()),
+                FlagHostResult.from(hostInfo),
+                parentFlag != null ? ParentFlagResult.from(parentFlag) : null,
+                participants
         );
     }
 }

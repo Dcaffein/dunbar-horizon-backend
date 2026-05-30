@@ -1,72 +1,34 @@
-# PLAN: Flag 목록 조회에 참여 인원수(participantCount) 추가
+# PLAN: GET /api/v1/flags/{id} 상세 조회 엔드포인트 추가
 
 ## 목표
-Flag 목록 조회 API(`/api/v1/flags/me`, `/api/v1/flags/friends`)의 응답에
-현재 참여 인원수(`participantCount`)를 포함시킨다.
+- `FlagResult`에 `parentFlagId` 추가 (목록에서 encore 여부 노출)
+- `GET /api/v1/flags/{id}` 엔드포인트 신규 추가 (접근 제한 없음)
+- 응답 DTO `FlagDetailResult`를 flat 구조로 재설계: FlagResult 필드 + `parentFlag?: { id, title }` + `participants`
+
+---
 
 ## 현황 분석
 
 | 항목 | 현재 상태 |
 |------|---------|
-| `FlagResult` | `capacity`만 있음, `participantCount` 없음 |
-| `FlagDetailResult` | `participantCount` 있음 (상세 조회는 이미 지원) |
-| `FlagRepository` | 단건 `countParticipants(Long flagId)` 존재 |
-| 목록 조회 서비스 | count 쿼리를 전혀 호출하지 않음 |
-
-## 설계 결정
-
-### N+1 방지를 위한 Bulk Count 쿼리
-목록 조회 시 플래그가 N개이면 단건 `countByFlagId`를 N번 호출하게 되므로,
-`flagIds IN (...)` 기반의 단일 쿼리로 일괄 조회 후 `Map<Long, Integer>`로 변환한다.
-
-### participantCount 정의
-`FlagParticipant` 테이블 기준 카운팅 (host 제외 순수 참여자 수)
+| `Flag.parentId` | 존재 (`@Getter`) |
+| `FlagQueryUseCase.getFlagDetail()` | 구현 완료, 단 host/participant 접근 제한 있음 |
+| `FlagDetailResult` | `FlagResult`를 nested로 감싼 구조 + `role` 포함 |
+| `GET /api/v1/flags/{id}` | 컨트롤러 엔드포인트 없음 |
 
 ---
 
-## 변경 파일 (5개)
+## 변경 파일 (7개)
 
-### 1. `FlagParticipantJpaRepository.java`
-Bulk count JPQL 쿼리 및 projection 인터페이스 추가:
-```java
-interface FlagParticipantCountProjection {
-    Long getFlagId();
-    Long getCount();
-}
-
-@Query("SELECT fp.flagId as flagId, COUNT(fp) as count FROM FlagParticipant fp WHERE fp.flagId IN :flagIds GROUP BY fp.flagId")
-List<FlagParticipantCountProjection> countByFlagIdIn(@Param("flagIds") Collection<Long> flagIds);
-```
-
-### 2. `FlagRepository.java` (domain port)
-메서드 추가:
-```java
-Map<Long, Integer> countParticipantsByFlagIds(Collection<Long> flagIds);
-```
-
-### 3. `FlagRepositoryAdapter.java`
-구현 추가:
-```java
-@Override
-public Map<Long, Integer> countParticipantsByFlagIds(Collection<Long> flagIds) {
-    if (flagIds == null || flagIds.isEmpty()) return Map.of();
-    return participantJpaRepository.countByFlagIdIn(flagIds).stream()
-            .collect(Collectors.toMap(
-                FlagParticipantJpaRepository.FlagParticipantCountProjection::getFlagId,
-                p -> p.getCount().intValue()
-            ));
-}
-```
-
-### 4. `FlagResult.java`
-`participantCount` 필드 추가 및 `of()` 시그니처 변경:
+### 1. `FlagResult.java` — `parentFlagId` 추가
 ```java
 public record FlagResult(
     Long id,
     String title,
     String description,
     int capacity,
-    int participantCount,   // 추가
+    int participantCount,
+    @Nullable Long parentFlagId,   // 추가
     String status,
     FlagScheduleResult schedule,
     FlagHostResult host
@@ -74,18 +36,72 @@ public record FlagResult(
     public static FlagResult of(Flag flag, FlagUserInfo hostInfo, int participantCount) { ... }
 }
 ```
+`flag.getParentId()` 값을 `of()` 내부에서 직접 읽으므로 시그니처 변경 없음.
 
-### 5. `FlagQueryService.java`
-세 개 목록 조회 메서드에서 bulk count 활용:
-- `getFriendFlags()` — `recruitingFlags`의 ID 목록으로 bulk count 후 매핑
-- `getMyHostingFlags()` — `managedFlags`의 ID 목록으로 bulk count 후 매핑
-- `getParticipatingFlags()` — `flags`의 ID 목록으로 bulk count 후 매핑
+### 2. `ParticipantResult.java` — 필드 정리
+`userId` → `id`, `joinedAt` 제거 (스펙에서 불필요)
+```java
+public record ParticipantResult(Long id, String nickname, String profileImageUrl) {
+    public static ParticipantResult of(FlagUserInfo userInfo) { ... }
+}
+```
+
+### 3. `ParentFlagResult.java` — 신규 DTO 생성
+```java
+public record ParentFlagResult(Long id, String title) {
+    public static ParentFlagResult from(Flag flag) { ... }
+}
+```
+
+### 4. `FlagDetailResult.java` — flat 구조로 재설계
+nested `FlagResult` 제거, FlagResult 필드를 직접 포함. `role` 제거.
+```java
+public record FlagDetailResult(
+    Long id,
+    String title,
+    String description,
+    int capacity,
+    int participantCount,
+    @Nullable Long parentFlagId,
+    String status,
+    FlagScheduleResult schedule,
+    FlagHostResult host,
+    @Nullable ParentFlagResult parentFlag,
+    List<ParticipantResult> participants
+) {
+    public static FlagDetailResult of(Flag flag, FlagUserInfo hostInfo,
+                                      @Nullable Flag parentFlag,
+                                      List<ParticipantResult> participants) { ... }
+}
+```
+
+### 5. `FlagQueryUseCase.java` — 시그니처 변경
+`viewerId` 제거 (접근 제한 없음):
+```java
+FlagDetailResult getFlagDetail(Long flagId);
+```
+
+### 6. `FlagQueryService.java` — getFlagDetail 재구현
+- `validateAccess` 호출 제거
+- `role` 계산 제거
+- `parentId`가 있으면 `flagRepository.findById(parentId)` 호출
+- 새 flat `FlagDetailResult` 빌드
+
+### 7. `FlagQueryController.java` — 엔드포인트 추가
+```java
+@GetMapping("/{id}")
+public ResponseEntity<FlagDetailResult> getFlagDetail(@PathVariable Long id) {
+    return ResponseEntity.ok(flagQueryUseCase.getFlagDetail(id));
+}
+```
+`@CurrentUserId` 불필요 (인증은 Security filter에서 처리, 서비스 레이어에 ID 전달 안 함)
 
 ---
 
 ## 영향 범위
-- `FlagDetailResult.of()`는 `participants.size()`를 직접 사용하므로 영향 없음
-- 기존 `countParticipants(Long flagId)` 단건 메서드는 `FlagManagementService`에서 사용 중 → 유지
+- `ParticipantResult.of()` 시그니처 변경 → `FlagQueryService.getFlagDetail()` 내부 호출부만 수정
+- 기존 `getFlagDetail(flagId, viewerId)` 호출부는 컨트롤러에 없으므로 컴파일 오류 없음
+- `FlagResult.of()` 시그니처 변경 없음 — `parentFlagId`는 `Flag.getParentId()`에서 내부 읽기
 
 ## 브랜치
-`ai/feat-flag-participant-count` (from main)
+`ai/feat-flag-detail-endpoint` (from main)
