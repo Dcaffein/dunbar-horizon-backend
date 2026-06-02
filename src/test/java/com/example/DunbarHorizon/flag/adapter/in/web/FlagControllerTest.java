@@ -1,12 +1,17 @@
 package com.example.DunbarHorizon.flag.adapter.in.web;
 
+import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
+import com.example.DunbarHorizon.flag.application.dto.result.FlagDetailResult;
 import com.example.DunbarHorizon.flag.application.port.in.FlagRole;
+import com.example.DunbarHorizon.flag.domain.flag.Flag;
+import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -170,5 +175,20 @@ class FlagControllerTest extends BaseControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(flagParticipationUseCase).leaveFlag(1L, CURRENT_USER_ID);
+    }
+
+    @Test
+    @DisplayName("플래그 상세 조회 시 200을 반환하고 currentUserId를 포함해 getFlagDetail()을 호출한다")
+    void getFlagDetail_Returns200AndPassesCurrentUserId() throws Exception {
+        LocalDateTime now = LocalDateTime.now();
+        FlagSchedule schedule = FlagSchedule.of(now.plusHours(2), now.plusHours(3), now.plusHours(4));
+        Flag flag = Flag.create(CURRENT_USER_ID, "테스트 플래그", "설명", 10, schedule);
+        FlagDetailResult detail = FlagDetailResult.of(flag, new FlagUserInfo(CURRENT_USER_ID, "호스트", null), null, List.of(), true);
+        given(flagQueryUseCase.getFlagDetail(1L, CURRENT_USER_ID)).willReturn(detail);
+
+        mockMvc.perform(get("/api/v1/flags/1"))
+                .andExpect(status().isOk());
+
+        verify(flagQueryUseCase).getFlagDetail(1L, CURRENT_USER_ID);
     }
 }
