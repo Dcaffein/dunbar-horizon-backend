@@ -10,7 +10,7 @@ public record FlagDetailResult(
         Long id,
         String title,
         String description,
-        int capacity,
+        Integer capacity,
         int participantCount,
         @Nullable Long parentFlagId,
         String status,
