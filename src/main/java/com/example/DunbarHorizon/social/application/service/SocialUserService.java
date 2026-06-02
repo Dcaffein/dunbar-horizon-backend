@@ -1,5 +1,7 @@
 package com.example.DunbarHorizon.social.application.service;
 
+import com.example.DunbarHorizon.social.application.dto.result.SocialProfileResult;
+import com.example.DunbarHorizon.social.application.port.in.SocialUserQueryUseCase;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
@@ -16,9 +18,14 @@ import java.util.stream.StreamSupport;
 @Service
 @RequiredArgsConstructor
 @Neo4jTransactional
-public class SocialUserService {
+public class SocialUserService implements SocialUserQueryUseCase {
     private final SocialUserRepository socialUserRepository;
     private final SocialUserSyncHelper syncHelper;
+
+    @Override
+    public SocialProfileResult getSocialProfile(Long userId) {
+        return SocialProfileResult.from(getUserReference(userId));
+    }
 
     public UserReference getUserReference(Long userId) {
         return getUserReferences(Set.of(userId)).stream()

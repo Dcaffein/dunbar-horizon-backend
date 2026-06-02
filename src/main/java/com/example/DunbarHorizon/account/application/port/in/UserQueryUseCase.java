@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.account.application.port.in;
 
+import com.example.DunbarHorizon.account.application.dto.MyProfileResult;
 import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
 
 import java.util.Collection;
@@ -10,4 +11,5 @@ public interface UserQueryUseCase {
     List<UserProfileInfo> getUserProfiles(Collection<Long> ids);
     Optional<UserProfileInfo> getActiveUserProfile(Long id);
     Optional<UserProfileInfo> findActiveUserByEmail(String email);
+    MyProfileResult getMyProfile(Long id);
 }
