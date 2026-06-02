@@ -1,5 +1,7 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web;
 
+import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
+import com.example.DunbarHorizon.buzz.application.dto.result.BuzzProfileResult;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
@@ -7,14 +9,56 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
+import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class BuzzControllerTest extends BaseControllerTest {
+
+    @Nested
+    @DisplayName("버즈 상세 조회 응답 검증")
+    class GetBuzzDetailResponse {
+
+        private static final Long CURRENT_USER_ID = 1L;
+
+        @Test
+        @WithMockCustomUser
+        @DisplayName("작성자가 상세 조회하면 응답에 isCreator=true가 포함된다")
+        void getBuzzDetail_ByCreator_ResponseContainsIsCreatorTrue() throws Exception {
+            BuzzDetailResult detail = new BuzzDetailResult(
+                    "buzz-id",
+                    new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
+                    "테스트 버즈", List.of(), List.of(), 25L, false, true
+            );
+            given(buzzQueryUseCase.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
+
+            mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.isCreator").value(true));
+        }
+
+        @Test
+        @WithMockCustomUser
+        @DisplayName("수신자가 상세 조회하면 응답에 isCreator=false가 포함된다")
+        void getBuzzDetail_ByRecipient_ResponseContainsIsCreatorFalse() throws Exception {
+            BuzzDetailResult detail = new BuzzDetailResult(
+                    "buzz-id",
+                    new BuzzProfileResult(2L, "작성자", null),
+                    "테스트 버즈", List.of(), List.of(), 25L, true, false
+            );
+            given(buzzQueryUseCase.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
+
+            mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.isCreator").value(false));
+        }
+    }
 
     @Nested
     @DisplayName("버즈 생성 요청 검증")

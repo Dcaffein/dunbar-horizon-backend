@@ -23,7 +23,7 @@ public record BuzzSummaryResult(
                 buzz.getText(),
                 buzz.getImageUrls(),
                 buzz.getComments().size(),
-                Duration.between(LocalDateTime.now(), buzz.getExpiresAt()).toMinutes(),
+                Math.max(0L, Duration.between(LocalDateTime.now(), buzz.getExpiresAt()).toMinutes()),
                 buzz.isUnreadBy(currentUserId),
                 buzz.isCreator(currentUserId)
         );
