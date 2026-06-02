@@ -123,6 +123,50 @@ class FlagCommentQueryServiceTest {
     }
 
     @Test
+    @DisplayName("본인이 작성한 댓글은 isMine이 true이다")
+    void getCommentTree_OwnComment_IsMineTrue() {
+        // given
+        Flag flag = createFlag();
+        FlagComment myComment = createComment(10L, VIEWER_ID, false);
+
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of(VIEWER_ID));
+        given(commentRepository.findAllByFlagId(FLAG_ID)).willReturn(List.of(myComment));
+        given(flagUserPort.findUserInfosByIds(anySet()))
+                .willReturn(Map.of(VIEWER_ID, new FlagUserInfo(VIEWER_ID, "뷰어", null),
+                                   HOST_ID, new FlagUserInfo(HOST_ID, "호스트", null)));
+
+        // when
+        List<CommentResult> result = flagCommentQueryService.getCommentTree(FLAG_ID, VIEWER_ID);
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).isMine()).isTrue();
+    }
+
+    @Test
+    @DisplayName("타인이 작성한 댓글은 isMine이 false이다")
+    void getCommentTree_OtherComment_IsMineFalse() {
+        // given
+        Flag flag = createFlag();
+        FlagComment otherComment = createComment(10L, HOST_ID, false); // writer = HOST_ID
+
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of(VIEWER_ID));
+        given(commentRepository.findAllByFlagId(FLAG_ID)).willReturn(List.of(otherComment));
+        given(flagUserPort.findUserInfosByIds(anySet()))
+                .willReturn(Map.of(VIEWER_ID, new FlagUserInfo(VIEWER_ID, "뷰어", null),
+                                   HOST_ID, new FlagUserInfo(HOST_ID, "호스트", null)));
+
+        // when
+        List<CommentResult> result = flagCommentQueryService.getCommentTree(FLAG_ID, VIEWER_ID);
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).isMine()).isFalse();
+    }
+
+    @Test
     @DisplayName("getCommentCount는 현재 0L을 반환한다")
     void getCommentCount_ReturnsZero() {
         // when
