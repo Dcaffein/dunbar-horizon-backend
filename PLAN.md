@@ -1,66 +1,70 @@
-# PLAN: Task-57 — FlagDetailResult에 isHost 필드 추가
+# PLAN: Task-58 — Buzz 응답에 isCreator 필드 추가
 
 ## 목표
 
-`GET /api/v1/flags/{id}` 응답에 요청자가 호스트인지 나타내는 `isHost: boolean` 필드 추가.
-프론트엔드에서 수정/삭제/초대권한 변경 UI를 조건부 노출하는 데 사용한다.
+`BuzzDetailResult`, `BuzzSummaryResult` 응답에 `isCreator: boolean` 필드 추가.
+프론트엔드에서 Buzz 삭제 버튼, 댓글 삭제 권한 UI를 조건부 노출하는 데 사용한다.
 
 ---
 
-## 변경 파일 (4개)
+## 분석
 
-### 1. `FlagDetailResult.java`
+`currentUserId`는 이미 컨트롤러 → 서비스 → `from(buzz, userId)` 팩토리까지 흐르고 있다.
+**컨트롤러, 유스케이스, 서비스 시그니처 변경 없음.** DTO와 도메인 메서드만 추가하면 된다.
 
-`isHost` 필드 추가 및 `of()` 팩토리 메서드 시그니처 변경.
+`creatorId.equals(userId)` 패턴이 도메인 메서드 5곳에 인라인으로 흩어져 있어
+`isCreator()` 도메인 메서드로 통일한다.
+
+---
+
+## 변경 파일 (3개)
+
+### 1. `Buzz.java`
+
+`isCreator(Long userId)` 도메인 메서드 추가 + 기존 인라인 `creatorId.equals(userId)` 호출부 교체.
 
 ```java
-public record FlagDetailResult(
-    Long id, String title, String description,
-    int capacity, int participantCount,
-    Long parentFlagId, String status,
-    FlagScheduleResult schedule,
-    FlagHostResult host,
-    ParentFlagResult parentFlag,
-    List<ParticipantResult> participants,
-    boolean isHost          // 추가
+public boolean isCreator(Long userId) {
+    return creatorId.equals(userId);
+}
+```
+
+교체 대상 (5곳):
+- `createComment()` — `!creatorId.equals(commenterId)` → `!isCreator(commenterId)`
+- `validateCommentDeletion()` — `!this.creatorId.equals(requesterId)` → `!isCreator(requesterId)`
+- `validateAccess()` — `!creatorId.equals(userId)` → `!isCreator(userId)`
+- `validateDeletion()` — `!creatorId.equals(requesterId)` → `!isCreator(requesterId)`
+- `getVisibleComments()` — `creatorId.equals(viewerId)` → `isCreator(viewerId)`
+
+### 2. `BuzzDetailResult.java`
+
+`isCreator` 필드 추가, `from()` 수정.
+
+```java
+public record BuzzDetailResult(
+    String buzzId, BuzzProfileResult author, String text,
+    List<String> imageUrls, List<BuzzCommentResult> comments,
+    long remainingMinutes, boolean isUnread, boolean isCreator   // 추가
 ) {
-    public static FlagDetailResult of(
-            Flag flag, FlagUserInfo hostInfo,
-            Flag parentFlag, List<ParticipantResult> participants,
-            boolean isHost) { ... }
+    public static BuzzDetailResult from(Buzz buzz, Long currentUserId) {
+        return new BuzzDetailResult(..., buzz.isCreator(currentUserId));
+    }
 }
 ```
 
-### 2. `FlagQueryUseCase.java`
+### 3. `BuzzSummaryResult.java`
 
-`viewerId` 파라미터 추가.
-
-```java
-FlagDetailResult getFlagDetail(Long flagId, Long viewerId);
-```
-
-### 3. `FlagQueryService.java`
-
-`viewerId`를 받아 `flag.getHostId().equals(viewerId)`로 계산 후 `of()`에 전달.
+`isCreator` 필드 추가, `from()` 수정.
 
 ```java
-public FlagDetailResult getFlagDetail(Long flagId, Long viewerId) {
-    ...
-    boolean isHost = flag.getHostId().equals(viewerId);
-    return FlagDetailResult.of(flag, hostInfo, parentFlag, participants, isHost);
-}
-```
-
-### 4. `FlagQueryController.java`
-
-`@CurrentUserId` 추가하여 `viewerId` 전달.
-
-```java
-@GetMapping("/{id}")
-public ResponseEntity<FlagDetailResult> getFlagDetail(
-        @PathVariable Long id,
-        @CurrentUserId Long currentUserId) {
-    return ResponseEntity.ok(flagQueryUseCase.getFlagDetail(id, currentUserId));
+public record BuzzSummaryResult(
+    String buzzId, BuzzProfileResult author, String text,
+    List<String> imageUrls, int commentCount,
+    long remainingMinutes, boolean isUnread, boolean isCreator   // 추가
+) {
+    public static BuzzSummaryResult from(Buzz buzz, Long currentUserId) {
+        return new BuzzSummaryResult(..., buzz.isCreator(currentUserId));
+    }
 }
 ```
 
@@ -69,17 +73,16 @@ public ResponseEntity<FlagDetailResult> getFlagDetail(
 ## 영향 범위
 
 ### Production 코드
-- `FlagDetailResult.of()` 시그니처 변경 → `FlagQueryService` 내부 호출부만 수정
-- `FlagQueryUseCase.getFlagDetail()` 시그니처 변경 → `FlagQueryController` 호출부만 수정
+- 컨트롤러/유스케이스/서비스 시그니처 변경 없음
+- `Buzz.java` 내부 리팩터링 + 도메인 메서드 추가
+- `BuzzDetailResult`, `BuzzSummaryResult` 필드 추가
 
 ### 테스트 코드
 | 파일 | 작업 |
 |------|------|
-| `FlagQueryServiceTest` | 기존 `getFlagDetail(flagId)` 호출 5곳을 `getFlagDetail(flagId, viewerId)` 형태로 수정 + `isHost=true/false` 케이스 신규 추가 |
-| `FlagControllerTest` | 수정 불필요 — `getFlagDetail` 관련 테스트 없음 |
-| `FlagQueryControllerTest` | 파일 없음 — 이번 Task 범위 제외 (신규 Controller 테스트는 별도 Task로) |
-
-> **주의**: `FlagControllerTest`는 기존 PLAN에 잘못 포함됐던 항목. `getFlagDetail` 관련 테스트를 포함하지 않아 수정 불필요.
+| `BuzzTest.java` | `isCreator()` 도메인 메서드 테스트 추가 (creator=true, non-creator=false) |
+| `BuzzServiceTest.java` | `getBuzzDetail` 결과의 `isCreator` 검증 케이스 추가 |
+| `BuzzControllerTest.java` | 변경 없음 (컨트롤러 시그니처 불변) |
 
 ## 브랜치
-`ai/feat-flag-detail-is-host` (from main)
+`ai/feat-buzz-is-creator` (from main)

@@ -13,7 +13,8 @@ public record BuzzDetailResult(
         List<String> imageUrls,
         List<BuzzCommentResult> comments,
         long remainingMinutes,
-        boolean isUnread
+        boolean isUnread,
+        boolean isCreator
 ) {
     public static BuzzDetailResult from(Buzz buzz, Long currentUserId) {
         return new BuzzDetailResult(
@@ -23,7 +24,8 @@ public record BuzzDetailResult(
                 buzz.getImageUrls(),
                 buzz.getVisibleComments(currentUserId).stream().map(BuzzCommentResult::from).toList(),
                 Math.max(0L, Duration.between(LocalDateTime.now(), buzz.getExpiresAt()).toMinutes()),
-                buzz.isUnreadBy(currentUserId)
+                buzz.isUnreadBy(currentUserId),
+                buzz.isCreator(currentUserId)
         );
     }
 }

@@ -13,7 +13,8 @@ public record BuzzSummaryResult(
         List<String> imageUrls,
         int commentCount,
         long remainingMinutes,
-        boolean isUnread
+        boolean isUnread,
+        boolean isCreator
 ) {
     public static BuzzSummaryResult from(Buzz buzz, Long currentUserId) {
         return new BuzzSummaryResult(
@@ -23,7 +24,8 @@ public record BuzzSummaryResult(
                 buzz.getImageUrls(),
                 buzz.getComments().size(),
                 Duration.between(LocalDateTime.now(), buzz.getExpiresAt()).toMinutes(),
-                buzz.isUnreadBy(currentUserId)
+                buzz.isUnreadBy(currentUserId),
+                buzz.isCreator(currentUserId)
         );
     }
 }
