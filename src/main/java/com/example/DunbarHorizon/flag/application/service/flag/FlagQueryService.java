@@ -49,7 +49,7 @@ public class FlagQueryService implements FlagQueryUseCase {
 
 
     @Override
-    public FlagDetailResult getFlagDetail(Long flagId) {
+    public FlagDetailResult getFlagDetail(Long flagId, Long viewerId) {
         Flag flag = flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
 
@@ -70,7 +70,8 @@ public class FlagQueryService implements FlagQueryUseCase {
                 ? flagRepository.findById(flag.getParentId()).orElse(null)
                 : null;
 
-        return FlagDetailResult.of(flag, hostInfo, parentFlag, participants);
+        boolean isHost = flag.getHostId().equals(viewerId);
+        return FlagDetailResult.of(flag, hostInfo, parentFlag, participants, isHost);
     }
 
     @Override

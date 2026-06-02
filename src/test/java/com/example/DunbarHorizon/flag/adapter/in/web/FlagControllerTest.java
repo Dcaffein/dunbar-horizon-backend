@@ -171,4 +171,5 @@ class FlagControllerTest extends BaseControllerTest {
 
         verify(flagParticipationUseCase).leaveFlag(1L, CURRENT_USER_ID);
     }
+
 }

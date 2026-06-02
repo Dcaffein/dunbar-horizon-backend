@@ -121,7 +121,7 @@ class FlagQueryServiceTest {
     void getFlagDetail_NotFound_ThrowsException() {
         given(flagRepository.findById(999L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> flagQueryService.getFlagDetail(999L))
+        assertThatThrownBy(() -> flagQueryService.getFlagDetail(999L, HOST_ID))
                 .isInstanceOf(FlagNotFoundException.class);
     }
 
@@ -133,7 +133,7 @@ class FlagQueryServiceTest {
         given(flagRepository.findAllParticipants(1L)).willReturn(List.of());
         given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
 
-        FlagDetailResult result = flagQueryService.getFlagDetail(1L);
+        FlagDetailResult result = flagQueryService.getFlagDetail(1L, HOST_ID);
 
         assertThat(result.participants()).isEmpty();
         assertThat(result.participantCount()).isEqualTo(0);
@@ -156,7 +156,7 @@ class FlagQueryServiceTest {
         given(flagUserPort.findUserInfosByIds(anySet()))
                 .willReturn(Map.of(HOST_ID, userInfo(HOST_ID), participantId, userInfo(participantId)));
 
-        FlagDetailResult result = flagQueryService.getFlagDetail(1L);
+        FlagDetailResult result = flagQueryService.getFlagDetail(1L, HOST_ID);
 
         assertThat(result.participants()).hasSize(1);
         assertThat(result.participantCount()).isEqualTo(1);
@@ -176,7 +176,7 @@ class FlagQueryServiceTest {
         given(flagRepository.findById(10L)).willReturn(Optional.of(parentFlag));
         given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
 
-        FlagDetailResult result = flagQueryService.getFlagDetail(1L);
+        FlagDetailResult result = flagQueryService.getFlagDetail(1L, HOST_ID);
 
         assertThat(result.parentFlagId()).isEqualTo(10L);
         assertThat(result.parentFlag()).isNotNull();
@@ -194,9 +194,36 @@ class FlagQueryServiceTest {
         given(flagRepository.findById(10L)).willReturn(Optional.empty());
         given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
 
-        FlagDetailResult result = flagQueryService.getFlagDetail(1L);
+        FlagDetailResult result = flagQueryService.getFlagDetail(1L, HOST_ID);
 
         assertThat(result.parentFlagId()).isEqualTo(10L);
         assertThat(result.parentFlag()).isNull();
+    }
+
+    @Test
+    @DisplayName("viewerId가 hostId와 같으면 isHost가 true이다")
+    void getFlagDetail_ViewerIsHost_IsHostTrue() {
+        Flag flag = createRecruitingFlag(1L);
+        given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
+        given(flagRepository.findAllParticipants(1L)).willReturn(List.of());
+        given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
+
+        FlagDetailResult result = flagQueryService.getFlagDetail(1L, HOST_ID);
+
+        assertThat(result.isHost()).isTrue();
+    }
+
+    @Test
+    @DisplayName("viewerId가 hostId와 다르면 isHost가 false이다")
+    void getFlagDetail_ViewerIsNotHost_IsHostFalse() {
+        Long viewerId = 99L;
+        Flag flag = createRecruitingFlag(1L);
+        given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
+        given(flagRepository.findAllParticipants(1L)).willReturn(List.of());
+        given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
+
+        FlagDetailResult result = flagQueryService.getFlagDetail(1L, viewerId);
+
+        assertThat(result.isHost()).isFalse();
     }
 }

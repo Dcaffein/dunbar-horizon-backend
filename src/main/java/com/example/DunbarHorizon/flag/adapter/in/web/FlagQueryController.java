@@ -45,7 +45,9 @@ public class FlagQueryController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<FlagDetailResult> getFlagDetail(@PathVariable Long id) {
-        return ResponseEntity.ok(flagQueryUseCase.getFlagDetail(id));
+    public ResponseEntity<FlagDetailResult> getFlagDetail(
+            @PathVariable Long id,
+            @CurrentUserId Long currentUserId) {
+        return ResponseEntity.ok(flagQueryUseCase.getFlagDetail(id, currentUserId));
     }
 }
