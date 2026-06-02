@@ -28,4 +28,20 @@ class BuzzCommentTest {
         assertThatThrownBy(() -> comment.update("", null))
                 .isInstanceOf(BuzzInvalidStateException.class);
     }
+
+    @Test
+    @DisplayName("commenterId와 같은 userId이면 isCommenter가 true이다")
+    void isCommenter_WithCommenterId_ReturnsTrue() {
+        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "내용", null, true);
+
+        assertThat(comment.isCommenter(1L)).isTrue();
+    }
+
+    @Test
+    @DisplayName("commenterId와 다른 userId이면 isCommenter가 false이다")
+    void isCommenter_WithOtherId_ReturnsFalse() {
+        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "내용", null, true);
+
+        assertThat(comment.isCommenter(99L)).isFalse();
+    }
 }

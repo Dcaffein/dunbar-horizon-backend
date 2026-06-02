@@ -10,9 +10,10 @@ public record BuzzCommentResult(
         BuzzProfileResult author,
         String text,
         List<String> imageUrls,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        boolean isMine
 ) {
-    public static BuzzCommentResult from(BuzzComment comment) {
+    public static BuzzCommentResult from(BuzzComment comment, Long viewerId) {
         return new BuzzCommentResult(
                 comment.getCommentId(),
                 new BuzzProfileResult(
@@ -22,7 +23,8 @@ public record BuzzCommentResult(
                 ),
                 comment.getText(),
                 comment.getImageUrls(),
-                comment.getCreatedAt()
+                comment.getCreatedAt(),
+                comment.isCommenter(viewerId)
         );
     }
 }

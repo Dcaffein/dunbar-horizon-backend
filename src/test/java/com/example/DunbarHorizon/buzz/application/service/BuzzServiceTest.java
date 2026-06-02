@@ -9,6 +9,7 @@ import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
+import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import org.junit.jupiter.api.BeforeEach;
@@ -129,6 +130,30 @@ class BuzzServiceTest {
         void getBuzzDetail_ByRecipient_IsCreatorFalse() {
             BuzzDetailResult result = buzzService.getBuzzDetail(recipientId, "buzz-id");
             assertThat(result.isCreator()).isFalse();
+        }
+
+        @Test
+        @DisplayName("본인이 작성한 댓글은 isMine이 true이다")
+        void getBuzzDetail_OwnComment_IsMineTrue() {
+            BuzzComment comment = BuzzComment.of("c1", recipientId, "수신자", "p.png", "댓글", List.of(), true);
+            ReflectionTestUtils.setField(buzz, "comments", List.of(comment));
+
+            BuzzDetailResult result = buzzService.getBuzzDetail(recipientId, "buzz-id");
+
+            assertThat(result.comments()).hasSize(1);
+            assertThat(result.comments().get(0).isMine()).isTrue();
+        }
+
+        @Test
+        @DisplayName("타인이 작성한 댓글은 isMine이 false이다")
+        void getBuzzDetail_OtherComment_IsMineFalse() {
+            BuzzComment comment = BuzzComment.of("c1", recipientId, "수신자", "p.png", "댓글", List.of(), true);
+            ReflectionTestUtils.setField(buzz, "comments", List.of(comment));
+
+            BuzzDetailResult result = buzzService.getBuzzDetail(creatorId, "buzz-id");
+
+            assertThat(result.comments()).hasSize(1);
+            assertThat(result.comments().get(0).isMine()).isFalse();
         }
     }
 

@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web;
 
+import com.example.DunbarHorizon.buzz.application.dto.result.BuzzCommentResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzProfileResult;
 import com.example.DunbarHorizon.support.BaseControllerTest;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
@@ -57,6 +59,26 @@ class BuzzControllerTest extends BaseControllerTest {
             mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.isCreator").value(false));
+        }
+
+        @Test
+        @WithMockCustomUser
+        @DisplayName("본인 댓글이면 comments[0].isMine이 true로 내려온다")
+        void getBuzzDetail_OwnComment_IsMineTrue() throws Exception {
+            BuzzCommentResult comment = new BuzzCommentResult(
+                    "c1", new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
+                    "댓글", List.of(), LocalDateTime.now(), true
+            );
+            BuzzDetailResult detail = new BuzzDetailResult(
+                    "buzz-id",
+                    new BuzzProfileResult(2L, "버즈작성자", null),
+                    "테스트 버즈", List.of(), List.of(comment), 25L, true, false
+            );
+            given(buzzQueryUseCase.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
+
+            mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.comments[0].isMine").value(true));
         }
     }
 

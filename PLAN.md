@@ -1,70 +1,57 @@
-# PLAN: Task-58 — Buzz 응답에 isCreator 필드 추가
+# PLAN: Task-59 (ad-hoc) — BuzzCommentResult에 isMine 필드 추가
 
 ## 목표
 
-`BuzzDetailResult`, `BuzzSummaryResult` 응답에 `isCreator: boolean` 필드 추가.
-프론트엔드에서 Buzz 삭제 버튼, 댓글 삭제 권한 UI를 조건부 노출하는 데 사용한다.
+`GET /api/v1/buzzes/{buzzId}` 응답 내 `comments[]` 배열의 각 항목에
+`isMine: boolean` 필드 추가. 프론트엔드에서 댓글 삭제 버튼 등을 조건부 노출하는 데 사용한다.
 
 ---
 
 ## 분석
 
-`currentUserId`는 이미 컨트롤러 → 서비스 → `from(buzz, userId)` 팩토리까지 흐르고 있다.
-**컨트롤러, 유스케이스, 서비스 시그니처 변경 없음.** DTO와 도메인 메서드만 추가하면 된다.
-
-`creatorId.equals(userId)` 패턴이 도메인 메서드 5곳에 인라인으로 흩어져 있어
-`isCreator()` 도메인 메서드로 통일한다.
+댓글 목록은 별도 GET 엔드포인트 없이 `BuzzDetailResult.comments`로만 내려온다.
+`BuzzDetailResult.from(buzz, currentUserId)` 내부에서 `getVisibleComments(currentUserId)`를 순회해
+`BuzzCommentResult::from`으로 매핑하는 구조이며, `currentUserId`가 이미 이 시점에 존재한다.
+**컨트롤러/유스케이스/서비스 시그니처 변경 없음.**
 
 ---
 
 ## 변경 파일 (3개)
 
-### 1. `Buzz.java`
+### 1. `BuzzCommentResult.java`
 
-`isCreator(Long userId)` 도메인 메서드 추가 + 기존 인라인 `creatorId.equals(userId)` 호출부 교체.
+`isMine` 필드 추가, `from()` 시그니처에 `viewerId` 추가.
 
 ```java
-public boolean isCreator(Long userId) {
-    return creatorId.equals(userId);
+public record BuzzCommentResult(
+    String commentId, BuzzProfileResult author,
+    String text, List<String> imageUrls,
+    LocalDateTime createdAt, boolean isMine
+) {
+    public static BuzzCommentResult from(BuzzComment comment, Long viewerId) {
+        return new BuzzCommentResult(..., comment.getCommenterId().equals(viewerId));
+    }
 }
 ```
-
-교체 대상 (5곳):
-- `createComment()` — `!creatorId.equals(commenterId)` → `!isCreator(commenterId)`
-- `validateCommentDeletion()` — `!this.creatorId.equals(requesterId)` → `!isCreator(requesterId)`
-- `validateAccess()` — `!creatorId.equals(userId)` → `!isCreator(userId)`
-- `validateDeletion()` — `!creatorId.equals(requesterId)` → `!isCreator(requesterId)`
-- `getVisibleComments()` — `creatorId.equals(viewerId)` → `isCreator(viewerId)`
 
 ### 2. `BuzzDetailResult.java`
 
-`isCreator` 필드 추가, `from()` 수정.
+comment 매핑을 메서드 레퍼런스에서 람다로 변경하여 `viewerId` 전달.
 
 ```java
-public record BuzzDetailResult(
-    String buzzId, BuzzProfileResult author, String text,
-    List<String> imageUrls, List<BuzzCommentResult> comments,
-    long remainingMinutes, boolean isUnread, boolean isCreator   // 추가
-) {
-    public static BuzzDetailResult from(Buzz buzz, Long currentUserId) {
-        return new BuzzDetailResult(..., buzz.isCreator(currentUserId));
-    }
-}
+// before
+.map(BuzzCommentResult::from)
+// after
+.map(c -> BuzzCommentResult.from(c, currentUserId))
 ```
 
-### 3. `BuzzSummaryResult.java`
+### 3. `BuzzComment.java`
 
-`isCreator` 필드 추가, `from()` 수정.
+`isCommenter(Long userId)` 도메인 메서드 추가 — `Buzz.isCreator()` 패턴과 통일.
 
 ```java
-public record BuzzSummaryResult(
-    String buzzId, BuzzProfileResult author, String text,
-    List<String> imageUrls, int commentCount,
-    long remainingMinutes, boolean isUnread, boolean isCreator   // 추가
-) {
-    public static BuzzSummaryResult from(Buzz buzz, Long currentUserId) {
-        return new BuzzSummaryResult(..., buzz.isCreator(currentUserId));
-    }
+public boolean isCommenter(Long userId) {
+    return commenterId.equals(userId);
 }
 ```
 
@@ -74,15 +61,13 @@ public record BuzzSummaryResult(
 
 ### Production 코드
 - 컨트롤러/유스케이스/서비스 시그니처 변경 없음
-- `Buzz.java` 내부 리팩터링 + 도메인 메서드 추가
-- `BuzzDetailResult`, `BuzzSummaryResult` 필드 추가
 
 ### 테스트 코드
 | 파일 | 작업 |
 |------|------|
-| `BuzzTest.java` | `isCreator()` 도메인 메서드 테스트 추가 (creator=true, non-creator=false) |
-| `BuzzServiceTest.java` | `getBuzzDetail` 결과의 `isCreator` 검증 케이스 추가 |
-| `BuzzControllerTest.java` | 변경 없음 (컨트롤러 시그니처 불변) |
+| `BuzzCommentTest.java` | `isCommenter()` true/false 케이스 추가 |
+| `BuzzServiceTest.java` | `getBuzzDetail` 결과 `comments[].isMine` 검증 케이스 추가 |
+| `BuzzControllerTest.java` | `$.comments[0].isMine` jsonPath 검증 추가 |
 
 ## 브랜치
-`ai/feat-buzz-is-creator` (from main)
+`ai/feat-buzz-comment-is-mine` (from main)
