@@ -17,13 +17,15 @@ public record FlagDetailResult(
         FlagScheduleResult schedule,
         FlagHostResult host,
         @Nullable ParentFlagResult parentFlag,
-        List<ParticipantResult> participants
+        List<ParticipantResult> participants,
+        boolean isHost
 ) {
     public static FlagDetailResult of(
             Flag flag,
             FlagUserInfo hostInfo,
             @Nullable Flag parentFlag,
-            List<ParticipantResult> participants
+            List<ParticipantResult> participants,
+            boolean isHost
     ) {
         return new FlagDetailResult(
                 flag.getId(),
@@ -36,7 +38,8 @@ public record FlagDetailResult(
                 FlagScheduleResult.from(flag.getSchedule()),
                 FlagHostResult.from(hostInfo),
                 parentFlag != null ? ParentFlagResult.from(parentFlag) : null,
-                participants
+                participants,
+                isHost
         );
     }
 }
