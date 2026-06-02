@@ -43,6 +43,10 @@ public class BuzzComment {
         );
     }
 
+    public boolean isCommenter(Long userId) {
+        return commenterId.equals(userId);
+    }
+
     public void update(String text, List<String> imageUrls) {
         validateContent(text);
         this.text = text;
