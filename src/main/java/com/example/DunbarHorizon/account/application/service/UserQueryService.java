@@ -1,8 +1,10 @@
 package com.example.DunbarHorizon.account.application.service;
 
 import com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase;
+import com.example.DunbarHorizon.account.application.dto.MyProfileResult;
 import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
 import com.example.DunbarHorizon.account.domain.UserStatus;
+import com.example.DunbarHorizon.account.domain.exception.UserNotFoundException;
 import com.example.DunbarHorizon.account.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,5 +41,12 @@ public class UserQueryService implements UserQueryUseCase {
         return userRepository.findByEmail(email)
                 .filter(user -> user.getStatus() == UserStatus.ACTIVE)
                 .map(UserProfileInfo::from);
+    }
+
+    @Override
+    public MyProfileResult getMyProfile(Long id) {
+        return userRepository.findActivatedUser(id)
+                .map(MyProfileResult::from)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
     }
 }

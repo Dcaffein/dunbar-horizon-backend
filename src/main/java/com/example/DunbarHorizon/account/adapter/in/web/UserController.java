@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.account.adapter.in.web;
 
+import com.example.DunbarHorizon.account.application.dto.MyProfileResult;
 import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
 import com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase;
 import com.example.DunbarHorizon.account.domain.exception.UserNotFoundException;
@@ -17,6 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserQueryUseCase userQueryUseCase;
+
+    @GetMapping("/me")
+    public ResponseEntity<MyProfileResult> getMyProfile(@CurrentUserId Long currentUserId) {
+        return ResponseEntity.ok(userQueryUseCase.getMyProfile(currentUserId));
+    }
 
     @GetMapping("/search")
     public ResponseEntity<UserProfileInfo> searchByEmail(
