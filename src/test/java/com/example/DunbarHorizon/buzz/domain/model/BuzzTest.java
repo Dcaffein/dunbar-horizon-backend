@@ -266,6 +266,35 @@ class BuzzTest {
     }
 
     @Nested
+    @DisplayName("isCreator 테스트")
+    class IsCreatorTest {
+        private Buzz buzz;
+
+        @BeforeEach
+        void setUp() {
+            buzz = Buzz.builder()
+                    .creatorId(creatorId)
+                    .creatorNickname(creatorNickname)
+                    .creatorProfileImageUrl(creatorProfile)
+                    .text("Test")
+                    .recipientIds(List.of(recipientId))
+                    .build();
+        }
+
+        @Test
+        @DisplayName("creatorId와 같은 userId이면 isCreator가 true이다")
+        void isCreator_WithCreatorId_ReturnsTrue() {
+            assertThat(buzz.isCreator(creatorId)).isTrue();
+        }
+
+        @Test
+        @DisplayName("creatorId와 다른 userId이면 isCreator가 false이다")
+        void isCreator_WithOtherId_ReturnsFalse() {
+            assertThat(buzz.isCreator(recipientId)).isFalse();
+        }
+    }
+
+    @Nested
     @DisplayName("isPublic 댓글 필터링 테스트")
     class VisibleCommentsTest {
         private Buzz buzz;

@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.buzz.application.service;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.RecipientType;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.ManualRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.port.in.command.CreateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
@@ -94,6 +95,40 @@ class BuzzServiceTest {
             ArgumentCaptor<Buzz> buzzCaptor = ArgumentCaptor.forClass(Buzz.class);
             verify(buzzRepository).save(buzzCaptor.capture());
             assertThat(buzzCaptor.getValue().getImageUrls()).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("getBuzzDetail isCreator 검증")
+    class GetBuzzDetailIsCreator {
+
+        private Buzz buzz;
+
+        @BeforeEach
+        void setUp() {
+            buzz = Buzz.builder()
+                    .creatorId(creatorId)
+                    .creatorNickname("작성자")
+                    .creatorProfileImageUrl("p.png")
+                    .text("Buzz")
+                    .recipientIds(List.of(recipientId))
+                    .build();
+            ReflectionTestUtils.setField(buzz, "id", "buzz-id");
+            given(buzzRepository.findById("buzz-id")).willReturn(buzz);
+        }
+
+        @Test
+        @DisplayName("작성자가 상세 조회하면 isCreator가 true이다")
+        void getBuzzDetail_ByCreator_IsCreatorTrue() {
+            BuzzDetailResult result = buzzService.getBuzzDetail(creatorId, "buzz-id");
+            assertThat(result.isCreator()).isTrue();
+        }
+
+        @Test
+        @DisplayName("수신자가 상세 조회하면 isCreator가 false이다")
+        void getBuzzDetail_ByRecipient_IsCreatorFalse() {
+            BuzzDetailResult result = buzzService.getBuzzDetail(recipientId, "buzz-id");
+            assertThat(result.isCreator()).isFalse();
         }
     }
 
