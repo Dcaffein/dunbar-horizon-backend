@@ -75,7 +75,7 @@ public class FlagCommentQueryService implements FlagCommentQueryUseCase {
                 .sorted(Comparator.comparing(CommentResult::createdAt))
                 .toList();
 
-        return CommentResult.of(current, writer, current.getContent(), replies);
+        return CommentResult.of(current, writer, current.getContent(), replies, current.isWriter(viewerId));
     }
 
     private Set<Long> extractUserIds(List<FlagComment> allComments, Flag flag) {

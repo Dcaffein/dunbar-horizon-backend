@@ -88,6 +88,10 @@ public class FlagComment extends BaseTimeAggregateRoot {
         }
     }
 
+    public boolean isWriter(Long userId) {
+        return this.writerId.equals(userId);
+    }
+
     public boolean isReply() {
         return this.parentId != null;
     }

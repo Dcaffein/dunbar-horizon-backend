@@ -172,4 +172,20 @@ class FlagCommentTest {
         // when / then
         assertThat(comment.isVisibleTo(STRANGER_ID, HOST_ID, null)).isFalse();
     }
+
+    @Test
+    @DisplayName("writerId와 같은 userId이면 isWriter가 true이다")
+    void isWriter_WithWriterId_ReturnsTrue() {
+        FlagComment comment = FlagComment.createRoot(FLAG_ID, WRITER_ID, "내용", false);
+
+        assertThat(comment.isWriter(WRITER_ID)).isTrue();
+    }
+
+    @Test
+    @DisplayName("writerId와 다른 userId이면 isWriter가 false이다")
+    void isWriter_WithOtherId_ReturnsFalse() {
+        FlagComment comment = FlagComment.createRoot(FLAG_ID, WRITER_ID, "내용", false);
+
+        assertThat(comment.isWriter(STRANGER_ID)).isFalse();
+    }
 }

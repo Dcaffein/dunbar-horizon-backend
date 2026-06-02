@@ -1,11 +1,13 @@
 package com.example.DunbarHorizon.flag.adapter.in.web;
 
+import com.example.DunbarHorizon.flag.application.dto.result.CommentResult;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -14,6 +16,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WithMockCustomUser
@@ -30,6 +33,21 @@ class FlagCommentControllerTest extends BaseControllerTest {
                 .andExpect(status().isOk());
 
         verify(flagCommentQueryUseCase).getCommentTree(1L, CURRENT_USER_ID);
+    }
+
+    @Test
+    @DisplayName("본인 댓글이면 응답에 isMine=true가 포함된다")
+    void getComments_OwnComment_IsMineTrue() throws Exception {
+        CommentResult comment = new CommentResult(
+                10L,
+                new CommentResult.WriterInfo(CURRENT_USER_ID, "작성자", null),
+                "댓글 내용", false, LocalDateTime.now(), List.of(), true
+        );
+        given(flagCommentQueryUseCase.getCommentTree(1L, CURRENT_USER_ID)).willReturn(List.of(comment));
+
+        mockMvc.perform(get("/api/v1/flags/1/comments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].isMine").value(true));
     }
 
     @Test

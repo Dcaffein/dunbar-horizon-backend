@@ -12,16 +12,18 @@ public record CommentResult(
         String content,
         boolean isPrivate,
         LocalDateTime createdAt,
-        List<CommentResult> replies
+        List<CommentResult> replies,
+        boolean isMine
 ) {
-    public static CommentResult of(FlagComment comment, WriterInfo writerInfo, String content, List<CommentResult> replies) {
+    public static CommentResult of(FlagComment comment, WriterInfo writerInfo, String content, List<CommentResult> replies, boolean isMine) {
         return new CommentResult(
                 comment.getId(),
                 writerInfo,
                 content,
                 comment.isPrivate(),
                 comment.getCreatedAt(),
-                replies
+                replies,
+                isMine
         );
     }
 
