@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.flag.domain.memorial;
 
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
+import com.example.DunbarHorizon.flag.domain.memorial.event.MemorialCreatedEvent;
 import com.example.DunbarHorizon.global.common.BaseTimeAggregateRoot;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -25,6 +26,7 @@ public class FlagMemorial extends BaseTimeAggregateRoot {
         this.flagId = flagId;
         this.writerId = writerId;
         this.content = content;
+        registerEvent(new MemorialCreatedEvent(flagId));
     }
 
     private void validateContent(String content) {

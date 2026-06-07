@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.flag.domain.memorial;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
-import com.example.DunbarHorizon.flag.domain.memorial.event.MemorialCreatedEvent;
 import com.example.DunbarHorizon.flag.domain.memorial.exception.FlagMemorialAuthorizationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -25,8 +24,6 @@ public class FlagMemorialFactory {
             throw new FlagMemorialAuthorizationException("플래그 참여자만 후기를 작성할 수 있습니다.");
         }
 
-        FlagMemorial memorial = new FlagMemorial(flag.getId(), writerId, content);
-        memorial.registerEvent(new MemorialCreatedEvent(flag.getId()));
-        return memorial;
+        return new FlagMemorial(flag.getId(), writerId, content);
     }
 }
