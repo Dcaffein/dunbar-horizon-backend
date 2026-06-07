@@ -6,7 +6,6 @@ import com.example.DunbarHorizon.buzz.application.port.in.command.CreateBuzzComm
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
-import com.example.DunbarHorizon.buzz.domain.event.BuzzReadEvent;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
@@ -118,7 +117,7 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     public BuzzDetailResult getBuzzDetail(Long userId, String buzzId) {
         Buzz buzz = getBuzzOrThrow(buzzId);
         buzz.validateAccess(userId);
-        eventPublisher.publishEvent(new BuzzReadEvent(buzzId, userId));
+        buzzRepository.addReadRecipient(buzzId, userId);
         return BuzzDetailResult.from(buzz, userId);
     }
 
