@@ -57,7 +57,7 @@ public class SocialQueryController {
             @RequestParam(required = false) String labelId,
             @RequestParam(defaultValue = "DUNBAR") DunbarCircle circleSize
     ) {
-        return ResponseEntity.ok(networkQueryUseCase.getIntersectionByOneHop(
+        return ResponseEntity.ok(networkQueryUseCase.getNewNodeEdges(
                 currentUserId, targetId, labelId, circleSize.getLimitSize()
         ));
     }

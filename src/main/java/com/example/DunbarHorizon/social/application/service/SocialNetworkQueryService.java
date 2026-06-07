@@ -30,14 +30,14 @@ public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
     }
 
     @Override
-    public List<MutualFriendEdgeResult> getIntersectionByOneHop(
+    public List<MutualFriendEdgeResult> getNewNodeEdges(
             Long userId, Long targetId, String labelId, int limitSize) {
-        return socialNetworkRepository.getIntersectionByOneHop(userId, targetId, labelId, limitSize);
+        return socialNetworkRepository.getNewNodeEdges(userId, targetId, labelId, limitSize);
     }
 
     @Override
-    public List<NetworkOneHopsByTwoHopResult> getIntersectionByTwoHop(
+    public List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(
             Long userId, Long targetId, String labelId, int limitSize) {
-        return socialNetworkRepository.getIntersectionOneHops(userId, targetId, labelId, limitSize);
+        return socialNetworkRepository.getNetworkContactsOfTwoHop(userId, targetId, labelId, limitSize);
     }
 }

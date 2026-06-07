@@ -215,7 +215,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
     }
 
     @Override
-    public List<NetworkOneHopsByTwoHopResult> getIntersectionOneHops(
+    public List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(
             Long userId, Long targetId, String labelId, int limitSize) {
 
         Node targetUser = user().named("targetUser");
@@ -250,7 +250,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
     }
 
     @Override
-    public List<MutualFriendEdgeResult> getIntersectionByOneHop(
+    public List<MutualFriendEdgeResult> getNewNodeEdges(
             Long userId, Long targetId, String labelId, int limitSize) {
 
         Node target = user().named("target");

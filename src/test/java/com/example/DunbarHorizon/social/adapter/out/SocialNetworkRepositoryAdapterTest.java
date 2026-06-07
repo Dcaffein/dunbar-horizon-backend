@@ -160,10 +160,10 @@ class SocialNetworkRepositoryAdapterTest {
 
     @Test
     @DisplayName("2-Hop 공통 친구 조회 시 isRoutable=false인 친구는 반환하지 않는다")
-    void getIntersectionOneHops_isRoutable_false인_공통친구는_반환하지_않는다() {
+    void getNetworkContactsOfTwoHop_isRoutable_false인_공통친구는_반환하지_않는다() {
         // 나(1)와 타겟X(100)의 물리적 공통 친구: B(20, isRoutable=true), C(30, isRoutable=false)
         List<NetworkOneHopsByTwoHopResult> result =
-                repository.getIntersectionOneHops(1L, 100L, null, DunbarCircle.DUNBAR.getLimitSize());
+                repository.getNetworkContactsOfTwoHop(1L, 100L, null, DunbarCircle.DUNBAR.getLimitSize());
 
         // then — isRoutable=true인 B(20)만 반환
         assertThat(result).hasSize(1);
@@ -174,11 +174,11 @@ class SocialNetworkRepositoryAdapterTest {
 
     @Test
     @DisplayName("1-Hop 친구 추가 시 현재 스켈레톤 내 isRoutable=true 공통 친구 엣지만 반환한다")
-    void getIntersectionByOneHop_스켈레톤_내_공통_친구를_반환한다() {
+    void getNewNodeEdges_스켈레톤_내_공통_친구를_반환한다() {
         // labelName=null, limitSize=DUNBAR: 스켈레톤 = [A, B, C, D, E, F]
         // X-B: isRoutable=true → 반환, X-C: isRoutable=false → 제외
         List<MutualFriendEdgeResult> result =
-                repository.getIntersectionByOneHop(1L, 100L, null, DunbarCircle.DUNBAR.getLimitSize());
+                repository.getNewNodeEdges(1L, 100L, null, DunbarCircle.DUNBAR.getLimitSize());
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).friendAId()).isEqualTo(100L);
@@ -187,12 +187,12 @@ class SocialNetworkRepositoryAdapterTest {
 
     @Test
     @DisplayName("1-Hop 친구 추가 시 스켈레톤 경계 밖의 친구는 교집합에서 제외된다")
-    void getIntersectionByOneHop_스켈레톤_밖의_친구는_교집합에서_제외된다() {
+    void getNewNodeEdges_스켈레톤_밖의_친구는_교집합에서_제외된다() {
         // SUPPORT(5) 스켈레톤 = [A, B, C, D, E]. F(60)은 제외
         // targetX는 B와 연결 → B는 스켈레톤 안 → 반환됨
         // isRoutable=false인 C는 여전히 제외
         List<MutualFriendEdgeResult> result =
-                repository.getIntersectionByOneHop(1L, 100L, null, DunbarCircle.SUPPORT.getLimitSize());
+                repository.getNewNodeEdges(1L, 100L, null, DunbarCircle.SUPPORT.getLimitSize());
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).friendBId()).isEqualTo(20L);

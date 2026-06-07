@@ -66,8 +66,8 @@ class SocialNetworkQueryServiceTest {
     }
 
     @Test
-    @DisplayName("getIntersectionByOneHop: Repository에 파라미터를 그대로 전달하고 결과를 반환한다")
-    void getIntersectionByOneHop_Repository에_올바른_파라미터를_전달하고_결과를_반환한다() {
+    @DisplayName("getNewNodeEdges: Repository에 파라미터를 그대로 전달하고 결과를 반환한다")
+    void getNewNodeEdges_Repository에_올바른_파라미터를_전달하고_결과를_반환한다() {
         // given
         Long userId = 1L;
         Long targetId = 99L;
@@ -76,20 +76,20 @@ class SocialNetworkQueryServiceTest {
         List<MutualFriendEdgeResult> expected = List.of(
                 new MutualFriendEdgeResult(99L, 20L, 0.6)
         );
-        given(socialNetworkRepository.getIntersectionByOneHop(userId, targetId, labelName, limitSize))
+        given(socialNetworkRepository.getNewNodeEdges(userId, targetId, labelName, limitSize))
                 .willReturn(expected);
 
         // when
-        List<MutualFriendEdgeResult> result = service.getIntersectionByOneHop(userId, targetId, labelName, limitSize);
+        List<MutualFriendEdgeResult> result = service.getNewNodeEdges(userId, targetId, labelName, limitSize);
 
         // then
-        verify(socialNetworkRepository).getIntersectionByOneHop(userId, targetId, labelName, limitSize);
+        verify(socialNetworkRepository).getNewNodeEdges(userId, targetId, labelName, limitSize);
         assertThat(result).isEqualTo(expected);
     }
 
     @Test
-    @DisplayName("getIntersectionByTwoHop: Repository에 파라미터를 그대로 전달하고 결과를 반환한다")
-    void getIntersectionByTwoHop_Repository에_올바른_파라미터를_전달하고_결과를_반환한다() {
+    @DisplayName("getNetworkContactsOfTwoHop: Repository에 파라미터를 그대로 전달하고 결과를 반환한다")
+    void getNetworkContactsOfTwoHop_Repository에_올바른_파라미터를_전달하고_결과를_반환한다() {
         // given
         Long userId = 1L;
         Long targetId = 99L;
@@ -98,14 +98,14 @@ class SocialNetworkQueryServiceTest {
         List<NetworkOneHopsByTwoHopResult> expected = List.of(
                 new NetworkOneHopsByTwoHopResult(5L)
         );
-        given(socialNetworkRepository.getIntersectionOneHops(userId, targetId, labelName, limitSize))
+        given(socialNetworkRepository.getNetworkContactsOfTwoHop(userId, targetId, labelName, limitSize))
                 .willReturn(expected);
 
         // when
-        List<NetworkOneHopsByTwoHopResult> result = service.getIntersectionByTwoHop(userId, targetId, labelName, limitSize);
+        List<NetworkOneHopsByTwoHopResult> result = service.getNetworkContactsOfTwoHop(userId, targetId, labelName, limitSize);
 
         // then
-        verify(socialNetworkRepository).getIntersectionOneHops(userId, targetId, labelName, limitSize);
+        verify(socialNetworkRepository).getNetworkContactsOfTwoHop(userId, targetId, labelName, limitSize);
         assertThat(result).isEqualTo(expected);
     }
 }
