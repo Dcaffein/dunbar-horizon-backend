@@ -6,7 +6,6 @@ import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundExceptio
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorial;
 import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorialFactory;
-import com.example.DunbarHorizon.flag.domain.memorial.event.MemorialCreatedEvent;
 import com.example.DunbarHorizon.flag.domain.memorial.event.MemorialDeletedEvent;
 import com.example.DunbarHorizon.flag.domain.memorial.exception.FlagMemorialNotFoundException;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
@@ -33,7 +32,6 @@ public class FlagMemorialCommandService implements FlagMemorialCommandUseCase {
         FlagMemorial newMemorial = memorialFactory.create(flag, userId, content);
 
         FlagMemorial saved = memorialRepository.save(newMemorial);
-        eventPublisher.publishEvent(new MemorialCreatedEvent(flagId));
 
         return saved.getId();
     }
