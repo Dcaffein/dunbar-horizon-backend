@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out;
 
-import com.example.DunbarHorizon.social.adapter.out.neo4j.springData.LabelNeo4jRepository;
-import com.example.DunbarHorizon.social.adapter.out.neo4j.springData.SocialUserNeo4jRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.LabelNeo4jRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.SocialUserNeo4jRepository;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelTestFactory;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;

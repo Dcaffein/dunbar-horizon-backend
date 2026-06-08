@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out;
 
-import com.example.DunbarHorizon.social.adapter.out.neo4j.springData.FriendRequestNeo4jRepository;
-import com.example.DunbarHorizon.social.adapter.out.neo4j.springData.SocialUserNeo4jRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.FriendRequestNeo4jRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.SocialUserNeo4jRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;

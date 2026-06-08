@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out;
 
+import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.SocialExpansionRepositoryAdapter;
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
 import com.example.DunbarHorizon.support.Neo4jRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out;
 
+import com.example.DunbarHorizon.social.adapter.out.redis.SocialNetworkCacheAdapter;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

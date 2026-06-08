@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out;
 
+import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.SocialNetworkRepositoryAdapter;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkRepository;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
