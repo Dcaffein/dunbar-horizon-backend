@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.social.adapter.account;
+package com.example.DunbarHorizon.social.adapter.out.account;
 
 import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
 import com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase;
