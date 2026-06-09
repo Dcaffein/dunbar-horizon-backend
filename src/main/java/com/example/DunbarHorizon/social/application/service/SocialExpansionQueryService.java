@@ -4,6 +4,9 @@ import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionRe
 import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
 import com.example.DunbarHorizon.social.application.port.in.SocialExpansionQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.SocialExpansionRepository;
+import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import org.springframework.stereotype.Service;
@@ -28,20 +31,33 @@ public class SocialExpansionQueryService implements SocialExpansionQueryUseCase 
     private static final int MIN_THRESHOLD = 1;
 
     private final SocialExpansionRepository socialExpansionRepository;
+    private final FriendshipRepository friendshipRepository;
 
     @Override
-    public List<AnchorExpansionResult> getTwoHopSuggestionsByOneHop(Long userId, Long anchorId) {
-        return socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, 1, 10);
+    public List<AnchorExpansionResult> getTwoHopSuggestionsByOneHop(Long userId, Long anchorId, Double expansionValue) {
+        validateExpansionValue(expansionValue);
+        int limit = calculateLimit(expansionValue);
+        int threshold = calculateThreshold(expansionValue);
+        return socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, threshold, limit);
     }
 
     @Override
     public List<AnchorExpansionResult> getAnchorExpansion(Long userId, Long anchorFriendId, Double expansionValue) {
         validateExpansionValue(expansionValue);
-
-        int limitCount = calculateLimit(expansionValue);
+        int limit = calculateLimit(expansionValue);
         int threshold = calculateThreshold(expansionValue);
+        return socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorFriendId, threshold, limit);
+    }
 
-        return socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorFriendId, threshold, limitCount);
+    @Override
+    public List<AnchorExpansionResult> getRecommendationsByAnchor(Long userId, Long anchorFriendId) {
+        double intimacy = friendshipRepository
+                .findById(Friendship.generateCompositeId(userId, anchorFriendId))
+                .orElseThrow(() -> new FriendshipNotFoundException(userId, anchorFriendId))
+                .getIntimacy();
+        int limit = calculateLimit(intimacy);
+        int threshold = calculateThreshold(intimacy);
+        return socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorFriendId, threshold, limit);
     }
 
     private void validateExpansionValue(Double value) {
