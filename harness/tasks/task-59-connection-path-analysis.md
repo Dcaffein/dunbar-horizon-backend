@@ -32,21 +32,17 @@ APOC `expandConfig`(단방향 flood-fill)와 달리 "경로 없음" 케이스에
 
 ```cypher
 -- 1-hop: 직접 친구 여부 확인
-MATCH (me:USER_REFERENCE {id: $myId})-[:HAS_FRIENDSHIP]->(f:Friendship)<-[:HAS_FRIENDSHIP]-(target:USER_REFERENCE {id: $targetId})
-RETURN f.intimacy AS score
+MATCH (me:UserReference {id: $myId})-[:HAS_FRIENDSHIP]->(f:Friendship)<-[:HAS_FRIENDSHIP]-(target:UserReference {id: $targetId})
+RETURN true AS direct
+LIMIT 1
 
 -- 2-hop: 공통 친구(중개인) 목록 조회
-MATCH (me:USER_REFERENCE {id: $myId})
-  -[:HAS_FRIENDSHIP]->(f1:Friendship)<-[:HAS_FRIENDSHIP]-(mid:USER_REFERENCE)
-  -[:HAS_FRIENDSHIP]->(f2:Friendship)<-[:HAS_FRIENDSHIP]-(target:USER_REFERENCE {id: $targetId})
-WHERE NONE(
-  r IN [f1, f2]
-  WHERE r.isRoutable = false AND startNode(r) <> me
-)
-WITH mid, f1.intimacy AS i1, f2.intimacy AS i2,
-     sqrt(f1.intimacy * f2.intimacy) AS score
+MATCH (me:UserReference {id: $myId})-[:HAS_FRIENDSHIP]->(f1:Friendship)<-[r2:HAS_FRIENDSHIP]-(mid:UserReference)
+      -[r3:HAS_FRIENDSHIP]->(f2:Friendship)<-[r4:HAS_FRIENDSHIP]-(target:UserReference {id: $targetId})
+WHERE r2.isRoutable = true AND r4.isRoutable = true
+WITH mid, sqrt(f1.intimacy * f2.intimacy) AS score
 ORDER BY score DESC
-RETURN mid, i1, i2, score
+RETURN mid.id AS userId, mid.nickname AS nickname, score
 ```
 
 1-hop 확인 후 결과에 따라 2-hop 쿼리를 실행한다.
@@ -71,11 +67,14 @@ RETURN mid, i1, i2, score
 
 - **내가 설정한 `isRoutable = false`** → 내 탐색에서는 무시 (내 프라이버시 선택이지 탐색을 막는 게 아님)
 - **타인이 설정한 `isRoutable = false`** → 해당 Friendship을 경유지에서 제외
-- 구현: `WHERE NONE(r IN [f1, f2] WHERE r.isRoutable = false AND startNode(r) <> me)` 후처리
+- 구현: `WHERE r2.isRoutable = true AND r4.isRoutable = true`
+  - r2: mid의 me-mid Friendship 인식 — mid가 경유를 원하지 않으면 제외
+  - r4: target의 mid-target Friendship 인식 — target의 노출 여부 보호
+  - r3(mid의 mid-target 인식)은 체크하지 않음
 
 ### 비활성 유저 필터
 
-`USER_REFERENCE` 레이블로만 탐색하므로 자동 처리.
+`UserReference` 레이블로만 탐색하므로 자동 처리.
 `SocialUser.deactivate()` 시 레이블이 `INACTIVE_SOCIAL_USER`로 교체되어 MATCH 패턴에 걸리지 않음.
 
 ### 3-hop 미포함

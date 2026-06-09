@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.dsl.SocialNetworkPatterns.*;
+import static com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.dsl.SocialNetworkProperties.*;
 import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.HAS_FRIENDSHIP;
 import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.ATTACHED_TO;
 import static org.neo4j.cypherdsl.core.Cypher.*;

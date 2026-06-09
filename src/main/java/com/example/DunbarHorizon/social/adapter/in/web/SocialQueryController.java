@@ -2,9 +2,11 @@ package com.example.DunbarHorizon.social.adapter.in.web;
 
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
+import com.example.DunbarHorizon.social.application.port.in.SocialConnectionPathQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.in.SocialExpansionQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
@@ -21,6 +23,7 @@ public class SocialQueryController {
 
     private final SocialExpansionQueryUseCase expansionQueryUseCase;
     private final SocialNetworkQueryUseCase networkQueryUseCase;
+    private final SocialConnectionPathQueryUseCase connectionPathQueryUseCase;
 
     /**
      * 메인 홈 네트워크 (Soft Morphing 적용으로 1개의 API로 통합)
@@ -73,7 +76,7 @@ public class SocialQueryController {
             @RequestParam(required = false) String labelId,
             @RequestParam(defaultValue = "DUNBAR") DunbarCircle circleSize
     ) {
-        return ResponseEntity.ok(networkQueryUseCase.getIntersectionByTwoHop(
+        return ResponseEntity.ok(networkQueryUseCase.getNetworkContactsOfTwoHop(
                 currentUserId, targetId, labelId, circleSize.getLimitSize()
         ));
     }
@@ -96,5 +99,13 @@ public class SocialQueryController {
             @RequestParam Double expansionValue
     ) {
         return ResponseEntity.ok(expansionQueryUseCase.getTwoHopSuggestionsByOneHop(currentUserId, anchorId, expansionValue));
+    }
+
+    @GetMapping("/path")
+    public ResponseEntity<ConnectionPathResult> getConnectionPath(
+            @CurrentUserId Long currentUserId,
+            @RequestParam Long targetId
+    ) {
+        return ResponseEntity.ok(connectionPathQueryUseCase.getConnectionPath(currentUserId, targetId));
     }
 }
