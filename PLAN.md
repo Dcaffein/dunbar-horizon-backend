@@ -1,97 +1,104 @@
-# PLAN: Task-60 앵커 확장 파라미터 동적화
+# PLAN: Task-59 — 유저 간 연결 중개인 탐색 API
+
+## Branch
+`ai/feat-connection-path-api` (from `main`)
 
 ## 목표
-
-- `GET /api/v1/networks/suggestions/anchor` — 클라이언트가 전달한 `expansionValue`로 limit/threshold 동적 결정 (excludeMyFriends=true)
-- `GET /api/v1/networks/recommendations` — 나와 앵커 사이의 `Friendship.intimacy`를 expansionValue로 사용해 limit/threshold 동적 결정 (excludeMyFriends=false)
-
----
-
-## 현황
-
-| 엔드포인트 | 현재 파라미터 | 문제 |
-|------------|--------------|------|
-| `/suggestions/anchor` | threshold=1, limit=10 고정 | 클라이언트 제어 불가 |
-| `/recommendations` | expansionValue=0.3 하드코딩 | 관계 친밀도 미반영, calculateLimit/Threshold dead code |
+`GET /api/v1/networks/path?targetId={userId}` 엔드포인트 추가.
+직접 연결 여부와 2-hop 공통 친구(중개인) 목록을 기하평균 점수 순으로 반환한다.
 
 ---
 
-## 변경 파일 (3개)
+## 새 파일
 
-### 1. `SocialExpansionQueryUseCase.java` (port/in) — 시그니처 변경
-
+### 1. `ConnectionPathResult.java`
 ```java
-// 변경 전
-List<AnchorExpansionResult> getTwoHopSuggestionsByOneHop(Long userId, Long anchorId);
-List<AnchorExpansionResult> getAnchorExpansion(Long userId, Long anchorFriendId, Double expansionValue);
-
-// 변경 후
-List<AnchorExpansionResult> getTwoHopSuggestionsByOneHop(Long userId, Long anchorId, Double expansionValue);
-List<AnchorExpansionResult> getAnchorExpansion(Long userId, Long anchorFriendId);
-```
-
-### 2. `SocialExpansionQueryService.java` — 서비스 로직 변경
-
-**getTwoHopSuggestionsByOneHop**: expansionValue 파라미터 추가, 기존 validateExpansionValue / calculateLimit / calculateThreshold 활용
-
-```java
-public List<AnchorExpansionResult> getTwoHopSuggestionsByOneHop(Long userId, Long anchorId, Double expansionValue) {
-    validateExpansionValue(expansionValue);
-    int limit = calculateLimit(expansionValue);
-    int threshold = calculateThreshold(expansionValue);
-    return socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, threshold, limit);
-}
-```
-
-**getAnchorExpansion**: expansionValue 파라미터 제거, `FriendshipRepository`에서 intimacy 조회 후 내부에서 계산
-
-```java
-public List<AnchorExpansionResult> getAnchorExpansion(Long userId, Long anchorId) {
-    double intimacy = friendshipRepository
-            .findById(Friendship.generateCompositeId(userId, anchorId))
-            .orElseThrow(() -> new FriendshipNotFoundException(userId, anchorId))
-            .getIntimacy();
-    int limit = calculateLimit(intimacy);
-    int threshold = calculateThreshold(intimacy);
-    return socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorId, threshold, limit);
-}
-```
-
-intimacy 범위: `Friendship.calculateIntimacyPolicy = Math.sqrt(scoreA * scoreB)`, normalizedScore가 [0,1]이므로 intimacy도 [0,1] — validateExpansionValue 범위와 일치. `SocialExpansionQueryService`에 `FriendshipRepository` 의존성 추가 필요.
-
-### 3. `SocialQueryController.java` — 엔드포인트 변경
-
-```java
-// /recommendations: expansionValue 파라미터 제거
-@GetMapping("/recommendations")
-public ResponseEntity<List<AnchorExpansionResult>> getTwoHopRecommendation(
-        @CurrentUserId Long currentUserId,
-        @RequestParam Long anchorId
+public record ConnectionPathResult(
+    boolean direct,
+    List<IntermediaryResult> intermediaries
 ) {
-    return ResponseEntity.ok(expansionQueryUseCase.getAnchorExpansion(currentUserId, anchorId));
+    public record IntermediaryResult(Long userId, String nickname, Double score) {}
 }
+```
 
-// /suggestions/anchor: expansionValue 파라미터 추가
-@GetMapping("/suggestions/anchor")
-public ResponseEntity<List<AnchorExpansionResult>> getTwoHopSuggestionsByAnchor(
-        @CurrentUserId Long currentUserId,
-        @RequestParam Long anchorId,
-        @RequestParam Double expansionValue
+### 2. `SocialConnectionPathRepository.java` (output port)
+```java
+public interface SocialConnectionPathRepository {
+    List<ConnectionPathResult.IntermediaryResult> findIntermediaries(Long myId, Long targetId);
+}
+```
+
+### 3. `SocialConnectionPathQueryUseCase.java` (input port)
+```java
+public interface SocialConnectionPathQueryUseCase {
+    ConnectionPathResult getConnectionPath(Long myId, Long targetId);
+}
+```
+
+### 4. `SocialConnectionPathQueryService.java`
+`direct`는 `FriendshipRepository.existsById(compositeId)`로 확인 — 별도 경로 쿼리 없이 `Friendship.id` 인덱스 단순 조회.
+
+```java
+@Service
+@RequiredArgsConstructor
+@Neo4jTransactional(readOnly = true)
+public class SocialConnectionPathQueryService implements SocialConnectionPathQueryUseCase {
+    private final SocialConnectionPathRepository connectionPathRepository;
+    private final FriendshipRepository friendshipRepository;
+
+    @Override
+    public ConnectionPathResult getConnectionPath(Long myId, Long targetId) {
+        boolean direct = friendshipRepository.existsById(Friendship.generateCompositeId(myId, targetId));
+        List<ConnectionPathResult.IntermediaryResult> intermediaries =
+                connectionPathRepository.findIntermediaries(myId, targetId);
+        return new ConnectionPathResult(direct, intermediaries);
+    }
+}
+```
+
+### 5. `SocialConnectionPathRepositoryAdapter.java`
+`Neo4jClient` + raw Cypher 사용.
+이유: 2-hop 경로에서 r2·r3·r4를 개별 명명해 `isRoutable`을 확인해야 하는데,
+Cypher DSL의 `RelationshipChain.named()`는 chain 전체를 명명하므로 개별 관계 접근이 불가.
+쿼리 내용이 동적 조건 없이 고정이라 raw string이 더 가독성 높다.
+
+**2-hop 쿼리** (중개인 목록):
+```cypher
+MATCH (me:UserReference {id: $myId})-[:HAS_FRIENDSHIP]->(f1:Friendship)<-[r2:HAS_FRIENDSHIP]-(mid:UserReference)
+      -[r3:HAS_FRIENDSHIP]->(f2:Friendship)<-[r4:HAS_FRIENDSHIP]-(target:UserReference {id: $targetId})
+WHERE r2.isRoutable = true AND r4.isRoutable = true
+WITH mid, sqrt(f1.intimacy * f2.intimacy) AS score
+ORDER BY score DESC
+RETURN mid.id AS userId, mid.nickname AS nickname, score
+```
+
+isRoutable 비대칭 적용:
+- `me → f1` (나의 HAS_FRIENDSHIP): 무시 — 내 탐색이므로 내 설정은 관여하지 않음
+- `r2` (mid의 me-mid Friendship 인식): 체크 — mid가 경유를 원하지 않으면 제외
+- `r3` (mid의 mid-target Friendship 인식): 체크하지 않음
+- `r4` (target의 mid-target Friendship 인식): 체크 — target의 노출 여부만 보호
+
+---
+
+## 수정 파일
+
+### `SocialQueryController.java`
+의존성 `SocialConnectionPathQueryUseCase` 추가, 엔드포인트 추가:
+```java
+@GetMapping("/path")
+public ResponseEntity<ConnectionPathResult> getConnectionPath(
+    @CurrentUserId Long currentUserId,
+    @RequestParam Long targetId
 ) {
-    return ResponseEntity.ok(expansionQueryUseCase.getTwoHopSuggestionsByOneHop(currentUserId, anchorId, expansionValue));
+    return ResponseEntity.ok(connectionPathQueryUseCase.getConnectionPath(currentUserId, targetId));
 }
 ```
 
 ---
 
-## 영향 범위
+## 결정 사항
 
-- `SocialExpansionQueryUseCase` 시그니처 변경 → 컨트롤러 호출부 수정 필요 (위에서 처리)
-- `getAnchorExpansion(userId, anchorId, 0.3)` 호출부는 컨트롤러 1곳뿐 — 컴파일 오류 없음
-- `SocialExpansionRepository` (port/out) 변경 없음 — 신규 메서드 불필요
-- 기존 `calculateLimit` / `calculateThreshold` / `validateExpansionValue` 로직 변경 없음
-- `SocialExpansionQueryService`에 `FriendshipRepository` 의존성 추가
-
-## 브랜치
-
-`ai/feat-dynamic-expansion-params` (from main)
+- **1-hop isRoutable 체크 없음**: `direct` 플래그는 "우리가 이미 친구인가"를 나타내는 사실이므로 isRoutable과 무관.
+- **3-hop 미포함**: task-59 문서 확정 사항.
+- **`targetId = myId` 방어**: 서비스에서 `myId.equals(targetId)`이면 `new ConnectionPathResult(false, List.of())` 즉시 반환.
+- **비활성 유저 자동 제외**: `UserReference` 레이블 MATCH — deactivate 시 레이블이 교체되므로 별도 필터 불필요.
