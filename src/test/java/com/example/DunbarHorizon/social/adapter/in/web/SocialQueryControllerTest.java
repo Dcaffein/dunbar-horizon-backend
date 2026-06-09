@@ -18,15 +18,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SocialQueryControllerTest extends BaseControllerTest {
 
     @Test
-    @DisplayName("앵커 친구 기반 2-hop 새 친구 추천 목록을 조회한다")
+    @DisplayName("expansionValue를 전달하면 앵커 기반 2-hop 새 친구 추천 목록을 조회한다")
     void getTwoHopSuggestionsByAnchor_Success() throws Exception {
         Long anchorId = 2L;
+        double expansionValue = 0.5;
         AnchorExpansionResult suggestion = new AnchorExpansionResult(3L, "추천유저", 0.5, 2, 1);
-        given(socialExpansionQueryUseCase.getTwoHopSuggestionsByOneHop(eq(1L), eq(anchorId)))
+        given(socialExpansionQueryUseCase.getTwoHopSuggestionsByOneHop(eq(1L), eq(anchorId), eq(expansionValue)))
                 .willReturn(List.of(suggestion));
 
         mockMvc.perform(get("/api/v1/networks/suggestions/anchor")
-                        .param("anchorId", String.valueOf(anchorId)))
+                        .param("anchorId", String.valueOf(anchorId))
+                        .param("expansionValue", String.valueOf(expansionValue)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(3))
                 .andExpect(jsonPath("$[0].nickname").value("추천유저"));
@@ -43,10 +45,10 @@ class SocialQueryControllerTest extends BaseControllerTest {
     }
 
     @Test
-    @DisplayName("앵커 확장 추천 목록을 조회한다")
+    @DisplayName("앵커의 intimacy 기반으로 동적 파라미터를 적용한 추천 목록을 조회한다")
     void getAnchorRecommendation_Success() throws Exception {
         Long anchorId = 2L;
-        given(socialExpansionQueryUseCase.getAnchorExpansion(eq(1L), eq(anchorId), eq(0.3))).willReturn(List.of());
+        given(socialExpansionQueryUseCase.getRecommendationsByAnchor(eq(1L), eq(anchorId))).willReturn(List.of());
 
         mockMvc.perform(get("/api/v1/networks/recommendations")
                         .param("anchorId", String.valueOf(anchorId)))
