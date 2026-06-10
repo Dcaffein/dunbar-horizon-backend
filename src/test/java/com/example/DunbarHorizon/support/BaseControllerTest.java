@@ -77,6 +77,7 @@ public abstract class BaseControllerTest {
 
     @MockitoBean protected SocialExpansionQueryUseCase socialExpansionQueryUseCase;
     @MockitoBean protected SocialNetworkQueryUseCase socialNetworkQueryUseCase;
+    @MockitoBean protected SocialConnectionPathQueryUseCase socialConnectionPathQueryUseCase;
     @MockitoBean protected com.example.DunbarHorizon.social.application.port.in.SocialUserQueryUseCase socialUserQueryUseCase;
 
     @MockitoBean protected TraceCommandUseCase traceCommandUseCase;

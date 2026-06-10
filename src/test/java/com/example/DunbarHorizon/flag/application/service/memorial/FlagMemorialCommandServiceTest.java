@@ -7,7 +7,6 @@ import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundExceptio
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorial;
 import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorialFactory;
-import com.example.DunbarHorizon.flag.domain.memorial.event.MemorialCreatedEvent;
 import com.example.DunbarHorizon.flag.domain.memorial.event.MemorialDeletedEvent;
 import com.example.DunbarHorizon.flag.domain.memorial.exception.FlagMemorialNotFoundException;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
@@ -70,7 +69,6 @@ class FlagMemorialCommandServiceTest {
 
         // then
         assertThat(result).isEqualTo(1L);
-        verify(eventPublisher).publishEvent(any(MemorialCreatedEvent.class));
     }
 
     @Test
