@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.trace.application;
 
+import com.example.DunbarHorizon.trace.application.dto.TraceResult;
 import com.example.DunbarHorizon.trace.application.port.in.TraceCommandUseCase;
 import com.example.DunbarHorizon.trace.domain.model.Trace;
 import com.example.DunbarHorizon.trace.domain.repository.TraceRepository;
@@ -18,12 +19,20 @@ public class TraceService implements TraceCommandUseCase {
 
     @Retryable(retryFor = {DataIntegrityViolationException.class, ObjectOptimisticLockingFailureException.class}, maxAttempts = 3)
     @Transactional
-    public void recordTrace(Long visitorId, Long targetId) {
+    public TraceResult recordTrace(Long visitorId, Long targetId) {
         Trace trace = traceRepository.findByUserAIdAndUserBId(visitorId, targetId)
                 .orElseGet(() -> new Trace(visitorId, targetId));
 
+        boolean wasRevealed = trace.isRevealed();
         trace.recordVisit(visitorId);
-
         traceRepository.save(trace);
+
+        boolean justRevealed = !wasRevealed && trace.isRevealed();
+        if (!justRevealed) return TraceResult.notRevealed();
+
+        Long otherUserId = trace.getUserAId().equals(visitorId)
+                ? trace.getUserBId()
+                : trace.getUserAId();
+        return new TraceResult(true, otherUserId);
     }
 }

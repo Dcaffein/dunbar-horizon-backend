@@ -1,6 +1,8 @@
 package com.example.DunbarHorizon.trace.application.port.in;
 
+import com.example.DunbarHorizon.trace.application.dto.TraceResult;
+
 public interface TraceCommandUseCase {
 
-    void recordTrace(Long visitorId, Long targetId);
+    TraceResult recordTrace(Long visitorId, Long targetId);
 }
