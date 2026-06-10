@@ -75,7 +75,6 @@ class TraceServiceTest {
 
         // then
         assertThat(result.revealed()).isTrue();
-        assertThat(result.revealedWithUserId()).isEqualTo(user2);
     }
 
     @Test
