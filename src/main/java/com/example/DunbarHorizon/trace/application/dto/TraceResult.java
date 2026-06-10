@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.trace.application.dto;
 
-public record TraceResult(boolean revealed, Long revealedWithUserId) {
+public record TraceResult(boolean revealed) {
 
     public static TraceResult notRevealed() {
-        return new TraceResult(false, null);
+        return new TraceResult(false);
     }
 }

@@ -28,8 +28,7 @@ class TraceControllerTest extends BaseControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.revealed").value(false))
-                .andExpect(jsonPath("$.revealedWithUserId").isEmpty());
+                .andExpect(jsonPath("$.revealed").value(false));
 
         verify(traceCommandUseCase).recordTrace(eq(1L), eq(targetId));
     }
@@ -39,13 +38,12 @@ class TraceControllerTest extends BaseControllerTest {
     void visitProfile_Revealed() throws Exception {
         Long targetId = 2L;
         VisitRequestDto requestDto = new VisitRequestDto(targetId);
-        given(traceCommandUseCase.recordTrace(eq(1L), eq(targetId))).willReturn(new TraceResult(true, targetId));
+        given(traceCommandUseCase.recordTrace(eq(1L), eq(targetId))).willReturn(new TraceResult(true));
 
         mockMvc.perform(post("/api/v1/social/traces")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.revealed").value(true))
-                .andExpect(jsonPath("$.revealedWithUserId").value(targetId));
+                .andExpect(jsonPath("$.revealed").value(true));
     }
 }

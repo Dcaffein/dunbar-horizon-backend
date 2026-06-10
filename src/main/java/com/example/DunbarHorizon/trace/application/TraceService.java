@@ -28,11 +28,6 @@ public class TraceService implements TraceCommandUseCase {
         traceRepository.save(trace);
 
         boolean justRevealed = !wasRevealed && trace.isRevealed();
-        if (!justRevealed) return TraceResult.notRevealed();
-
-        Long otherUserId = trace.getUserAId().equals(visitorId)
-                ? trace.getUserBId()
-                : trace.getUserAId();
-        return new TraceResult(true, otherUserId);
+        return new TraceResult(justRevealed);
     }
 }
