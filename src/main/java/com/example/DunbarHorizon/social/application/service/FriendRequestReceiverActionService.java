@@ -1,8 +1,7 @@
 package com.example.DunbarHorizon.social.application.service;
 
-import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
-import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.social.application.port.in.FriendRequestReceiverActionUseCase;
+import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendshipCreatedEvent;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
@@ -14,8 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -40,15 +37,10 @@ public class FriendRequestReceiverActionService implements FriendRequestReceiver
                 request.getRequester().getId(),
                 request.getReceiver().getId()
         ));
-        eventPublisher.publishEvent(new NotificationEvent(
+        eventPublisher.publishEvent(new FriendRequestAcceptedEvent(
                 request.getRequester().getId(),
-                "친구 수락",
-                request.getReceiver().getNickname() + "님과 이제 친구입니다.",
-                NotificationType.FRIEND_REQUEST_ACCEPT,
-                Map.of(
-                        "friendId", request.getReceiver().getId(),
-                        "friendName", request.getReceiver().getNickname()
-                )
+                request.getReceiver().getId(),
+                request.getReceiver().getNickname()
         ));
     }
 
