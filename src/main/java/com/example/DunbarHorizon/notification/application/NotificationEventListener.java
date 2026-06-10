@@ -27,7 +27,7 @@ public class NotificationEventListener {
 
 
     @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handleNotificationRequest(NotificationEvent event) {
 
         // 전체 공지사항 (Broadcast)
