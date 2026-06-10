@@ -1,12 +1,12 @@
 package com.example.DunbarHorizon.social.application;
 
-import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.social.application.service.FriendRequestReceiverActionService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipBroker;
+import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendshipCreatedEvent;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
@@ -71,7 +71,7 @@ class FriendRequestReceiverActionServiceTest {
         verify(friendshipRepository).save(mockFriendship);
         verify(friendRequestRepository).deleteById(requestId);
         verify(eventPublisher).publishEvent(any(FriendshipCreatedEvent.class));
-        verify(eventPublisher).publishEvent(any(NotificationEvent.class));
+        verify(eventPublisher).publishEvent(any(FriendRequestAcceptedEvent.class));
     }
 
     @Test

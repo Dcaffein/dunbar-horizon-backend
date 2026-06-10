@@ -6,8 +6,10 @@ import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.Map;
 
@@ -16,7 +18,8 @@ import java.util.Map;
 public class BuzzNotificationDispatcher {
     private final ApplicationEventPublisher eventPublisher;
 
-    @EventListener
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void dispatch(BuzzCreatedEvent event) {
         event.recipientIds().forEach(receiverId -> {
             NotificationEvent notification = new NotificationEvent(
@@ -31,7 +34,8 @@ public class BuzzNotificationDispatcher {
         });
     }
 
-    @EventListener
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void dispatch(BuzzCommentedEvent event) {
         if (event.creatorId().equals(event.commenterId())) return;
         NotificationEvent notification = NotificationEvent.builder()
