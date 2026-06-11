@@ -57,7 +57,7 @@ public class SocialExpansionQueryService implements SocialExpansionQueryUseCase 
                 .getIntimacy();
         int limit = calculateLimit(intimacy);
         int threshold = calculateThreshold(intimacy);
-        return socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorFriendId, threshold, limit);
+        return socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorFriendId, threshold, limit);
     }
 
     private void validateExpansionValue(Double value) {
