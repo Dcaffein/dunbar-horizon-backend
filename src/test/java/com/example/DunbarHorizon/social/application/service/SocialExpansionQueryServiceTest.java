@@ -125,14 +125,14 @@ class SocialExpansionQueryServiceTest {
         given(friendshipRepository.findById(Friendship.generateCompositeId(userId, anchorId)))
                 .willReturn(Optional.of(friendship));
         given(friendship.getIntimacy()).willReturn(intimacy);
-        given(socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorId, 3, 35))
+        given(socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, 3, 35))
                 .willReturn(List.of());
 
         // when
         service.getRecommendationsByAnchor(userId, anchorId);
 
         // then
-        verify(socialExpansionRepository).getRelatedNetworkByAnchor(userId, anchorId, 3, 35);
+        verify(socialExpansionRepository).getRecommendedNetworkByAnchor(userId, anchorId, 3, 35);
     }
 
     @Test
@@ -159,7 +159,7 @@ class SocialExpansionQueryServiceTest {
         given(friendshipRepository.findById(Friendship.generateCompositeId(userId, anchorId)))
                 .willReturn(Optional.of(friendship));
         given(friendship.getIntimacy()).willReturn(0.9);
-        given(socialExpansionRepository.getRelatedNetworkByAnchor(eq(userId), eq(anchorId), anyInt(), anyInt()))
+        given(socialExpansionRepository.getRecommendedNetworkByAnchor(eq(userId), eq(anchorId), anyInt(), anyInt()))
                 .willReturn(expected);
 
         // when
