@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.domain.label;
 
 import com.example.DunbarHorizon.social.domain.label.exception.InvalidLabelNameException;
-import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import org.junit.jupiter.api.BeforeEach;
 import java.util.Set;
@@ -26,12 +25,11 @@ class LabelTest {
     @DisplayName("라벨 생성 시 초기 멤버는 비어있어야 한다")
     void createLabel_Success() {
         // when
-        Label label = new Label(owner, "친구들", true);
+        Label label = new Label(owner, "친구들");
 
         // then
         assertThat(label.getLabelName()).isEqualTo("친구들");
         assertThat(label.getOwner().getId()).isEqualTo(1L);
-        assertThat(label.isExposure()).isTrue();
         assertThat(label.getMembers()).isEmpty();
     }
 
@@ -39,7 +37,7 @@ class LabelTest {
     @DisplayName("라벨에 새로운 멤버를 추가할 수 있다")
     void addNewMember_Success() {
         // given
-        Label label = new Label(owner, "친구들", true);
+        Label label = new Label(owner, "친구들");
 
         // when
         label.addNewMember(friend);
@@ -53,7 +51,7 @@ class LabelTest {
     @DisplayName("라벨 이름을 변경할 때 빈 값이 들어오면 예외가 발생한다")
     void applyNewLabelName_Fail_BlankName() {
         // given
-        Label label = new Label(owner, "친구들", true);
+        Label label = new Label(owner, "친구들");
 
         // when & then
         assertThatThrownBy(() -> label.applyNewLabelName(""))
@@ -61,35 +59,10 @@ class LabelTest {
     }
 
     @Test
-    @DisplayName("소유자가 아닌 유저가 노출 설정을 변경하려 하면 예외가 발생한다")
-    void updateExposure_Fail_Unauthorized() {
-        // given
-        Label label = new Label(owner, "친구들", true);
-        Long otherUserId = 999L;
-
-        // when & then
-        assertThatThrownBy(() -> label.updateExposure(otherUserId, false))
-                .isInstanceOf(LabelAuthorizationException.class);
-    }
-
-    @Test
-    @DisplayName("소유자는 노출 설정을 성공적으로 변경할 수 있다")
-    void updateExposure_Success() {
-        // given
-        Label label = new Label(owner, "친구들", true);
-
-        // when
-        label.updateExposure(owner.getId(), false);
-
-        // then
-        assertThat(label.isExposure()).isFalse();
-    }
-
-    @Test
     @DisplayName("멤버 전체 교체 시 기존 멤버가 제거되고 새 멤버로 대체된다")
     void updateMembers_ReplacesExistingMembers() {
         // given
-        Label label = new Label(owner, "친구들", true);
+        Label label = new Label(owner, "친구들");
         SocialUser newFriend = new SocialUser(3L, "newFriend", "profile3");
         label.addNewMember(friend);
 
@@ -106,7 +79,7 @@ class LabelTest {
     @DisplayName("빈 Set으로 교체 시 모든 멤버가 제거된다")
     void updateMembers_EmptySet_ClearsAll() {
         // given
-        Label label = new Label(owner, "친구들", true);
+        Label label = new Label(owner, "친구들");
         label.addNewMember(friend);
 
         // when

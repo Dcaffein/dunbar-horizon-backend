@@ -28,7 +28,7 @@ class LabelNamePolicyTest {
     void changeLabelName_SameName_Skip() {
         // given
         SocialUser owner = new SocialUser(1L, "owner", null);
-        Label label = new Label(owner, "기존이름", true);
+        Label label = new Label(owner, "기존이름");
 
         // when
         labelNamePolicy.changeLabelName(label, "기존이름");
@@ -42,7 +42,7 @@ class LabelNamePolicyTest {
     void changeLabelName_Success() {
         // given
         SocialUser owner = new SocialUser(1L, "owner", null);
-        Label label = new Label(owner, "기존이름", true);
+        Label label = new Label(owner, "기존이름");
         String newName = "새로운이름";
 
         given(labelRepository.existsByOwner_IdAndLabelName(owner.getId(), newName))

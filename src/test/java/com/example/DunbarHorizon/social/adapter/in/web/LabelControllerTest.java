@@ -32,18 +32,17 @@ class LabelControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("새로운 라벨을 성공적으로 생성한다")
     void createLabel_Success() throws Exception {
-        LabelCreateRequest dto = new LabelCreateRequest("친한친구", true);
+        LabelCreateRequest dto = new LabelCreateRequest("친한친구");
 
         Label mockLabel = mock(Label.class);
         SocialUser mockOwner = mock(SocialUser.class);
 
         given(mockLabel.getId()).willReturn(labelId);
         given(mockLabel.getLabelName()).willReturn("친한친구");
-        given(mockLabel.isExposure()).willReturn(true);
         given(mockLabel.getOwner()).willReturn(mockOwner);
         given(mockOwner.getId()).willReturn(1L);
 
-        given(labelCommandUseCase.createLabel(eq(1L), eq("친한친구"), eq(true)))
+        given(labelCommandUseCase.createLabel(eq(1L), eq("친한친구")))
                 .willReturn(mockLabel);
 
         mockMvc.perform(post("/api/v1/labels")
@@ -65,18 +64,17 @@ class LabelControllerTest extends BaseControllerTest {
     }
 
     @Test
-    @DisplayName("라벨의 이름을 변경하거나 노출 여부를 업데이트한다")
+    @DisplayName("라벨의 이름을 업데이트한다")
     void updateLabel_Success() throws Exception {
         String newLabelName = "새로운 라벨명";
-        Boolean newExposure = false;
-        LabelUpdateRequest dto = new LabelUpdateRequest(newLabelName, newExposure);
+        LabelUpdateRequest dto = new LabelUpdateRequest(newLabelName);
 
         mockMvc.perform(patch("/api/v1/labels/{labelId}", labelId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNoContent());
 
-        verify(labelCommandUseCase).updateLabel(eq(labelId), eq(1L), eq(newLabelName), eq(newExposure));
+        verify(labelCommandUseCase).updateLabel(eq(labelId), eq(1L), eq(newLabelName));
     }
 
     @Test
@@ -119,7 +117,7 @@ class LabelControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("라벨 단건 정보를 조회한다")
     void getLabelById_Success() throws Exception {
-        LabelResult result = new LabelResult(labelId, "친구들", true, List.of());
+        LabelResult result = new LabelResult(labelId, "친구들", List.of());
         given(labelQueryUseCase.getLabelById(eq(1L), eq(labelId))).willReturn(result);
 
         mockMvc.perform(get("/api/v1/labels/{labelId}", labelId))
