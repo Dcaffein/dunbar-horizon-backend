@@ -10,8 +10,8 @@ public class LabelFactory {
 
     private final LabelNamePolicy labelNamePolicy;
 
-    public Label create(UserReference owner, String labelName, boolean exposure) {
+    public Label create(UserReference owner, String labelName) {
         labelNamePolicy.validateLabelNameUniqueness(owner.getId(), labelName);
-        return new Label(owner, labelName, exposure);
+        return new Label(owner, labelName);
     }
 }

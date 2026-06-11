@@ -43,7 +43,7 @@ class LabelMemberEnrollerTest {
     void setUp() {
         owner = new SocialUser(1L, "owner", null);
         friend = new SocialUser(2L, "friend", null);
-        label = new Label(owner, "친구들", true);
+        label = new Label(owner, "친구들");
     }
 
     @Test

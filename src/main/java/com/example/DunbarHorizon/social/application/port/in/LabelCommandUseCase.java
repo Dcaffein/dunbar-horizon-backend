@@ -5,9 +5,9 @@ import java.util.List;
 
 public interface LabelCommandUseCase {
 
-    Label createLabel(Long ownerId, String name, boolean exposure);
+    Label createLabel(Long ownerId, String name);
 
-    void updateLabel(String labelId, Long ownerId, String labelName, Boolean exposure);
+    void updateLabel(String labelId, Long ownerId, String labelName);
 
     void deleteLabel(Long ownerId, String labelId);
 

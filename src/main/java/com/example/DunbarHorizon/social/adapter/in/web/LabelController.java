@@ -54,7 +54,7 @@ public class LabelController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid LabelCreateRequest dto) {
 
-        Label newLabel = labelCommandUseCase.createLabel(currentUserId, dto.labelName(), dto.exposure());
+        Label newLabel = labelCommandUseCase.createLabel(currentUserId, dto.labelName());
 
         return ResponseEntity
                 .created(URI.create("/api/v1/labels/" + newLabel.getId()))
@@ -76,7 +76,7 @@ public class LabelController {
             @PathVariable String labelId,
             @RequestBody @Valid LabelUpdateRequest dto) {
 
-        labelCommandUseCase.updateLabel(labelId, currentUserId, dto.labelName(), dto.exposure());
+        labelCommandUseCase.updateLabel(labelId, currentUserId, dto.labelName());
         return ResponseEntity.noContent().build();
     }
 

@@ -40,7 +40,7 @@ class LabelServiceTest {
     private LabelRepository labelRepository;
 
     @Mock
-    private SocialUserRepository socialUserRepository; // useCase 대신 Repository 주입 🫡
+    private SocialUserRepository socialUserRepository;
 
     @Mock
     private LabelNamePolicy labelNamePolicy;
@@ -68,15 +68,14 @@ class LabelServiceTest {
     void createLabel_Success() {
         // given
         String name = "친구들";
-        SocialUser mockOwner = mock(SocialUser.class); // Optional 타입을 위해 SocialUser로 mock 🛡️
+        SocialUser mockOwner = mock(SocialUser.class);
 
-        // given(...) 구문 수정: socialUserRepository 사용 및 Optional.of() 타입 일치
         given(socialUserRepository.findById(currentUserId)).willReturn(Optional.of(mockOwner));
-        given(labelFactory.create(any(), anyString(), anyBoolean())).willReturn(mock(Label.class));
+        given(labelFactory.create(any(), anyString())).willReturn(mock(Label.class));
         given(labelRepository.save(any(Label.class))).willReturn(mockLabel);
 
         // when
-        Label result = labelService.createLabel(currentUserId, name, true);
+        Label result = labelService.createLabel(currentUserId, name);
 
         // then
         verify(labelNamePolicy).validateLabelNameUniqueness(currentUserId, name);
@@ -122,20 +121,18 @@ class LabelServiceTest {
     }
 
     @Test
-    @DisplayName("라벨 정보 업데이트 시 전달된 값이 있는 필드만 반영한다")
+    @DisplayName("라벨 정보 업데이트 시 이름이 있으면 반영한다")
     void updateLabel_PartialUpdate() {
         // given
         String newName = "새이름";
-        Boolean newExposure = null;
 
         given(labelRepository.findById(labelId)).willReturn(Optional.of(mockLabel));
 
         // when
-        labelService.updateLabel(labelId, currentUserId, newName, newExposure);
+        labelService.updateLabel(labelId, currentUserId, newName);
 
         // then
         verify(labelNamePolicy).changeLabelName(mockLabel, newName);
-        verify(mockLabel, never()).updateExposure(anyLong(), anyBoolean());
         verify(labelRepository).save(mockLabel);
     }
 
@@ -150,7 +147,6 @@ class LabelServiceTest {
         given(mockLabel.getOwner()).willReturn(owner);
         given(mockLabel.getId()).willReturn(labelId);
         given(mockLabel.getLabelName()).willReturn("친구들");
-        given(mockLabel.isExposure()).willReturn(true);
         given(mockLabel.getMembers()).willReturn(Set.of());
 
         // when
