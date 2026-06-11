@@ -35,11 +35,11 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     private final ApplicationEventPublisher eventPublisher;
 
     @Neo4jTransactional
-    public Label createLabel(Long currentUserId, String labelName, boolean exposure) {
+    public Label createLabel(Long currentUserId, String labelName) {
         labelNamePolicy.validateLabelNameUniqueness(currentUserId, labelName);
         UserReference owner = socialUserRepository.findById(currentUserId)
                 .orElseThrow(() -> new UserReferenceNotFoundException(currentUserId));
-        return labelRepository.save(labelFactory.create(owner, labelName, exposure));
+        return labelRepository.save(labelFactory.create(owner, labelName));
     }
 
     @Neo4jTransactional
@@ -81,11 +81,10 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     }
 
     @Neo4jTransactional
-    public void updateLabel(String labelId, Long currentUserId, String labelName, Boolean exposure) {
+    public void updateLabel(String labelId, Long currentUserId, String labelName) {
         Label label = getLabel(labelId);
 
         applyIfPresent(labelName, newLabelName -> labelNamePolicy.changeLabelName(label, newLabelName));
-        applyIfPresent(exposure, newExposureStatus -> label.updateExposure(currentUserId, newExposureStatus));
 
         labelRepository.save(label);
     }

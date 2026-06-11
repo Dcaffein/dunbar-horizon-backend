@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.social.domain.label;
 
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.social.domain.label.exception.InvalidLabelNameException;
-import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import lombok.*;
 import org.springframework.data.annotation.Version;
 import com.example.DunbarHorizon.global.util.UuidUtil;
@@ -29,19 +28,16 @@ public class Label {
 
     private String labelName;
 
-    private boolean exposure;
-
     @Relationship(type = OWNS_LABEL, direction = Relationship.Direction.INCOMING)
     private UserReference owner;
 
     @Relationship(type = ATTACHED_TO, direction = Relationship.Direction.OUTGOING)
     private Set<UserReference> members = new HashSet<>();
 
-    Label(UserReference owner, String labelName, boolean exposure) {
+    Label(UserReference owner, String labelName) {
         this.id = UuidUtil.createV7().toString();
         this.owner = owner;
         this.labelName = labelName;
-        this.exposure = exposure;
     }
 
     void addNewMember(UserReference newMember) {
@@ -66,14 +62,4 @@ public class Label {
         this.labelName = newLabelName;
     }
 
-    public void updateExposure(Long currentUserId, boolean exposure) {
-        validateOwner(currentUserId);
-        this.exposure = exposure;
-    }
-
-    private void validateOwner(Long userId) {
-        if (!this.owner.getId().equals(userId)) {
-            throw new LabelAuthorizationException(userId);
-        }
-    }
 }

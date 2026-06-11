@@ -1,106 +1,55 @@
-# PLAN: Task-62 — NotificationEvent 발행 패턴 통일 (패턴 A → 패턴 B)
+# PLAN: Task-64 — Label.exposure 필드 제거
 
 ## Branch
-`ai/refactor-unify-notification-pattern` (from `main`)
+`ai/refactor-remove-label-exposure` (from `main`)
 
 ## 목표
-`NotificationEvent`를 트랜잭션 내 직접 발행하는 패턴 A 코드 2곳을 도메인 이벤트 기반 패턴 B로 통일한다.
+
+`Label` 도메인에서 `exposure` 필드를 전 레이어에 걸쳐 제거한다.
 
 ---
 
 ## 현황 분석
 
-### BuzzNotificationDispatcher
-`@EventListener` (동기) → Buzz 서비스 트랜잭션 안에서 동기 실행되며 `NotificationEvent` 발행.
-`NotificationEventListener`의 `AFTER_COMMIT`이 Buzz 트랜잭션 커밋까지 알림 실행을 미뤄줘 현재는 동작하지만,
-Buzz 서비스 코드와 동기적으로 묶여 있어 패턴 불일치.
-
-### FriendRequestReceiverActionService
-`@Neo4jTransactional` 내에서 `NotificationEvent`를 직접 발행.
-알림 제목(`"친구 수락"`), 알림 내용, `NotificationType`을 서비스 레이어가 직접 알고 있음 — 알림 인프라 관심사가 도메인 서비스에 누출.
-`FriendshipCreatedEvent(userAId, userBId)`는 캐시 eviction 용도로 사용 중이라 알림용 필드 추가 불가.
-
-### 테스트
-`FriendRequestReceiverActionServiceTest:74` — `verify(eventPublisher).publishEvent(any(NotificationEvent.class))` 가 현재 검증하고 있어 수정 필요.
+- `exposure`는 `Label` Neo4j 노드의 프로퍼티로 저장·업데이트되고 있으나, 조회 시 분기에 쓰이는 코드가 없는 dead field다.
+- `LabelResult`를 통해 API 응답에도 포함되어 있어 클라이언트에 노출되고 있다.
+- `LabelCreateRequest`에 `@NotNull` 필수 검증이 걸려 있어, 현재 라벨 생성 요청에 `exposure` 값이 반드시 필요하다.
+- 테스트 코드(`LabelNeo4jRepositoryTest`) 8곳에서 `LabelTestFactory.createLabel(owner, name, true)` 형태로 호출 중이다.
 
 ---
 
 ## 변경 파일 목록
 
-### 신규 생성
-
-**1. `social/domain/friend/event/FriendRequestAcceptedEvent.java`**
-```java
-public record FriendRequestAcceptedEvent(
-        Long requesterId,
-        Long receiverId,
-        String receiverNickname
-) {}
-```
-
-**2. `social/application/eventListener/FriendshipNotificationEventListener.java`**
-```java
-@Component
-@RequiredArgsConstructor
-public class FriendshipNotificationEventListener {
-    private final ApplicationEventPublisher eventPublisher;
-
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onFriendRequestAccepted(FriendRequestAcceptedEvent event) {
-        eventPublisher.publishEvent(new NotificationEvent(
-                event.requesterId(),
-                "친구 수락",
-                event.receiverNickname() + "님과 이제 친구입니다.",
-                NotificationType.FRIEND_REQUEST_ACCEPT,
-                Map.of(
-                        "friendId", event.receiverId(),
-                        "friendName", event.receiverNickname()
-                )
-        ));
-    }
-}
-```
-
-### 수정
-
-**3. `social/application/service/FriendRequestReceiverActionService.java`**
-- `NotificationEvent` 직접 발행 제거
-- `FriendRequestAcceptedEvent` 발행으로 대체:
-```java
-eventPublisher.publishEvent(new FriendRequestAcceptedEvent(
-        request.getRequester().getId(),
-        request.getReceiver().getId(),
-        request.getReceiver().getNickname()
-));
-```
-- `NotificationEvent`, `NotificationType` import 제거
-
-**4. `buzz/application/eventListener/BuzzNotificationDispatcher.java`**
-- 두 메서드 모두 `@EventListener` → `@Async` + `@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)` 전환
-- `ApplicationEventPublisher` import 유지 (발행 로직은 그대로)
-
-### 테스트 수정
-
-**5. `test/.../FriendRequestReceiverActionServiceTest.java`**
-- line 74: `any(NotificationEvent.class)` → `any(FriendRequestAcceptedEvent.class)`
-- `NotificationEvent` import 제거, `FriendRequestAcceptedEvent` import 추가
-
-**6. `test/.../FriendshipNotificationEventListenerTest.java`** (신규)
-- `FriendRequestAcceptedEvent` 수신 시 `NotificationEvent` 발행 검증
-- 수신자 ID, 알림 제목, 알림 내용, metadata 검증
+| 파일 | 변경 내용 |
+|------|---------|
+| `social/domain/label/Label.java` | `exposure` 필드 제거, 생성자 파라미터 제거, `updateExposure()` 메서드 제거 |
+| `social/domain/label/LabelFactory.java` | `create()` 파라미터에서 `exposure` 제거 |
+| `social/application/port/in/LabelCommandUseCase.java` | `createLabel()`, `updateLabel()` 시그니처에서 `exposure` 제거 |
+| `social/application/service/LabelService.java` | `createLabel()`, `updateLabel()` 파라미터 및 `applyIfPresent(exposure, ...)` 제거 |
+| `social/adapter/in/web/LabelController.java` | `dto.exposure()` 전달 제거 (create, update 두 곳) |
+| `social/adapter/in/web/dto/LabelCreateRequest.java` | `exposure` 필드 및 `@NotNull` 검증 제거 |
+| `social/adapter/in/web/dto/LabelUpdateRequest.java` | `exposure` 필드 제거 |
+| `social/application/dto/result/LabelResult.java` | `exposure` 필드 제거, `from()` 매핑 제거 |
+| `social/domain/label/LabelTestFactory.java` | `createLabel()` 파라미터에서 `exposure` 제거 |
+| `social/adapter/out/LabelNeo4jRepositoryTest.java` | `createLabel(owner, name, true)` → `createLabel(owner, name)` (8곳) |
 
 ---
 
-## 결정 사항
+## 구현 방향
 
-- **`@Transactional(REQUIRES_NEW)` 미적용**: `fallbackExecution = true` 이미 적용되어 있어 불필요. Flag 리스너들의 `REQUIRES_NEW`는 이전 workaround였으며 신규 리스너는 추가하지 않는다.
-- **`FriendshipCreatedEvent` 변경 없음**: 캐시 eviction 전용으로 최소 필드 유지.
-- **알림 문구는 리스너에**: 서비스에서 제거된 알림 제목/내용은 `FriendshipNotificationEventListener`로 이동.
+- `LabelService.updateLabel()`에서 `exposure` 관련 `applyIfPresent` 라인만 제거한다. `applyIfPresent` 헬퍼 자체는 `labelName` 처리에 여전히 사용되므로 유지한다.
+- `LabelUpdateRequest`는 `exposure` 제거 후 `labelName` 단일 필드만 남는다. PATCH 의미상 선택적 단일 필드 요청은 정상적이므로 별도 구조 변경 없이 유지한다.
+- Neo4j에 기존 저장된 노드의 `exposure` 프로퍼티는 매핑 코드 제거 시 자연스럽게 무시된다. DB 마이그레이션 불필요.
 
 ---
 
 ## 예상 사이드 이펙트
 
-- `FriendRequestReceiverActionService`가 더 이상 `NotificationEvent`를 직접 발행하지 않아 기존 테스트 1건 수정 필요.
-- `BuzzNotificationDispatcher`의 `@EventListener` → `@Async` + `AFTER_COMMIT` 전환으로 Buzz 알림 발송 시점이 트랜잭션 커밋 이후로 변경 (기존에도 `NotificationEventListener`의 `AFTER_COMMIT`이 실질적으로 동일 효과를 냈으므로 사용자 체감 변화 없음).
+- API 클라이언트(프론트엔드)가 라벨 생성 시 `exposure` 필드를 보내고 있다면, 해당 필드는 무시된다. (추가 필드 무시는 Jackson 기본 동작)
+- 라벨 조회 응답(`LabelResult`)에서 `exposure` 필드가 사라진다. 프론트엔드에서 이 필드를 사용 중이라면 대응 필요.
+
+---
+
+## 테스트 전략
+
+기본 프로토콜 준수. `LabelNeo4jRepositoryTest`의 호출부 시그니처만 수정하며, 테스트 로직 자체 변경 없음.

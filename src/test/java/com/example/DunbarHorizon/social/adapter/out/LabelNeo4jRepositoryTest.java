@@ -40,7 +40,7 @@ class LabelNeo4jRepositoryTest {
     @DisplayName("소유자 ID와 라벨 이름으로 존재 여부를 정확히 판단한다")
     void existsByOwner_User_IdAndLabelName_Success() {
         // given
-        Label label = LabelTestFactory.createLabel(owner, "운동 모임", true);
+        Label label = LabelTestFactory.createLabel(owner, "운동 모임");
         labelRepository.save(label);
 
         // when
@@ -56,8 +56,8 @@ class LabelNeo4jRepositoryTest {
     @DisplayName("특정 소유자의 모든 라벨 목록을 조회한다")
     void findAllByOwner_User_Id_Success() {
         // given
-        labelRepository.save(LabelTestFactory.createLabel(owner, "라벨A", true));
-        labelRepository.save(LabelTestFactory.createLabel(owner, "라벨B", true));
+        labelRepository.save(LabelTestFactory.createLabel(owner, "라벨A"));
+        labelRepository.save(LabelTestFactory.createLabel(owner, "라벨B"));
 
         // when
         List<Label> labels = labelRepository.findAllByOwner_Id(owner.getId());
@@ -72,11 +72,11 @@ class LabelNeo4jRepositoryTest {
     @DisplayName("ownerId + memberId 기준으로 해당 멤버가 속한 라벨만 조회한다")
     void findLabelsByOwnerAndMember_멤버가_속한_라벨만_반환() {
         // given
-        Label labelWithFriend1 = LabelTestFactory.createLabel(owner, "라벨A", true);
+        Label labelWithFriend1 = LabelTestFactory.createLabel(owner, "라벨A");
         LabelTestFactory.addMember(labelWithFriend1, friend1);
         labelRepository.save(labelWithFriend1);
 
-        Label labelWithFriend2 = LabelTestFactory.createLabel(owner, "라벨B", true);
+        Label labelWithFriend2 = LabelTestFactory.createLabel(owner, "라벨B");
         LabelTestFactory.addMember(labelWithFriend2, friend2);
         labelRepository.save(labelWithFriend2);
 
@@ -92,7 +92,7 @@ class LabelNeo4jRepositoryTest {
     @DisplayName("멤버가 어떤 라벨에도 속하지 않으면 빈 리스트를 반환한다")
     void findLabelsByOwnerAndMember_멤버가_없으면_빈_리스트() {
         // given
-        Label label = LabelTestFactory.createLabel(owner, "라벨A", true);
+        Label label = LabelTestFactory.createLabel(owner, "라벨A");
         labelRepository.save(label);
 
         // when
@@ -106,7 +106,7 @@ class LabelNeo4jRepositoryTest {
     @DisplayName("OWNS_LABEL 관계 기반으로 소유자와 라벨 ID에 해당하는 멤버 ID를 조회한다")
     void findMemberIdsByOwnerAndLabelIds_올바른_멤버_ID_반환() {
         // given
-        Label label = LabelTestFactory.createLabel(owner, "라벨A", true);
+        Label label = LabelTestFactory.createLabel(owner, "라벨A");
         LabelTestFactory.addMember(label, friend1);
         LabelTestFactory.addMember(label, friend2);
         Label saved = labelRepository.save(label);
@@ -123,7 +123,7 @@ class LabelNeo4jRepositoryTest {
     @DisplayName("멤버 교체 시 그래프 상의 HAS_MEMBER 관계가 갱신되어야 한다")
     void updateMembers_Graph_Consistency() {
         // given
-        Label label = LabelTestFactory.createLabel(owner, "프로젝트", true);
+        Label label = LabelTestFactory.createLabel(owner, "프로젝트");
         LabelTestFactory.addMember(label, friend1);
         labelRepository.save(label);
 

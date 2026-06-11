@@ -5,8 +5,8 @@ import java.util.Set;
 
 public class LabelTestFactory {
 
-    public static Label createLabel(UserReference owner, String name, boolean exposure) {
-        return new Label(owner, name, exposure);
+    public static Label createLabel(UserReference owner, String name) {
+        return new Label(owner, name);
     }
 
     public static void addMember(Label label, UserReference member) {
