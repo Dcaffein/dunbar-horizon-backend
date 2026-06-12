@@ -50,35 +50,29 @@ public class SocialQueryController {
     }
 
     /**
-     * 1-Hop 친구 수동 추가 (Drag & Drop)
-     * 클라이언트가 현재 보고 있는 화면의 컨텍스트(labelName, circleSize)를 전달하여 스켈레톤 붕괴 방지
+     * 1-Hop 친구를 기존 네트워크에 수동 추가
+     * 클라이언트가 현재 화면의 skeleton ID 목록을 전달하여 동적 컨텍스트 반영 및 보안 검증
      */
     @GetMapping("/mutual/one-hop")
     public ResponseEntity<List<MutualFriendEdgeResult>> getOneHopMutualFriendEdges(
             @CurrentUserId Long currentUserId,
             @RequestParam Long targetId,
-            @RequestParam(required = false) String labelId,
-            @RequestParam(defaultValue = "DUNBAR") DunbarCircle circleSize
+            @RequestParam List<Long> skeletonIds
     ) {
-        return ResponseEntity.ok(networkQueryUseCase.getNewNodeEdges(
-                currentUserId, targetId, labelId, circleSize.getLimitSize()
-        ));
+        return ResponseEntity.ok(networkQueryUseCase.getNewNodeEdges(currentUserId, targetId, skeletonIds));
     }
 
     /**
-     * 2-Hop 유저 추천 클릭
-     * 클라이언트가 현재 보고 있는 화면의 컨텍스트(labelName, circleSize) 기준 겹치는 지인만 도출 + 이방인 페널티 적용
+     * 2-Hop 유저와 기존 네트워크와의 접점
+     * 클라이언트가 현재 화면의 skeleton ID 목록을 전달하여 동적 컨텍스트 반영 및 보안 검증
      */
     @GetMapping("/mutual/two-hop")
     public ResponseEntity<List<NetworkOneHopsByTwoHopResult>> getTwoHopMutualFriends(
             @CurrentUserId Long currentUserId,
             @RequestParam Long targetId,
-            @RequestParam(required = false) String labelId,
-            @RequestParam(defaultValue = "DUNBAR") DunbarCircle circleSize
+            @RequestParam List<Long> skeletonIds
     ) {
-        return ResponseEntity.ok(networkQueryUseCase.getNetworkContactsOfTwoHop(
-                currentUserId, targetId, labelId, circleSize.getLimitSize()
-        ));
+        return ResponseEntity.ok(networkQueryUseCase.getNetworkContactsOfTwoHop(currentUserId, targetId, skeletonIds));
     }
 
     /**

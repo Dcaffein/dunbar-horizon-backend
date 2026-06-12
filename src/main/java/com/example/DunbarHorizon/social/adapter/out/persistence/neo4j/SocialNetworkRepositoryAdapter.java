@@ -18,7 +18,6 @@ import java.util.List;
 
 import static com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.dsl.SocialNetworkPatterns.*;
 import static com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.dsl.SocialNetworkProperties.*;
-import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.HAS_FRIENDSHIP;
 
 @Repository
 @RequiredArgsConstructor
@@ -214,34 +213,44 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
                 .build();
     }
 
+    private static final String GET_NETWORK_CONTACTS_OF_TWO_HOP = """
+            MATCH (me:UserReference {id: $meId})
+            WITH me
+            MATCH (target:UserReference {id: $targetId})
+            CALL (me, target) {
+              MATCH (me)-[:HAS_FRIENDSHIP]->(:Friendship)<-[:HAS_FRIENDSHIP]-(mutual:UserReference)
+              WHERE mutual.id IN $skeletonIds
+              MATCH (target)-[:HAS_FRIENDSHIP]->(tf:Friendship)<-[:HAS_FRIENDSHIP]-(mutual)
+              ORDER BY tf.intimacy DESC
+              LIMIT 5
+              RETURN mutual, tf
+            }
+            RETURN mutual.id AS friendId
+            """;
+
+    private static final String GET_NEW_NODE_EDGES = """
+            MATCH (me:UserReference {id: $meId})
+            WITH me
+            MATCH (target:UserReference {id: $targetId})
+            CALL (me, target) {
+              MATCH (me)-[:HAS_FRIENDSHIP]->(:Friendship)<-[:HAS_FRIENDSHIP]-(mutual:UserReference)
+              WHERE mutual.id IN $skeletonIds
+              MATCH (target)-[:HAS_FRIENDSHIP]->(tf:Friendship)<-[:HAS_FRIENDSHIP]-(mutual)
+              ORDER BY tf.intimacy DESC
+              LIMIT $dynamicLimit
+              RETURN mutual, tf
+            }
+            RETURN target.id AS friendAId, mutual.id AS friendBId, tf.intimacy AS intimacy
+            """;
+
     @Override
     public List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(
-            Long userId, Long targetId, String labelId, int limitSize) {
+            Long userId, Long targetId, List<Long> skeletonIds) {
 
-        Node targetUser = user().named("targetUser");
-        Node mutual = user().named("mutual");
-        Node targetFriendship = friendship().named("targetFriendship");
-        Relationship targetRelationship = targetUser.relationshipTo(targetFriendship, HAS_FRIENDSHIP).named("targetRelationship");
-        SymbolicName currentSkeleton = Cypher.name("currentSkeleton");
-
-        StatementBuilder.OngoingReadingAndWith withSkeleton = buildCurrentSkeleton(userId, labelId);
-
-        Statement statement = withSkeleton
-                .match(targetUser).where(idEquals(targetUser, targetId))
-                .match(targetRelationship.relationshipFrom(mutual, HAS_FRIENDSHIP))
-                .where(isRoutable(targetRelationship).and(mutual.getRequiredSymbolicName().in(currentSkeleton)))
-                .with(mutual, targetFriendship)
-                .orderBy(targetFriendship.property(PROP_INTIMACY).descending())
-                .limit(5)
-                .returning(mutual.property(PROP_ID).as("friendId"))
-                .build();
-
-        String cypher = renderer.render(statement);
-
-        return neo4jClient.query(cypher)
+        return neo4jClient.query(GET_NETWORK_CONTACTS_OF_TWO_HOP)
+                .bind(userId).to("meId")
                 .bind(targetId).to("targetId")
-                .bind(limitSize).to("limitSize")
-                .bind(labelId == null ? "" : labelId).to("labelId")
+                .bind(skeletonIds).to("skeletonIds")
                 .fetchAs(NetworkOneHopsByTwoHopResult.class)
                 .mappedBy((typeSystem, record) -> new NetworkOneHopsByTwoHopResult(
                         record.get("friendId").asLong()
@@ -251,34 +260,13 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
 
     @Override
     public List<MutualFriendEdgeResult> getNewNodeEdges(
-            Long userId, Long targetId, String labelId, int limitSize) {
+            Long userId, Long targetId, List<Long> skeletonIds, int dynamicLimit) {
 
-        Node target = user().named("target");
-        Node mutual = user().named("mutual");
-        Node targetFriendship = friendship().named("targetFriendship");
-        Relationship targetRelationship = target.relationshipTo(targetFriendship, HAS_FRIENDSHIP).named("targetRelationship");
-        SymbolicName currentSkeleton = Cypher.name("currentSkeleton");
-
-        StatementBuilder.OngoingReadingAndWith withSkeleton = buildCurrentSkeleton(userId, labelId);
-
-        Statement statement = withSkeleton
-                .match(target).where(idEquals(target, targetId))
-                .match(targetRelationship.relationshipFrom(mutual, HAS_FRIENDSHIP))
-                .where(mutual.getRequiredSymbolicName().in(currentSkeleton))
-                .and(isRoutable(targetRelationship))
-                .returning(
-                        target.property(PROP_ID).as("friendAId"),
-                        mutual.property(PROP_ID).as("friendBId"),
-                        targetFriendship.property(PROP_INTIMACY).as("intimacy")
-                )
-                .build();
-
-        String cypher = renderer.render(statement);
-
-        return neo4jClient.query(cypher)
+        return neo4jClient.query(GET_NEW_NODE_EDGES)
+                .bind(userId).to("meId")
                 .bind(targetId).to("targetId")
-                .bind(limitSize).to("limitSize")
-                .bind(labelId == null ? "" : labelId).to("labelId")
+                .bind(skeletonIds).to("skeletonIds")
+                .bind(dynamicLimit).to("dynamicLimit")
                 .fetchAs(MutualFriendEdgeResult.class)
                 .mappedBy((typeSystem, record) -> new MutualFriendEdgeResult(
                         record.get("friendAId").asLong(),
@@ -286,24 +274,5 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
                         record.get("intimacy").asDouble()
                 ))
                 .all().stream().toList();
-    }
-
-    private StatementBuilder.OngoingReadingAndWith buildCurrentSkeleton(Long userId, String labelId) {
-        Node me = user().named("me");
-        Node myFriend = user().named("myFriend");
-        Node myFriendship = friendship().named("myFriendship");
-        StatementBuilder.OngoingReading builder = matchUserWithId(userId, "me")
-                .match(friendshipBetween(me, myFriendship, myFriend));
-
-        if (labelId != null && !labelId.isBlank()) {
-            Node label = label().named("label");
-            builder = builder.match(me.relationshipTo(label, "HAS_LABEL").relationshipTo(myFriend, "HAS_MEMBER"))
-                    .where(label.property("id").isEqualTo(Cypher.parameter("labelId")));
-        }
-
-        return builder.with(myFriend, myFriendship)
-                .orderBy(myFriendship.property(PROP_INTIMACY).descending())
-                .limit(Cypher.parameter("limitSize"))
-                .with(Cypher.collect(myFriend).as("currentSkeleton"));
     }
 }

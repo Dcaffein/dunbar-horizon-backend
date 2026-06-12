@@ -17,7 +17,7 @@ public class TestContainerConfig {
             .withPassword("test")
             .withReuse(true);
 
-    private static final Neo4jContainer<?> NEO4J = new Neo4jContainer<>(DockerImageName.parse("neo4j:5.12"))
+    private static final Neo4jContainer<?> NEO4J = new Neo4jContainer<>(DockerImageName.parse("neo4j:5.24"))
             .withAdminPassword("password")
             .withEnv("NEO4J_PLUGINS", "[\"apoc\"]")
             .withNeo4jConfig("dbms.security.procedures.unrestricted", "apoc.*")
