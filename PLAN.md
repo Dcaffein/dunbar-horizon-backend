@@ -1,32 +1,78 @@
-# PLAN: Task-65 — currentSkeletonIds 보안 검증 및 외부인 엣지 탐색 제한
+# PLAN: Task-66 — GET /me 응답을 nodes + edges 조합으로 교체
 
 ## Branch
-`ai/feat-secure-skeleton-ids` (from `main`)
+`ai/feat-network-circle-nodes-endpoint` (from `main`)
 
 ## 목표
 
-`/mutual/one-hop`, `/mutual/two-hop`의 skeleton 계산 방식을 클라이언트 전달(`currentSkeletonIds`)로 전환하면서
-보안 검증과 엣지 탐색 제한을 동시에 적용한다.
+`GET /api/v1/networks/me`의 응답을 `List<NetworkFriendEdgeResult>` → `NetworkGraphResult`로 교체한다.
+서비스 레이어에서 nodes 쿼리와 edges 쿼리를 조합(Facade)하여 단일 응답으로 반환하고,
+`@Cacheable`을 service 레이어로 올려 `NetworkGraphResult` 전체를 캐시한다.
 
 ---
 
 ## 현황 분석
 
-### 현재 구조
-- `buildCurrentSkeleton(userId, labelId)`이 매 호출마다 DB를 재조회해 skeleton을 서버에서 계산
-- 클라이언트가 드래그앤드롭으로 화면을 확장해도 서버는 초기 `labelId` + `circleSize` 기준 skeleton을 계속 사용
-- `getNewNodeEdges`: LIMIT 없음 — skeleton에 속하는 target 친구 엣지를 전부 반환
-- `getNetworkContactsOfTwoHop`: 하드코딩 `LIMIT 5`
+### 문제
+edges만 반환하는 현재 구조에서는 다른 친구와 연결이 없는 고립 노드가 프론트엔드에 렌더링되지 않는다. circleSize 판단 권한은 서버에 있어야 하므로 클라이언트가 친구 목록으로 노드를 직접 계산하는 것은 비즈니스 로직 유출이다.
 
-### 보안 취약점
-`currentSkeletonIds`를 검증 없이 사용하면 임의 ID로 `target`의 친구 관계를 열거할 수 있다.
-방어: `FriendshipRepository.findFriendIdsIn(userId, skeletonIds)`로 내 실제 친구 ID와 교집합 후 사용.
+### 설계 결정: Facade at Service Layer
+두 쿼리를 하나의 Neo4j 쿼리로 합치지 않는다(기존 `buildDynamicPruningNetwork` 복잡도 유지).
+대신 서비스 레이어에서 두 쿼리를 조합하고, 조합된 결과를 통째로 캐시한다.
 
-### dynamicLimit
-- `buildDynamicPruningNetwork` 기존 공식: `5 + intimacy * 25` → 5~30
-- 외부인 skeleton 노드 적용 공식: `5 + intimacy * 5` → 5~10
-- skeleton 노드들의 me→mutual 친밀도 중 `MAX`를 취해 전체 결과의 global limit으로 사용
-  - 친밀도 낮은 외부인만 있으면 최대 5개, 친밀도 높은 경우 최대 10개 노출
+nodes와 edges는 항상 함께 필요한 한 단위이므로 캐시도 한 단위로 관리한다.
+
+---
+
+## @Cacheable을 service 레이어로 올릴 때의 주의사항
+
+### 문제 1 — AOP 프록시 실행 순서 (`@Neo4jTransactional` 충돌)
+
+Spring은 `@Transactional`과 `@Cacheable`을 각각 AOP 인터셉터로 적용한다.
+현재 `SocialNetworkQueryService`에 `@Neo4jTransactional(readOnly = true)`가 클래스 레벨에 선언되어 있다.
+
+두 어노테이션이 같은 클래스에 있을 때 기본 실행 순서:
+
+```
+호출자
+  → TransactionInterceptor (Neo4j) ← 바깥 레이어
+      → CacheInterceptor             ← 안쪽 레이어
+          → 실제 메서드
+```
+
+`TransactionInterceptor`가 바깥을 감싸므로 **캐시 히트 시에도** 아래 사이클이 실행된다:
+
+```
+1. Neo4j 커넥션 풀에서 세션 획득
+2. BEGIN 패킷 전송 → Neo4j 왕복 대기 (~15ms)
+3. CacheInterceptor → Redis 히트, 즉시 반환
+4. COMMIT 패킷 전송 → Neo4j 왕복 대기 (~15ms)
+5. 세션 반납
+```
+
+이는 load test Phase 4의 병목 원인이었다 (캐시 히트율 ~100%인데 평균 230ms).
+
+**해결**: `SocialNetworkQueryService` 클래스 레벨의 `@Neo4jTransactional(readOnly = true)` 제거.
+서비스가 호출하는 모든 repo 메서드는 `Neo4jClient`를 직접 사용하며,
+`Neo4jClient`는 트랜잭션 어노테이션 없이 auto-commit 모드로 읽기 쿼리를 실행한다.
+
+### 문제 2 — `cacheManager` ObjectMapper의 `activateDefaultTyping` 버그
+
+`RedisConfig.cacheManager`의 ObjectMapper에 `activateDefaultTyping(NON_FINAL)`이 설정되어 있다.
+이 설정은 직렬화 시 모든 non-final 타입에 `@class` 메타데이터를 삽입한다.
+
+`NetworkGraphResult` 역직렬화 시 타입 포맷 불일치로 예외가 발생하고,
+`CacheErrorHandler`가 예외를 조용히 삼키며 Neo4j로 fall-through한다.
+기능상 정상 동작하지만 캐시가 완전히 무효 상태가 된다. (load test Phase 4 초기 버그와 동일)
+
+**해결**: `cacheManager` ObjectMapper에서 `activateDefaultTyping` 제거.
+`NetworkGraphResult`는 구체 타입이므로 폴리모픽 타입 정보 불필요.
+(`redisTemplate`용 ObjectMapper는 eviction 등 별도 용도이므로 그대로 유지)
+
+### 두 수정이 이번 task 범위인 이유
+`@Cacheable`을 service 레이어로 올리면 위 두 문제가 반드시 함께 터진다.
+별도 task로 분리하면 캐시가 동작하지 않거나 Phase 4 수준에 머문다.
+load test에서 이미 검증된 수정사항이므로 범위에 포함한다.
 
 ---
 
@@ -34,116 +80,73 @@
 
 | 파일 | 변경 내용 |
 |------|---------|
-| `social/adapter/in/web/SocialQueryController.java` | `labelId`, `circleSize` 파라미터 → `skeletonIds: List<Long>` |
-| `social/application/port/in/SocialNetworkQueryUseCase.java` | 두 메서드 시그니처에서 `labelId`, `limitSize` → `List<Long> skeletonIds` |
-| `social/application/service/SocialNetworkQueryService.java` | `FriendshipRepository` 주입. `skeletonIds` 빈 리스트 early return + me→target 친밀도 PK 조회 후 `dynamicLimit` 계산 |
-| `social/application/port/out/SocialNetworkRepository.java` | `getNewNodeEdges`에 `dynamicLimit` 파라미터 추가, `getNetworkContactsOfTwoHop` 시그니처 변경 |
-| `social/adapter/out/persistence/neo4j/SocialNetworkRepositoryAdapter.java` | `buildCurrentSkeleton` 제거. 단일 Neo4j 쿼리로 보안 검증 + dynamicLimit 계산 + 조기 종료 |
+| `global/config/RedisConfig.java` | `cacheManager` ObjectMapper에서 `activateDefaultTyping` 제거 |
+| `social/application/dto/result/NetworkGraphResult.java` | 신규: `record NetworkGraphResult(List<Long> nodeIds, List<NetworkFriendEdgeResult> edges)` |
+| `social/application/port/out/SocialNetworkRepository.java` | `getCircleNodeIds(Long userId, DunbarCircle circleSize)` 추가 |
+| `social/application/port/in/SocialNetworkQueryUseCase.java` | `getFriendsNetwork` 반환 타입 → `NetworkGraphResult` |
+| `social/application/service/SocialNetworkQueryService.java` | 클래스 레벨 `@Neo4jTransactional` 제거. `getFriendsNetwork`에 `@Cacheable` 추가 + 두 쿼리 조합 |
+| `social/adapter/out/persistence/neo4j/SocialNetworkRepositoryAdapter.java` | `getDefaultIntimacyNetwork`의 `@Cacheable` 제거. `buildDynamicPruningNetwork` DSL → raw Cypher string 전환. `getCircleNodeIds` 구현 추가. `@Transactional(readOnly = true)` 제거 |
+| `social/adapter/in/web/SocialQueryController.java` | `GET /me` 반환 타입 → `ResponseEntity<NetworkGraphResult>` |
 
 ---
 
 ## 구현 방향
 
-### Controller
+### 신규 DTO
+
 ```java
-@GetMapping("/mutual/one-hop")
-public ResponseEntity<...> getOneHopMutualFriendEdges(
-    @CurrentUserId Long currentUserId,
-    @RequestParam Long targetId,
-    @RequestParam List<Long> skeletonIds
-) { ... }
+public record NetworkGraphResult(
+        List<Long> nodeIds,
+        List<NetworkFriendEdgeResult> edges
+) {}
 ```
 
 ### Service
+
 ```java
-// getNewNodeEdges
-public List<MutualFriendEdgeResult> getNewNodeEdges(
-        Long userId, Long targetId, List<Long> skeletonIds) {
-    if (skeletonIds == null || skeletonIds.isEmpty()) return List.of();
-    double intimacy = friendshipRepository
-            .findById(Friendship.generateCompositeId(userId, targetId))
-            .map(Friendship::getIntimacy).orElse(0.0);
-    int dynamicLimit = (int)(5 + intimacy * 5);
-    return socialNetworkRepository.getNewNodeEdges(userId, targetId, skeletonIds, dynamicLimit);
-}
-
-// getNetworkContactsOfTwoHop — target이 아직 내 친구가 아니므로 intimacy 조회 없음
-public List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(
-        Long userId, Long targetId, List<Long> skeletonIds) {
-    if (skeletonIds == null || skeletonIds.isEmpty()) return List.of();
-    return socialNetworkRepository.getNetworkContactsOfTwoHop(userId, targetId, skeletonIds);
+@Cacheable(cacheNames = "dunbar:network:default", key = "#userId + ':' + #circleSize.name()")
+@Override
+public NetworkGraphResult getFriendsNetwork(Long userId, DunbarCircle circleSize) {
+    List<NetworkFriendEdgeResult> edges = socialNetworkRepository.getDefaultIntimacyNetwork(userId, circleSize);
+    List<Long> nodeIds = socialNetworkRepository.getCircleNodeIds(userId, circleSize);
+    return new NetworkGraphResult(nodeIds, edges);
 }
 ```
 
-보안 검증은 Neo4j 쿼리의 HAS_FRIENDSHIP 패턴 매칭이 담당한다.
-`(me)-[:HAS_FRIENDSHIP]->(:FRIENDSHIP)<-[:HAS_FRIENDSHIP]-(mutual) WHERE mutual.id IN $skeletonIds`
-→ 실제 친구 관계가 없는 임의 ID는 패턴 매칭 단계에서 자연스럽게 제거된다.
+클래스 레벨 `@Neo4jTransactional(readOnly = true)` 제거.
+나머지 메서드(`getLabelNetwork`, `getNewNodeEdges`, `getNetworkContactsOfTwoHop`)는 변경 없음.
 
-### Repository — `getNewNodeEdges` Cypher 구조
-
-target은 이미 내 1-hop 친구이므로 신뢰 관계 성립 → isRoutable 불필요.
-dynamicLimit은 서비스에서 계산해 `$dynamicLimit` 파라미터로 전달 → CALL 서브쿼리 안에서 LIMIT에 사용 가능.
-
-`MATCH (me), (target)` 콤마 분리는 카테시안 프로덕트를 유발하므로 `WITH me` 를 사이에 두어 순차 MATCH로 분리.
-`CALL { WITH me, target ... }` 은 deprecated → `CALL (me, target) { ... }` 사용.
-노드 라벨: `UserReference` (USER_REFERENCE), `Friendship` (FRIENDSHIP) 명시.
+### Nodes Cypher (raw string 상수)
 
 ```cypher
-MATCH (me:UserReference {id: $meId})
-WITH me
-MATCH (target:UserReference {id: $targetId})
-CALL (me, target) {
-  MATCH (me)-[:HAS_FRIENDSHIP]->(:Friendship)<-[:HAS_FRIENDSHIP]-(mutual:UserReference)
-  WHERE mutual.id IN $skeletonIds
-  MATCH (target)-[:HAS_FRIENDSHIP]->(tf:Friendship)<-[:HAS_FRIENDSHIP]-(mutual)
-  ORDER BY tf.intimacy DESC
-  LIMIT $dynamicLimit
-  RETURN mutual, tf
-}
-RETURN target.id AS friendAId, mutual.id AS friendBId, tf.intimacy AS intimacy
+MATCH (me:UserReference {id: $userId})-[:HAS_FRIENDSHIP]->(f:Friendship)<-[:HAS_FRIENDSHIP]-(friend:UserReference)
+WITH friend, f.intimacy AS intimacy
+ORDER BY intimacy DESC
+LIMIT $circleSize
+RETURN friend.id AS friendId
 ```
 
-> **필터 위치 근거**: `WHERE mutual.id IN $skeletonIds`를 첫 번째 MATCH 직후에 배치하면, 플래너가 NodeHashJoin Build 단계에서 me의 친구 전체 대신 skeletonIds에 속한 친구만 해시 테이블에 올린다. skeletonIds는 통상 5~15개로 작기 때문에 Build 비용을 크게 줄인다.
+### Cache key 형식 (캐시된 실제 Redis 키)
 
-### Repository — `getNetworkContactsOfTwoHop` Cypher 구조
-
-target은 이미 추천으로 화면에 표시된 2-hop 유저이므로, 화면에 이미 올라온 노드 간의 접점을 찾는 용도다.
-isRoutable은 네트워크 탐색 시 새로운 사람을 노출할지 결정하는 설정이므로, 이 쿼리에는 적용하지 않는다.
-(isRoutable은 expansion 계열 쿼리에서 사용하는 것이 의미상 맞다.)
-
-isRoutable 제거로 `getNewNodeEdges`와 구조가 동일해져 플래너가 힌트 없이 NodeHashJoin을 선택한다.
-
-```cypher
-MATCH (me:UserReference {id: $meId})
-WITH me
-MATCH (target:UserReference {id: $targetId})
-CALL (me, target) {
-  MATCH (me)-[:HAS_FRIENDSHIP]->(:Friendship)<-[:HAS_FRIENDSHIP]-(mutual:UserReference)
-  WHERE mutual.id IN $skeletonIds
-  MATCH (target)-[:HAS_FRIENDSHIP]->(tf:Friendship)<-[:HAS_FRIENDSHIP]-(mutual)
-  ORDER BY tf.intimacy DESC
-  LIMIT 5
-  RETURN mutual, tf
-}
-RETURN mutual.id AS friendId
-```
+`dunbar:network:default:{userId}:{circleSize}` → 기존 eviction 로직 그대로 적용 가능
 
 ---
 
 ## 예상 사이드 이펙트
 
-- **API 파라미터 변경**: 클라이언트가 `labelId` + `circleSize` 대신 `skeletonIds` 배열을 전달해야 함
-- `SocialNetworkQueryService`에서 `FriendshipRepository` 의존성 불필요
-- `getNetworkContactsOfTwoHop`의 `limitSize` 바인딩 제거
+- `GET /me` 응답 스키마 변경 → 프론트엔드 수정 필요
+- `getLabelNetwork`는 변경하지 않음 (라벨 멤버 목록이 곧 노드 정의)
+- `SocialNetworkQueryServiceTest`: `getFriendsNetwork` 관련 테스트 수정 필요
 
 ---
 
 ## 테스트 전략
 
-- `SocialNetworkQueryServiceTest`:
-  - `skeletonIds` 빈 리스트 early return 검증
-  - me→target 친밀도에 따라 dynamicLimit(5~10)이 올바르게 계산되어 repository에 전달되는지
-  - target과 친구 관계가 없을 때 intimacy=0.0 fallback → dynamicLimit=5
-- Repository 통합 테스트:
-  - 비친구 ID가 포함된 skeletonIds 전달 시 결과에서 제외되는지
-  - `$dynamicLimit`만큼만 결과가 반환되는지
+**Repository 통합 테스트 (`SocialNetworkRepositoryAdapterTest` 기존 그래프 재사용):**
+- `getCircleNodeIds(1L, DUNBAR)` → 친구 6명 전원 반환
+- `getCircleNodeIds(1L, SUPPORT)` → intimacy 상위 5명 반환 (F(60, 0.1) 제외)
+- `getCircleNodeIds(999L, DUNBAR)` → 빈 리스트
+
+**Service 단위 테스트 (`SocialNetworkQueryServiceTest`):**
+- `getFriendsNetwork` 호출 시 `getDefaultIntimacyNetwork`와 `getCircleNodeIds` 둘 다 호출되는지
+- 반환값이 `NetworkGraphResult(nodeIds, edges)` 로 올바르게 조합되는지

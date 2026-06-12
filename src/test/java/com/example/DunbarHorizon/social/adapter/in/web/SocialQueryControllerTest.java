@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.in.web;
 
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.dto.result.NetworkGraphResult;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
@@ -37,11 +38,12 @@ class SocialQueryControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("메인 홈 네트워크를 기본 크기(DUNBAR)로 조회한다")
     void getFriendsNetwork_DefaultCircleSize() throws Exception {
-        given(socialNetworkQueryUseCase.getFriendsNetwork(eq(1L), eq(DunbarCircle.DUNBAR))).willReturn(List.of());
+        given(socialNetworkQueryUseCase.getFriendsNetwork(eq(1L), eq(DunbarCircle.DUNBAR)))
+                .willReturn(new NetworkGraphResult(List.of()));
 
         mockMvc.perform(get("/api/v1/networks/me"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$.nodes").isArray());
     }
 
     @Test
