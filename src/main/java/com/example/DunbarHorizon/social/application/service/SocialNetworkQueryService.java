@@ -3,13 +3,13 @@ package com.example.DunbarHorizon.social.application.service;
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkGraphResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
+import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkRepository;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,7 +21,6 @@ public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
     private final SocialNetworkRepository socialNetworkRepository;
     private final FriendshipRepository friendshipRepository;
 
-    @Cacheable(cacheNames = "dunbar:network:default", key = "#userId + ':' + #circleSize.name()")
     @Override
     public NetworkGraphResult getFriendsNetwork(Long userId, DunbarCircle circleSize) {
         return socialNetworkRepository.getDefaultNetworkGraph(userId, circleSize);
@@ -32,6 +31,7 @@ public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
         return socialNetworkRepository.getLabelCustomNetwork(userId, labelId);
     }
 
+    @Neo4jTransactional(readOnly = true)
     @Override
     public List<MutualFriendEdgeResult> getNewNodeEdges(Long userId, Long targetId, List<Long> skeletonIds) {
         if (skeletonIds == null || skeletonIds.isEmpty()) return List.of();
@@ -43,6 +43,7 @@ public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
         return socialNetworkRepository.getNewNodeEdges(userId, targetId, skeletonIds, dynamicLimit);
     }
 
+    @Neo4jTransactional(readOnly = true)
     @Override
     public List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(Long userId, Long targetId, List<Long> skeletonIds) {
         if (skeletonIds == null || skeletonIds.isEmpty()) return List.of();

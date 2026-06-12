@@ -11,7 +11,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @DataNeo4jTest
 @ActiveProfiles("test")
-@Import({TestContainerConfig.class})
+@Import({TestContainerConfig.class, TestNeo4jConfig.class})
 @Transactional
 public @interface Neo4jRepositoryTest {
 }

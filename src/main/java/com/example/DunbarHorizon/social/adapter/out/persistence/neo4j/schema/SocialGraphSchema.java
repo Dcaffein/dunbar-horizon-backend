@@ -1,6 +1,6 @@
-package com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.dsl;
+package com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.schema;
 
-public final class SocialNetworkProperties {
+public final class SocialGraphSchema {
     public static final String PROP_ID = "id";
     public static final String PROP_NICKNAME = "nickname";
     public static final String PROP_FRIEND_ALIAS = "friendAlias";
@@ -9,6 +9,5 @@ public final class SocialNetworkProperties {
     public static final String PROP_IS_ROUTABLE = "isRoutable";
     public static final String PROP_EXPOSURE = "exposure";
 
-
-    private SocialNetworkProperties() {}
+    private SocialGraphSchema() {}
 }
