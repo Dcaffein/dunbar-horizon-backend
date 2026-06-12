@@ -6,6 +6,8 @@ import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByT
 import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkRepository;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
+import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import java.util.List;
 public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
 
     private final SocialNetworkRepository socialNetworkRepository;
+    private final FriendshipRepository friendshipRepository;
 
     @Override
     public List<NetworkFriendEdgeResult> getFriendsNetwork(Long userId, DunbarCircle circleSize) {
@@ -30,14 +33,19 @@ public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
     }
 
     @Override
-    public List<MutualFriendEdgeResult> getNewNodeEdges(
-            Long userId, Long targetId, String labelId, int limitSize) {
-        return socialNetworkRepository.getNewNodeEdges(userId, targetId, labelId, limitSize);
+    public List<MutualFriendEdgeResult> getNewNodeEdges(Long userId, Long targetId, List<Long> skeletonIds) {
+        if (skeletonIds == null || skeletonIds.isEmpty()) return List.of();
+        double intimacy = friendshipRepository
+                .findById(Friendship.generateCompositeId(userId, targetId))
+                .map(Friendship::getIntimacy)
+                .orElse(0.0);
+        int dynamicLimit = (int) (5 + intimacy * 5);
+        return socialNetworkRepository.getNewNodeEdges(userId, targetId, skeletonIds, dynamicLimit);
     }
 
     @Override
-    public List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(
-            Long userId, Long targetId, String labelId, int limitSize) {
-        return socialNetworkRepository.getNetworkContactsOfTwoHop(userId, targetId, labelId, limitSize);
+    public List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(Long userId, Long targetId, List<Long> skeletonIds) {
+        if (skeletonIds == null || skeletonIds.isEmpty()) return List.of();
+        return socialNetworkRepository.getNetworkContactsOfTwoHop(userId, targetId, skeletonIds);
     }
 }
