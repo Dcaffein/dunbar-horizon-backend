@@ -7,13 +7,15 @@ import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkRepository;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
+import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-import static com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.dsl.SocialNetworkProperties.*;
+import static com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.schema.SocialGraphSchema.*;
 import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.*;
 import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.LABEL;
 import static com.example.DunbarHorizon.social.domain.socialUser.constant.SocialUserConstants.USER_REFERENCE;
@@ -40,12 +42,17 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
                  toInteger(5 + coalesce(item.friendship.#{INTIMACY}, 0.0) * 25) AS dynamicLimit
 
             // [3] boundary 내에서 각 친구의 내부 엣지를 dynamicLimit만큼 슬라이싱 (ID만 수집)
+            // OPTIONAL MATCH: 연결이 없는 고립 노드도 1 row(null)로 통과시켜 [4]에서 빈 리스트로 반환
             CALL (me, member, boundary, dynamicLimit) {
-              MATCH (member)-[:#{HF}]->(innerFriendship:#{F})<-[:#{HF}]-(targetMember:#{UR})
+              OPTIONAL MATCH (member)-[:#{HF}]->(innerFriendship:#{F})<-[:#{HF}]-(targetMember:#{UR})
               WHERE targetMember IN boundary AND member <> targetMember AND targetMember <> me
               WITH innerFriendship, targetMember, dynamicLimit
               ORDER BY innerFriendship.#{INTIMACY} DESC
-              WITH collect({intimacy: innerFriendship.#{INTIMACY}, targetMemberId: targetMember.#{ID}}) AS allEdges, dynamicLimit
+              WITH collect(
+                CASE WHEN targetMember IS NOT NULL
+                THEN {intimacy: innerFriendship.#{INTIMACY}, targetMemberId: targetMember.#{ID}}
+                ELSE null END
+              ) AS allEdges, dynamicLimit
               RETURN allEdges[0..dynamicLimit] AS topEdges
             }
 
@@ -145,6 +152,8 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
             .replace("#{ID}", PROP_ID)
             .replace("#{INTIMACY}", PROP_INTIMACY);
 
+    @Cacheable(cacheNames = "dunbar:network:default", key = "#userId + ':' + #circleSize.name()")
+    @Neo4jTransactional(readOnly = true)
     @Override
     public NetworkGraphResult getDefaultNetworkGraph(Long userId, DunbarCircle circleSize) {
         List<NodeGraphResult> nodes = neo4jClient.query(GET_DEFAULT_NETWORK_GRAPH)
@@ -156,6 +165,8 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
         return new NetworkGraphResult(nodes);
     }
 
+    @Cacheable(cacheNames = "dunbar:network:label", key = "#userId + ':' + #labelId")
+    @Neo4jTransactional(readOnly = true)
     @Override
     public NetworkGraphResult getLabelCustomNetwork(Long userId, String labelId) {
         List<NodeGraphResult> nodes = neo4jClient.query(GET_LABEL_CUSTOM_NETWORK)
