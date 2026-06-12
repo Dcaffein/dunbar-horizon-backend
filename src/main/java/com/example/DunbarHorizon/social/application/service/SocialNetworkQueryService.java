@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
-import com.example.DunbarHorizon.social.application.dto.result.NetworkFriendEdgeResult;
+import com.example.DunbarHorizon.social.application.dto.result.NetworkGraphResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
 import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkRepository;
@@ -9,26 +9,26 @@ import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
-import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Neo4jTransactional(readOnly = true)
 public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
 
     private final SocialNetworkRepository socialNetworkRepository;
     private final FriendshipRepository friendshipRepository;
 
+    @Cacheable(cacheNames = "dunbar:network:default", key = "#userId + ':' + #circleSize.name()")
     @Override
-    public List<NetworkFriendEdgeResult> getFriendsNetwork(Long userId, DunbarCircle circleSize) {
-        return socialNetworkRepository.getDefaultIntimacyNetwork(userId, circleSize);
+    public NetworkGraphResult getFriendsNetwork(Long userId, DunbarCircle circleSize) {
+        return socialNetworkRepository.getDefaultNetworkGraph(userId, circleSize);
     }
 
     @Override
-    public List<NetworkFriendEdgeResult> getLabelNetwork(Long userId, String labelId) {
+    public NetworkGraphResult getLabelNetwork(Long userId, String labelId) {
         return socialNetworkRepository.getLabelCustomNetwork(userId, labelId);
     }
 

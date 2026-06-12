@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
-import com.example.DunbarHorizon.social.application.dto.result.NetworkFriendEdgeResult;
+import com.example.DunbarHorizon.social.application.dto.result.NetworkGraphResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
 import com.example.DunbarHorizon.social.application.port.in.SocialConnectionPathQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.in.SocialExpansionQueryUseCase;
@@ -30,7 +30,7 @@ public class SocialQueryController {
      * 프론트엔드는 슬라이더 위치에 따라 circleSize(SUPPORT, SYMPATHY, KINSHIP, DUNBAR)를 보냄
      */
     @GetMapping("/me")
-    public ResponseEntity<List<NetworkFriendEdgeResult>> getFriendsNetwork(
+    public ResponseEntity<NetworkGraphResult> getFriendsNetwork(
             @CurrentUserId Long currentUserId,
             @RequestParam(defaultValue = "DUNBAR") DunbarCircle circleSize
     ) {
@@ -42,7 +42,7 @@ public class SocialQueryController {
      * 라벨 크기와 무관하게 최대 150명(Dunbar's Ceiling)까지 단일 뷰로 제공
      */
     @GetMapping("/labels/{labelId}")
-    public ResponseEntity<List<NetworkFriendEdgeResult>> getLabelNetwork(
+    public ResponseEntity<NetworkGraphResult> getLabelNetwork(
             @CurrentUserId Long currentUserId,
             @PathVariable String labelId
     ) {

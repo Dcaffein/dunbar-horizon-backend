@@ -1,8 +1,10 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
-import com.example.DunbarHorizon.social.application.dto.result.NetworkFriendEdgeResult;
+import com.example.DunbarHorizon.social.application.dto.result.NetworkGraphResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
+import com.example.DunbarHorizon.social.application.dto.result.NodeEdgeResult;
+import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkRepository;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
@@ -40,16 +42,21 @@ class SocialNetworkQueryServiceTest {
     // ── getFriendsNetwork ──────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("getFriendsNetwork: Repository에 userId와 DunbarCircle을 그대로 전달하고 결과를 반환한다")
-    void getFriendsNetwork_Repository에_올바른_파라미터를_전달하고_결과를_반환한다() {
+    @DisplayName("getFriendsNetwork: Repository의 getDefaultNetworkGraph 결과를 그대로 반환한다")
+    void getFriendsNetwork_getDefaultNetworkGraph_결과를_반환한다() {
         Long userId = 1L;
         DunbarCircle circleSize = DunbarCircle.KINSHIP;
-        List<NetworkFriendEdgeResult> expected = List.of(new NetworkFriendEdgeResult(10L, 20L, 0.8, 0.5, 0.4));
-        given(socialNetworkRepository.getDefaultIntimacyNetwork(userId, circleSize)).willReturn(expected);
+        List<NodeGraphResult> nodes = List.of(
+                new NodeGraphResult(10L, 0.7, List.of(new NodeEdgeResult(20L, 0.85, 0.3))),
+                new NodeGraphResult(20L, 0.3, List.of(new NodeEdgeResult(10L, 0.85, 0.7))),
+                new NodeGraphResult(30L, 0.0, List.of())
+        );
+        NetworkGraphResult expected = new NetworkGraphResult(nodes);
+        given(socialNetworkRepository.getDefaultNetworkGraph(userId, circleSize)).willReturn(expected);
 
-        List<NetworkFriendEdgeResult> result = service.getFriendsNetwork(userId, circleSize);
+        NetworkGraphResult result = service.getFriendsNetwork(userId, circleSize);
 
-        verify(socialNetworkRepository).getDefaultIntimacyNetwork(userId, circleSize);
+        verify(socialNetworkRepository).getDefaultNetworkGraph(userId, circleSize);
         assertThat(result).isEqualTo(expected);
     }
 
@@ -60,10 +67,12 @@ class SocialNetworkQueryServiceTest {
     void getLabelNetwork_Repository에_올바른_파라미터를_전달하고_결과를_반환한다() {
         Long userId = 1L;
         String labelId = "label-abc";
-        List<NetworkFriendEdgeResult> expected = List.of(new NetworkFriendEdgeResult(10L, 20L, 0.7, 0.3, 0.4));
+        NetworkGraphResult expected = new NetworkGraphResult(List.of(
+                new NodeGraphResult(10L, 0.3, List.of(new NodeEdgeResult(20L, 0.85, 0.7)))
+        ));
         given(socialNetworkRepository.getLabelCustomNetwork(userId, labelId)).willReturn(expected);
 
-        List<NetworkFriendEdgeResult> result = service.getLabelNetwork(userId, labelId);
+        NetworkGraphResult result = service.getLabelNetwork(userId, labelId);
 
         verify(socialNetworkRepository).getLabelCustomNetwork(userId, labelId);
         assertThat(result).isEqualTo(expected);

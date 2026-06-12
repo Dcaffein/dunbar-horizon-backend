@@ -2,8 +2,9 @@ package com.example.DunbarHorizon.social.adapter.out;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.SocialNetworkRepositoryAdapter;
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
-import com.example.DunbarHorizon.social.application.dto.result.NetworkFriendEdgeResult;
+import com.example.DunbarHorizon.social.application.dto.result.NetworkGraphResult;
 import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
+import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.support.Neo4jRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,77 +70,98 @@ class SocialNetworkRepositoryAdapterTest {
                 """).run();
     }
 
-    // ───────── Default Network ─────────
+    // ───────── Default Network Graph ─────────
 
     @Test
-    @DisplayName("DUNBAR 크기로 조회 시 경계 내 모든 친구 간 엣지를 반환한다 (A-B, A-F 양방향 = 4개)")
-    void getDefaultIntimacyNetwork_DUNBAR_경계_내_모든_엣지를_반환한다() {
-        List<NetworkFriendEdgeResult> result = repository.getDefaultIntimacyNetwork(1L, DunbarCircle.DUNBAR);
+    @DisplayName("DUNBAR 크기로 조회 시 경계 내 모든 친구 노드를 반환한다 (6명)")
+    void getDefaultNetworkGraph_DUNBAR_경계_내_모든_노드를_반환한다() {
+        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR);
 
-        assertThat(result).hasSize(4);
-        assertThat(result).anyMatch(e -> e.friendAId().equals(10L) && e.friendBId().equals(20L));
-        assertThat(result).anyMatch(e -> e.friendAId().equals(20L) && e.friendBId().equals(10L));
-        assertThat(result).anyMatch(e -> e.friendAId().equals(10L) && e.friendBId().equals(60L));
-        assertThat(result).anyMatch(e -> e.friendAId().equals(60L) && e.friendBId().equals(10L));
+        assertThat(result.nodes()).hasSize(6);
+        assertThat(result.nodes()).extracting(NodeGraphResult::nodeId)
+                .containsExactlyInAnyOrder(10L, 20L, 30L, 40L, 50L, 60L);
     }
 
     @Test
-    @DisplayName("SUPPORT(5) 크기로 조회 시 6번째 친구 F가 경계에서 제외되어 A-F 엣지는 반환되지 않는다")
-    void getDefaultIntimacyNetwork_SUPPORT_경계_밖의_친구가_포함된_엣지는_반환하지_않는다() {
-        List<NetworkFriendEdgeResult> result = repository.getDefaultIntimacyNetwork(1L, DunbarCircle.SUPPORT);
+    @DisplayName("DUNBAR 크기로 조회 시 A-B, A-F 엣지가 양방향으로 포함된다 (총 4개)")
+    void getDefaultNetworkGraph_DUNBAR_경계_내_엣지를_양방향으로_반환한다() {
+        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR);
 
-        assertThat(result).hasSize(2);
-        assertThat(result).noneMatch(e -> e.friendAId().equals(60L) || e.friendBId().equals(60L));
-        assertThat(result).allMatch(e ->
-                (e.friendAId().equals(10L) && e.friendBId().equals(20L)) ||
-                (e.friendAId().equals(20L) && e.friendBId().equals(10L))
-        );
+        long totalEdges = result.nodes().stream().mapToLong(n -> n.edges().size()).sum();
+        assertThat(totalEdges).isEqualTo(4);
+
+        NodeGraphResult nodeA = result.nodes().stream().filter(n -> n.nodeId().equals(10L)).findFirst().orElseThrow();
+        assertThat(nodeA.edges()).extracting(e -> e.friendId()).containsExactlyInAnyOrder(20L, 60L);
     }
 
     @Test
-    @DisplayName("interestScore가 interestMap lookup으로 올바르게 반환된다")
-    void getDefaultIntimacyNetwork_interestScore가_interestMap_lookup으로_올바르게_반환된다() {
-        List<NetworkFriendEdgeResult> result = repository.getDefaultIntimacyNetwork(1L, DunbarCircle.DUNBAR);
+    @DisplayName("SUPPORT(5) 크기로 조회 시 F(60)가 경계에서 제외되고 A-F 엣지도 제외된다")
+    void getDefaultNetworkGraph_SUPPORT_경계_밖의_친구와_엣지가_제외된다() {
+        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.SUPPORT);
 
-        assertThat(result).anyMatch(e ->
-                e.friendAId().equals(10L) && e.friendBId().equals(20L)
-                && e.friendAInterest() == 0.7 && e.friendBInterest() == 0.3
-        );
-        assertThat(result).anyMatch(e ->
-                e.friendAId().equals(20L) && e.friendBId().equals(10L)
-                && e.friendAInterest() == 0.3 && e.friendBInterest() == 0.7
-        );
+        assertThat(result.nodes()).hasSize(5);
+        assertThat(result.nodes()).extracting(NodeGraphResult::nodeId).doesNotContain(60L);
+
+        long totalEdges = result.nodes().stream().mapToLong(n -> n.edges().size()).sum();
+        assertThat(totalEdges).isEqualTo(2); // A→B, B→A
     }
 
     @Test
-    @DisplayName("친구가 없는 유저는 빈 결과를 반환한다")
-    void getDefaultIntimacyNetwork_친구가_없는_유저는_빈_결과를_반환한다() {
-        List<NetworkFriendEdgeResult> result = repository.getDefaultIntimacyNetwork(999L, DunbarCircle.DUNBAR);
+    @DisplayName("고립 노드(엣지 없는 친구)도 빈 edges 리스트로 반환된다")
+    void getDefaultNetworkGraph_고립_노드도_빈_엣지로_반환된다() {
+        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR);
 
-        assertThat(result).isEmpty();
+        // C(30), D(40), E(50)는 연결이 없는 고립 노드
+        assertThat(result.nodes()).filteredOn(n -> List.of(30L, 40L, 50L).contains(n.nodeId()))
+                .allMatch(n -> n.edges().isEmpty());
+    }
+
+    @Test
+    @DisplayName("interestScore가 노드별로 올바르게 반환된다")
+    void getDefaultNetworkGraph_interestScore가_노드별로_올바르게_반환된다() {
+        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR);
+
+        NodeGraphResult nodeA = result.nodes().stream().filter(n -> n.nodeId().equals(10L)).findFirst().orElseThrow();
+        NodeGraphResult nodeB = result.nodes().stream().filter(n -> n.nodeId().equals(20L)).findFirst().orElseThrow();
+        assertThat(nodeA.interestScore()).isEqualTo(0.7);
+        assertThat(nodeB.interestScore()).isEqualTo(0.3);
+
+        // A→B 엣지에서 B의 friendInterest
+        nodeA.edges().stream().filter(e -> e.friendId().equals(20L)).findFirst()
+                .ifPresent(e -> assertThat(e.friendInterest()).isEqualTo(0.3));
+    }
+
+    @Test
+    @DisplayName("친구가 없는 유저는 빈 nodes를 반환한다")
+    void getDefaultNetworkGraph_친구가_없는_유저는_빈_결과를_반환한다() {
+        NetworkGraphResult result = repository.getDefaultNetworkGraph(999L, DunbarCircle.DUNBAR);
+
+        assertThat(result.nodes()).isEmpty();
     }
 
     // ───────── Label Network ─────────
 
     @Test
-    @DisplayName("라벨 네트워크 조회 시 라벨 멤버 간의 엣지만 반환한다")
-    void getLabelCustomNetwork_라벨_멤버_간의_엣지만_반환한다() {
-        List<NetworkFriendEdgeResult> result = repository.getLabelCustomNetwork(1L, "test-label-id");
+    @DisplayName("라벨 네트워크 조회 시 라벨 멤버만 노드로 반환하고 멤버 간 엣지를 포함한다")
+    void getLabelCustomNetwork_라벨_멤버_노드와_엣지를_반환한다() {
+        NetworkGraphResult result = repository.getLabelCustomNetwork(1L, "test-label-id");
 
-        assertThat(result).hasSize(2);
-        assertThat(result).allMatch(e ->
-                (e.friendAId().equals(10L) && e.friendBId().equals(20L)) ||
-                (e.friendAId().equals(20L) && e.friendBId().equals(10L))
-        );
-        assertThat(result).noneMatch(e -> e.friendAId().equals(60L) || e.friendBId().equals(60L));
+        // label에는 A(10), B(20)만 포함
+        assertThat(result.nodes()).hasSize(2);
+        assertThat(result.nodes()).extracting(NodeGraphResult::nodeId)
+                .containsExactlyInAnyOrder(10L, 20L);
+
+        // A-B 양방향 엣지
+        long totalEdges = result.nodes().stream().mapToLong(n -> n.edges().size()).sum();
+        assertThat(totalEdges).isEqualTo(2);
     }
 
     @Test
-    @DisplayName("존재하지 않는 라벨 ID로 조회하면 빈 결과를 반환한다")
+    @DisplayName("존재하지 않는 라벨 ID로 조회하면 빈 nodes를 반환한다")
     void getLabelCustomNetwork_존재하지_않는_라벨ID는_빈_결과를_반환한다() {
-        List<NetworkFriendEdgeResult> result = repository.getLabelCustomNetwork(1L, "non-existent-label-id");
+        NetworkGraphResult result = repository.getLabelCustomNetwork(1L, "non-existent-label-id");
 
-        assertThat(result).isEmpty();
+        assertThat(result.nodes()).isEmpty();
     }
 
     // ───────── Two-Hop Contacts ─────────
