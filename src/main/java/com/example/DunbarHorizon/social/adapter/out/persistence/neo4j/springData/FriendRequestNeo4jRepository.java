@@ -20,12 +20,10 @@ public interface FriendRequestNeo4jRepository extends Neo4jRepository<FriendRequ
     @Override
     Optional<FriendRequest> findById(@NonNull String id);
 
-    @Query("MATCH (req: " + USER_REFERENCE + " {id: $requesterId}), (rec:" + USER_REFERENCE + " {id: $receiverId}) " +
-            "MERGE (req)-[:" + SENT_FRIEND_REQUEST + "]->(fr:" + FRIEND_REQUEST + ")-[:" + FRIEND_REQUEST_TO + "]->(rec) " +
-            "ON CREATE SET " +
-            "  fr.id = $requestId, " +
-            "  fr.status = 'PENDING', " +
-            "  fr.createdAt = localdatetime() " +
+    @Query("MATCH (req:" + USER_REFERENCE + " {id: $requesterId}), (rec:" + USER_REFERENCE + " {id: $receiverId}) " +
+            "CREATE (fr:" + FRIEND_REQUEST + " {id: $requestId, status: 'PENDING', createdAt: localdatetime()}) " +
+            "CREATE (req)-[:" + SENT_FRIEND_REQUEST + "]->(fr) " +
+            "CREATE (fr)-[:" + FRIEND_REQUEST_TO + "]->(rec) " +
             "RETURN fr")
     FriendRequest mergeFriendRequest(
             @Param("requesterId") Long requesterId,

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.neo4j.core.Neo4jClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,12 +29,16 @@ class FriendshipNeo4jRepositoryTest {
     @Autowired
     private SocialUserNeo4jRepository socialUserNeo4jRepository;
 
+    @Autowired
+    private Neo4jClient neo4jClient;
+
     private SocialUser userA;
     private SocialUser userB;
     private SocialUser userC;
 
     @BeforeEach
     void setUp() {
+        neo4jClient.query("MATCH (n) DETACH DELETE n").run();
         userA = socialUserNeo4jRepository.save(new SocialUser(1L, "사용자A", "url1"));
         userB = socialUserNeo4jRepository.save(new SocialUser(2L, "사용자B", "url2"));
         userC = socialUserNeo4jRepository.save(new SocialUser(3L, "사용자C", "url3"));

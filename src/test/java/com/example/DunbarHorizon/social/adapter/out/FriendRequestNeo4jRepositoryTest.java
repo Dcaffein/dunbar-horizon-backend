@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.neo4j.core.Neo4jClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -23,12 +24,15 @@ class FriendRequestNeo4jRepositoryTest {
     @Autowired
     private SocialUserNeo4jRepository socialUserNeo4jRepository;
 
+    @Autowired
+    private Neo4jClient neo4jClient;
+
     private SocialUser requester;
     private SocialUser receiver;
 
     @BeforeEach
     void setUp() {
-        // 유저 노드 사전 생성
+        neo4jClient.query("MATCH (n) DETACH DELETE n").run();
         requester = socialUserNeo4jRepository.save(new SocialUser(1L, "요청자", "url1"));
         receiver = socialUserNeo4jRepository.save(new SocialUser(2L, "수신자", "url2"));
     }
