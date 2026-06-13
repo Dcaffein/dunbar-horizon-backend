@@ -31,6 +31,20 @@ class FriendshipControllerTest extends BaseControllerTest {
     }
 
     @Test
+    @DisplayName("별명을 빈 문자열로 보내면 validation을 통과하고 alias가 삭제된다")
+    void updateFriend_withEmptyAlias_returnsNoContent() throws Exception {
+        Long friendId = 2L;
+        FriendUpdateRequest dto = new FriendUpdateRequest("", null, null);
+
+        mockMvc.perform(patch("/api/v1/friends/{friendId}", friendId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isNoContent());
+
+        verify(friendshipCommandUseCase).updateFriendship(anyLong(), eq(friendId), any(FriendshipUpdateCommand.class));
+    }
+
+    @Test
     @DisplayName("친구 관계를 성공적으로 해제한다")
     void brokeUpWithFriend_Success() throws Exception {
         Long friendId = 2L;

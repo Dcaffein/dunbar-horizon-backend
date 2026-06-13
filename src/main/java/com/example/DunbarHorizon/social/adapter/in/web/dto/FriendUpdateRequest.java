@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUp
 import jakarta.validation.constraints.Size;
 
 public record FriendUpdateRequest(
-        @Size(min = 1, max = 20, message = "별명은 1자 이상 20자 이내여야 합니다.")
+        @Size(max = 20, message = "별명은 20자 이내여야 합니다.")
         String friendAlias,
         Boolean isMuted,
         Boolean isRoutable

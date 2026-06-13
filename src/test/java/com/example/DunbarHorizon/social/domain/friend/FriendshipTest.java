@@ -90,4 +90,45 @@ class FriendshipTest {
         // then
         assertThat(friendship.getIntimacy()).isEqualTo(0.0);
     }
+
+    @Test
+    @DisplayName("별명에 비어있지 않은 값을 전달하면 해당 값으로 설정된다")
+    void updateUserFields_withAlias_setsAlias() {
+        // given
+        Friendship friendship = new Friendship(new SocialUser(1L, "A", ""), new SocialUser(2L, "B", ""));
+
+        // when
+        friendship.updateUserFields(1L, "동기", null, null);
+
+        // then
+        assertThat(friendship.getFriendAlias(1L)).isEqualTo("동기");
+    }
+
+    @Test
+    @DisplayName("별명에 빈 문자열을 전달하면 alias가 삭제되어 빈 문자열로 반환된다")
+    void updateUserFields_withEmptyAlias_clearsAlias() {
+        // given
+        Friendship friendship = new Friendship(new SocialUser(1L, "A", ""), new SocialUser(2L, "B", ""));
+        friendship.updateUserFields(1L, "동기", null, null);
+
+        // when
+        friendship.updateUserFields(1L, "", null, null);
+
+        // then
+        assertThat(friendship.getFriendAlias(1L)).isEqualTo(""); // null 저장 → getFriendAlias는 "" 반환
+    }
+
+    @Test
+    @DisplayName("별명에 null을 전달하면 기존 alias가 변경되지 않는다")
+    void updateUserFields_withNullAlias_doesNotChangeAlias() {
+        // given
+        Friendship friendship = new Friendship(new SocialUser(1L, "A", ""), new SocialUser(2L, "B", ""));
+        friendship.updateUserFields(1L, "동기", null, null);
+
+        // when
+        friendship.updateUserFields(1L, null, null, null);
+
+        // then
+        assertThat(friendship.getFriendAlias(1L)).isEqualTo("동기");
+    }
 }
