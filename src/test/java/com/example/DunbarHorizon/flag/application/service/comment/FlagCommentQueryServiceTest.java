@@ -71,7 +71,6 @@ class FlagCommentQueryServiceTest {
         // given
         Flag flag = createFlag();
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of(VIEWER_ID));
         given(commentRepository.findAllByFlagId(FLAG_ID)).willReturn(List.of());
         given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of());
 
@@ -90,7 +89,6 @@ class FlagCommentQueryServiceTest {
         FlagComment publicComment = createComment(10L, VIEWER_ID, false);
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of(VIEWER_ID));
         given(commentRepository.findAllByFlagId(FLAG_ID)).willReturn(List.of(publicComment));
         given(flagUserPort.findUserInfosByIds(anySet()))
                 .willReturn(Map.of(VIEWER_ID, new FlagUserInfo(VIEWER_ID, "사용자", null),
@@ -111,7 +109,6 @@ class FlagCommentQueryServiceTest {
         FlagComment privateComment = createComment(10L, VIEWER_ID, true); // writer = VIEWER_ID
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of(99L, VIEWER_ID));
         given(commentRepository.findAllByFlagId(FLAG_ID)).willReturn(List.of(privateComment));
         given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of());
 
@@ -130,7 +127,6 @@ class FlagCommentQueryServiceTest {
         FlagComment myComment = createComment(10L, VIEWER_ID, false);
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of(VIEWER_ID));
         given(commentRepository.findAllByFlagId(FLAG_ID)).willReturn(List.of(myComment));
         given(flagUserPort.findUserInfosByIds(anySet()))
                 .willReturn(Map.of(VIEWER_ID, new FlagUserInfo(VIEWER_ID, "뷰어", null),
@@ -152,7 +148,6 @@ class FlagCommentQueryServiceTest {
         FlagComment otherComment = createComment(10L, HOST_ID, false); // writer = HOST_ID
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
-        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of(VIEWER_ID));
         given(commentRepository.findAllByFlagId(FLAG_ID)).willReturn(List.of(otherComment));
         given(flagUserPort.findUserInfosByIds(anySet()))
                 .willReturn(Map.of(VIEWER_ID, new FlagUserInfo(VIEWER_ID, "뷰어", null),

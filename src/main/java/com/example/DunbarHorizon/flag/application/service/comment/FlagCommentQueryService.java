@@ -28,8 +28,6 @@ public class FlagCommentQueryService implements FlagCommentQueryUseCase {
     @Override
     public List<CommentResult> getCommentTree(Long flagId, Long viewerId) {
         Flag flag = flagRepository.findById(flagId).orElseThrow(() -> new FlagNotFoundException(flagId));
-        List<Long> participantIds = flagRepository.findAllParticipantIds(flagId);
-        flag.validateAccess(viewerId, participantIds);
 
         List<FlagComment> allComments = commentRepository.findAllByFlagId(flagId);
 

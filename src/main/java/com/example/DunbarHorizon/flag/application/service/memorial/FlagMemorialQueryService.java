@@ -5,6 +5,9 @@ import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 import com.example.DunbarHorizon.flag.application.dto.result.MemorialListResult;
 import com.example.DunbarHorizon.flag.application.dto.result.MemorialResult;
 import com.example.DunbarHorizon.flag.application.port.out.FlagUserPort;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorial;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +23,17 @@ import java.util.Map;
 public class FlagMemorialQueryService implements FlagMemorialQueryUseCase {
 
     private final FlagMemorialRepository memorialRepository;
+    private final FlagRepository flagRepository;
     private final FlagUserPort flagUserPort;
 
     @Override
     public MemorialListResult getMemorials(Long flagId, Long viewerId) {
+        Long hostId = flagRepository.findHostIdById(flagId)
+                .orElseThrow(() -> new FlagNotFoundException(flagId));
+        if (!hostId.equals(viewerId) && !flagRepository.isParticipating(flagId, viewerId)) {
+            throw new FlagAuthorizationException("플래그 참여자만 추도문을 조회할 수 있습니다.");
+        }
+
         if (!memorialRepository.existsByFlagId(flagId)) {
             return MemorialListResult.empty();
         }
