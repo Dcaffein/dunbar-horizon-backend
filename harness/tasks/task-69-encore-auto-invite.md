@@ -66,4 +66,8 @@ Flag 앵콜(encore)은 종료된 모임을 같은 멤버들과 다시 여는 흐
 
 ## Result
 
-(미완료)
+- `FlagEncoreInvitationListener` 신규 생성. `FlagEncoreEvent` AFTER_COMMIT + `@Async` + `REQUIRES_NEW` 트랜잭션으로 실행.
+- `FlagEncoreEventListener`에서 `FLAG_ENCORE` 알림 발행 제거 — `FLAG_INVITATION` 알림으로 통합.
+- `FlagInvitationRepository` 포트에 `saveAll`, `findPendingInviteeIdsByFlagId` 추가 및 어댑터 위임 구현.
+- `FlagEncoreInvitationListenerTest` 7케이스 단위 테스트 작성 (정상·호스트 제외·pending 중복·참여 중 중복·참여자 없음·모집 중 아님·encore 없음).
+- 커밋: `3a28621` → main 머지 완료 (`ai/feat-encore-auto-invite`)
