@@ -1,180 +1,123 @@
-# PLAN — Task 71: 개발용 Flag 시드 API
+# PLAN — Task 72: 후기 조회 응답에 locked 필드 추가
 
 ## 작업 목표
 
-`POST /api/dev/flags/seed`로 임의 상태의 Flag (+ 참여자, 후기)를 한 번에 삽입한다.
-`FlagParticipant` / `FlagMemorial` 생성자가 package-private이라 JPA 우회 → JdbcTemplate 직접 INSERT.
-
----
-
-## 현황 분석
-
-### 기존 DevController 패턴
-
-```
-account/adapter/in/web/DevController.java     — @Profile("local"), /api/dev
-account/application/service/DevUserService.java — @Profile("local"), @Transactional
-```
-
-### 테이블 · 컬럼 매핑
-
-**`flags`** (`@Table(name = "flags")`)
-
-| 컬럼 | 출처 |
-|------|------|
-| `host_id` | request.hostUserId |
-| `title` | flagItem.title |
-| `description` | null (dev 용도) |
-| `capacity` | flagItem.capacity |
-| `deadline` | schedule.deadline (없으면 startDateTime - 1분) |
-| `start_date_time` | schedule.startDateTime |
-| `end_date_time` | schedule.endDateTime |
-| `group_id` | `UNHEX(REPLACE(UUID, '-', ''))` — BINARY(16) |
-| `parent_id` | null |
-| `is_preserved` | false |
-| `created_at`, `updated_at` | NOW() |
-
-**`flag_participant`** (entity 기본 네이밍 → `flag_participant`)
-
-| 컬럼 | 값 |
-|------|-----|
-| `flag_id` | 삽입된 flag ID |
-| `participant_id` | participantUserIds 각 원소 |
-| `can_invite` | false |
-| `created_at`, `updated_at` | NOW() |
-
-**`flag_memorial`** (entity 기본 네이밍 → `flag_memorial`)
-
-| 컬럼 | 값 |
-|------|-----|
-| `flag_id` | 삽입된 flag ID |
-| `writer_id` | memorial.writerUserId |
-| `content` | memorial.content |
-| `created_at`, `updated_at` | NOW() |
+`GET /api/v1/flags/{flagId}/memorials` 응답을 `{ memorials, locked }` 구조로 변경.
+서비스 레이어에서 2단계 체크로 비즈니스 규칙을 명시적으로 표현하고,
+기존 단일 복합쿼리(`findAllMemorialsIfMemorialized`)를 제거한다.
 
 ---
 
 ## 구현 계획
 
-### 1. `FlagSeedController` (신규)
-
-위치: `flag/adapter/in/web/FlagSeedController.java`
+### 1. `MemorialListResult` 신규 (application/dto/result)
 
 ```java
-@Profile("local")
-@RestController
-@RequestMapping("/api/dev/flags")
-@RequiredArgsConstructor
-public class FlagSeedController {
+public record MemorialListResult(
+        List<MemorialResult> memorials,
+        boolean locked
+) {
+    public static MemorialListResult empty() {
+        return new MemorialListResult(List.of(), false);
+    }
 
-    private final FlagSeedService flagSeedService;
+    public static MemorialListResult locked() {
+        return new MemorialListResult(List.of(), true);
+    }
 
-    @PostMapping("/seed")
-    public ResponseEntity<FlagSeedResponse> seed(@RequestBody FlagSeedRequest request) {
-        List<Long> ids = flagSeedService.seed(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(new FlagSeedResponse(ids));
+    public static MemorialListResult of(List<MemorialResult> memorials) {
+        return new MemorialListResult(memorials, false);
     }
 }
 ```
 
-요청 DTO:
+### 2. `FlagMemorialRepository` 포트 수정
+
 ```java
-record FlagSeedRequest(Long hostUserId, List<FlagSeedItem> flags) {}
+// 추가
+boolean existsByFlagIdAndWriterId(Long flagId, Long writerId);
+List<FlagMemorial> findAllByFlagId(Long flagId);
 
-record FlagSeedItem(
-    String title,
-    String status,               // "OPEN" | "CLOSED"
-    ScheduleSeedItem schedule,
-    Integer capacity,
-    List<Long> participantUserIds,
-    List<MemorialSeedItem> memorials  // nullable
-) {}
-
-record ScheduleSeedItem(
-    LocalDateTime startDateTime,
-    LocalDateTime endDateTime,
-    LocalDateTime deadline        // nullable — 없으면 startDateTime - 1분
-) {}
-
-record MemorialSeedItem(Long writerUserId, String content) {}
-
-record FlagSeedResponse(List<Long> flagIds) {}
+// 제거
+List<FlagMemorial> findAllMemorialsIfMemorialized(Long flagId, Long viewerId);
 ```
 
-### 2. `FlagSeedService` (신규)
+### 3. `FlagMemorialJpaRepository` 수정
 
-위치: `flag/application/service/flag/FlagSeedService.java`
+Spring Data 메서드명 자동 생성:
+```java
+// 추가 (메서드명만으로 쿼리 자동 생성)
+boolean existsByFlagIdAndWriterId(Long flagId, Long writerId);
+List<FlagMemorial> findAllByFlagId(Long flagId);
+
+// 제거
+@Query("SELECT fm FROM FlagMemorial fm WHERE ...") findAllMemorialsIfMemorialized(...)
+```
+
+### 4. `FlagMemorialRepositoryAdapter` 수정
 
 ```java
-@Profile("local")
-@Service
-@RequiredArgsConstructor
-@Transactional
-public class FlagSeedService {
+// 추가
+@Override
+public boolean existsByFlagIdAndWriterId(Long flagId, Long writerId) {
+    return jpaRepository.existsByFlagIdAndWriterId(flagId, writerId);
+}
 
-    private final JdbcTemplate jdbc;
+@Override
+public List<FlagMemorial> findAllByFlagId(Long flagId) {
+    return jpaRepository.findAllByFlagId(flagId);
+}
 
-    public List<Long> seed(FlagSeedRequest request) {
-        List<Long> ids = new ArrayList<>();
-        for (FlagSeedItem item : request.flags()) {
-            Long flagId = insertFlag(request.hostUserId(), item);
-            insertParticipants(flagId, item.participantUserIds());
-            if (item.memorials() != null) {
-                insertMemorials(flagId, item.memorials());
-            }
-            ids.add(flagId);
-        }
-        return ids;
+// 제거
+findAllMemorialsIfMemorialized(...) 위임 메서드
+```
+
+### 5. `FlagMemorialQueryUseCase` 반환 타입 변경
+
+```java
+// Before
+List<MemorialResult> getMemorials(Long flagId, Long viewerId);
+
+// After
+MemorialListResult getMemorials(Long flagId, Long viewerId);
+```
+
+### 6. `FlagMemorialQueryService` 로직 재작성
+
+```java
+@Override
+public MemorialListResult getMemorials(Long flagId, Long viewerId) {
+    if (!memorialRepository.existsByFlagId(flagId)) {
+        return MemorialListResult.empty();         // 후기 자체가 없음
+    }
+    if (!memorialRepository.existsByFlagIdAndWriterId(flagId, viewerId)) {
+        return MemorialListResult.locked();        // 본인이 안 남겨서 못 봄
     }
 
-    private Long insertFlag(Long hostId, FlagSeedItem item) {
-        String sql = """
-            INSERT INTO flags
-              (host_id, title, description, capacity,
-               deadline, start_date_time, end_date_time,
-               group_id, parent_id, is_preserved, created_at, updated_at)
-            VALUES (?, ?, NULL, ?, ?, ?, ?, UNHEX(REPLACE(?, '-', '')), NULL, false, NOW(), NOW())
-            """;
+    List<FlagMemorial> memorials = memorialRepository.findAllByFlagId(flagId);
+    List<Long> writerIds = memorials.stream()
+            .map(FlagMemorial::getWriterId).distinct().toList();
+    Map<Long, FlagUserInfo> writerMap = flagUserPort.findUserInfosByIds(writerIds);
 
-        LocalDateTime deadline = item.schedule().deadline() != null
-                ? item.schedule().deadline()
-                : item.schedule().startDateTime().minusMinutes(1);
+    return MemorialListResult.of(
+            memorials.stream()
+                    .map(m -> MemorialResult.of(m,
+                            writerMap.getOrDefault(m.getWriterId(),
+                                    new FlagUserInfo(m.getWriterId(), "알 수 없는 사용자", null))))
+                    .toList()
+    );
+}
+```
 
-        KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbc.update(conn -> {
-            PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            ps.setLong(1, hostId);
-            ps.setString(2, item.title());
-            ps.setInt(3, item.capacity());
-            ps.setObject(4, deadline);
-            ps.setObject(5, item.schedule().startDateTime());
-            ps.setObject(6, item.schedule().endDateTime());
-            ps.setString(7, UUID.randomUUID().toString());
-            return ps;
-        }, keyHolder);
+### 7. `FlagMemorialController` 응답 타입 변경
 
-        return keyHolder.getKey().longValue();
-    }
+```java
+// Before
+public ResponseEntity<List<MemorialResult>> getMemorials(...)
 
-    private void insertParticipants(Long flagId, List<Long> participantIds) {
-        String sql = """
-            INSERT INTO flag_participant (flag_id, participant_id, can_invite, created_at, updated_at)
-            VALUES (?, ?, false, NOW(), NOW())
-            """;
-        for (Long pid : participantIds) {
-            jdbc.update(sql, flagId, pid);
-        }
-    }
-
-    private void insertMemorials(Long flagId, List<MemorialSeedItem> memorials) {
-        String sql = """
-            INSERT INTO flag_memorial (flag_id, writer_id, content, created_at, updated_at)
-            VALUES (?, ?, ?, NOW(), NOW())
-            """;
-        for (MemorialSeedItem m : memorials) {
-            jdbc.update(sql, flagId, m.writerUserId(), m.content());
-        }
-    }
+// After
+public ResponseEntity<MemorialListResult> getMemorials(...) {
+    return ResponseEntity.ok(memorialQueryUseCase.getMemorials(flagId, currentUserId));
 }
 ```
 
@@ -182,8 +125,13 @@ public class FlagSeedService {
 
 ## 테스트 계획
 
-Mockito 단위 테스트 대신 수동 확인 (JdbcTemplate + DB 직접 조회).
-`./gradlew bootRun` 후 curl 또는 Swagger로 검증.
+### `FlagMemorialQueryServiceTest` (신규, Mockito)
+
+| 케이스 | 검증 |
+|--------|------|
+| 후기 없음 | `locked=false`, `memorials=[]` |
+| 후기 있으나 본인 미작성 | `locked=true`, `memorials=[]` |
+| 본인 작성 완료 | `locked=false`, `memorials` 내용 포함 |
 
 ---
 
@@ -191,5 +139,11 @@ Mockito 단위 테스트 대신 수동 확인 (JdbcTemplate + DB 직접 조회).
 
 | 파일 | 유형 |
 |------|------|
-| `flag/adapter/in/web/FlagSeedController.java` | 신규 |
-| `flag/application/service/flag/FlagSeedService.java` | 신규 |
+| `flag/application/dto/result/MemorialListResult.java` | 신규 |
+| `flag/domain/memorial/repository/FlagMemorialRepository.java` | 수정 |
+| `flag/adapter/out/persistence/jpa/FlagMemorialJpaRepository.java` | 수정 |
+| `flag/adapter/out/persistence/FlagMemorialRepositoryAdapter.java` | 수정 |
+| `flag/application/port/in/FlagMemorialQueryUseCase.java` | 수정 |
+| `flag/application/service/memorial/FlagMemorialQueryService.java` | 수정 |
+| `flag/adapter/in/web/FlagMemorialController.java` | 수정 |
+| `flag/application/service/memorial/FlagMemorialQueryServiceTest.java` | 신규 |

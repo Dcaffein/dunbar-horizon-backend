@@ -9,20 +9,12 @@ import org.springframework.data.repository.query.Param;
 import java.util.Collection;
 import java.util.List;
 
+
 public interface FlagMemorialJpaRepository extends JpaRepository<FlagMemorial, Long> {
 
     boolean existsByFlagId(Long flagId);
-
-    @Query("SELECT fm FROM FlagMemorial fm " +
-            "WHERE fm.flagId = :flagId " +
-            "AND EXISTS (" +
-            "    SELECT 1 FROM FlagMemorial sub " +
-            "    WHERE sub.flagId = :flagId AND sub.writerId = :viewerId" +
-            ")")
-    List<FlagMemorial> findAllMemorialsIfMemorialized(
-            @Param("flagId") Long flagId,
-            @Param("viewerId") Long viewerId
-    );
+    boolean existsByFlagIdAndWriterId(Long flagId, Long writerId);
+    List<FlagMemorial> findAllByFlagId(Long flagId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM FlagMemorial fm WHERE fm.flagId IN :flagIds")

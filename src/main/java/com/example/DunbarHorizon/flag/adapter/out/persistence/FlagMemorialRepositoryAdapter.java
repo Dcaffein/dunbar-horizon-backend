@@ -31,12 +31,17 @@ public class FlagMemorialRepositoryAdapter implements FlagMemorialRepository {
     }
 
     @Override
-    public void delete(FlagMemorial memorial) {
-        jpaRepository.delete(memorial);
+    public boolean existsByFlagIdAndWriterId(Long flagId, Long writerId) {
+        return jpaRepository.existsByFlagIdAndWriterId(flagId, writerId);
     }
 
     @Override
-    public List<FlagMemorial> findAllMemorialsIfMemorialized(Long flagId, Long viewerId) {
-        return jpaRepository.findAllMemorialsIfMemorialized(flagId, viewerId);
+    public List<FlagMemorial> findAllByFlagId(Long flagId) {
+        return jpaRepository.findAllByFlagId(flagId);
+    }
+
+    @Override
+    public void delete(FlagMemorial memorial) {
+        jpaRepository.delete(memorial);
     }
 }

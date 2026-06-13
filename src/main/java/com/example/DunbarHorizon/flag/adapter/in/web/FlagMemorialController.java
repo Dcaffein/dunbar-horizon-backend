@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.flag.adapter.in.web;
 import com.example.DunbarHorizon.flag.adapter.in.web.dto.MemorialCreateRequest;
 import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialCommandUseCase;
 import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialQueryUseCase;
-import com.example.DunbarHorizon.flag.application.dto.result.MemorialResult;
+import com.example.DunbarHorizon.flag.application.dto.result.MemorialListResult;
 import com.example.DunbarHorizon.flag.adapter.in.web.dto.MemorialUpdateRequest;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import jakarta.validation.Valid;
@@ -11,8 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/flags")
@@ -35,12 +33,11 @@ public class FlagMemorialController {
     }
 
     @GetMapping("/{flagId}/memorials")
-    public ResponseEntity<List<MemorialResult>> getMemorials(
+    public ResponseEntity<MemorialListResult> getMemorials(
             @PathVariable Long flagId,
             @CurrentUserId Long currentUserId
     ) {
-        List<MemorialResult> responses = memorialQueryUseCase.getMemorials(flagId, currentUserId);
-        return ResponseEntity.ok(responses);
+        return ResponseEntity.ok(memorialQueryUseCase.getMemorials(flagId, currentUserId));
     }
 
     @PatchMapping("/memorials/{id}")

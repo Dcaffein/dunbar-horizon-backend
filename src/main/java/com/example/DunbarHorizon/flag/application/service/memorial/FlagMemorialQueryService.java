@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.flag.application.service.memorial;
 
 import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialQueryUseCase;
 import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
+import com.example.DunbarHorizon.flag.application.dto.result.MemorialListResult;
 import com.example.DunbarHorizon.flag.application.dto.result.MemorialResult;
 import com.example.DunbarHorizon.flag.application.port.out.FlagUserPort;
 import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorial;
@@ -22,11 +23,15 @@ public class FlagMemorialQueryService implements FlagMemorialQueryUseCase {
     private final FlagUserPort flagUserPort;
 
     @Override
-    public List<MemorialResult> getMemorials(Long flagId, Long viewerId) {
+    public MemorialListResult getMemorials(Long flagId, Long viewerId) {
+        if (!memorialRepository.existsByFlagId(flagId)) {
+            return MemorialListResult.empty();
+        }
+        if (!memorialRepository.existsByFlagIdAndWriterId(flagId, viewerId)) {
+            return MemorialListResult.asLocked();
+        }
 
-        List<FlagMemorial> memorials = memorialRepository.findAllMemorialsIfMemorialized(flagId, viewerId);
-        if (memorials.isEmpty()) return List.of();
-
+        List<FlagMemorial> memorials = memorialRepository.findAllByFlagId(flagId);
         List<Long> writerIds = memorials.stream()
                 .map(FlagMemorial::getWriterId)
                 .distinct()
@@ -34,12 +39,13 @@ public class FlagMemorialQueryService implements FlagMemorialQueryUseCase {
 
         Map<Long, FlagUserInfo> writerMap = flagUserPort.findUserInfosByIds(writerIds);
 
-        return memorials.stream()
-                .map(m -> MemorialResult.of(
-                        m,
-                        writerMap.getOrDefault(m.getWriterId(),
-                                new FlagUserInfo(m.getWriterId(), "알 수 없는 사용자", null))
-                ))
-                .toList();
+        return MemorialListResult.of(
+                memorials.stream()
+                        .map(m -> MemorialResult.of(
+                                m,
+                                writerMap.getOrDefault(m.getWriterId(),
+                                        new FlagUserInfo(m.getWriterId(), "알 수 없는 사용자", null))))
+                        .toList()
+        );
     }
 }
