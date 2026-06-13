@@ -4,5 +4,6 @@ public record FlagInvitationSentEvent(
         Long flagId,
         Long invitationId,
         Long inviteeId,
-        String flagTitle
+        String flagTitle,
+        boolean isEncore
 ) {}

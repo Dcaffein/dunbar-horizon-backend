@@ -74,7 +74,9 @@ class FlagEncoreInvitationListenerTest {
         verify(invitationRepository).saveAll(captor.capture());
         assertThat(captor.getValue()).hasSize(3);
 
-        verify(eventPublisher, times(3)).publishEvent(any(FlagInvitationSentEvent.class));
+        ArgumentCaptor<FlagInvitationSentEvent> eventCaptor = ArgumentCaptor.forClass(FlagInvitationSentEvent.class);
+        verify(eventPublisher, times(3)).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getAllValues()).allMatch(FlagInvitationSentEvent::isEncore);
     }
 
     @Test

@@ -25,10 +25,15 @@ public class FlagInvitationEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handle(FlagInvitationSentEvent event) {
+        String title = event.isEncore() ? "앵콜 초대" : "플래그 초대";
+        String content = event.isEncore()
+                ? String.format("[%s] 앵콜 모임에 초대받았습니다. 함께하실래요!", event.flagTitle())
+                : String.format("[%s] 플래그에 초대받았습니다. 수락 여부를 선택해주세요!", event.flagTitle());
+
         NotificationEvent notificationEvent = NotificationEvent.builder()
                 .receiverIds(List.of(event.inviteeId()))
-                .title("플래그 초대")
-                .content(String.format("[%s] 플래그에 초대받았습니다. 수락 여부를 선택해주세요!", event.flagTitle()))
+                .title(title)
+                .content(content)
                 .type(NotificationType.FLAG_INVITATION)
                 .metadata(Map.of(
                         "flagId", event.flagId(),

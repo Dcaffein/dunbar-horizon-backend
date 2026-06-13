@@ -37,7 +37,7 @@ public class FlagInvitationService implements FlagInvitationUseCase {
                 .orElse("");
 
         eventPublisher.publishEvent(new FlagInvitationSentEvent(
-                flagId, saved.getId(), inviteeId, flagTitle
+                flagId, saved.getId(), inviteeId, flagTitle, false
         ));
 
         return saved.getId();
