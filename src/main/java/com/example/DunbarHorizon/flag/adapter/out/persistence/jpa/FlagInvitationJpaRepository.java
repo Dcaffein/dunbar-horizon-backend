@@ -8,10 +8,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
+import java.util.Set;
 
 public interface FlagInvitationJpaRepository extends JpaRepository<FlagInvitation, Long> {
 
     boolean existsByFlagIdAndInviteeIdAndStatus(Long flagId, Long inviteeId, FlagInvitationStatus status);
+
+    @Query("SELECT fi.inviteeId FROM FlagInvitation fi WHERE fi.flagId = :flagId AND fi.status = 'PENDING'")
+    Set<Long> findPendingInviteeIdsByFlagId(@Param("flagId") Long flagId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM FlagInvitation fi WHERE fi.flagId IN :flagIds")

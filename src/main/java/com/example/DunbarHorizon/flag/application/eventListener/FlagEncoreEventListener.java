@@ -2,54 +2,19 @@ package com.example.DunbarHorizon.flag.application.eventListener;
 
 import com.example.DunbarHorizon.flag.domain.flag.FlagPreservationPolicy;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagEncoreEvent;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
-import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
-import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
 public class FlagEncoreEventListener {
 
-    private final FlagRepository flagRepository;
-    private final ApplicationEventPublisher eventPublisher;
     private final FlagPreservationPolicy flagPreservationPolicy;
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void handleEncoreCreated(FlagEncoreEvent event) {
         flagPreservationPolicy.refresh(event.parentFlagId());
-    }
-
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void handle(FlagEncoreEvent event) {
-        List<Long> oldParticipantIds = flagRepository.findAllParticipantIds(event.parentFlagId());
-
-        if (oldParticipantIds.isEmpty()) return;
-
-        NotificationEvent notificationEvent = NotificationEvent.builder()
-                .receiverIds(oldParticipantIds)
-                .title("앵콜 플래그 생성!")
-                .content(String.format("[%s] 플래그가 다시 열렸습니다. 지금 확인해보세요!", event.title()))
-                .type(NotificationType.FLAG_ENCORE)
-                .occurredAt(LocalDateTime.now())
-                .metadata(Map.of(
-                        "parentFlagId", event.parentFlagId()
-                ))
-                .build();
-
-        eventPublisher.publishEvent(notificationEvent);
     }
 }

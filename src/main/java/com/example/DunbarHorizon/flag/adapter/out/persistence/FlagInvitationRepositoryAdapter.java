@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 @RequiredArgsConstructor
@@ -22,6 +24,11 @@ public class FlagInvitationRepositoryAdapter implements FlagInvitationRepository
     }
 
     @Override
+    public List<FlagInvitation> saveAll(List<FlagInvitation> invitations) {
+        return jpaRepository.saveAll(invitations);
+    }
+
+    @Override
     public Optional<FlagInvitation> findById(Long id) {
         return jpaRepository.findById(id);
     }
@@ -29,6 +36,11 @@ public class FlagInvitationRepositoryAdapter implements FlagInvitationRepository
     @Override
     public boolean existsPendingByFlagIdAndInviteeId(Long flagId, Long inviteeId) {
         return jpaRepository.existsByFlagIdAndInviteeIdAndStatus(flagId, inviteeId, FlagInvitationStatus.PENDING);
+    }
+
+    @Override
+    public Set<Long> findPendingInviteeIdsByFlagId(Long flagId) {
+        return jpaRepository.findPendingInviteeIdsByFlagId(flagId);
     }
 
     @Override
