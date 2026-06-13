@@ -5,4 +5,5 @@ public interface FlagInvitationUseCase {
     Long invite(Long flagId, Long inviterId, Long inviteeId);
     void accept(Long invitationId, Long acceptorId);
     void reject(Long invitationId, Long rejectorId);
+    void cancel(Long invitationId, Long requesterId);
 }

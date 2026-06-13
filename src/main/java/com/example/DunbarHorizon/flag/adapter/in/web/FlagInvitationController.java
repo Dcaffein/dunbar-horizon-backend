@@ -30,4 +30,13 @@ public class FlagInvitationController {
         flagInvitationUseCase.reject(invitationId, currentUserId);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/{invitationId}")
+    public ResponseEntity<Void> cancel(
+            @PathVariable Long invitationId,
+            @CurrentUserId Long currentUserId
+    ) {
+        flagInvitationUseCase.cancel(invitationId, currentUserId);
+        return ResponseEntity.noContent().build();
+    }
 }

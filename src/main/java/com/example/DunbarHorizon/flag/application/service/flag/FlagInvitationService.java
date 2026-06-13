@@ -47,10 +47,18 @@ public class FlagInvitationService implements FlagInvitationUseCase {
     public void accept(Long invitationId, Long acceptorId) {
         FlagParticipant newParticipant = invitationManager.accept(invitationId, acceptorId);
         flagRepository.saveParticipant(newParticipant);
+        invitationRepository.deleteById(invitationId);
     }
 
     @Override
     public void reject(Long invitationId, Long rejectorId) {
         invitationManager.reject(invitationId, rejectorId);
+        invitationRepository.deleteById(invitationId);
+    }
+
+    @Override
+    public void cancel(Long invitationId, Long requesterId) {
+        invitationManager.cancel(invitationId, requesterId);
+        invitationRepository.deleteById(invitationId);
     }
 }

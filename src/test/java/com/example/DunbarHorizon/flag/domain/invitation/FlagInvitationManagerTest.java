@@ -218,7 +218,6 @@ class FlagInvitationManagerTest {
 
         // then
         assertThat(result.getParticipantId()).isEqualTo(INVITEE_ID);
-        assertThat(invitation.getStatus()).isEqualTo(FlagInvitationStatus.ACCEPTED);
     }
 
     @Test
@@ -269,7 +268,7 @@ class FlagInvitationManagerTest {
     // ==================== reject ====================
 
     @Test
-    @DisplayName("초대받은 사람이 거절하면 상태가 REJECTED로 변경된다")
+    @DisplayName("초대받은 사람이 거절하면 검증을 통과한다")
     void reject_Success() {
         // given
         FlagInvitation invitation = FlagInvitation.create(FLAG_ID, INVITER_ID, INVITEE_ID, NOW.plusHours(2));
@@ -277,10 +276,37 @@ class FlagInvitationManagerTest {
 
         given(invitationRepository.findById(10L)).willReturn(Optional.of(invitation));
 
-        // when
-        policy.reject(10L, INVITEE_ID);
+        // when / then
+        assertThatNoException().isThrownBy(() -> policy.reject(10L, INVITEE_ID));
+    }
 
-        // then
-        assertThat(invitation.getStatus()).isEqualTo(FlagInvitationStatus.REJECTED);
+    // ==================== cancel ====================
+
+    @Test
+    @DisplayName("초대를 보낸 사람이 PENDING 초대를 취소할 수 있다")
+    void cancel_Success() {
+        // given
+        FlagInvitation invitation = FlagInvitation.create(FLAG_ID, INVITER_ID, INVITEE_ID, NOW.plusHours(2));
+        ReflectionTestUtils.setField(invitation, "id", 10L);
+
+        given(invitationRepository.findById(10L)).willReturn(Optional.of(invitation));
+
+        // when / then
+        assertThatNoException().isThrownBy(() -> policy.cancel(10L, INVITER_ID));
+    }
+
+    @Test
+    @DisplayName("초대를 보내지 않은 사람이 취소하면 FlagInvitationAccessException이 발생한다")
+    void cancel_NotInviter_Throws() {
+        // given
+        FlagInvitation invitation = FlagInvitation.create(FLAG_ID, INVITER_ID, INVITEE_ID, NOW.plusHours(2));
+        ReflectionTestUtils.setField(invitation, "id", 10L);
+
+        given(invitationRepository.findById(10L)).willReturn(Optional.of(invitation));
+
+        // when / then
+        Long otherId = 99L;
+        assertThatThrownBy(() -> policy.cancel(10L, otherId))
+                .isInstanceOf(FlagInvitationAccessException.class);
     }
 }
