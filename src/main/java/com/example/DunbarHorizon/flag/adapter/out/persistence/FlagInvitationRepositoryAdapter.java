@@ -44,6 +44,11 @@ public class FlagInvitationRepositoryAdapter implements FlagInvitationRepository
     }
 
     @Override
+    public void deleteById(Long id) {
+        jpaRepository.deleteById(id);
+    }
+
+    @Override
     public void hardDeleteByFlagIdsIn(Collection<Long> flagIds) {
         jpaRepository.hardDeleteByFlagIdsIn(flagIds);
     }

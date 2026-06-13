@@ -84,4 +84,11 @@ public class FlagInvitationManager {
 
         invitation.reject(rejectorId);
     }
+
+    public void cancel(Long invitationId, Long requesterId) {
+        FlagInvitation invitation = invitationRepository.findById(invitationId)
+                .orElseThrow(() -> new FlagInvitationNotFoundException(invitationId));
+
+        invitation.cancel(requesterId);
+    }
 }

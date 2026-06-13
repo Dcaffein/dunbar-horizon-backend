@@ -16,7 +16,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew test
 ```
 
-> Note: Tests are currently disabled in `build.gradle` (`enabled = false`). Remove that line to re-enable them.
 > Integration tests require Docker (Testcontainers: MySQL, Neo4j, MongoDB).
 
 ## 문서 지도 (Document Map)

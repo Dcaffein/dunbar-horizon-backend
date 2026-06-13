@@ -45,13 +45,18 @@ public class FlagInvitation extends BaseTimeEntity {
         validateInvitee(requesterId);
         validatePending();
         validateNotExpired();
-        this.status = FlagInvitationStatus.ACCEPTED;
     }
 
     public void reject(Long requesterId) {
         validateInvitee(requesterId);
         validatePending();
-        this.status = FlagInvitationStatus.REJECTED;
+    }
+
+    public void cancel(Long requesterId) {
+        if (!inviterId.equals(requesterId)) {
+            throw new FlagInvitationAccessException("초대를 보낸 본인만 취소할 수 있습니다.");
+        }
+        validatePending();
     }
 
     public boolean isExpired() {

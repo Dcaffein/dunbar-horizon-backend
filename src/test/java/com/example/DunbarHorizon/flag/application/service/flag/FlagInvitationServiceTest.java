@@ -75,8 +75,8 @@ class FlagInvitationServiceTest {
     }
 
     @Test
-    @DisplayName("수락 시 Manager에 위임하고 FlagParticipant를 저장한다")
-    void accept_DelegatesToPolicyAndSavesParticipant() {
+    @DisplayName("수락 시 Manager에 위임하고 FlagParticipant를 저장한 뒤 초대를 삭제한다")
+    void accept_DelegatesToPolicyAndSavesParticipantAndDeletes() {
         // given
         FlagParticipant newParticipant = mock(FlagParticipant.class);
         given(invitationManager.accept(10L, INVITEE_ID)).willReturn(newParticipant);
@@ -87,15 +87,28 @@ class FlagInvitationServiceTest {
         // then
         verify(invitationManager).accept(10L, INVITEE_ID);
         verify(flagRepository).saveParticipant(newParticipant);
+        verify(invitationRepository).deleteById(10L);
     }
 
     @Test
-    @DisplayName("거절 시 Manager에 위임한다")
-    void reject_DelegatesToPolicy() {
+    @DisplayName("거절 시 Manager에 위임하고 초대를 삭제한다")
+    void reject_DelegatesToPolicyAndDeletes() {
         // when
         flagInvitationService.reject(10L, INVITEE_ID);
 
         // then
         verify(invitationManager).reject(10L, INVITEE_ID);
+        verify(invitationRepository).deleteById(10L);
+    }
+
+    @Test
+    @DisplayName("취소 시 Manager에 위임하고 초대를 삭제한다")
+    void cancel_DelegatesToManagerAndDeletes() {
+        // when
+        flagInvitationService.cancel(10L, INVITER_ID);
+
+        // then
+        verify(invitationManager).cancel(10L, INVITER_ID);
+        verify(invitationRepository).deleteById(10L);
     }
 }

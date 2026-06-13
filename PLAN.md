@@ -1,137 +1,79 @@
-# PLAN — Task 72: 후기 조회 응답에 locked 필드 추가
+# PLAN: task-75 — Flag 초대 취소 및 수락/거절 후 초대 삭제
 
 ## 작업 목표
 
-`GET /api/v1/flags/{flagId}/memorials` 응답을 `{ memorials, locked }` 구조로 변경.
-서비스 레이어에서 2단계 체크로 비즈니스 규칙을 명시적으로 표현하고,
-기존 단일 복합쿼리(`findAllMemorialsIfMemorialized`)를 제거한다.
+1. 초대 취소 API 추가 (`DELETE /api/v1/flag-invitations/{invitationId}`) — inviter만 PENDING 초대를 취소 가능
+2. 수락·거절 처리 후 `flag_invitations` 행을 DB에서 삭제 (상태 업데이트 → 삭제로 변경)
 
 ---
 
-## 구현 계획
+## 현황 분석
 
-### 1. `MemorialListResult` 신규 (application/dto/result)
-
-```java
-public record MemorialListResult(
-        List<MemorialResult> memorials,
-        boolean locked
-) {
-    public static MemorialListResult empty() {
-        return new MemorialListResult(List.of(), false);
-    }
-
-    public static MemorialListResult locked() {
-        return new MemorialListResult(List.of(), true);
-    }
-
-    public static MemorialListResult of(List<MemorialResult> memorials) {
-        return new MemorialListResult(memorials, false);
-    }
-}
-```
-
-### 2. `FlagMemorialRepository` 포트 수정
-
-```java
-// 추가
-boolean existsByFlagIdAndWriterId(Long flagId, Long writerId);
-List<FlagMemorial> findAllByFlagId(Long flagId);
-
-// 제거
-List<FlagMemorial> findAllMemorialsIfMemorialized(Long flagId, Long viewerId);
-```
-
-### 3. `FlagMemorialJpaRepository` 수정
-
-Spring Data 메서드명 자동 생성:
-```java
-// 추가 (메서드명만으로 쿼리 자동 생성)
-boolean existsByFlagIdAndWriterId(Long flagId, Long writerId);
-List<FlagMemorial> findAllByFlagId(Long flagId);
-
-// 제거
-@Query("SELECT fm FROM FlagMemorial fm WHERE ...") findAllMemorialsIfMemorialized(...)
-```
-
-### 4. `FlagMemorialRepositoryAdapter` 수정
-
-```java
-// 추가
-@Override
-public boolean existsByFlagIdAndWriterId(Long flagId, Long writerId) {
-    return jpaRepository.existsByFlagIdAndWriterId(flagId, writerId);
-}
-
-@Override
-public List<FlagMemorial> findAllByFlagId(Long flagId) {
-    return jpaRepository.findAllByFlagId(flagId);
-}
-
-// 제거
-findAllMemorialsIfMemorialized(...) 위임 메서드
-```
-
-### 5. `FlagMemorialQueryUseCase` 반환 타입 변경
-
-```java
-// Before
-List<MemorialResult> getMemorials(Long flagId, Long viewerId);
-
-// After
-MemorialListResult getMemorials(Long flagId, Long viewerId);
-```
-
-### 6. `FlagMemorialQueryService` 로직 재작성
-
-```java
-@Override
-public MemorialListResult getMemorials(Long flagId, Long viewerId) {
-    if (!memorialRepository.existsByFlagId(flagId)) {
-        return MemorialListResult.empty();         // 후기 자체가 없음
-    }
-    if (!memorialRepository.existsByFlagIdAndWriterId(flagId, viewerId)) {
-        return MemorialListResult.locked();        // 본인이 안 남겨서 못 봄
-    }
-
-    List<FlagMemorial> memorials = memorialRepository.findAllByFlagId(flagId);
-    List<Long> writerIds = memorials.stream()
-            .map(FlagMemorial::getWriterId).distinct().toList();
-    Map<Long, FlagUserInfo> writerMap = flagUserPort.findUserInfosByIds(writerIds);
-
-    return MemorialListResult.of(
-            memorials.stream()
-                    .map(m -> MemorialResult.of(m,
-                            writerMap.getOrDefault(m.getWriterId(),
-                                    new FlagUserInfo(m.getWriterId(), "알 수 없는 사용자", null))))
-                    .toList()
-    );
-}
-```
-
-### 7. `FlagMemorialController` 응답 타입 변경
-
-```java
-// Before
-public ResponseEntity<List<MemorialResult>> getMemorials(...)
-
-// After
-public ResponseEntity<MemorialListResult> getMemorials(...) {
-    return ResponseEntity.ok(memorialQueryUseCase.getMemorials(flagId, currentUserId));
-}
-```
+| 항목 | 현재 상태 |
+|------|----------|
+| `FlagInvitationUseCase` | `invite`, `accept`, `reject`, `updateInvitePermission` — cancel 없음 |
+| `FlagInvitationController` | `POST /{id}/accept`, `POST /{id}/reject` — DELETE 엔드포인트 없음 |
+| `FlagInvitationManager.accept()` | `invitation.accept()` → status=ACCEPTED 후 행 유지 |
+| `FlagInvitationManager.reject()` | `invitation.reject()` → status=REJECTED 후 행 유지 |
+| `FlagInvitationService.accept/reject()` | dirty check로 status만 반영, `deleteById` 없음 |
+| `FlagInvitationRepository` (port) | `deleteById` 없음 |
+| `FlagInvitationJpaRepository` | `JpaRepository` 상속으로 `deleteById` 기본 제공 |
 
 ---
 
-## 테스트 계획
+## 변경 파일 목록
 
-### `FlagMemorialQueryServiceTest` (신규, Mockito)
+### 1. `FlagInvitation` (domain)
+- `accept()`, `reject()` — status 변경 코드 제거, **검증만** 수행하도록 축소
+  - `accept()`: invitee 체크 + pending 체크 + expired 체크
+  - `reject()`: invitee 체크 + pending 체크
+- `cancel()` 메서드 추가 — inviter 체크 + pending 체크
 
-| 케이스 | 검증 |
-|--------|------|
-| 후기 없음 | `locked=false`, `memorials=[]` |
-| 후기 있으나 본인 미작성 | `locked=true`, `memorials=[]` |
-| 본인 작성 완료 | `locked=false`, `memorials` 내용 포함 |
+### 2. `FlagInvitationRepository` (port/out)
+- `void deleteById(Long id)` 추가
+
+### 3. `FlagInvitationRepositoryAdapter`
+- `deleteById` 구현 → `jpaRepository.deleteById(id)` 위임
+
+### 4. `FlagInvitationManager`
+- `accept()`: `invitation.accept()` 검증 후 참여자 생성 반환, status 변경 없음
+- `reject()`: `invitation.reject()` 검증, status 변경 없음
+- `cancel(Long invitationId, Long requesterId)` 추가 — 조회 후 `invitation.cancel()` 검증
+
+### 5. `FlagInvitationUseCase` (port/in)
+- `void cancel(Long invitationId, Long requesterId)` 추가
+
+### 6. `FlagInvitationService`
+- `accept()`: 참여자 저장 후 `invitationRepository.deleteById(invitationId)` 추가
+- `reject()`: 검증 후 `invitationRepository.deleteById(invitationId)` 추가
+- `cancel()` 구현: `invitationManager.cancel()` → `invitationRepository.deleteById(invitationId)`
+
+### 7. `FlagInvitationController`
+- `DELETE /{invitationId}` 엔드포인트 추가
+
+---
+
+## 구현 방향
+
+- `FlagInvitation.accept/reject`에서 status 변경만 제거 — 행 자체를 삭제하므로 불필요
+- `FlagInvitationStatus` enum(ACCEPTED, REJECTED)은 제거하지 않음 — 스키마 변경 리스크 회피
+- 삭제는 서비스 레이어에서 담당, 도메인 객체는 검증만 책임
+
+---
+
+## 예상 사이드 이펙트
+
+- `accept` 후 동일 초대 ID 재호출 → `findById` 결과 없어 `FlagInvitationNotFoundException` (정상)
+- `reject` 후 재초대 허용 — `existsPendingByFlagIdAndInviteeId` 체크를 통과하므로 의도된 동작
+- 기존 테스트에서 accept/reject 후 status 검증 assertions 수정 필요
+
+---
+
+## 테스트 전략
+
+- `FlagInvitationServiceTest`: accept/reject 후 `invitationRepository.deleteById` 호출 verify 추가
+- `FlagInvitationManagerTest`: `cancel()` 케이스 추가 (non-inviter 취소, 이미 처리된 초대 취소)
+- 기존 status assertion → `deleteById` 호출 검증으로 교체
 
 ---
 
@@ -139,11 +81,12 @@ public ResponseEntity<MemorialListResult> getMemorials(...) {
 
 | 파일 | 유형 |
 |------|------|
-| `flag/application/dto/result/MemorialListResult.java` | 신규 |
-| `flag/domain/memorial/repository/FlagMemorialRepository.java` | 수정 |
-| `flag/adapter/out/persistence/jpa/FlagMemorialJpaRepository.java` | 수정 |
-| `flag/adapter/out/persistence/FlagMemorialRepositoryAdapter.java` | 수정 |
-| `flag/application/port/in/FlagMemorialQueryUseCase.java` | 수정 |
-| `flag/application/service/memorial/FlagMemorialQueryService.java` | 수정 |
-| `flag/adapter/in/web/FlagMemorialController.java` | 수정 |
-| `flag/application/service/memorial/FlagMemorialQueryServiceTest.java` | 신규 |
+| `flag/domain/invitation/FlagInvitation.java` | 수정 |
+| `flag/domain/invitation/repository/FlagInvitationRepository.java` | 수정 |
+| `flag/adapter/out/persistence/FlagInvitationRepositoryAdapter.java` | 수정 |
+| `flag/domain/invitation/FlagInvitationManager.java` | 수정 |
+| `flag/application/port/in/FlagInvitationUseCase.java` | 수정 |
+| `flag/application/service/flag/FlagInvitationService.java` | 수정 |
+| `flag/adapter/in/web/FlagInvitationController.java` | 수정 |
+| `flag/application/service/flag/FlagInvitationServiceTest.java` | 수정 |
+| `flag/domain/invitation/FlagInvitationManagerTest.java` | 수정 |
