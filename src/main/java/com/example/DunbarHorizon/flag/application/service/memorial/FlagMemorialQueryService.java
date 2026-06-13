@@ -31,7 +31,7 @@ public class FlagMemorialQueryService implements FlagMemorialQueryUseCase {
         Long hostId = flagRepository.findHostIdById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
         if (!hostId.equals(viewerId) && !flagRepository.isParticipating(flagId, viewerId)) {
-            throw new FlagAuthorizationException("플래그 참여자만 추도문을 조회할 수 있습니다.");
+            throw new FlagAuthorizationException("플래그 참여자만 Memorial을 조회할 수 있습니다.");
         }
 
         if (!memorialRepository.existsByFlagId(flagId)) {

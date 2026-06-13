@@ -53,7 +53,7 @@ class FlagMemorialCommandServiceTest {
     }
 
     @Test
-    @DisplayName("정상적으로 추도문을 생성하고 ID를 반환한다")
+    @DisplayName("정상적으로 Memorial을 생성하고 ID를 반환한다")
     void createMemorial_Success() {
         // given
         Flag flag = createEndedFlag();
@@ -72,7 +72,7 @@ class FlagMemorialCommandServiceTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 플래그에 추도문을 작성하면 FlagNotFoundException이 발생한다")
+    @DisplayName("존재하지 않는 플래그에 Memorial을 작성하면 FlagNotFoundException이 발생한다")
     void createMemorial_FlagNotFound_ThrowsException() {
         // given
         given(flagRepository.findById(999L)).willReturn(Optional.empty());
@@ -83,7 +83,7 @@ class FlagMemorialCommandServiceTest {
     }
 
     @Test
-    @DisplayName("작성자가 추도문을 수정할 수 있다")
+    @DisplayName("작성자가 Memorial을 수정할 수 있다")
     void updateMemorial_ByWriter_Success() {
         // given
         FlagMemorial mockMemorial = mock(FlagMemorial.class);
@@ -97,7 +97,7 @@ class FlagMemorialCommandServiceTest {
     }
 
     @Test
-    @DisplayName("작성자가 아닌 사용자가 추도문을 수정하면 FlagAuthorizationException이 발생한다")
+    @DisplayName("작성자가 아닌 사용자가 Memorial을 수정하면 FlagAuthorizationException이 발생한다")
     void updateMemorial_ByNonWriter_ThrowsException() {
         // given
         FlagMemorial mockMemorial = mock(FlagMemorial.class);
@@ -111,7 +111,7 @@ class FlagMemorialCommandServiceTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 추도문을 수정하면 FlagMemorialNotFoundException이 발생한다")
+    @DisplayName("존재하지 않는 Memorial을 수정하면 FlagMemorialNotFoundException이 발생한다")
     void updateMemorial_NotFound_ThrowsException() {
         // given
         given(memorialRepository.findById(999L)).willReturn(Optional.empty());
@@ -122,7 +122,7 @@ class FlagMemorialCommandServiceTest {
     }
 
     @Test
-    @DisplayName("작성자가 추도문을 삭제할 수 있다")
+    @DisplayName("작성자가 Memorial을 삭제할 수 있다")
     void deleteMemorial_ByWriter_Success() {
         // given
         FlagMemorial mockMemorial = mock(FlagMemorial.class);
@@ -139,7 +139,7 @@ class FlagMemorialCommandServiceTest {
     }
 
     @Test
-    @DisplayName("작성자가 아닌 사용자가 추도문을 삭제하면 FlagAuthorizationException이 발생한다")
+    @DisplayName("작성자가 아닌 사용자가 Memorial을 삭제하면 FlagAuthorizationException이 발생한다")
     void deleteMemorial_ByNonWriter_ThrowsException() {
         // given
         FlagMemorial mockMemorial = mock(FlagMemorial.class);
@@ -153,7 +153,7 @@ class FlagMemorialCommandServiceTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 추도문을 삭제하면 FlagMemorialNotFoundException이 발생한다")
+    @DisplayName("존재하지 않는 Memorial을 삭제하면 FlagMemorialNotFoundException이 발생한다")
     void deleteMemorial_NotFound_ThrowsException() {
         // given
         given(memorialRepository.findById(999L)).willReturn(Optional.empty());
