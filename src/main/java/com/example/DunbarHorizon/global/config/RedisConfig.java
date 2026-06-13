@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.global.config;
 
+import com.example.DunbarHorizon.social.application.dto.result.NetworkGraphResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -18,6 +19,7 @@ import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
@@ -56,7 +58,7 @@ public class RedisConfig implements CachingConfigurer {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
+        RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(10))
                 .computePrefixWith(cacheName -> cacheName + ":")
                 .serializeValuesWith(
@@ -65,8 +67,20 @@ public class RedisConfig implements CachingConfigurer {
                         )
                 );
 
+        // NetworkGraphResult는 record(final class)라 GenericJackson2JsonRedisSerializer의
+        // NON_FINAL 타입 정책에서 제외되어 LinkedHashMap으로 역직렬화됨.
+        // 해당 캐시에 타입을 명시한 Jackson2JsonRedisSerializer를 별도 설정한다.
+        RedisCacheConfiguration networkGraphConfig = defaultConfig
+                .serializeValuesWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(
+                                new Jackson2JsonRedisSerializer<>(objectMapper, NetworkGraphResult.class)
+                        )
+                );
+
         return RedisCacheManager.builder(connectionFactory)
-                .cacheDefaults(config)
+                .cacheDefaults(defaultConfig)
+                .withCacheConfiguration("dunbar:network:default", networkGraphConfig)
+                .withCacheConfiguration("dunbar:network:label", networkGraphConfig)
                 .build();
     }
 
