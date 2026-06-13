@@ -74,4 +74,60 @@ class LabelMemberShipEventListenerTest {
         // then
         verify(labelRepository, never()).saveAll(any());
     }
+
+    @Test
+    @DisplayName("한쪽만 상대방을 라벨에 등록한 경우 해당 쪽만 saveAll이 호출된다")
+    void handleFriendShipDeleted_한쪽만_라벨_보유_시_단방향_저장() {
+        // given
+        Long userAId = 1L;
+        Long userBId = 2L;
+        FriendShipDeletedEvent event = new FriendShipDeletedEvent(userAId, userBId);
+
+        SocialUser userA = new SocialUser(userAId, "userA", null);
+        SocialUser userB = new SocialUser(userBId, "userB", null);
+
+        // A는 B가 포함된 라벨 1개 보유
+        Label labelA = mock(Label.class);
+        given(labelA.getMembers()).willReturn(new HashSet<>(Set.of(userB)));
+        given(labelRepository.findLabelsByOwnerAndMember(userAId, userBId)).willReturn(List.of(labelA));
+
+        // B는 A가 포함된 라벨 없음
+        given(labelRepository.findLabelsByOwnerAndMember(userBId, userAId)).willReturn(List.of());
+
+        // when
+        labelMemberShipEventListener.handleFriendShipDeleted(event);
+
+        // then
+        verify(labelA).removeMember(userB);
+        verify(labelRepository, times(1)).saveAll(any()); // A 쪽만 saveAll 호출
+    }
+
+    @Test
+    @DisplayName("여러 라벨에 해당 멤버가 포함된 경우 모든 라벨에서 제거하고 한 번에 saveAll을 호출한다")
+    void handleFriendShipDeleted_다중_라벨에서_멤버_일괄_제거() {
+        // given
+        Long userAId = 1L;
+        Long userBId = 2L;
+        FriendShipDeletedEvent event = new FriendShipDeletedEvent(userAId, userBId);
+
+        SocialUser userB = new SocialUser(userBId, "userB", null);
+
+        // A가 B를 포함한 라벨 2개 보유
+        Label label1 = mock(Label.class);
+        given(label1.getMembers()).willReturn(new HashSet<>(Set.of(userB)));
+        Label label2 = mock(Label.class);
+        given(label2.getMembers()).willReturn(new HashSet<>(Set.of(userB)));
+        given(labelRepository.findLabelsByOwnerAndMember(userAId, userBId)).willReturn(List.of(label1, label2));
+
+        // B 쪽은 라벨 없음
+        given(labelRepository.findLabelsByOwnerAndMember(userBId, userAId)).willReturn(List.of());
+
+        // when
+        labelMemberShipEventListener.handleFriendShipDeleted(event);
+
+        // then — 두 라벨 모두 removeMember 호출, saveAll은 한 번
+        verify(label1).removeMember(userB);
+        verify(label2).removeMember(userB);
+        verify(labelRepository, times(1)).saveAll(List.of(label1, label2));
+    }
 }

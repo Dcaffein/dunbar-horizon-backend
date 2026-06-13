@@ -114,6 +114,35 @@ class FriendshipNeo4jRepositoryTest {
         assertThat(updated.getIntimacy()).isCloseTo(updated.getIntimacy(), within(0.01));
     }
 
+    @Test
+    @DisplayName("친구 관계를 삭제하면 더 이상 조회되지 않는다")
+    void deleteById_Success() {
+        // given
+        Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.save(friendship);
+        assertThat(friendshipRepository.findById("1_2")).isPresent();
+
+        // when
+        friendshipRepository.deleteById("1_2");
+
+        // then
+        assertThat(friendshipRepository.findById("1_2")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("친구 관계 삭제 후 existsFriendshipBetween은 false를 반환한다")
+    void deleteById_ExistenceCheck() {
+        // given
+        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
+        assertThat(friendshipRepository.existsFriendshipBetween(1L, 2L)).isTrue();
+
+        // when
+        friendshipRepository.deleteById("1_2");
+
+        // then
+        assertThat(friendshipRepository.existsFriendshipBetween(1L, 2L)).isFalse();
+    }
+
     // --- [새롭게 추가된 핵심 테스트들] ---
 
     @Test
