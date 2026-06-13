@@ -53,7 +53,7 @@ public class FlagEncoreInvitationListener {
 
         List<FlagInvitation> saved = invitationRepository.saveAll(invitations);
         saved.forEach(inv -> eventPublisher.publishEvent(
-                new FlagInvitationSentEvent(inv.getFlagId(), inv.getId(), inv.getInviteeId(), event.title())
+                new FlagInvitationSentEvent(inv.getFlagId(), inv.getId(), inv.getInviteeId(), event.title(), true)
         ));
     }
 }
