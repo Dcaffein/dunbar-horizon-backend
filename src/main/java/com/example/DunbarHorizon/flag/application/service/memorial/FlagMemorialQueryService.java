@@ -58,4 +58,9 @@ public class FlagMemorialQueryService implements FlagMemorialQueryUseCase {
                         .toList()
         );
     }
+
+    @Override
+    public long getMemorialCount(Long flagId) {
+        return memorialRepository.countByFlagId(flagId);
+    }
 }

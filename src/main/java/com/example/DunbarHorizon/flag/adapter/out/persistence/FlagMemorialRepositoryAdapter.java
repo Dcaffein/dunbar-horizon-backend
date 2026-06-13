@@ -36,6 +36,11 @@ public class FlagMemorialRepositoryAdapter implements FlagMemorialRepository {
     }
 
     @Override
+    public long countByFlagId(Long flagId) {
+        return jpaRepository.countByFlagId(flagId);
+    }
+
+    @Override
     public List<FlagMemorial> findAllByFlagId(Long flagId) {
         return jpaRepository.findAllByFlagId(flagId);
     }

@@ -40,6 +40,11 @@ public class FlagMemorialController {
         return ResponseEntity.ok(memorialQueryUseCase.getMemorials(flagId, currentUserId));
     }
 
+    @GetMapping("/{flagId}/memorials/count")
+    public ResponseEntity<Long> getMemorialCount(@PathVariable Long flagId) {
+        return ResponseEntity.ok(memorialQueryUseCase.getMemorialCount(flagId));
+    }
+
     @PatchMapping("/memorials/{id}")
     public ResponseEntity<Void> updateMemorial(
             @PathVariable Long id,

@@ -14,6 +14,7 @@ public interface FlagMemorialJpaRepository extends JpaRepository<FlagMemorial, L
 
     boolean existsByFlagId(Long flagId);
     boolean existsByFlagIdAndWriterId(Long flagId, Long writerId);
+    long countByFlagId(Long flagId);
     List<FlagMemorial> findAllByFlagId(Long flagId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)

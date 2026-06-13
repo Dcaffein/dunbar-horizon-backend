@@ -48,6 +48,17 @@ class FlagMemorialControllerTest extends BaseControllerTest {
     }
 
     @Test
+    @DisplayName("추도문 카운트 조회 시 200을 반환하고 getMemorialCount()를 호출한다")
+    void getMemorialCount_Returns200() throws Exception {
+        given(flagMemorialQueryUseCase.getMemorialCount(1L)).willReturn(3L);
+
+        mockMvc.perform(get("/api/v1/flags/1/memorials/count"))
+                .andExpect(status().isOk());
+
+        verify(flagMemorialQueryUseCase).getMemorialCount(1L);
+    }
+
+    @Test
     @DisplayName("추도문 수정 시 200을 반환하고 updateMemorial()를 호출한다")
     void updateMemorial_Returns200() throws Exception {
         String body = """
