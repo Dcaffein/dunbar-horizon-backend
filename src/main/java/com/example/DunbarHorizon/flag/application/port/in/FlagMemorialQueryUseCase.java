@@ -1,9 +1,7 @@
 package com.example.DunbarHorizon.flag.application.port.in;
 
-import com.example.DunbarHorizon.flag.application.dto.result.MemorialResult;
-
-import java.util.List;
+import com.example.DunbarHorizon.flag.application.dto.result.MemorialListResult;
 
 public interface FlagMemorialQueryUseCase {
-    List<MemorialResult> getMemorials(Long flagId, Long viewerId);
+    MemorialListResult getMemorials(Long flagId, Long viewerId);
 }

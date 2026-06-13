@@ -1,12 +1,11 @@
 package com.example.DunbarHorizon.flag.adapter.in.web;
 
+import com.example.DunbarHorizon.flag.application.dto.result.MemorialListResult;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
-
-import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -40,7 +39,7 @@ class FlagMemorialControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("추도문 목록 조회 시 200을 반환하고 getMemorials()를 호출한다")
     void getMemorials_Returns200() throws Exception {
-        given(flagMemorialQueryUseCase.getMemorials(1L, CURRENT_USER_ID)).willReturn(List.of());
+        given(flagMemorialQueryUseCase.getMemorials(1L, CURRENT_USER_ID)).willReturn(MemorialListResult.empty());
 
         mockMvc.perform(get("/api/v1/flags/1/memorials"))
                 .andExpect(status().isOk());
