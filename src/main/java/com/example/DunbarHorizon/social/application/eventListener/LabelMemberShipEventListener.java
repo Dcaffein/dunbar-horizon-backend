@@ -1,13 +1,15 @@
 package com.example.DunbarHorizon.social.application.eventListener;
 
+import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendShipDeletedEvent;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.repository.LabelRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
 
@@ -18,8 +20,9 @@ public class LabelMemberShipEventListener {
 
     private final LabelRepository labelRepository;
 
-    @EventListener
-    @Transactional
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Neo4jTransactional
     public void handleFriendShipDeleted(FriendShipDeletedEvent event) {
         removeFriendFromLabels(event.userAId(), event.userBId());
         removeFriendFromLabels(event.userBId(), event.userAId());
