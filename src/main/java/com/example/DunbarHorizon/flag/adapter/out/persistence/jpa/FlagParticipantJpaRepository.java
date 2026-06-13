@@ -34,7 +34,8 @@ public interface FlagParticipantJpaRepository extends JpaRepository<FlagParticip
     @Query("SELECT fp.participantId FROM FlagParticipant fp WHERE fp.flagId = :flagId")
     List<Long> findAllParticipantIdsByFlagId(@Param("flagId") Long flagId);
 
-    List<Long> findFlagIdByParticipantId(Long participantId);
+    @Query("SELECT fp.flagId FROM FlagParticipant fp WHERE fp.participantId = :participantId")
+    List<Long> findFlagIdsByParticipantId(@Param("participantId") Long participantId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM FlagParticipant fp WHERE fp.flagId = :flagId")

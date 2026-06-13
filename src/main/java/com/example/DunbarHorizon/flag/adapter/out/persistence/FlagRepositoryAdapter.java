@@ -140,7 +140,7 @@ public class FlagRepositoryAdapter implements FlagRepository {
 
     @Override
     public List<Long> findFlagIdsByParticipantId(Long participantId) {
-        return participantJpaRepository.findFlagIdByParticipantId(participantId);
+        return participantJpaRepository.findFlagIdsByParticipantId(participantId);
     }
 
     @Override
