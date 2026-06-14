@@ -24,6 +24,7 @@ public interface FlagRepository {
     List<Flag> findAllByIdIn(Collection<Long> ids);
     List<Flag> findAllByHostId(Long hostId);
     List<Flag> findAllByHostIdsAndStatus(Set<Long> friendIds, FlagStatus flagStatus);
+    List<Flag> findRecentByUserId(Long userId, int limit);
 
     // FlagParticipant
     FlagParticipant saveParticipant(FlagParticipant participant);

@@ -59,6 +59,36 @@ class FlagQueryServiceTest {
         return new FlagUserInfo(userId, "사용자" + userId, null);
     }
 
+    // ===== 최근 Flag 조회 =====
+
+    @Test
+    @DisplayName("최근 Flag 조회 시 host + 참여 Flag 합산 결과가 반환된다")
+    void getRecentFlags_ReturnsCombinedFlags() {
+        Long participantUserId = 2L;
+        Flag hostedFlag = createRecruitingFlag(1L);
+        Flag participatedFlag = createRecruitingFlag(2L);
+        ReflectionTestUtils.setField(participatedFlag, "hostId", participantUserId);
+
+        given(flagRepository.findRecentByUserId(HOST_ID, 5)).willReturn(List.of(hostedFlag, participatedFlag));
+        given(flagRepository.countParticipantsByFlagIds(anyCollection())).willReturn(Map.of(1L, 2, 2L, 1));
+        given(flagUserPort.findUserInfosByIds(anySet()))
+                .willReturn(Map.of(HOST_ID, userInfo(HOST_ID), participantUserId, userInfo(participantUserId)));
+
+        List<FlagResult> result = flagQueryService.getRecentFlags(HOST_ID);
+
+        assertThat(result).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("최근 Flag가 없으면 빈 리스트가 반환된다")
+    void getRecentFlags_NoFlags_ReturnsEmpty() {
+        given(flagRepository.findRecentByUserId(HOST_ID, 5)).willReturn(List.of());
+
+        List<FlagResult> result = flagQueryService.getRecentFlags(HOST_ID);
+
+        assertThat(result).isEmpty();
+    }
+
     // ===== 목록 조회 =====
 
     @Test
