@@ -1,16 +1,12 @@
 package com.example.DunbarHorizon.flag.adapter.in.web;
 
-import com.example.DunbarHorizon.flag.application.port.in.FlagRole;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
-import java.util.List;
-
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -64,28 +60,6 @@ class FlagControllerTest extends BaseControllerTest {
                 .andExpect(status().isCreated());
 
         verify(flagHostUseCase).encoreFlag(any());
-    }
-
-    @Test
-    @DisplayName("친구 플래그 조회 시 200을 반환하고 getFriendFlags()를 호출한다")
-    void getFriendFlags_Returns200() throws Exception {
-        given(flagQueryUseCase.getFriendFlags(CURRENT_USER_ID)).willReturn(List.of());
-
-        mockMvc.perform(get("/api/v1/flags/friends"))
-                .andExpect(status().isOk());
-
-        verify(flagQueryUseCase).getFriendFlags(CURRENT_USER_ID);
-    }
-
-    @Test
-    @DisplayName("내 플래그 조회(HOST) 시 200을 반환하고 getMyFlagsByRole()를 호출한다")
-    void getMyFlags_HostRole_Returns200() throws Exception {
-        given(flagQueryUseCase.getMyFlagsByRole(CURRENT_USER_ID, FlagRole.HOST)).willReturn(List.of());
-
-        mockMvc.perform(get("/api/v1/flags/me").param("role", "HOST"))
-                .andExpect(status().isOk());
-
-        verify(flagQueryUseCase).getMyFlagsByRole(CURRENT_USER_ID, FlagRole.HOST);
     }
 
     @Test

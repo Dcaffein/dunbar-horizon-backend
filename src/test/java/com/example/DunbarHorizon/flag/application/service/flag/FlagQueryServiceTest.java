@@ -63,13 +63,13 @@ class FlagQueryServiceTest {
 
     @Test
     @DisplayName("HOST 역할로 조회하면 호스팅 중인 플래그 목록이 반환된다")
-    void getMyFlagsByRole_Host_ReturnsManagedFlags() {
+    void getFlagsByRole_Host_ReturnsManagedFlags() {
         Flag flag = createRecruitingFlag(1L);
         given(flagRepository.findAllByHostId(HOST_ID)).willReturn(List.of(flag));
         given(flagRepository.countParticipantsByFlagIds(anyCollection())).willReturn(Map.of(1L, 3));
         given(flagUserPort.findUserInfosByIds(Set.of(HOST_ID))).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
 
-        List<FlagResult> result = flagQueryService.getMyFlagsByRole(HOST_ID, FlagRole.HOST);
+        List<FlagResult> result = flagQueryService.getFlagsByRole(HOST_ID, FlagRole.HOST);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).title()).isEqualTo("테스트 플래그");
@@ -78,14 +78,14 @@ class FlagQueryServiceTest {
 
     @Test
     @DisplayName("PARTICIPANT 역할로 조회하면 참여 중인 플래그 목록이 반환된다")
-    void getMyFlagsByRole_Participant_ReturnsParticipatingFlags() {
+    void getFlagsByRole_Participant_ReturnsParticipatingFlags() {
         Flag flag = createRecruitingFlag(1L);
         given(flagRepository.findFlagIdsByParticipantId(HOST_ID)).willReturn(List.of(1L));
         given(flagRepository.findAllByIdIn(List.of(1L))).willReturn(List.of(flag));
         given(flagRepository.countParticipantsByFlagIds(anyCollection())).willReturn(Map.of(1L, 1));
         given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
 
-        List<FlagResult> result = flagQueryService.getMyFlagsByRole(HOST_ID, FlagRole.PARTICIPANT);
+        List<FlagResult> result = flagQueryService.getFlagsByRole(HOST_ID, FlagRole.PARTICIPANT);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).participantCount()).isEqualTo(1);
@@ -93,23 +93,23 @@ class FlagQueryServiceTest {
 
     @Test
     @DisplayName("참여 플래그가 없으면 빈 리스트가 반환된다")
-    void getMyFlagsByRole_ParticipantNoFlags_ReturnsEmpty() {
+    void getFlagsByRole_ParticipantNoFlags_ReturnsEmpty() {
         given(flagRepository.findFlagIdsByParticipantId(HOST_ID)).willReturn(List.of());
 
-        List<FlagResult> result = flagQueryService.getMyFlagsByRole(HOST_ID, FlagRole.PARTICIPANT);
+        List<FlagResult> result = flagQueryService.getFlagsByRole(HOST_ID, FlagRole.PARTICIPANT);
 
         assertThat(result).isEmpty();
     }
 
     @Test
     @DisplayName("참여자가 없는 플래그는 participantCount가 0이다")
-    void getMyFlagsByRole_NoParticipants_CountIsZero() {
+    void getFlagsByRole_NoParticipants_CountIsZero() {
         Flag flag = createRecruitingFlag(1L);
         given(flagRepository.findAllByHostId(HOST_ID)).willReturn(List.of(flag));
         given(flagRepository.countParticipantsByFlagIds(anyCollection())).willReturn(Map.of());
         given(flagUserPort.findUserInfosByIds(anySet())).willReturn(Map.of(HOST_ID, userInfo(HOST_ID)));
 
-        List<FlagResult> result = flagQueryService.getMyHostingFlags(HOST_ID);
+        List<FlagResult> result = flagQueryService.getFlagsByRole(HOST_ID, FlagRole.HOST);
 
         assertThat(result.get(0).participantCount()).isEqualTo(0);
     }
