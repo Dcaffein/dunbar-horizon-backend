@@ -17,7 +17,9 @@ import java.util.List;
 
 import static com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.schema.SocialGraphSchema.*;
 import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.*;
+import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.ATTACHED_TO;
 import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.LABEL;
+import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.OWNS_LABEL;
 import static com.example.DunbarHorizon.social.domain.socialUser.constant.SocialUserConstants.USER_REFERENCE;
 
 @Repository
@@ -91,7 +93,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
             ("""
             // [0] 지정 라벨에 속한 친구만 네트워크 풀로 제한
             MATCH (me:#{UR} {#{ID}: $meId})
-            MATCH (me)-[:HAS_LABEL]->(label:#{LBL})-[:HAS_MEMBER]->(member:#{UR})
+            MATCH (me)-[:#{OL}]->(label:#{LBL})-[:#{AT}]->(member:#{UR})
             WHERE label.#{ID} = $labelId
             MATCH (me)-[r_me:#{HF}]->(myFriendship:#{F})<-[:#{HF}]-(member)
             WITH me, member, myFriendship, coalesce(r_me.#{INTEREST}, 0.0) AS interestScore
@@ -100,6 +102,8 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
             """)
             .replace("#{UR}", USER_REFERENCE)
             .replace("#{LBL}", LABEL)
+            .replace("#{OL}", OWNS_LABEL)
+            .replace("#{AT}", ATTACHED_TO)
             .replace("#{F}", FRIENDSHIP)
             .replace("#{HF}", HAS_FRIENDSHIP)
             .replace("#{ID}", PROP_ID)

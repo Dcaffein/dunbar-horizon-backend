@@ -14,7 +14,7 @@ import java.util.Set;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Node("SocialUser")
+@Node(SocialUserConstants.SOCIAL_USER)
 public class SocialUser implements UserReference {
     @Id
     private Long id;

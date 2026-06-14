@@ -17,10 +17,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.FRIENDSHIP;
 import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.HAS_FRIENDSHIP;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Node("Friendship")
+@Node(FRIENDSHIP)
 public class Friendship {
     @Getter
     @Id
