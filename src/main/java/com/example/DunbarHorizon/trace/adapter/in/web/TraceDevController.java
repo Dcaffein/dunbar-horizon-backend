@@ -43,7 +43,7 @@ public class TraceDevController {
         LocalDateTime yesterday = now.minusDays(1);
 
         entityManager.createNativeQuery("""
-                INSERT INTO trace
+                INSERT INTO traces
                     (user_a_id, user_b_id, user_a_count, user_b_count,
                      user_a_last_visited_at, user_b_last_visited_at,
                      is_revealed, revealed_at, last_traced_at, version,
