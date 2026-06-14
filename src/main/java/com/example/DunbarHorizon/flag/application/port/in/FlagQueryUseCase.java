@@ -8,5 +8,6 @@ import java.util.List;
 public interface FlagQueryUseCase {
     List<FlagResult> getFriendFlags(Long userId);
     List<FlagResult> getFlagsByRole(Long userId, FlagRole role);
+    List<FlagResult> getRecentFlags(Long userId);
     FlagDetailResult getFlagDetail(Long flagId, Long viewerId);
 }

@@ -49,6 +49,23 @@ public class FlagQueryService implements FlagQueryUseCase {
 
 
     @Override
+    public List<FlagResult> getRecentFlags(Long userId) {
+        List<Flag> flags = flagRepository.findRecentByUserId(userId, 5);
+        if (flags.isEmpty()) return List.of();
+
+        Set<Long> hostIds = flags.stream().map(Flag::getHostId).collect(Collectors.toSet());
+        Map<Long, FlagUserInfo> hostInfoMap = flagUserPort.findUserInfosByIds(hostIds);
+
+        List<Long> flagIds = flags.stream().map(Flag::getId).toList();
+        Map<Long, Integer> countMap = flagRepository.countParticipantsByFlagIds(flagIds);
+
+        return flags.stream()
+                .map(flag -> FlagResult.of(flag, hostInfoMap.get(flag.getHostId()),
+                        countMap.getOrDefault(flag.getId(), 0)))
+                .toList();
+    }
+
+    @Override
     public FlagDetailResult getFlagDetail(Long flagId, Long viewerId) {
         Flag flag = flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));

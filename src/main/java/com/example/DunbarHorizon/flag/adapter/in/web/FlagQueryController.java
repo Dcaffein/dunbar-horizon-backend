@@ -38,6 +38,13 @@ public class FlagQueryController {
         return ResponseEntity.ok(flagQueryUseCase.getFlagsByRole(userId, role));
     }
 
+    @GetMapping("/users/{userId}/recent")
+    public ResponseEntity<List<FlagResult>> getRecentFlags(
+            @PathVariable Long userId
+    ) {
+        return ResponseEntity.ok(flagQueryUseCase.getRecentFlags(userId));
+    }
+
     @GetMapping("/friends")
     public ResponseEntity<List<FlagResult>> getFriendFlags(
             @CurrentUserId Long currentUserId

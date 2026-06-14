@@ -7,6 +7,7 @@ import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -74,6 +75,11 @@ public class FlagRepositoryAdapter implements FlagRepository {
     @Override
     public List<Flag> findAllByHostId(Long hostId) {
         return flagJpaRepository.findAllByHostId(hostId);
+    }
+
+    @Override
+    public List<Flag> findRecentByUserId(Long userId, int limit) {
+        return flagJpaRepository.findRecentByUserId(userId, PageRequest.of(0, limit));
     }
 
     @Override

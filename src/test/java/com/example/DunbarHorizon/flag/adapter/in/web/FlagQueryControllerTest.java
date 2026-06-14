@@ -83,6 +83,18 @@ class FlagQueryControllerTest extends BaseControllerTest {
     }
 
     @Test
+    @DisplayName("특정 유저 최근 플래그 조회 시 200을 반환하고 getRecentFlags()를 호출한다")
+    void getRecentFlags_Returns200() throws Exception {
+        Long targetUserId = 2L;
+        given(flagQueryUseCase.getRecentFlags(targetUserId)).willReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/flags/users/{userId}/recent", targetUserId))
+                .andExpect(status().isOk());
+
+        verify(flagQueryUseCase).getRecentFlags(targetUserId);
+    }
+
+    @Test
     @DisplayName("특정 유저 플래그 조회(PARTICIPANT) 시 200을 반환하고 getFlagsByRole()를 호출한다")
     void getUserFlags_ParticipantRole_Returns200() throws Exception {
         Long targetUserId = 2L;

@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.flag.adapter.out.persistence.jpa;
 
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -56,6 +57,12 @@ public interface FlagJpaRepository extends JpaRepository<Flag, Long> {
     default List<Long> findIdsByDeletedAtBefore(LocalDateTime bufferTime) {
         return _findIdsInternal(bufferTime);
     }
+
+    @Query("SELECT f FROM Flag f " +
+           "WHERE f.hostId = :userId " +
+           "OR f.id IN (SELECT fp.flagId FROM FlagParticipant fp WHERE fp.participantId = :userId) " +
+           "ORDER BY f.createdAt DESC")
+    List<Flag> findRecentByUserId(@Param("userId") Long userId, Pageable pageable);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM Flag f WHERE f.id IN :ids")
