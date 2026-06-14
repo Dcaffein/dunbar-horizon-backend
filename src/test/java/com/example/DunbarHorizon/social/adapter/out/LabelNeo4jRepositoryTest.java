@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.neo4j.core.Neo4jClient;
 
 import java.util.List;
 import java.util.Set;
@@ -25,12 +26,16 @@ class LabelNeo4jRepositoryTest {
     @Autowired
     private SocialUserNeo4jRepository socialUserNeo4jRepository;
 
+    @Autowired
+    private Neo4jClient neo4jClient;
+
     private SocialUser owner;
     private SocialUser friend1;
     private SocialUser friend2;
 
     @BeforeEach
     void setUp() {
+        neo4jClient.query("MATCH (n) DETACH DELETE n").run();
         owner = socialUserNeo4jRepository.save(new SocialUser(1L, "소유자", "url1"));
         friend1 = socialUserNeo4jRepository.save(new SocialUser(2L, "친구1", "url2"));
         friend2 = socialUserNeo4jRepository.save(new SocialUser(3L, "친구2", "url3"));

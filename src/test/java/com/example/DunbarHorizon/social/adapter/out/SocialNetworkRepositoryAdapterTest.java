@@ -64,9 +64,9 @@ class SocialNetworkRepositoryAdapterTest {
                 CREATE (tx)-[:HAS_FRIENDSHIP {isRoutable: false, interestScore: 0.0}]->(:Friendship {intimacy: 0.4})<-[:HAS_FRIENDSHIP {isRoutable: true,  interestScore: 0.0}]-(fc)
 
                 CREATE (lbl:Label {id: 'test-label-id'})
-                CREATE (me)-[:HAS_LABEL]->(lbl)
-                CREATE (lbl)-[:HAS_MEMBER]->(fa)
-                CREATE (lbl)-[:HAS_MEMBER]->(fb)
+                CREATE (me)-[:OWNS_LABEL]->(lbl)
+                CREATE (lbl)-[:ATTACHED_TO]->(fa)
+                CREATE (lbl)-[:ATTACHED_TO]->(fb)
                 """).run();
     }
 

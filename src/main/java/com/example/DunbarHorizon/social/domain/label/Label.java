@@ -13,12 +13,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.ATTACHED_TO;
+import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.LABEL;
 import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.OWNS_LABEL;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
-@Node("Label")
+@Node(LABEL)
 public class Label {
     @Id
     private String id;

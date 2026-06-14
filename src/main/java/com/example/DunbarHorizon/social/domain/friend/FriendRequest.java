@@ -10,13 +10,14 @@ import org.springframework.data.neo4j.core.schema.*;
 
 import java.time.LocalDateTime;
 
+import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.FRIEND_REQUEST;
 import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.SENT_FRIEND_REQUEST;
 import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.FRIEND_REQUEST_TO;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Node("FriendRequest")
+@Node(FRIEND_REQUEST)
 public class FriendRequest {
     @Id
     private String id;
