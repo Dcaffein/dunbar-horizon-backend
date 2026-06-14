@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
+@Table(name = "flag_memorials")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FlagMemorial extends BaseTimeAggregateRoot {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

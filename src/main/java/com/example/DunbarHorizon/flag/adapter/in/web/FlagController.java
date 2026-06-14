@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.flag.adapter.in.web;
 
 import com.example.DunbarHorizon.flag.adapter.in.web.dto.*;
 import com.example.DunbarHorizon.flag.application.port.in.*;
-import com.example.DunbarHorizon.flag.application.dto.result.FlagResult;
 import com.example.DunbarHorizon.flag.application.port.in.command.*;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import jakarta.validation.Valid;
@@ -10,8 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/flags")
@@ -21,7 +18,6 @@ public class FlagController {
     private final FlagHostUseCase flagHostUseCase;
     private final FlagManagementUseCase flagManagementUseCase;
     private final FlagParticipationUseCase flagParticipationUseCase;
-    private final FlagQueryUseCase flagQueryUseCase;
     private final FlagInvitationUseCase flagInvitationUseCase;
 
     @PostMapping
@@ -43,13 +39,6 @@ public class FlagController {
                 request.startDateTime(), request.endDateTime()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(flagHostUseCase.hostFlag(command));
-    }
-
-    @GetMapping("/friends")
-    public ResponseEntity<List<FlagResult>> getFriendFlags(
-            @CurrentUserId Long currentUserId
-    ) {
-        return ResponseEntity.ok(flagQueryUseCase.getFriendFlags(currentUserId));
     }
 
     @PatchMapping("/{id}/details")

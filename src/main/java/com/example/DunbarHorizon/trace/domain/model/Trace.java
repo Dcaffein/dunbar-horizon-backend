@@ -16,7 +16,7 @@ import java.util.Objects;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "trace", uniqueConstraints = {
+@Table(name = "traces", uniqueConstraints = {
         @UniqueConstraint(name = "uk_trace_users", columnNames = {"user_a_id", "user_b_id"})
 })
 public class Trace extends BaseTimeAggregateRoot {

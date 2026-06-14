@@ -27,21 +27,22 @@ public class FlagQueryController {
             @CurrentUserId Long currentUserId,
             @RequestParam FlagRole role
     ) {
-        return ResponseEntity.ok(flagQueryUseCase.getMyFlagsByRole(currentUserId, role));
+        return ResponseEntity.ok(flagQueryUseCase.getFlagsByRole(currentUserId, role));
     }
 
-    @GetMapping("/me/hosting")
-    public ResponseEntity<List<FlagResult>> getMyHostingFlags(
-            @CurrentUserId Long currentUserId
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<List<FlagResult>> getUserFlagsByRole(
+            @PathVariable Long userId,
+            @RequestParam FlagRole role
     ) {
-        return ResponseEntity.ok(flagQueryUseCase.getMyHostingFlags(currentUserId));
+        return ResponseEntity.ok(flagQueryUseCase.getFlagsByRole(userId, role));
     }
 
-    @GetMapping("/me/participating")
-    public ResponseEntity<List<FlagResult>> getMyParticipatingFlags(
+    @GetMapping("/friends")
+    public ResponseEntity<List<FlagResult>> getFriendFlags(
             @CurrentUserId Long currentUserId
     ) {
-        return ResponseEntity.ok(flagQueryUseCase.getParticipatingFlags(currentUserId));
+        return ResponseEntity.ok(flagQueryUseCase.getFriendFlags(currentUserId));
     }
 
     @GetMapping("/{id}")

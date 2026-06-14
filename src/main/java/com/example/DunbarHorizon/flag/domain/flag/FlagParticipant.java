@@ -1,17 +1,14 @@
 package com.example.DunbarHorizon.flag.domain.flag;
 
 import com.example.DunbarHorizon.global.common.BaseTimeEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
+@Table(name = "flag_participants")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FlagParticipant extends BaseTimeEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

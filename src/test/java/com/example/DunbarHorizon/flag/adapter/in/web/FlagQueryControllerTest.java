@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.flag.adapter.in.web;
 
 import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 import com.example.DunbarHorizon.flag.application.dto.result.FlagDetailResult;
+import com.example.DunbarHorizon.flag.application.port.in.FlagRole;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
@@ -57,5 +58,39 @@ class FlagQueryControllerTest extends BaseControllerTest {
         // when & then
         mockMvc.perform(get("/api/v1/flags/999"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("친구 플래그 조회 시 200을 반환하고 getFriendFlags()를 호출한다")
+    void getFriendFlags_Returns200() throws Exception {
+        given(flagQueryUseCase.getFriendFlags(CURRENT_USER_ID)).willReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/flags/friends"))
+                .andExpect(status().isOk());
+
+        verify(flagQueryUseCase).getFriendFlags(CURRENT_USER_ID);
+    }
+
+    @Test
+    @DisplayName("내 플래그 조회(HOST) 시 200을 반환하고 getFlagsByRole()를 호출한다")
+    void getMyFlags_HostRole_Returns200() throws Exception {
+        given(flagQueryUseCase.getFlagsByRole(CURRENT_USER_ID, FlagRole.HOST)).willReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/flags/me").param("role", "HOST"))
+                .andExpect(status().isOk());
+
+        verify(flagQueryUseCase).getFlagsByRole(CURRENT_USER_ID, FlagRole.HOST);
+    }
+
+    @Test
+    @DisplayName("특정 유저 플래그 조회(PARTICIPANT) 시 200을 반환하고 getFlagsByRole()를 호출한다")
+    void getUserFlags_ParticipantRole_Returns200() throws Exception {
+        Long targetUserId = 2L;
+        given(flagQueryUseCase.getFlagsByRole(targetUserId, FlagRole.PARTICIPANT)).willReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/flags/users/{userId}", targetUserId).param("role", "PARTICIPANT"))
+                .andExpect(status().isOk());
+
+        verify(flagQueryUseCase).getFlagsByRole(targetUserId, FlagRole.PARTICIPANT);
     }
 }
