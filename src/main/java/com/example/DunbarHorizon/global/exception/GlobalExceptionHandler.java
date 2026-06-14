@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.global.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -87,6 +88,20 @@ public class GlobalExceptionHandler {
                         .error("NotFoundException")
                         .message("요청하신 경로를 찾을 수 없습니다: " + e.getResourcePath())
                         .build());
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLockingFailureException(OptimisticLockingFailureException e) {
+        log.warn("[Optimistic Locking Failure] {}", e.getMessage());
+
+        ErrorResponse response = ErrorResponse.builder()
+                .error("ConcurrentModificationException")
+                .message("다른 요청과 충돌이 발생했습니다. 잠시 후 다시 시도해주세요.")
+                .build();
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(response);
     }
 
     @ExceptionHandler(Exception.class)
