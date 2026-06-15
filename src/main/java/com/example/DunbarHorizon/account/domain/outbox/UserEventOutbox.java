@@ -5,8 +5,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import com.example.DunbarHorizon.global.util.UuidUtil;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Getter
@@ -44,7 +44,7 @@ public class UserEventOutbox {
 
     public static UserEventOutbox pending(Long aggregateId, UserOutboxEventType eventType, String payload) {
         UserEventOutbox outbox = new UserEventOutbox();
-        outbox.id = UUID.randomUUID().toString();
+        outbox.id = UuidUtil.createV7().toString();
         outbox.aggregateId = aggregateId;
         outbox.eventType = eventType;
         outbox.payload = payload;

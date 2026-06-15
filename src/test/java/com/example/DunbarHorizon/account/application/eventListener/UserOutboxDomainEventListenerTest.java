@@ -6,13 +6,13 @@ import com.example.DunbarHorizon.account.domain.outbox.UserOutboxStatus;
 import com.example.DunbarHorizon.account.domain.repository.UserEventOutboxRepository;
 import com.example.DunbarHorizon.global.event.user.UserActivatedEvent;
 import com.example.DunbarHorizon.global.event.user.UserDeactivatedEvent;
+import com.example.DunbarHorizon.global.event.user.UserSyncIntegrationEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,7 +31,6 @@ class UserOutboxDomainEventListenerTest {
         eventPublisher = mock(ApplicationEventPublisher.class);
         ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
         listener = new UserOutboxDomainEventListener(outboxRepository, eventPublisher, objectMapper);
-        TransactionSynchronizationManager.initSynchronization();
     }
 
     @Test
@@ -72,25 +71,21 @@ class UserOutboxDomainEventListenerTest {
     }
 
     @Test
-    void AFTER_COMMIT_콜백이_TransactionSynchronization에_등록된다() {
+    void 유저_활성화_이벤트_수신_시_UserSyncIntegrationEvent가_즉시_발행된다() {
         // given
-        UserActivatedEvent event = new UserActivatedEvent(1L, "testUser", null);
+        UserActivatedEvent event = new UserActivatedEvent(1L, "testUser", "https://img.url");
         given(outboxRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
         // when
         listener.onUserActivated(event);
 
         // then
-        assertThat(TransactionSynchronizationManager.getSynchronizations()).hasSize(1);
-    }
-
-    @BeforeEach
-    void tearDown() {
-        // @BeforeEach가 두 번 실행되지 않도록 직접 정리
-    }
-
-    @org.junit.jupiter.api.AfterEach
-    void cleanUp() {
-        TransactionSynchronizationManager.clearSynchronization();
+        ArgumentCaptor<UserSyncIntegrationEvent> captor = ArgumentCaptor.forClass(UserSyncIntegrationEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        UserSyncIntegrationEvent published = captor.getValue();
+        assertThat(published.userId()).isEqualTo(1L);
+        assertThat(published.eventType()).isEqualTo(UserOutboxEventType.ACTIVATE);
+        assertThat(published.nickname()).isEqualTo("testUser");
+        assertThat(published.outboxId()).isNotNull();
     }
 }

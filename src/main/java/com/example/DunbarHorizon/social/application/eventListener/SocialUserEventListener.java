@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.social.application.eventListener;
 
+import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import com.example.DunbarHorizon.global.event.user.UserSyncCompletedEvent;
 import com.example.DunbarHorizon.global.event.user.UserSyncIntegrationEvent;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
@@ -7,9 +8,11 @@ import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserR
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Slf4j
 @Component
@@ -20,7 +23,8 @@ public class SocialUserEventListener {
     private final ApplicationEventPublisher eventPublisher;
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Neo4jTransactional(propagation = Propagation.REQUIRES_NEW)
     public void onUserSync(UserSyncIntegrationEvent event) {
         try {
             switch (event.eventType()) {

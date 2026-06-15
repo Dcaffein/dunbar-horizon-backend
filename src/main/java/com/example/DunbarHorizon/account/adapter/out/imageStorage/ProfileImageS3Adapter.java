@@ -11,8 +11,8 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
+import com.example.DunbarHorizon.global.util.UuidUtil;
 import java.time.Duration;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -27,7 +27,7 @@ public class ProfileImageS3Adapter implements ProfileImageStoragePort {
 
     @Override
     public PresignedUploadResult presignUpload(String contentType) {
-        String key = "profiles/" + UUID.randomUUID();
+        String key = "profiles/" + UuidUtil.createV7();
         String uploadUrl = s3Presigner.presignPutObject(PutObjectPresignRequest.builder()
                         .signatureDuration(PRESIGN_TTL)
                         .putObjectRequest(PutObjectRequest.builder()

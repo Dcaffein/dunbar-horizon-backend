@@ -12,9 +12,9 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+import com.example.DunbarHorizon.global.util.UuidUtil;
 import java.time.Duration;
 import java.util.List;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -31,7 +31,7 @@ public class S3StorageAdapter implements ImageStoragePort {
     public List<PresignedUploadResult> presignUploads(List<PresignRequest> requests) {
         return requests.stream()
                 .map(request -> {
-                    String key = "buzz/" + UUID.randomUUID();
+                    String key = "buzz/" + UuidUtil.createV7();
                     String uploadUrl = s3Presigner.presignPutObject(PutObjectPresignRequest.builder()
                                     .signatureDuration(PRESIGN_TTL)
                                     .putObjectRequest(PutObjectRequest.builder()

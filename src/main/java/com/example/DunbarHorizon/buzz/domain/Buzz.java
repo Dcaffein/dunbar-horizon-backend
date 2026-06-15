@@ -7,9 +7,9 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
+import com.example.DunbarHorizon.global.util.UuidUtil;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Document(collection = "buzzes")
 @Getter
@@ -96,7 +96,7 @@ public class Buzz {
         }
 
         return BuzzComment.builder()
-                .commentId(UUID.randomUUID().toString())
+                .commentId(UuidUtil.createV7().toString())
                 .commenterId(commenterId)
                 .commenterNickname(nickname)
                 .commenterProfileImageUrl(profileImageUrl)
