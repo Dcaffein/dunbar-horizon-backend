@@ -44,25 +44,36 @@ public class TraceDevController {
 
         entityManager.createNativeQuery("""
                 INSERT INTO traces
-                    (user_a_id, user_b_id, user_a_count, user_b_count,
-                     user_a_last_visited_at, user_b_last_visited_at,
+                
+    
+                
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    (user_a_id, user_b_id, useracount, userbcount,
+                     useralast_visited_at, userblast_visited_at,
                      is_revealed, revealed_at, last_traced_at, version,
-                     created_at, modified_at)
+                     created_at, updated_at)
                 VALUES
                     (:minId, :maxId, :userACount, :userBCount,
                      :yesterday, :yesterday,
-                     false, null, :now, 0,
+                     false, null, :yesterday, 0,
                      :now, :now)
                 ON DUPLICATE KEY UPDATE
-                    user_a_count           = :userACount,
-                    user_b_count           = :userBCount,
-                    user_a_last_visited_at = :yesterday,
-                    user_b_last_visited_at = :yesterday,
-                    is_revealed            = false,
-                    revealed_at            = null,
-                    last_traced_at         = :now,
-                    version                = version + 1,
-                    modified_at            = :now
+                    useracount           = :userACount,
+                    userbcount           = :userBCount,
+                    useralast_visited_at = :yesterday,
+                    userblast_visited_at = :yesterday,
+                    is_revealed          = false,
+                    revealed_at          = null,
+                    last_traced_at       = :yesterday,
+                    version              = version + 1,
+                    updated_at          = :now
                 """)
                 .setParameter("minId", minId)
                 .setParameter("maxId", maxId)
