@@ -15,8 +15,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -37,7 +35,10 @@ public class UserOutboxDomainEventListener {
         UserEventOutbox outbox = outboxRepository.save(
                 UserEventOutbox.pending(event.userId(), UserOutboxEventType.ACTIVATE, payload)
         );
-        registerAfterCommit(outbox, event.nickname(), event.profileImageUrl(), null);
+        eventPublisher.publishEvent(new UserSyncIntegrationEvent(
+                outbox.getId(), outbox.getAggregateId(), outbox.getEventType(),
+                event.nickname(), event.profileImageUrl(), null
+        ));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
@@ -46,7 +47,10 @@ public class UserOutboxDomainEventListener {
         UserEventOutbox outbox = outboxRepository.save(
                 UserEventOutbox.pending(event.id(), UserOutboxEventType.DEACTIVATE, payload)
         );
-        registerAfterCommit(outbox, null, null, null);
+        eventPublisher.publishEvent(new UserSyncIntegrationEvent(
+                outbox.getId(), outbox.getAggregateId(), outbox.getEventType(),
+                null, null, null
+        ));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
@@ -55,23 +59,10 @@ public class UserOutboxDomainEventListener {
         UserEventOutbox outbox = outboxRepository.save(
                 UserEventOutbox.pending(event.userId(), UserOutboxEventType.PROFILE_UPDATE, payload)
         );
-        registerAfterCommit(outbox, event.nickname(), event.profileImageUrl(), event.occurredAt());
-    }
-
-    private void registerAfterCommit(UserEventOutbox outbox, String nickname, String profileImageUrl, LocalDateTime occurredAt) {
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                eventPublisher.publishEvent(new UserSyncIntegrationEvent(
-                        outbox.getId(),
-                        outbox.getAggregateId(),
-                        outbox.getEventType(),
-                        nickname,
-                        profileImageUrl,
-                        occurredAt
-                ));
-            }
-        });
+        eventPublisher.publishEvent(new UserSyncIntegrationEvent(
+                outbox.getId(), outbox.getAggregateId(), outbox.getEventType(),
+                event.nickname(), event.profileImageUrl(), event.occurredAt()
+        ));
     }
 
     private String serialize(Long userId, String nickname, String profileImageUrl, LocalDateTime occurredAt) {

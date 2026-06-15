@@ -1,125 +1,103 @@
-# PLAN: FCM 멀티 디바이스 알림 구조 개선 (task-79)
+# PLAN: UUID v7 전환 및 Outbox 이벤트 구조 단순화 (task-80)
 
 ## 작업 목표
 
-`notification_settings` (1유저 1토큰) 구조를 `device_tokens` (1유저 N토큰)으로 교체한다.
-토큰 row 존재 여부가 알람 ON/OFF의 단일 진실 공급원이 되며, `isAlarmOn` 필드를 제거한다.
+1. 프로젝트 전체에서 `UUID.randomUUID()`를 `UuidUtil.createV7()`으로 통일한다.
+2. `UserOutboxDomainEventListener`의 `registerAfterCommit()` 콜백 구조를 제거하고 Spring의 `@TransactionalEventListener(AFTER_COMMIT)` 메커니즘으로 대체한다.
 
 ---
 
 ## 현황 분석
 
-| 항목 | 현재 상태 | 문제 |
-|------|----------|------|
-| `NotificationSetting` | `userId` PK + `fcmToken` 1개 | 멀티 디바이스 시 마지막 토큰으로 덮어씌워짐 |
-| `isAlarmOn` | 항상 `true`로 하드코딩 생성 | dead field, 불일치 상태 가능 |
-| 로그아웃 | refresh token만 삭제 | FCM 토큰이 DB에 남아 로그아웃 기기에도 알림 전달 |
-| `DeviceTokenRegisteredEvent` | `isAlarmOn` 포함 | 불필요한 필드 |
-| `subscribeToTopic` | `isAlarmOn=true`일 때만 구독 | 토큰 등록 = 항상 구독으로 단순화 가능 |
+### UUID v4 사용 위치 (5곳)
 
-JPA `ddl-auto: update` → 새 entity 추가 시 테이블 자동 생성, 기존 `notification_settings` 테이블은 수동 정리 필요 (로컬 개발 환경).
+| 파일 | 라인 | 용도 |
+|------|------|------|
+| `account/domain/outbox/UserEventOutbox.java` | 47 | Outbox PK |
+| `buzz/domain/Buzz.java` | 99 | 댓글 ID |
+| `buzz/adapter/out/imageStorage/S3StorageAdapter.java` | 34 | S3 키 |
+| `flag/application/service/flag/FlagSeedService.java` | 63 | 시드 group_id |
+| `account/adapter/out/imageStorage/ProfileImageS3Adapter.java` | 30 | S3 키 |
+
+### Outbox 이벤트 구조 문제
+
+`registerAfterCommit()`은 `TransactionSynchronizationManager`에 콜백을 수동 등록하는 방식으로, `UserSyncIntegrationEvent`를 트랜잭션 외부에서 발행한다. 그 결과 `SocialUserEventListener`가 `@EventListener`를 써야 하는 제약이 생기고, 코드 의도 파악이 어렵다.
+
+**변경 전:**
+```
+BEFORE_COMMIT → Outbox 저장 → registerAfterCommit() 콜백 등록
+afterCommit() → UserSyncIntegrationEvent 발행 (트랜잭션 밖)
+SocialUserEventListener: @EventListener (트랜잭션 무관)
+```
+
+**변경 후:**
+```
+BEFORE_COMMIT → Outbox 저장 → UserSyncIntegrationEvent 직접 발행 (트랜잭션 내)
+SocialUserEventListener: @TransactionalEventListener(AFTER_COMMIT) (Spring이 커밋 후 지연 처리)
+```
 
 ---
 
 ## 변경 파일 목록
 
-### 삭제 (신규 파일로 대체)
-- `notification/domain/NotificationSetting.java`
-- `notification/domain/repository/NotificationSettingRepository.java`
-- `notification/adapter/out/persistence/NotificationSettingRepositoryAdapter.java`
-- `notification/adapter/out/persistence/jpa/NotificationSettingJpaRepository.java`
-
-### 생성
-| 파일 | 내용 |
-|------|------|
-| `notification/domain/DeviceToken.java` | `id(PK)`, `userId`, `fcmToken(unique)`, `BaseTimeEntity` 상속 |
-| `notification/domain/repository/DeviceTokenRepository.java` | port interface |
-| `notification/adapter/out/persistence/DeviceTokenRepositoryAdapter.java` | adapter |
-| `notification/adapter/out/persistence/jpa/DeviceTokenJpaRepository.java` | Spring Data JPA repo |
-| `notification/adapter/in/web/dto/DeviceTokenStatusResponse.java` | `{ registered: boolean }` |
-| `account/adapter/in/web/dto/LogoutRequest.java` | `{ fcmToken: String }` (optional body) |
-| `global/event/DeviceTokenDeregisteredEvent.java` | `record(String fcmToken)` |
-
-### 수정
+### UUID 교체 (5개)
 | 파일 | 변경 내용 |
 |------|----------|
-| `notification/domain/event/DeviceTokenRegisteredEvent.java` | `isAlarmOn` 필드 제거 |
-| `notification/application/NotificationService.java` | `DeviceTokenRepository`로 교체, `removeDeviceToken()` / `isTokenRegistered()` 추가 |
-| `notification/application/NotificationEventListener.java` | 토큰 조회 로직 교체, `isAlarmOn` 필터 제거, `DeviceTokenDeregisteredEvent` 핸들러 추가 |
-| `notification/adapter/in/web/NotificationController.java` | `DELETE /device-token`, `GET /device-token/status` 추가 |
-| `account/adapter/in/web/AccountController.java` | 로그아웃 body에 optional `fcmToken` 수신 |
-| `account/application/port/in/LoginUseCase.java` | `logout(refreshToken, fcmToken)` 시그니처 변경 |
-| `account/application/service/LoginService.java` | `ApplicationEventPublisher` 추가, fcmToken 있으면 `DeviceTokenDeregisteredEvent` 발행 |
+| `account/domain/outbox/UserEventOutbox.java` | `UUID.randomUUID()` → `UuidUtil.createV7()`, import 교체 |
+| `buzz/domain/Buzz.java` | 동일 |
+| `buzz/adapter/out/imageStorage/S3StorageAdapter.java` | 동일 |
+| `flag/application/service/flag/FlagSeedService.java` | 동일 |
+| `account/adapter/out/imageStorage/ProfileImageS3Adapter.java` | 동일 |
+
+### Outbox 이벤트 구조 (2개)
+| 파일 | 변경 내용 |
+|------|----------|
+| `account/application/eventListener/UserOutboxDomainEventListener.java` | `registerAfterCommit()` 제거, 각 핸들러에서 `UserSyncIntegrationEvent` 직접 발행, `TransactionSynchronization` 관련 import 제거 |
+| `social/application/eventListener/SocialUserEventListener.java` | `@EventListener` → `@TransactionalEventListener(phase = AFTER_COMMIT)`, `@Neo4jTransactional` 추가 |
 
 ---
 
 ## 구현 방향
 
-### 1. DeviceToken 엔티티
+### UUID 교체
+
+`UUID.randomUUID()` → `UuidUtil.createV7()`으로 단순 치환. `toString()` 호출이 필요한 곳은 `.toString()` 유지. `import java.util.UUID` 제거 후 `import com.example.DunbarHorizon.global.util.UuidUtil` 추가.
+
+### Outbox 이벤트 구조
+
+`onUserActivated` 예시:
 ```java
-@Entity @Table(name = "device_tokens")
-public class DeviceToken extends BaseTimeEntity {
-    @Id @GeneratedValue
-    private Long id;
+// 변경 전
+UserEventOutbox outbox = outboxRepository.save(...);
+registerAfterCommit(outbox, event.nickname(), event.profileImageUrl(), null);
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
-
-    @Column(unique = true, nullable = false)
-    private String fcmToken;
-}
+// 변경 후
+UserEventOutbox outbox = outboxRepository.save(...);
+eventPublisher.publishEvent(new UserSyncIntegrationEvent(
+        outbox.getId(), outbox.getAggregateId(), outbox.getEventType(),
+        event.nickname(), event.profileImageUrl(), null
+));
 ```
 
-### 2. 토큰 등록 (`POST /device-token`)
-- 동일 토큰이 이미 존재하면 무시 (`existsByFcmToken` 체크 후 early return)
+`registerAfterCommit()` 메서드 전체 삭제. `TransactionSynchronizationManager`, `TransactionSynchronization` import 제거.
 
-### 3. 알람 상태 조회 (`GET /device-token/status?token=`)
-- `DeviceTokenRepository.existsByFcmToken(token)` → `{ registered: true/false }`
+`SocialUserEventListener`:
+```java
+// 변경 전
+@Async
+@EventListener
+public void onUserSync(UserSyncIntegrationEvent event)
 
-### 4. 토큰 삭제 (`DELETE /device-token`)
-- body: `{ token: "..." }` → `DeviceTokenRepository.deleteByFcmToken(token)` + FCM 토픽 해지
-
-### 5. 로그아웃 시 토큰 연계
-- `AccountController.logout()`: optional `@RequestBody LogoutRequest(fcmToken)`
-- `LoginService.logout(refreshToken, fcmToken)`: fcmToken 있으면 `DeviceTokenDeregisteredEvent` 발행
-- `NotificationEventListener.handleDeviceTokenDeregistered()`: `notificationService.removeDeviceToken(fcmToken)`
-- 도메인 간 직접 참조 없이 event로 처리 → account / notification 결합 없음
-- 핸들러에 `@TransactionalEventListener(phase = BEFORE_COMMIT)` 사용 → 외부 트랜잭션 커밋 직전 실행, 실패 시 로그아웃 전체 롤백 (원자성 보장)
-
-### 6. 알림 발송 토큰 조회
-- 기존: `settingRepository.findAllByUserIdIn()` + `isAlarmOn` 필터
-- 변경: `deviceTokenRepository.findAllTokensByUserIdIn()` (토큰 row 존재 = 알람 ON)
-
-### 7. 죽은 토큰 정리
-- `UNREGISTERED` / `INVALID_ARGUMENT` 에러 → `deviceTokenRepository.deleteAllByFcmTokenIn(invalidTokens)`
-
-### 8. notice 토픽 구독
-- 기존: `isAlarmOn=true`일 때만 구독
-- 변경: 토큰 등록 시 무조건 구독 (`DeviceTokenRegisteredEvent`에서 `isAlarmOn` 제거)
-
----
-
-## API 변경 요약
-
-| 변경 | 엔드포인트 | 설명 |
-|------|-----------|------|
-| 유지 (내부 수정) | `POST /api/v1/notifications/device-token` | 토큰 등록 |
-| 추가 | `DELETE /api/v1/notifications/device-token` | 토큰 삭제 (알람 OFF) |
-| 추가 | `GET /api/v1/notifications/device-token/status?token=` | 토큰 등록 여부 조회 |
-| 수정 | `DELETE /api/auth/tokens` | body에 optional fcmToken 추가 |
+// 변경 후
+@Async
+@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+@Neo4jTransactional   // findById + save를 단일 Neo4j 트랜잭션으로 묶어 원자성 확보
+public void onUserSync(UserSyncIntegrationEvent event)
+```
 
 ---
 
 ## 예상 사이드 이펙트
 
-- `NotificationSetting` 참조 전체 제거 → 관련 import 교체 필요
-- `notification_settings` 테이블은 `ddl-auto: update`로 자동 삭제되지 않음 → 로컬 DB 수동 drop 필요
-- 기존 토큰 데이터 마이그레이션 없음 (개발 단계, 데이터 초기화 허용)
-
----
-
-## 테스트 전략
-
-- `NotificationService` 단위 테스트: 토큰 등록(중복), 삭제, 상태 조회
-- `NotificationEventListener` 단위 테스트: `DeviceTokenDeregisteredEvent` 처리
-- `LoginService` 단위 테스트: fcmToken 있을 때 / 없을 때 이벤트 발행 여부
+- `UserOutboxRetryService`는 `@Transactional` 내에서 `UserSyncIntegrationEvent`를 발행하므로, `SocialUserEventListener`의 `AFTER_COMMIT` 변경 후에도 정상 동작한다.
+- 테스트 코드(`UserOutboxDomainEventListenerTest`, `SocialUserEventListenerTest`)에서 `@EventListener` 기반 검증 방식이 있다면 수정 필요.

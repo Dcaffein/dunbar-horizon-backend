@@ -13,9 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.time.LocalDateTime;
+import com.example.DunbarHorizon.global.util.UuidUtil;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Profile("local")
 @Service
@@ -60,7 +60,7 @@ public class FlagSeedService {
             ps.setObject(4, deadline);
             ps.setObject(5, item.schedule().startDateTime());
             ps.setObject(6, item.schedule().endDateTime());
-            ps.setString(7, UUID.randomUUID().toString());
+            ps.setString(7, UuidUtil.createV7().toString());
             return ps;
         }, keyHolder);
 
