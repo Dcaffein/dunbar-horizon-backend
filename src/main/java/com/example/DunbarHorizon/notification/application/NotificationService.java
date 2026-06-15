@@ -1,11 +1,10 @@
 package com.example.DunbarHorizon.notification.application;
 
-import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
+import com.example.DunbarHorizon.notification.domain.DeviceToken;
 import com.example.DunbarHorizon.notification.domain.Notification;
-import com.example.DunbarHorizon.notification.domain.NotificationSetting;
 import com.example.DunbarHorizon.notification.domain.event.DeviceTokenRegisteredEvent;
+import com.example.DunbarHorizon.notification.domain.repository.DeviceTokenRepository;
 import com.example.DunbarHorizon.notification.domain.repository.NotificationRepository;
-import com.example.DunbarHorizon.notification.domain.repository.NotificationSettingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
@@ -20,24 +19,25 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
-    private final NotificationSettingRepository settingRepository;
+    private final DeviceTokenRepository deviceTokenRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public void registerDeviceToken(Long userId, String newToken) {
-        NotificationSetting setting = settingRepository.findById(userId)
-                .orElse(new NotificationSetting(userId, null));
-
-        String oldToken = setting.getFcmToken();
-
-        if (newToken.equals(oldToken)) {
+    public void registerDeviceToken(Long userId, String token) {
+        if (deviceTokenRepository.existsByFcmToken(token)) {
             return;
         }
+        deviceTokenRepository.save(new DeviceToken(userId, token));
+        eventPublisher.publishEvent(new DeviceTokenRegisteredEvent(token));
+    }
 
-        setting.updateToken(newToken);
-        settingRepository.save(setting);
+    @Transactional
+    public void removeDeviceToken(String fcmToken) {
+        deviceTokenRepository.deleteByFcmToken(fcmToken);
+    }
 
-        eventPublisher.publishEvent(new DeviceTokenRegisteredEvent(newToken, setting.isAlarmOn()));
+    public boolean isTokenRegistered(String fcmToken) {
+        return deviceTokenRepository.existsByFcmToken(fcmToken);
     }
 
     public Notification savePendingNotification(Notification notification) {
@@ -64,17 +64,13 @@ public class NotificationService {
     @Transactional
     public void cleanupInvalidTokens(List<String> invalidTokens) {
         if (invalidTokens == null || invalidTokens.isEmpty()) return;
-
-        List<NotificationSetting> settings = settingRepository.findAllByFcmTokenIn(invalidTokens);
-        settings.forEach(setting -> setting.updateToken(null));
+        deviceTokenRepository.deleteAllByFcmTokenIn(invalidTokens);
     }
 
     public Notification readNotification(String notificationId, Long currentUserId) {
         Notification notice = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
-
         notice.read(currentUserId);
-
         return notificationRepository.save(notice);
     }
 

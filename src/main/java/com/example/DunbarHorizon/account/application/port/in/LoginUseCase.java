@@ -7,5 +7,5 @@ public interface LoginUseCase {
     AuthTokenResult login(String email, String password);
     AuthTokenResult issueTokens(User user);
     AuthTokenResult reissue(String refreshToken);
-    void logout(String refreshToken);
+    void logout(String refreshToken, String fcmToken);
 }

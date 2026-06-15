@@ -6,6 +6,7 @@ import com.example.DunbarHorizon.account.application.port.in.UserProfileUpdateUs
 import com.example.DunbarHorizon.account.application.port.in.VerificationUseCase;
 import com.example.DunbarHorizon.account.application.dto.AuthTokenResult;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.LoginRequestDto;
+import com.example.DunbarHorizon.account.adapter.in.web.dto.LogoutRequest;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.SignupRequestDto;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.UserProfileUpdateRequest;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.VerificationEmailRequestDto;
@@ -49,10 +50,10 @@ public class AccountController {
     @DeleteMapping("/tokens")
     public ResponseEntity<Void> logout(
             @CookieValue(name = "refresh_token", required = false) String refreshToken,
+            @RequestBody(required = false) LogoutRequest logoutRequest,
             HttpServletResponse response) {
-        if (refreshToken != null) {
-            loginUseCase.logout(refreshToken);
-        }
+        String fcmToken = logoutRequest != null ? logoutRequest.fcmToken() : null;
+        loginUseCase.logout(refreshToken, fcmToken);
         authCookieManager.addExpiredTokenCookie(response);
         return ResponseEntity.noContent().build();
     }

@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.notification.adapter.in.web;
 
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import com.example.DunbarHorizon.notification.adapter.in.web.dto.DeviceTokenRequest;
+import com.example.DunbarHorizon.notification.adapter.in.web.dto.DeviceTokenStatusResponse;
 import com.example.DunbarHorizon.notification.adapter.in.web.dto.NotificationResponse;
 import com.example.DunbarHorizon.notification.application.NotificationService;
 import com.example.DunbarHorizon.notification.domain.Notification;
@@ -23,18 +24,29 @@ public class NotificationController {
     public ResponseEntity<Void> registerDeviceToken(
             @CurrentUserId Long currentUserId,
             @RequestBody DeviceTokenRequest dto) {
-
         notificationService.registerDeviceToken(currentUserId, dto.token());
         return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/device-token")
+    public ResponseEntity<Void> removeDeviceToken(
+            @RequestBody DeviceTokenRequest dto) {
+        notificationService.removeDeviceToken(dto.token());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/device-token/status")
+    public ResponseEntity<DeviceTokenStatusResponse> getDeviceTokenStatus(
+            @RequestParam String token) {
+        boolean registered = notificationService.isTokenRegistered(token);
+        return ResponseEntity.ok(new DeviceTokenStatusResponse(registered));
     }
 
     @PatchMapping("/{notificationId}/read")
     public ResponseEntity<NotificationResponse> readNotification(
             @PathVariable String notificationId,
             @CurrentUserId Long currentUserId) {
-
         Notification updatedNotification = notificationService.readNotification(notificationId, currentUserId);
-
         return ResponseEntity.ok(NotificationResponse.from(updatedNotification));
     }
 
@@ -42,7 +54,6 @@ public class NotificationController {
     public ResponseEntity<Slice<NotificationResponse>> getMyNotifications(
             @CurrentUserId Long currentUserId,
             @PageableDefault(size = 20) Pageable pageable) {
-
         Slice<NotificationResponse> responses = notificationService
                 .getMyNotifications(currentUserId, pageable)
                 .map(NotificationResponse::from);

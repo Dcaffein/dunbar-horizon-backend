@@ -1,11 +1,11 @@
 package com.example.DunbarHorizon.notification.application;
 
+import com.example.DunbarHorizon.global.event.DeviceTokenDeregisteredEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
 import com.example.DunbarHorizon.notification.domain.Notification;
-import com.example.DunbarHorizon.notification.domain.NotificationSetting;
-import com.example.DunbarHorizon.notification.domain.repository.NotificationSettingRepository;
+import com.example.DunbarHorizon.notification.domain.repository.DeviceTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,59 +31,73 @@ class NotificationEventListenerTest {
     private NotificationEventListener eventListener;
 
     @Mock
-    private NotificationSender notificationSender; // 변경: FcmService -> 인터페이스(Port)
+    private NotificationSender notificationSender;
 
     @Mock
-    private NotificationService historyService; // 트랜잭션 전담 서비스 모킹
+    private NotificationService notificationService;
 
     @Mock
-    private NotificationSettingRepository settingRepository;
+    private DeviceTokenRepository deviceTokenRepository;
 
     @Test
-    @DisplayName("특정 사용자 알림: 유효한 토큰을 필터링하여 발송하고, 죽은 토큰을 청소한다")
-    void handleNotificationRequest_SpecificUser_MulticastFlow() {
+    @DisplayName("멀티캐스트: 수신자들의 토큰을 조회하여 발송하고 죽은 토큰을 정리한다")
+    void handleNotificationRequest_멀티캐스트_발송_후_죽은_토큰_정리() {
         // given
         NotificationEvent event = NotificationEvent.builder()
-                .receiverIds(List.of(1L,2L,3L))
+                .receiverIds(List.of(1L, 2L, 3L))
                 .title("제목")
                 .content("내용")
                 .type(NotificationType.BUZZ_ARRIVAL)
                 .metadata(null)
                 .build();
 
-        // 유저 1: 정상 수신 / 유저 2: 알림 끔 / 유저 3: 토큰 없음
-        NotificationSetting s1 = new NotificationSetting(1L, "token-1"); // isOn=true
-        NotificationSetting s2 = new NotificationSetting(2L, "token-2");
-        s2.toggleAlarm(false);
-        NotificationSetting s3 = new NotificationSetting(3L, null); // isOn=true
+        given(deviceTokenRepository.findAllFcmTokensByUserIdIn(event.receiverIds()))
+                .willReturn(List.of("token-1", "token-2"));
 
-        given(settingRepository.findAllByUserIdIn(event.receiverIds())).willReturn(List.of(s1, s2, s3));
+        Notification saved = Notification.builder().receiverId(1L).build();
+        given(notificationService.savePendingNotifications(anyList())).willReturn(List.of(saved));
 
-        // DB에 저장된 상태라고 가정
-        Notification savedNotice1 = Notification.builder().receiverId(1L).build();
-        given(historyService.savePendingNotifications(anyList())).willReturn(List.of(savedNotice1));
-
-        // FCM 발송 결과, "token-1"이 죽은 토큰으로 판명되었다고 가정
-        List<String> invalidTokens = List.of("token-1");
+        List<String> invalidTokens = List.of("token-2");
         given(notificationSender.sendMulticast(eq(event), anyList())).willReturn(invalidTokens);
 
         // when
         eventListener.handleNotificationRequest(event);
 
         // then
-        // 1. 토큰 필터링 검증: s1의 토큰만 발송 목록에 포함되어야 함
         ArgumentCaptor<List<String>> tokenCaptor = ArgumentCaptor.forClass(List.class);
         verify(notificationSender).sendMulticast(eq(event), tokenCaptor.capture());
-        assertThat(tokenCaptor.getValue()).containsExactly("token-1");
+        assertThat(tokenCaptor.getValue()).containsExactlyInAnyOrder("token-1", "token-2");
 
-        // 2. 발송 후 처리(Tx) 검증: 성공 처리 및 청소 메서드가 불렸는지 확인
-        verify(historyService).markAllAsSent(List.of(savedNotice1));
-        verify(historyService).cleanupInvalidTokens(invalidTokens);
+        verify(notificationService).markAllAsSent(List.of(saved));
+        verify(notificationService).cleanupInvalidTokens(invalidTokens);
     }
 
     @Test
-    @DisplayName("브로드캐스트 알림: 단건 저장 후 발송하고 상태를 업데이트한다")
-    void handleNotificationRequest_Broadcast_SaveAndBroadcastFlow() {
+    @DisplayName("멀티캐스트: 등록된 토큰이 없으면 FCM 발송을 생략한다")
+    void handleNotificationRequest_토큰없으면_FCM_발송_생략() {
+        // given
+        NotificationEvent event = NotificationEvent.builder()
+                .receiverIds(List.of(1L))
+                .title("제목")
+                .content("내용")
+                .type(NotificationType.BUZZ_ARRIVAL)
+                .metadata(null)
+                .build();
+
+        given(notificationService.savePendingNotifications(anyList())).willReturn(List.of());
+        given(deviceTokenRepository.findAllFcmTokensByUserIdIn(event.receiverIds()))
+                .willReturn(List.of());
+
+        // when
+        eventListener.handleNotificationRequest(event);
+
+        // then
+        verify(notificationSender, never()).sendMulticast(any(), any());
+    }
+
+    @Test
+    @DisplayName("브로드캐스트: 단건 저장 후 토픽으로 발송하고 상태를 업데이트한다")
+    void handleNotificationRequest_브로드캐스트_저장_후_발송() {
         // given
         NotificationEvent event = NotificationEvent.toAll(
                 "공지 제목", "공지 내용", NotificationType.NOTICE, null
@@ -91,15 +105,27 @@ class NotificationEventListenerTest {
 
         Notification savedNotice = Notification.builder().receiverId(null).title("공지 제목").build();
         ReflectionTestUtils.setField(savedNotice, "id", "broadcast-id");
-
-        given(historyService.savePendingNotification(any(Notification.class))).willReturn(savedNotice);
+        given(notificationService.savePendingNotification(any(Notification.class))).willReturn(savedNotice);
 
         // when
         eventListener.handleNotificationRequest(event);
 
         // then
-        verify(historyService).savePendingNotification(any(Notification.class));
-        verify(notificationSender).sendBroadcast(event); // Port 호출 확인
-        verify(historyService).markAsSent("broadcast-id"); // 사후 처리 확인
+        verify(notificationService).savePendingNotification(any(Notification.class));
+        verify(notificationSender).sendBroadcast(event);
+        verify(notificationService).markAsSent("broadcast-id");
+    }
+
+    @Test
+    @DisplayName("handleDeviceTokenDeregistration: BEFORE_COMMIT 핸들러에서 토큰을 삭제한다")
+    void handleDeviceTokenDeregistration_토큰을_삭제한다() {
+        // given
+        DeviceTokenDeregisteredEvent event = new DeviceTokenDeregisteredEvent("token-to-remove");
+
+        // when
+        eventListener.handleDeviceTokenDeregistration(event);
+
+        // then
+        verify(notificationService).removeDeviceToken("token-to-remove");
     }
 }

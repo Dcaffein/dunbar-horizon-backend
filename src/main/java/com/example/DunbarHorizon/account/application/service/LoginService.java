@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.account.application.service;
 
 import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
 import com.example.DunbarHorizon.account.domain.exception.ExpiredRefreshTokenException;
+import com.example.DunbarHorizon.global.event.DeviceTokenDeregisteredEvent;
 import com.example.DunbarHorizon.global.security.AuthPrincipal;
 import com.example.DunbarHorizon.account.application.dto.AuthTokenResult;
 import com.example.DunbarHorizon.account.application.port.out.AuthTokenProvider;
@@ -17,6 +18,7 @@ import com.example.DunbarHorizon.account.domain.repository.AuthRepository;
 import com.example.DunbarHorizon.account.domain.repository.RefreshTokenRepository;
 import com.example.DunbarHorizon.account.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +36,7 @@ public class LoginService implements LoginUseCase {
     private final RefreshTokenRepository refreshTokenRepository;
     private final AuthTokenProvider authTokenProvider;
     private final PasswordHasher passwordHasher;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -102,11 +105,13 @@ public class LoginService implements LoginUseCase {
     }
 
     @Override
-    public void logout(String refreshTokenValue) {
-        if (refreshTokenValue == null || refreshTokenValue.isBlank()) {
-            return;
+    public void logout(String refreshTokenValue, String fcmToken) {
+        if (refreshTokenValue != null && !refreshTokenValue.isBlank()) {
+            refreshTokenRepository.deleteByTokenValue(refreshTokenValue);
         }
-        refreshTokenRepository.deleteByTokenValue(refreshTokenValue);
+        if (fcmToken != null && !fcmToken.isBlank()) {
+            eventPublisher.publishEvent(new DeviceTokenDeregisteredEvent(fcmToken));
+        }
     }
 
 }

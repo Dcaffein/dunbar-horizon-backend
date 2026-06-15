@@ -60,7 +60,7 @@ class AccountControllerTest extends BaseControllerTest {
                         .cookie(new Cookie("refresh_token", "some-rt")))
                 .andExpect(status().isNoContent());
 
-        verify(loginUseCase).logout(eq("some-rt"));
+        verify(loginUseCase).logout(eq("some-rt"), isNull());
         verify(authCookieManager).addExpiredTokenCookie(any());
     }
 
