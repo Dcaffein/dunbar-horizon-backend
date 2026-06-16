@@ -21,7 +21,8 @@ public class FriendshipBroker {
             throw new AlreadyFriendsException(requesterId, receiverId);
         }
 
-        if (friendRequestRepository.existsRequestBetween(requesterId, receiverId)) {
+        if (friendRequestRepository.existsRequestBetween(requesterId, receiverId) ||
+                friendRequestRepository.existsRequestBetween(receiverId, requesterId)) {
             throw new DuplicateFriendRequestException(requesterId, receiverId);
         }
 

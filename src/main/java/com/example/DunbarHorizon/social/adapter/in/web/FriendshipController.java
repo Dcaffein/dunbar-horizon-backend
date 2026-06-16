@@ -5,7 +5,6 @@ import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendUpdateRequest;
 import com.example.DunbarHorizon.social.application.dto.result.FriendshipDetailResult;
 import com.example.DunbarHorizon.social.application.port.in.FriendshipCommandUseCase;
 import com.example.DunbarHorizon.social.application.port.in.FriendshipQueryUseCase;
-import com.example.DunbarHorizon.social.application.dto.result.FriendshipDetailResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

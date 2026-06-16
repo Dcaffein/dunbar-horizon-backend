@@ -48,14 +48,14 @@ public class FriendRequestReceiverActionService implements FriendRequestReceiver
     public void hideRequest(String requestId, Long receiverId) {
         FriendRequest request = findRequestById(requestId);
         request.hide(receiverId);
-        friendRequestRepository.saveRequest(request);
+        friendRequestRepository.updateStatus(request);
     }
 
     @Override
     public void undoHideRequest(String requestId, Long receiverId) {
         FriendRequest request = findRequestById(requestId);
         request.undoHide(receiverId);
-        friendRequestRepository.saveRequest(request);
+        friendRequestRepository.updateStatus(request);
     }
 
     private FriendRequest findRequestById(String requestId) {

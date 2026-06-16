@@ -118,6 +118,6 @@ class FriendRequestReceiverActionServiceTest {
 
         // then
         assertThat(request.getStatus()).isEqualTo(FriendRequestStatus.HIDDEN);
-        verify(friendRequestRepository).saveRequest(request);
+        verify(friendRequestRepository).updateStatus(request);
     }
 }

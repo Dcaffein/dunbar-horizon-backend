@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.flag.adapter.out.task;
+package com.example.DunbarHorizon.flag.adapter.out.persistence;
 
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagCommentJpaRepository;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagInvitationJpaRepository;
