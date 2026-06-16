@@ -57,11 +57,13 @@ class TraceEventListenerTest {
                 .findFirst().orElseThrow();
 
         assertThat(toMinUser.type()).isEqualTo(NotificationType.TRACE_REVEALED);
+        assertThat(toMinUser.content()).isEqualTo("nickB님과 서로 통했습니다! 방문해서 인사를 건네보세요");
         assertThat(toMinUser.metadata()).containsEntry("senderUserId", 2L);
         assertThat(toMinUser.metadata()).containsEntry("senderNickname", "nickB");
         assertThat(toMinUser.metadata()).containsEntry("senderProfileImageUrl", "imgB");
 
         assertThat(toMaxUser.type()).isEqualTo(NotificationType.TRACE_REVEALED);
+        assertThat(toMaxUser.content()).isEqualTo("nickA님과 서로 통했습니다! 방문해서 인사를 건네보세요");
         assertThat(toMaxUser.metadata()).containsEntry("senderUserId", 1L);
         assertThat(toMaxUser.metadata()).containsEntry("senderNickname", "nickA");
         assertThat(toMaxUser.metadata()).containsEntry("senderProfileImageUrl", "imgA");
