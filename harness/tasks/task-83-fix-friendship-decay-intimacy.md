@@ -98,7 +98,6 @@ UserReference 경유 탐색 쿼리 및 관계 프로퍼티 조건 쿼리는 @Que
 - 감쇄 조건 (`r.lastInteractedAt`, `r.interestScore > $threshold`) 및 수치
 - 이관 조건 및 Archive 로직
 - `InteractionScoreFlushService` 현행 구조
-- Neo4j 스키마/constraint — task-84에서 별도 처리
 
 ---
 

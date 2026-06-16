@@ -15,7 +15,6 @@
 |------|----------|
 | `Friendship.java` | `recalculateIntimacy`에 dead branch + `calculateIntimacyPolicy` 존재 |
 | `FriendshipNeo4jRepository.java` | `applyDecay` 버그. 일부 쿼리 derived로 대체 가능 |
-| `Neo4jConfig.java` | `Friendship.id` constraint 없음. 프로젝트에 Neo4j 스키마 관리 메커니즘 자체가 없음 |
 
 ### `FriendshipNeo4jRepository` 쿼리 분류
 
@@ -62,7 +61,6 @@ SDN6 derived query는 `Neo4jRepository<Friendship, String>` 기준으로 `Friend
 ## 구현 방향
 
 - 감쇄 조건(`r.lastInteractedAt`, `r.interestScore > $threshold`) 및 이관 조건은 변경하지 않는다. 버그는 collect 범위 문제이며, 판정 로직 자체는 정상이다.
-- Neo4j 스키마/constraint 관리는 task-84에서 별도 처리한다.
 - `findAllById` / `deleteAllById`는 SDN6가 `@Relationship(INCOMING)`을 자동으로 로드하므로 현재 @Query와 동일한 결과를 보장한다.
 - `FriendshipRepository` 포트 인터페이스의 메서드 시그니처도 어댑터 변경에 맞게 수정한다.
 
