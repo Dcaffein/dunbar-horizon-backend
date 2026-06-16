@@ -43,7 +43,7 @@ public class LabelMemberEnroller {
         List<Long> distinctIds = newMemberIds.stream().distinct().toList();
         Long ownerId = label.getOwner().getId();
 
-        Set<Long> validFriendIds = friendshipRepository.findFriendIdsIn(ownerId, distinctIds);
+        Set<Long> validFriendIds = friendshipRepository.filterFriendIdsAmong(ownerId, distinctIds);
 
         if (validFriendIds.size() != distinctIds.size()) {
             List<Long> invalidIds = findInvalidIds(new HashSet<>(distinctIds), validFriendIds);

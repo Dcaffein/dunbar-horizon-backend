@@ -16,28 +16,24 @@ public interface FriendshipRepository {
     Optional<Friendship> findById(String id);
     void delete(String friendshipId);
 
-    List<Friendship> findFriendships(Long userId);
-
     boolean existsFriendshipBetween(Long userId, Long targetId);
 
-    Set<Long> findFriendIds(Long userId);
-    Set<UserReference> findFriends(Long userId);
+    List<Friendship> findByUserId(Long userId);
+    Set<Long> findFriendIdsByUserId(Long userId);
+    Set<UserReference> findFriendsByUserId(Long userId);
 
-    Set<Long> findFriendIdsIn(Long userId, Collection<Long> candidateIds);
-    Set<UserReference> findFriendsIn(Long userId, Collection<Long> targetIds);
-
+    List<Friendship> findByMuteStatus(Long userId, boolean isMuted);
     Set<Long> findFriendIdsByMuteStatus(Long userId, boolean isMuted);
     Set<UserReference> findFriendsByMuteStatus(Long userId, boolean isMuted);
 
+    List<Friendship> filterAmong(Long userId, Collection<Long> candidateIds);
+    Set<Long> filterFriendIdsAmong(Long userId, Collection<Long> candidateIds);
+    Set<UserReference> filterFriendsAmong(Long userId, Collection<Long> candidateIds);
+
     void applyDecay(double rate, double threshold, LocalDateTime decayTime);
-
     void updateUserFields(Friendship friendship, Long userId);
-
     List<Friendship> findAllByIds(List<String> ids);
-
     void batchUpdateInterestScores(List<Map<String, Object>> updates, LocalDateTime lastInteractedAt);
-
     List<FriendshipArchiveCandidate> findArchiveCandidates(double threshold);
-
     void deleteAllByIds(Collection<String> ids);
 }

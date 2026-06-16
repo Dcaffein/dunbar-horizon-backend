@@ -89,7 +89,7 @@ class LabelMemberEnrollerTest {
     void updateMembers_Fail_ContainsNonFriendIds() {
         // given
         List<Long> requestedIds = List.of(2L, 3L);
-        given(friendshipRepository.findFriendIdsIn(owner.getId(), requestedIds)).willReturn(Set.of(2L));
+        given(friendshipRepository.filterFriendIdsAmong(owner.getId(), requestedIds)).willReturn(Set.of(2L));
 
         // when & then
         assertThatThrownBy(() -> labelMemberEnroller.updateMembers(label, requestedIds))
@@ -102,7 +102,7 @@ class LabelMemberEnrollerTest {
     void updateMembers_Success() {
         // given
         List<Long> requestedIds = List.of(2L);
-        given(friendshipRepository.findFriendIdsIn(owner.getId(), requestedIds)).willReturn(Set.of(2L));
+        given(friendshipRepository.filterFriendIdsAmong(owner.getId(), requestedIds)).willReturn(Set.of(2L));
         given(socialUserRepository.findAllUserReferencesById(Set.of(2L))).willReturn(Set.of(friend));
 
         // when

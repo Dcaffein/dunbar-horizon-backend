@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,11 +26,6 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
 
     private final FriendshipNeo4jRepository friendshipNeo4jRepository;
     private final Neo4jClient neo4jClient;
-
-    @Override
-    public List<Friendship> findFriendships(Long userId) {
-        return friendshipNeo4jRepository.findByUserId(userId);
-    }
 
     @Override
     public Friendship save(Friendship friendship) {
@@ -52,31 +48,23 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
     }
 
     @Override
-    public Set<Long> findFriendIds(Long userId) {
+    public List<Friendship> findByUserId(Long userId) {
+        return friendshipNeo4jRepository.findByUserId(userId);
+    }
+
+    @Override
+    public Set<Long> findFriendIdsByUserId(Long userId) {
         return friendshipNeo4jRepository.findFriendIdsByUserId(userId);
     }
 
     @Override
-    public Set<UserReference> findFriends(Long userId) {
-        List<Friendship> friendships = friendshipNeo4jRepository.findByUserId(userId);
-
-        return friendships.stream()
-                .map(friendship -> friendship.getFriend(userId))
-                .collect(Collectors.toSet());
+    public Set<UserReference> findFriendsByUserId(Long userId) {
+        return new HashSet<>(friendshipNeo4jRepository.findFriendsByUserId(userId));
     }
 
     @Override
-    public Set<Long> findFriendIdsIn(Long userId, Collection<Long> candidateIds) {
-        return friendshipNeo4jRepository.filterFriendIdsAmong(userId, candidateIds);
-    }
-
-    @Override
-    public Set<UserReference> findFriendsIn(Long userId, Collection<Long> targetIds) {
-        List<Friendship> friendships = friendshipNeo4jRepository.filterAmong(userId, targetIds);
-
-        return friendships.stream()
-                .map(friendship -> friendship.getFriend(userId))
-                .collect(Collectors.toSet());
+    public List<Friendship> findByMuteStatus(Long userId, boolean isMuted) {
+        return friendshipNeo4jRepository.findByMuteStatus(userId, isMuted);
     }
 
     @Override
@@ -86,11 +74,22 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
 
     @Override
     public Set<UserReference> findFriendsByMuteStatus(Long userId, boolean isMuted) {
-        List<Friendship> friendships = friendshipNeo4jRepository.findByMuteStatus(userId, isMuted);
+        return new HashSet<>(friendshipNeo4jRepository.findFriendsByMuteStatus(userId, isMuted));
+    }
 
-        return friendships.stream()
-                .map(friendship -> friendship.getFriend(userId))
-                .collect(Collectors.toSet());
+    @Override
+    public List<Friendship> filterAmong(Long userId, Collection<Long> candidateIds) {
+        return friendshipNeo4jRepository.filterAmong(userId, candidateIds);
+    }
+
+    @Override
+    public Set<Long> filterFriendIdsAmong(Long userId, Collection<Long> candidateIds) {
+        return friendshipNeo4jRepository.filterFriendIdsAmong(userId, candidateIds);
+    }
+
+    @Override
+    public Set<UserReference> filterFriendsAmong(Long userId, Collection<Long> candidateIds) {
+        return new HashSet<>(friendshipNeo4jRepository.filterFriendsAmong(userId, candidateIds));
     }
 
     @Override

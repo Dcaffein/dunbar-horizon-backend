@@ -24,7 +24,7 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
 
     @Override
     public List<FriendshipDetailResult> getDetailedFriendships(Long userId) {
-        List<Friendship> friendships = friendshipRepository.findFriendships(userId);
+        List<Friendship> friendships = friendshipRepository.findByUserId(userId);
 
         return friendships.stream()
                 .map(friendship -> FriendshipDetailResult.from(friendship, userId))
@@ -45,24 +45,24 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
 
     @Override
     public Set<Long> getAllFriendIds(Long userId) {
-        return friendshipRepository.findFriendIds(userId);
+        return friendshipRepository.findFriendIdsByUserId(userId);
     }
 
     @Override
     public Set<FriendProfileInfo> getAllFriends(Long userId) {
-        return friendshipRepository.findFriends(userId).stream()
+        return friendshipRepository.findFriendsByUserId(userId).stream()
                 .map(FriendProfileInfo::from)
                 .collect(Collectors.toSet());
     }
 
     @Override
     public Set<Long> getFriendIdsIn(Long userId, Collection<Long> targetIds) {
-        return friendshipRepository.findFriendIdsIn(userId, targetIds);
+        return friendshipRepository.filterFriendIdsAmong(userId, targetIds);
     }
 
     @Override
     public Set<FriendProfileInfo> getFriendProfilesIn(Long userId, Collection<Long> targetIds) {
-        return friendshipRepository.findFriendsIn(userId, targetIds).stream()
+        return friendshipRepository.filterFriendsAmong(userId, targetIds).stream()
                 .map(FriendProfileInfo::from)
                 .collect(Collectors.toSet());
     }

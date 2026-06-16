@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData;
 
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.*;
+import static com.example.DunbarHorizon.social.domain.socialUser.constant.SocialUserConstants.SOCIAL_USER;
 import static com.example.DunbarHorizon.social.domain.socialUser.constant.SocialUserConstants.USER_REFERENCE;
 
 public interface FriendshipNeo4jRepository extends Neo4jRepository<Friendship, String> {
@@ -25,35 +27,49 @@ public interface FriendshipNeo4jRepository extends Neo4jRepository<Friendship, S
             "RETURN f, collect(all_r), collect(all_u)")
     List<Friendship> findByUserId(@Param("userId") Long userId);
 
-    @Query("MATCH (u:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->" +
-            "(:" + FRIENDSHIP + ")" +
-            "<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
+    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->" +
+            "(:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
             "RETURN friend.id")
     Set<Long> findFriendIdsByUserId(@Param("userId") Long userId);
 
-    @Query("MATCH (u:" + USER_REFERENCE + " {id: $userId})-[r:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ") " +
+    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->" +
+            "(:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(friend:" + SOCIAL_USER + ") " +
+            "RETURN friend")
+    List<SocialUser> findFriendsByUserId(@Param("userId") Long userId);
+
+    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[r:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ") " +
             "WHERE r.isMuted = $isMuted " +
             "MATCH (f)<-[all_r:" + HAS_FRIENDSHIP + "]-(all_u:" + USER_REFERENCE + ") " +
             "RETURN f, collect(all_r), collect(all_u)")
     List<Friendship> findByMuteStatus(@Param("userId") Long userId, @Param("isMuted") boolean isMuted);
 
-    @Query("MATCH (u:" + USER_REFERENCE + " {id: $userId})-[r:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
+    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[r:" + HAS_FRIENDSHIP + "]->(:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
             "WHERE r.isMuted = $isMuted " +
             "RETURN friend.id")
     Set<Long> findFriendIdsByMuteStatus(@Param("userId") Long userId, @Param("isMuted") boolean isMuted);
 
-    @Query("MATCH (u:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
+    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[r:" + HAS_FRIENDSHIP + "]->(:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(friend:" + SOCIAL_USER + ") " +
+            "WHERE r.isMuted = $isMuted " +
+            "RETURN friend")
+    List<SocialUser> findFriendsByMuteStatus(@Param("userId") Long userId, @Param("isMuted") boolean isMuted);
+
+    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
             "WHERE friend.id IN $candidateIds " +
             "MATCH (f)<-[all_r:" + HAS_FRIENDSHIP + "]-(all_u:" + USER_REFERENCE + ") " +
             "RETURN f, collect(all_r), collect(all_u)")
     List<Friendship> filterAmong(@Param("userId") Long userId, @Param("candidateIds") Collection<Long> candidateIds);
 
-    @Query("MATCH (u:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->" +
-            "(:" + FRIENDSHIP + ")" +
-            "<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
+    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->" +
+            "(:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
             "WHERE friend.id IN $candidateIds " +
             "RETURN friend.id")
     Set<Long> filterFriendIdsAmong(@Param("userId") Long userId, @Param("candidateIds") Collection<Long> candidateIds);
+
+    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->" +
+            "(:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(friend:" + SOCIAL_USER + ") " +
+            "WHERE friend.id IN $candidateIds " +
+            "RETURN friend")
+    List<SocialUser> filterFriendsAmong(@Param("userId") Long userId, @Param("candidateIds") Collection<Long> candidateIds);
 
     @Query("MATCH (u:" + USER_REFERENCE + ")-[r:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ") " +
             "WHERE r.interestScore > $threshold " +
