@@ -10,5 +10,6 @@ public interface DeviceTokenRepository {
     void deleteByFcmToken(String fcmToken);
     void deleteAllByFcmTokenIn(List<String> fcmTokens);
     List<String> findAllFcmTokensByUserIdIn(List<Long> userIds);
+    boolean existsByUserIdAndFcmToken(Long userId, String fcmToken);
     void deleteAllByUserId(Long userId);
 }

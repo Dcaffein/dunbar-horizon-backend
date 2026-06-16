@@ -30,15 +30,16 @@ public class NotificationController {
 
     @DeleteMapping("/device-token")
     public ResponseEntity<Void> removeDeviceToken(
-            @RequestBody DeviceTokenRequest dto) {
-        notificationService.removeDeviceToken(dto.token());
-        return ResponseEntity.noContent().build();
+            @CurrentUserId Long currentUserId) {
+        notificationService.removeDeviceTokenByUserId(currentUserId);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/device-token/status")
     public ResponseEntity<DeviceTokenStatusResponse> getDeviceTokenStatus(
+            @CurrentUserId Long currentUserId,
             @RequestParam String token) {
-        boolean registered = notificationService.isTokenRegistered(token);
+        boolean registered = notificationService.isTokenRegisteredForUser(currentUserId, token);
         return ResponseEntity.ok(new DeviceTokenStatusResponse(registered));
     }
 

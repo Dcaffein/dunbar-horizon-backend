@@ -38,15 +38,17 @@ class NotificationServiceTest {
     private ApplicationEventPublisher eventPublisher;
 
     @Test
-    @DisplayName("registerDeviceToken: 신규 토큰이면 저장하고 이벤트를 발행한다")
-    void registerDeviceToken_신규_토큰이면_저장하고_이벤트를_발행한다() {
+    @DisplayName("registerDeviceToken: 신규 토큰이면 기존 토큰을 삭제하고 저장 후 이벤트를 발행한다")
+    void registerDeviceToken_신규_토큰이면_기존_삭제_후_저장하고_이벤트를_발행한다() {
         // given
-        given(deviceTokenRepository.existsByFcmToken("new-token")).willReturn(false);
+        given(deviceTokenRepository.existsByUserIdAndFcmToken(1L, "new-token")).willReturn(false);
 
         // when
         notificationService.registerDeviceToken(1L, "new-token");
 
         // then
+        verify(deviceTokenRepository).deleteAllByUserId(1L);
+
         ArgumentCaptor<DeviceToken> captor = ArgumentCaptor.forClass(DeviceToken.class);
         verify(deviceTokenRepository).save(captor.capture());
         assertThat(captor.getValue().getUserId()).isEqualTo(1L);
@@ -56,17 +58,54 @@ class NotificationServiceTest {
     }
 
     @Test
-    @DisplayName("registerDeviceToken: 이미 존재하는 토큰이면 저장과 이벤트 발행 없이 무시한다")
-    void registerDeviceToken_이미_존재하는_토큰이면_무시한다() {
+    @DisplayName("registerDeviceToken: 동일 유저의 동일 토큰이면 no-op")
+    void registerDeviceToken_동일_유저의_동일_토큰이면_무시한다() {
         // given
-        given(deviceTokenRepository.existsByFcmToken("existing-token")).willReturn(true);
+        given(deviceTokenRepository.existsByUserIdAndFcmToken(1L, "existing-token")).willReturn(true);
 
         // when
         notificationService.registerDeviceToken(1L, "existing-token");
 
         // then
+        verify(deviceTokenRepository, never()).deleteAllByUserId(any());
         verify(deviceTokenRepository, never()).save(any());
         verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("removeDeviceTokenByUserId: userId 기준으로 토큰을 삭제한다")
+    void removeDeviceTokenByUserId_userId_기준으로_삭제한다() {
+        // when
+        notificationService.removeDeviceTokenByUserId(1L);
+
+        // then
+        verify(deviceTokenRepository).deleteAllByUserId(1L);
+    }
+
+    @Test
+    @DisplayName("isTokenRegisteredForUser: userId와 토큰이 모두 일치하면 true를 반환한다")
+    void isTokenRegisteredForUser_일치하면_true() {
+        // given
+        given(deviceTokenRepository.existsByUserIdAndFcmToken(1L, "registered-token")).willReturn(true);
+
+        // when
+        boolean result = notificationService.isTokenRegisteredForUser(1L, "registered-token");
+
+        // then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("isTokenRegisteredForUser: 토큰이 없거나 userId가 다르면 false를 반환한다")
+    void isTokenRegisteredForUser_불일치하면_false() {
+        // given
+        given(deviceTokenRepository.existsByUserIdAndFcmToken(1L, "unknown-token")).willReturn(false);
+
+        // when
+        boolean result = notificationService.isTokenRegisteredForUser(1L, "unknown-token");
+
+        // then
+        assertThat(result).isFalse();
     }
 
     @Test
@@ -77,32 +116,6 @@ class NotificationServiceTest {
 
         // then
         verify(deviceTokenRepository).deleteByFcmToken("token-to-remove");
-    }
-
-    @Test
-    @DisplayName("isTokenRegistered: 토큰이 등록되어 있으면 true를 반환한다")
-    void isTokenRegistered_토큰이_있으면_true() {
-        // given
-        given(deviceTokenRepository.existsByFcmToken("registered-token")).willReturn(true);
-
-        // when
-        boolean result = notificationService.isTokenRegistered("registered-token");
-
-        // then
-        assertThat(result).isTrue();
-    }
-
-    @Test
-    @DisplayName("isTokenRegistered: 토큰이 없으면 false를 반환한다")
-    void isTokenRegistered_토큰이_없으면_false() {
-        // given
-        given(deviceTokenRepository.existsByFcmToken("unknown-token")).willReturn(false);
-
-        // when
-        boolean result = notificationService.isTokenRegistered("unknown-token");
-
-        // then
-        assertThat(result).isFalse();
     }
 
     @Test

@@ -83,7 +83,7 @@ public class FcmService implements NotificationSender {
                 for (int i = 0; i < responses.size(); i++) {
                     if (!responses.get(i).isSuccessful()) {
                         MessagingErrorCode code = responses.get(i).getException().getMessagingErrorCode();
-                        // 유효하지 않은 토큰(앱 삭제 등) 수집
+                        log.warn("FCM 토큰 전송 실패 [{}]: {}", code, chunk.get(i));
                         if (code == MessagingErrorCode.UNREGISTERED || code == MessagingErrorCode.INVALID_ARGUMENT) {
                             invalidTokensInChunk.add(chunk.get(i));
                         }

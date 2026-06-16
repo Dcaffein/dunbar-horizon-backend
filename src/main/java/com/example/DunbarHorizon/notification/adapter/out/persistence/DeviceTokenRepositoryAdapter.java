@@ -41,6 +41,11 @@ public class DeviceTokenRepositoryAdapter implements DeviceTokenRepository {
     }
 
     @Override
+    public boolean existsByUserIdAndFcmToken(Long userId, String fcmToken) {
+        return deviceTokenJpaRepository.existsByUserIdAndFcmToken(userId, fcmToken);
+    }
+
+    @Override
     public void deleteAllByUserId(Long userId) {
         deviceTokenJpaRepository.deleteAllByUserId(userId);
     }

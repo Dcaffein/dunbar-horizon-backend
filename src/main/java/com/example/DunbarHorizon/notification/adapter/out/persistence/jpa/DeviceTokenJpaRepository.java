@@ -21,6 +21,8 @@ public interface DeviceTokenJpaRepository extends JpaRepository<DeviceToken, Lon
     @Query("SELECT d.fcmToken FROM DeviceToken d WHERE d.userId IN :userIds")
     List<String> findAllFcmTokensByUserIdIn(@Param("userIds") List<Long> userIds);
 
+    boolean existsByUserIdAndFcmToken(Long userId, String fcmToken);
+
     @Modifying
     @Query("DELETE FROM DeviceToken d WHERE d.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);

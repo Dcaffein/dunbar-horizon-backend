@@ -24,9 +24,10 @@ public class NotificationService {
 
     @Transactional
     public void registerDeviceToken(Long userId, String token) {
-        if (deviceTokenRepository.existsByFcmToken(token)) {
+        if (deviceTokenRepository.existsByUserIdAndFcmToken(userId, token)) {
             return;
         }
+        deviceTokenRepository.deleteAllByUserId(userId);
         deviceTokenRepository.save(new DeviceToken(userId, token));
         eventPublisher.publishEvent(new DeviceTokenRegisteredEvent(token));
     }
@@ -36,8 +37,13 @@ public class NotificationService {
         deviceTokenRepository.deleteByFcmToken(fcmToken);
     }
 
-    public boolean isTokenRegistered(String fcmToken) {
-        return deviceTokenRepository.existsByFcmToken(fcmToken);
+    @Transactional
+    public void removeDeviceTokenByUserId(Long userId) {
+        deviceTokenRepository.deleteAllByUserId(userId);
+    }
+
+    public boolean isTokenRegisteredForUser(Long userId, String fcmToken) {
+        return deviceTokenRepository.existsByUserIdAndFcmToken(userId, fcmToken);
     }
 
     public Notification savePendingNotification(Notification notification) {
