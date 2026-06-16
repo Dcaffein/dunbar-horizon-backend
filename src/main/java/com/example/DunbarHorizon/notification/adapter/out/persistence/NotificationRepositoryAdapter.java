@@ -47,4 +47,9 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     public List<Notification> saveAll(List<Notification> notifications) {
         return notificationMongoRepository.saveAll(notifications);
     }
+
+    @Override
+    public void deleteById(String id) {
+        notificationMongoRepository.deleteById(id);
+    }
 }

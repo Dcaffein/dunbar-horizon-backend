@@ -84,7 +84,9 @@ public class FcmService implements NotificationSender {
                     if (!responses.get(i).isSuccessful()) {
                         MessagingErrorCode code = responses.get(i).getException().getMessagingErrorCode();
                         log.warn("FCM 토큰 전송 실패 [{}]: {}", code, chunk.get(i));
-                        if (code == MessagingErrorCode.UNREGISTERED || code == MessagingErrorCode.INVALID_ARGUMENT) {
+                        if (code == MessagingErrorCode.UNREGISTERED
+                                || code == MessagingErrorCode.INVALID_ARGUMENT
+                                || code == MessagingErrorCode.SENDER_ID_MISMATCH) {
                             invalidTokensInChunk.add(chunk.get(i));
                         }
                     }

@@ -15,4 +15,5 @@ public interface NotificationRepository{
     Notification save(Notification notification);
     Optional<Notification> findById(String id);
     List<Notification> saveAll(List<Notification> notifications);
+    void deleteById(String id);
 }

@@ -87,4 +87,11 @@ public class NotificationService {
     public long countUnreadNotifications(Long userId) {
         return notificationRepository.countByReceiverIdAndIsReadFalse(userId);
     }
+
+    public void deleteNotification(String notificationId, Long currentUserId) {
+        Notification notice = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
+        notice.requireOwnership(currentUserId);
+        notificationRepository.deleteById(notificationId);
+    }
 }
