@@ -23,37 +23,37 @@ public interface FriendshipNeo4jRepository extends Neo4jRepository<Friendship, S
     @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ") " +
             "MATCH (f)<-[all_r:" + HAS_FRIENDSHIP + "]-(all_u:" + USER_REFERENCE + ") " +
             "RETURN f, collect(all_r), collect(all_u)")
-    List<Friendship> findFriendshipsByUserId(@Param("userId") Long userId);
-
-    @Query("MATCH (u:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->" +
-            "(:" + FRIENDSHIP + ")" +
-            "<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
-            "WHERE friend.id IN $potentialMemberIds " +
-            "RETURN friend.id")
-    Set<Long> findFriendIdsIn(@Param("userId") Long userId, @Param("potentialMemberIds") Collection<Long> potentialMemberIds);
+    List<Friendship> findByUserId(@Param("userId") Long userId);
 
     @Query("MATCH (u:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->" +
             "(:" + FRIENDSHIP + ")" +
             "<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
             "RETURN friend.id")
-    Set<Long> findFriendIds(@Param("userId") Long userId);
+    Set<Long> findFriendIdsByUserId(@Param("userId") Long userId);
+
+    @Query("MATCH (u:" + USER_REFERENCE + " {id: $userId})-[r:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ") " +
+            "WHERE r.isMuted = $isMuted " +
+            "MATCH (f)<-[all_r:" + HAS_FRIENDSHIP + "]-(all_u:" + USER_REFERENCE + ") " +
+            "RETURN f, collect(all_r), collect(all_u)")
+    List<Friendship> findByMuteStatus(@Param("userId") Long userId, @Param("isMuted") boolean isMuted);
 
     @Query("MATCH (u:" + USER_REFERENCE + " {id: $userId})-[r:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
             "WHERE r.isMuted = $isMuted " +
             "RETURN friend.id")
     Set<Long> findFriendIdsByMuteStatus(@Param("userId") Long userId, @Param("isMuted") boolean isMuted);
 
-    @Query("MATCH (u:" + USER_REFERENCE + " {id: $userId})-[r:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ") " +
-            "WHERE r.isMuted = $isMuted " +
-            "MATCH (f)<-[all_r:" + HAS_FRIENDSHIP + "]-(all_u:" + USER_REFERENCE + ") " +
-            "RETURN f, collect(all_r), collect(all_u)")
-    List<Friendship> findFriendshipsByMuteStatus(@Param("userId") Long userId, @Param("isMuted") boolean isMuted);
-
     @Query("MATCH (u:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
-            "WHERE friend.id IN $targetIds " +
+            "WHERE friend.id IN $candidateIds " +
             "MATCH (f)<-[all_r:" + HAS_FRIENDSHIP + "]-(all_u:" + USER_REFERENCE + ") " +
             "RETURN f, collect(all_r), collect(all_u)")
-    List<Friendship> findFriendshipsIn(@Param("userId") Long userId, @Param("targetIds") Collection<Long> targetIds);
+    List<Friendship> filterAmong(@Param("userId") Long userId, @Param("candidateIds") Collection<Long> candidateIds);
+
+    @Query("MATCH (u:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->" +
+            "(:" + FRIENDSHIP + ")" +
+            "<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
+            "WHERE friend.id IN $candidateIds " +
+            "RETURN friend.id")
+    Set<Long> filterFriendIdsAmong(@Param("userId") Long userId, @Param("candidateIds") Collection<Long> candidateIds);
 
     @Query("MATCH (u:" + USER_REFERENCE + ")-[r:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ") " +
             "WHERE r.interestScore > $threshold " +
@@ -67,7 +67,6 @@ public interface FriendshipNeo4jRepository extends Neo4jRepository<Friendship, S
             "WITH f, collect(all_r.interestScore) as scores " +
             "SET f.intimacy = sqrt((scores[0] / (scores[0] + 50.0)) * (scores[1] / (scores[1] + 50.0)))")
     void applyDecay(@Param("rate") double rate, @Param("threshold") double threshold, @Param("decayTime") LocalDateTime decayTime);
-
 
     @Query("UNWIND $updates AS u " +
             "MATCH (:" + USER_REFERENCE + " {id: u.userId})-[r:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + " {id: u.friendshipId}) " +

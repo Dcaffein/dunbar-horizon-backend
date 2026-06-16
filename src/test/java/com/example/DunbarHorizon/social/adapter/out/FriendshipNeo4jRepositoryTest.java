@@ -73,12 +73,12 @@ class FriendshipNeo4jRepositoryTest {
 
     @Test
     @DisplayName("특정 ID 목록 중 친구인 ID들만 필터링하여 반환한다")
-    void findFriendIdsIn_Success() {
+    void filterFriendIdsAmong_Success() {
         // given
         friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
 
         // when
-        Set<Long> friendIds = friendshipRepository.findFriendIdsIn(1L, Set.of(2L, 3L));
+        Set<Long> friendIds = friendshipRepository.filterFriendIdsAmong(1L, Set.of(2L, 3L));
 
         // then
         assertThat(friendIds).containsExactly(2L);
@@ -190,7 +190,7 @@ class FriendshipNeo4jRepositoryTest {
         friendshipRepository.save(FriendTestFactory.createFriendship(userA, userC));
 
         // when
-        List<Friendship> friendships = friendshipRepository.findFriendshipsByUserId(userA.getId());
+        List<Friendship> friendships = friendshipRepository.findByUserId(userA.getId());
 
         // then
         assertThat(friendships).hasSize(2);
@@ -198,13 +198,13 @@ class FriendshipNeo4jRepositoryTest {
 
     @Test
     @DisplayName("특정 타겟 ID 목록에 해당하는 Friendship 엔티티만 필터링하여 조회한다")
-    void findFriendshipsIn_Success() {
+    void filterAmong_Success() {
         // given
         friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
         friendshipRepository.save(FriendTestFactory.createFriendship(userA, userC));
 
         // when (userB만 타겟으로 지정)
-        List<Friendship> friendships = friendshipRepository.findFriendshipsIn(userA.getId(), Set.of(userB.getId()));
+        List<Friendship> friendships = friendshipRepository.filterAmong(userA.getId(), Set.of(userB.getId()));
 
         // then
         assertThat(friendships).hasSize(1);
@@ -213,7 +213,7 @@ class FriendshipNeo4jRepositoryTest {
 
     @Test
     @DisplayName("음소거 상태를 필터링하여 Friendship 엔티티를 조회한다")
-    void findFriendshipsByMuteStatus_Success() {
+    void findByMuteStatus_Success() {
         // given
         Friendship friendshipWithB = FriendTestFactory.createFriendship(userA, userB);
         friendshipWithB.updateMuteStatus(userA.getId(), true); // B는 음소거
@@ -224,8 +224,8 @@ class FriendshipNeo4jRepositoryTest {
         friendshipRepository.save(friendshipWithC);
 
         // when
-        List<Friendship> mutedFriendships = friendshipRepository.findFriendshipsByMuteStatus(userA.getId(), true);
-        List<Friendship> activeFriendships = friendshipRepository.findFriendshipsByMuteStatus(userA.getId(), false);
+        List<Friendship> mutedFriendships = friendshipRepository.findByMuteStatus(userA.getId(), true);
+        List<Friendship> activeFriendships = friendshipRepository.findByMuteStatus(userA.getId(), false);
 
         // then
         assertThat(mutedFriendships).hasSize(1);

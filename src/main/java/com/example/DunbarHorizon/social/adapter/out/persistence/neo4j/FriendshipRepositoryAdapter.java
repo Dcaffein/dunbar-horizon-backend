@@ -28,7 +28,7 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
 
     @Override
     public List<Friendship> findFriendships(Long userId) {
-        return friendshipNeo4jRepository.findFriendshipsByUserId(userId);
+        return friendshipNeo4jRepository.findByUserId(userId);
     }
 
     @Override
@@ -53,12 +53,12 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
 
     @Override
     public Set<Long> findFriendIds(Long userId) {
-        return friendshipNeo4jRepository.findFriendIds(userId);
+        return friendshipNeo4jRepository.findFriendIdsByUserId(userId);
     }
 
     @Override
     public Set<UserReference> findFriends(Long userId) {
-        List<Friendship> friendships = friendshipNeo4jRepository.findFriendshipsByUserId(userId);
+        List<Friendship> friendships = friendshipNeo4jRepository.findByUserId(userId);
 
         return friendships.stream()
                 .map(friendship -> friendship.getFriend(userId))
@@ -67,12 +67,12 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
 
     @Override
     public Set<Long> findFriendIdsIn(Long userId, Collection<Long> candidateIds) {
-        return friendshipNeo4jRepository.findFriendIdsIn(userId, candidateIds);
+        return friendshipNeo4jRepository.filterFriendIdsAmong(userId, candidateIds);
     }
 
     @Override
     public Set<UserReference> findFriendsIn(Long userId, Collection<Long> targetIds) {
-        List<Friendship> friendships = friendshipNeo4jRepository.findFriendshipsIn(userId, targetIds);
+        List<Friendship> friendships = friendshipNeo4jRepository.filterAmong(userId, targetIds);
 
         return friendships.stream()
                 .map(friendship -> friendship.getFriend(userId))
@@ -86,7 +86,7 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
 
     @Override
     public Set<UserReference> findFriendsByMuteStatus(Long userId, boolean isMuted) {
-        List<Friendship> friendships = friendshipNeo4jRepository.findFriendshipsByMuteStatus(userId, isMuted);
+        List<Friendship> friendships = friendshipNeo4jRepository.findByMuteStatus(userId, isMuted);
 
         return friendships.stream()
                 .map(friendship -> friendship.getFriend(userId))
