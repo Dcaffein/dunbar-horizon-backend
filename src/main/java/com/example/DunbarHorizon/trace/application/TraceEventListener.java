@@ -45,16 +45,16 @@ public class TraceEventListener {
         eventPublisher.publishEvent(buildNotificationEvent(event.maxId(), minUser));
     }
 
-    private NotificationEvent buildNotificationEvent(Long receiverId, UserProfileInfo sender) {
+    private NotificationEvent buildNotificationEvent(Long receiverId, UserProfileInfo counterpart) {
         return NotificationEvent.builder()
                 .receiverId(receiverId)
                 .title("서로간 잦은 방문")
-                .content(sender.nickname() + "님과 서로 통했습니다! 방문해서 인사를 건네보세요")
+                .content(counterpart.nickname() + "님과 서로 통했습니다! 방문해서 인사를 건네보세요")
                 .type(NotificationType.TRACE_REVEALED)
                 .metadata(Map.of(
-                        "senderUserId", sender.id(),
-                        "senderNickname", sender.nickname(),
-                        "senderProfileImageUrl", sender.profileImage() != null ? sender.profileImage() : ""
+                        "counterpartUserId", counterpart.id(),
+                        "counterpartNickname", counterpart.nickname(),
+                        "counterpartProfileImageUrl", counterpart.profileImage() != null ? counterpart.profileImage() : ""
                 ))
                 .build();
     }

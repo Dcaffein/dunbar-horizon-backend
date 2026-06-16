@@ -58,15 +58,15 @@ class TraceEventListenerTest {
 
         assertThat(toMinUser.type()).isEqualTo(NotificationType.TRACE_REVEALED);
         assertThat(toMinUser.content()).isEqualTo("nickB님과 서로 통했습니다! 방문해서 인사를 건네보세요");
-        assertThat(toMinUser.metadata()).containsEntry("senderUserId", 2L);
-        assertThat(toMinUser.metadata()).containsEntry("senderNickname", "nickB");
-        assertThat(toMinUser.metadata()).containsEntry("senderProfileImageUrl", "imgB");
+        assertThat(toMinUser.metadata()).containsEntry("counterpartUserId", 2L);
+        assertThat(toMinUser.metadata()).containsEntry("counterpartNickname", "nickB");
+        assertThat(toMinUser.metadata()).containsEntry("counterpartProfileImageUrl", "imgB");
 
         assertThat(toMaxUser.type()).isEqualTo(NotificationType.TRACE_REVEALED);
         assertThat(toMaxUser.content()).isEqualTo("nickA님과 서로 통했습니다! 방문해서 인사를 건네보세요");
-        assertThat(toMaxUser.metadata()).containsEntry("senderUserId", 1L);
-        assertThat(toMaxUser.metadata()).containsEntry("senderNickname", "nickA");
-        assertThat(toMaxUser.metadata()).containsEntry("senderProfileImageUrl", "imgA");
+        assertThat(toMaxUser.metadata()).containsEntry("counterpartUserId", 1L);
+        assertThat(toMaxUser.metadata()).containsEntry("counterpartNickname", "nickA");
+        assertThat(toMaxUser.metadata()).containsEntry("counterpartProfileImageUrl", "imgA");
     }
 
     @Test
