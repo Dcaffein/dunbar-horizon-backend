@@ -11,6 +11,8 @@ public interface FlagInvitationRepository {
     FlagInvitation save(FlagInvitation invitation);
     List<FlagInvitation> saveAll(List<FlagInvitation> invitations);
     Optional<FlagInvitation> findById(Long id);
+    List<FlagInvitation> findByInviteeId(Long inviteeId);
+    List<FlagInvitation> findByInviterId(Long inviterId);
     boolean existsPendingByFlagIdAndInviteeId(Long flagId, Long inviteeId);
     Set<Long> findPendingInviteeIdsByFlagId(Long flagId);
     void deleteById(Long id);
