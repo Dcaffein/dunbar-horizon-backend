@@ -10,6 +10,7 @@ import java.util.Optional;
 
 public interface FriendRequestRepository{
     FriendRequest saveRequest(FriendRequest friendRequest);
+    FriendRequest updateStatus(FriendRequest friendRequest);
     boolean existsRequestBetween(@Param("requesterId") Long requesterId, @Param("receiverId") Long receiverId);
     Optional<FriendRequest> findById(String requestId);
     void deleteById(String requestId);

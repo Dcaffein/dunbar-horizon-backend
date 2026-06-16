@@ -1,10 +1,12 @@
 package com.example.DunbarHorizon.global.config.database;
 
 import org.neo4j.driver.Driver;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.neo4j.config.EnableNeo4jAuditing;
 import org.springframework.data.neo4j.core.DatabaseSelectionProvider;
+import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.data.neo4j.core.transaction.Neo4jTransactionManager;
 import org.springframework.data.neo4j.repository.config.EnableNeo4jRepositories;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -26,5 +28,13 @@ public class Neo4jConfig {
                 DatabaseSelectionProvider databaseSelectionProvider
         ) {
                 return new Neo4jTransactionManager(driver, databaseSelectionProvider);
+        }
+
+        @Bean
+        public ApplicationRunner createNeo4jConstraints(Neo4jClient neo4jClient) {
+                return args -> neo4jClient.query(
+                        "CREATE CONSTRAINT friend_request_id_unique IF NOT EXISTS " +
+                        "FOR (fr:FriendRequest) REQUIRE fr.id IS UNIQUE"
+                ).run();
         }
 }

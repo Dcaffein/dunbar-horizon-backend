@@ -19,13 +19,15 @@ public class FriendRequestRepositoryAdapter implements FriendRequestRepository {
 
     @Override
     public FriendRequest saveRequest(FriendRequest request) {
-        if (!friendRequestNeo4jRepository.existsById(request.getId())) {
-            return friendRequestNeo4jRepository.mergeFriendRequest(
-                    request.getRequester().getId(),
-                    request.getReceiver().getId(),
-                    request.getId()
-            );
-        }
+        return friendRequestNeo4jRepository.mergeFriendRequest(
+                request.getRequester().getId(),
+                request.getReceiver().getId(),
+                request.getId()
+        );
+    }
+
+    @Override
+    public FriendRequest updateStatus(FriendRequest request) {
         return friendRequestNeo4jRepository.updateFriendRequest(request);
     }
 
