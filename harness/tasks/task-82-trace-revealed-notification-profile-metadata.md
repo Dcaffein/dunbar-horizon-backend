@@ -1,4 +1,4 @@
-# Task-83: TraceRevealed 알림에 상대방 프로필 메타데이터 포함
+# Task-82: TraceRevealed 알림에 상대방 프로필 메타데이터 포함
 
 ## 배경 및 목적
 
