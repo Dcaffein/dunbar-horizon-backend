@@ -45,10 +45,7 @@ public class Friendship {
         this.id = generateCompositeId(userA.getId(), userB.getId());
         this.createdAt = LocalDate.now();
 
-        this.intimacy = calculateIntimacyPolicy(
-                recognitionA.getNormalizedScore(),
-                recognitionB.getNormalizedScore()
-        );
+        this.intimacy = Math.sqrt(recognitionA.getNormalizedScore() * recognitionB.getNormalizedScore());
     }
 
     @PersistenceCreator
@@ -132,19 +129,9 @@ public class Friendship {
     }
 
     private void recalculateIntimacy() {
-        if (this.recognitions.size() < 2) {
-            this.intimacy = 0.0;
-            return;
-        }
-
-        double affinityA = Math.max(0, this.recognitions.get(0).getNormalizedScore());
-        double affinityB = Math.max(0, this.recognitions.get(1).getNormalizedScore());
-
-        this.intimacy = calculateIntimacyPolicy(affinityA, affinityB);
-    }
-
-    private static double calculateIntimacyPolicy(double scoreA, double scoreB) {
-        return Math.sqrt(scoreA * scoreB);
+        double a = Math.max(0, this.recognitions.get(0).getNormalizedScore());
+        double b = Math.max(0, this.recognitions.get(1).getNormalizedScore());
+        this.intimacy = Math.sqrt(a * b);
     }
 
     public boolean isMuted(Long myId) {

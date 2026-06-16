@@ -112,7 +112,7 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
     @Override
     public List<Friendship> findAllByIds(List<String> ids) {
         return StreamSupport.stream(
-                friendshipNeo4jRepository.findAllByIds(ids).spliterator(), false
+                friendshipNeo4jRepository.findAllById(ids).spliterator(), false
         ).collect(Collectors.toList());
     }
 
@@ -145,6 +145,6 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
     @Override
     public void deleteAllByIds(Collection<String> ids) {
         if (ids.isEmpty()) return;
-        friendshipNeo4jRepository.deleteAllByIdIn(ids);
+        friendshipNeo4jRepository.deleteAllById(ids);
     }
 }

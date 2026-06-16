@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.social.adapter.out;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.FriendshipNeo4jRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.SocialUserNeo4jRepository;
+import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
@@ -104,19 +105,50 @@ class FriendshipNeo4jRepositoryTest {
     @Test
     @DisplayName("applyDecay 쿼리가 조건에 맞는 관계의 점수를 감쇄시키고 친밀도를 재계산한다")
     void applyDecay_Success() {
+        // given
         Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
         friendship.adjustInterestScore(userA.getId(), 100.0);
         friendship.adjustInterestScore(userB.getId(), 100.0);
         friendshipRepository.save(friendship);
 
-        LocalDateTime decayTime = LocalDateTime.now().plusSeconds(1);
+        double rate = 0.5;
+        double threshold = 1.0;
+        double k = FriendRecognition.CONVERGENCE_K;
+        double decayedScore = (FriendRecognition.INITIAL_RAW_SCORE + 100.0) * rate;
+        double norm = decayedScore / (decayedScore + k);
+        double expectedIntimacy = Math.sqrt(norm * norm);
 
         // when
-        friendshipRepository.applyDecay(0.5, 1.0, decayTime);
+        friendshipRepository.applyDecay(rate, threshold, LocalDateTime.now().plusSeconds(1));
 
         // then
         Friendship updated = friendshipRepository.findById("1_2").orElseThrow();
-        assertThat(updated.getIntimacy()).isCloseTo(updated.getIntimacy(), within(0.01));
+        assertThat(updated.getIntimacy()).isCloseTo(expectedIntimacy, within(0.0001));
+    }
+
+    @Test
+    @DisplayName("한쪽만 30일 이상 교류가 없을 때 applyDecay는 intimacy를 0으로 덮어쓰지 않는다")
+    void applyDecay_asymmetric_doesNotZeroIntimacy() {
+        // given
+        Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.save(friendship);
+
+        // userA의 엣지만 60일 전으로 설정 → decayTime(30일 전) 조건 충족
+        // userB의 엣지는 생성 직후 → decayTime 조건 미충족 (최신)
+        neo4jClient.query(
+                "MATCH (:UserReference {id: $userId})-[r:HAS_FRIENDSHIP]->(f:Friendship {id: $fid}) " +
+                "SET r.lastInteractedAt = $past"
+        ).bind(userA.getId()).to("userId")
+         .bind("1_2").to("fid")
+         .bind(LocalDateTime.now().minusDays(60)).to("past")
+         .run();
+
+        // when
+        friendshipRepository.applyDecay(0.967, 1.0, LocalDateTime.now().minusDays(30));
+
+        // then — 버그 시 intimacy = 0.0, 수정 후 양쪽 점수 기반 정상 계산값 > 0
+        Friendship updated = friendshipRepository.findById("1_2").orElseThrow();
+        assertThat(updated.getIntimacy()).isGreaterThan(0.0);
     }
 
     @Test
