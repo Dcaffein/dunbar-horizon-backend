@@ -180,11 +180,9 @@ class FriendshipNeo4jRepositoryTest {
         assertThat(friendshipRepository.existsFriendshipBetween(1L, 2L)).isFalse();
     }
 
-    // --- [새롭게 추가된 핵심 테스트들] ---
-
     @Test
     @DisplayName("특정 사용자의 모든 Friendship 엔티티를 통째로 조회한다")
-    void findFriendshipsBy_User_Id_Success() {
+    void findByUserId_Success() {
         // given
         friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
         friendshipRepository.save(FriendTestFactory.createFriendship(userA, userC));
@@ -194,44 +192,5 @@ class FriendshipNeo4jRepositoryTest {
 
         // then
         assertThat(friendships).hasSize(2);
-    }
-
-    @Test
-    @DisplayName("특정 타겟 ID 목록에 해당하는 Friendship 엔티티만 필터링하여 조회한다")
-    void filterAmong_Success() {
-        // given
-        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
-        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userC));
-
-        // when (userB만 타겟으로 지정)
-        List<Friendship> friendships = friendshipRepository.filterAmong(userA.getId(), Set.of(userB.getId()));
-
-        // then
-        assertThat(friendships).hasSize(1);
-        assertThat(friendships.get(0).getFriend(userA.getId()).getId()).isEqualTo(userB.getId());
-    }
-
-    @Test
-    @DisplayName("음소거 상태를 필터링하여 Friendship 엔티티를 조회한다")
-    void findByMuteStatus_Success() {
-        // given
-        Friendship friendshipWithB = FriendTestFactory.createFriendship(userA, userB);
-        friendshipWithB.updateMuteStatus(userA.getId(), true); // B는 음소거
-        friendshipRepository.save(friendshipWithB);
-
-        Friendship friendshipWithC = FriendTestFactory.createFriendship(userA, userC);
-        friendshipWithC.updateMuteStatus(userA.getId(), false); // C는 활성
-        friendshipRepository.save(friendshipWithC);
-
-        // when
-        List<Friendship> mutedFriendships = friendshipRepository.findByMuteStatus(userA.getId(), true);
-        List<Friendship> activeFriendships = friendshipRepository.findByMuteStatus(userA.getId(), false);
-
-        // then
-        assertThat(mutedFriendships).hasSize(1);
-        assertThat(mutedFriendships.get(0).getFriend(userA.getId()).getId()).isEqualTo(userB.getId());
-
-        assertThat(activeFriendships).hasSize(1);
-        assertThat(activeFriendships.get(0).getFriend(userA.getId()).getId()).isEqualTo(userC.getId());
     }
 }

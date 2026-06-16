@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.social.domain.friend.repository;
 
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -19,16 +18,10 @@ public interface FriendshipRepository {
     boolean existsFriendshipBetween(Long userId, Long targetId);
 
     List<Friendship> findByUserId(Long userId);
-    Set<Long> findFriendIdsByUserId(Long userId);
-    Set<UserReference> findFriendsByUserId(Long userId);
 
-    List<Friendship> findByMuteStatus(Long userId, boolean isMuted);
     Set<Long> findFriendIdsByMuteStatus(Long userId, boolean isMuted);
-    Set<UserReference> findFriendsByMuteStatus(Long userId, boolean isMuted);
 
-    List<Friendship> filterAmong(Long userId, Collection<Long> candidateIds);
     Set<Long> filterFriendIdsAmong(Long userId, Collection<Long> candidateIds);
-    Set<UserReference> filterFriendsAmong(Long userId, Collection<Long> candidateIds);
 
     void applyDecay(double rate, double threshold, LocalDateTime decayTime);
     void updateUserFields(Friendship friendship, Long userId);

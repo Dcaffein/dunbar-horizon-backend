@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.neo4j.core.Neo4jClient;
@@ -12,7 +11,6 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -53,43 +51,13 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
     }
 
     @Override
-    public Set<Long> findFriendIdsByUserId(Long userId) {
-        return friendshipNeo4jRepository.findFriendIdsByUserId(userId);
-    }
-
-    @Override
-    public Set<UserReference> findFriendsByUserId(Long userId) {
-        return new HashSet<>(friendshipNeo4jRepository.findFriendsByUserId(userId));
-    }
-
-    @Override
-    public List<Friendship> findByMuteStatus(Long userId, boolean isMuted) {
-        return friendshipNeo4jRepository.findByMuteStatus(userId, isMuted);
-    }
-
-    @Override
     public Set<Long> findFriendIdsByMuteStatus(Long userId, boolean isMuted) {
         return friendshipNeo4jRepository.findFriendIdsByMuteStatus(userId, isMuted);
     }
 
     @Override
-    public Set<UserReference> findFriendsByMuteStatus(Long userId, boolean isMuted) {
-        return new HashSet<>(friendshipNeo4jRepository.findFriendsByMuteStatus(userId, isMuted));
-    }
-
-    @Override
-    public List<Friendship> filterAmong(Long userId, Collection<Long> candidateIds) {
-        return friendshipNeo4jRepository.filterAmong(userId, candidateIds);
-    }
-
-    @Override
     public Set<Long> filterFriendIdsAmong(Long userId, Collection<Long> candidateIds) {
         return friendshipNeo4jRepository.filterFriendIdsAmong(userId, candidateIds);
-    }
-
-    @Override
-    public Set<UserReference> filterFriendsAmong(Long userId, Collection<Long> candidateIds) {
-        return new HashSet<>(friendshipNeo4jRepository.filterFriendsAmong(userId, candidateIds));
     }
 
     @Override
