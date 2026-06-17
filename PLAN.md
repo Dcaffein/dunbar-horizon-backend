@@ -1,79 +1,93 @@
-# PLAN.md — Task-83: Friendship 감쇄 버그 수정 및 코드 정비
+# PLAN — Task-85: findByUserId 쿼리 비활성 유저 미처리 수정
 
 ## 작업 목표
 
-`applyDecay` Cypher 쿼리의 collect 버그로 `f.intimacy = 0.0`이 잘못 설정되어 활성 관계가 삭제되는 문제를 수정한다.
-아울러 버그의 기원이 된 Java dead branch 제거, `Friendship.id` 인덱스 추가, Repository 쿼리 정비를 함께 진행한다.
+`FriendshipNeo4jRepository.findByUserId` 의 쿼리가 비활성 친구가 있을 때 `MappingException`
+을 던지는 버그를 수정하고, 다른 쿼리 메서드들의 동일 문제 여부를 검토한다.
 
 ---
 
 ## 현황 분석
 
-### 변경 대상 파일
+### 수정 대상: `findByUserId`
 
-| 파일 | 현재 상태 |
-|------|----------|
-| `Friendship.java` | `recalculateIntimacy`에 dead branch + `calculateIntimacyPolicy` 존재 |
-| `FriendshipNeo4jRepository.java` | `applyDecay` 버그. 일부 쿼리 derived로 대체 가능 |
+```cypher
+-- 현재 (버그)
+MATCH (:UserReference {id: $userId})-[:HAS_FRIENDSHIP]->(f:Friendship)
+MATCH (f)<-[all_r:HAS_FRIENDSHIP]-(all_u:UserReference)  -- 비활성 친구 누락
+RETURN f, collect(all_r), collect(all_u)
+```
 
-### `FriendshipNeo4jRepository` 쿼리 분류
+두 번째 MATCH가 `UserReference` 레이블로 필터하므로, 친구가 비활성(`InactiveSocialUser`)이면
+해당 관계가 `collect(all_r)` 에서 빠져 `recognitions.size() == 1` → `FriendshipInvalidException`.
 
-**inherited 메서드로 대체 가능 (derived):**
+### 다른 쿼리 메서드 검토 결과
 
-| 현재 | 대체 |
-|------|------|
-| `findById` override | 제거 — `Neo4jRepository.findById` 그대로 사용 |
-| `findAllByIds(Collection<String>)` @Query | `findAllById(Iterable<String>)` 상속 메서드 사용 |
-| `deleteAllByIdIn(Collection<String>)` @Query | `deleteAllById(Iterable<String>)` 상속 메서드 사용 |
+| 메서드 | `UserReference` 사용 방식 | 비활성 유저 시 동작 | 판정 |
+|--------|--------------------------|-------------------|------|
+| `findFriendIdsByMuteStatus` | `(friend:UserReference)` | 비활성 친구 ID 누락 | 묵음 목록에서 제외 — 비즈니스상 허용 |
+| `filterFriendIdsAmong` | `(friend:UserReference)` | 비활성 친구 필터 탈락 | 친구 여부 체크에서 false 반환 — 허용 |
+| `applyDecay` | `(u:UserReference)` | 비활성 유저 엣지 감쇄 스킵 | 비활성 유저의 interestScore 미감쇄 — 허용 |
+| `batchUpdateInterestScores` | `(:UserReference)` | 비활성 유저 업데이트 스킵 | 동일 — 허용 |
+| `updateUserRelationshipFields` | `(:UserReference)` | 비활성 유저면 SET 무시 | 비활성 유저 관계 필드 수정 불가 — 허용 |
 
-**@Query 유지 필요 (UserReference 경유 탐색 또는 관계 프로퍼티 조건):**
-
-`findFriendshipsByUserId`, `findFriendIdsIn`, `findFriendIds`, `findFriendIdsByMuteStatus`, `findFriendshipsByMuteStatus`, `findFriendshipsIn`, `applyDecay`, `batchUpdateInterestScores`, `updateUserRelationshipFields`
-
-SDN6 derived query는 `Neo4jRepository<Friendship, String>` 기준으로 `Friendship` 자신의 프로퍼티만 조건으로 쓸 수 있다. UserReference 경유 탐색이나 관계 프로퍼티(`isMuted` 등) 조건은 표현 불가하므로 @Query를 유지한다.
+`findByUserId` 외 다른 메서드들은 엔티티 매핑 없이 ID 반환 또는 순수 SET 쿼리이므로,
+비활성 유저를 제외하는 것이 예외가 아닌 자연스러운 동작이다. **추가 수정 불필요**.
 
 ---
 
 ## 변경 파일 목록
 
-### 1. `social/domain/friend/Friendship.java`
-
-- `recalculateIntimacy()`: dead branch(`size < 2`) 제거, `calculateIntimacyPolicy()` 제거 후 `Math.sqrt` 인라인
-
-### 2. `social/adapter/out/persistence/neo4j/springData/FriendshipNeo4jRepository.java`
-
-- `findById` override 제거
-- `findAllByIds` @Query → `findAllById` 상속 메서드로 대체 (시그니처 변경)
-- `deleteAllByIdIn` @Query → `deleteAllById` 상속 메서드로 대체 (시그니처 변경)
-- `applyDecay` 쿼리 수정:
-  - 감쇄 후 `WITH DISTINCT f`로 영향받은 Friendship만 추출
-  - 전체 엣지 재조회: `MATCH (all_u:UserReference)-[all_r:HAS_FRIENDSHIP]->(f)`
-  - `collect(all_r.interestScore)`로 항상 2개 수집 보장
-  - `ELSE 0.0` 분기 제거
-
-### 3. `social/adapter/out/persistence/neo4j/FriendshipRepositoryAdapter.java`
-
-- `findAllByIds` → `findAllById` 시그니처 변경에 따른 어댑터 수정
-- `deleteAllByIds` → `deleteAllById` 시그니처 변경에 따른 어댑터 수정
+| 파일 | 변경 내용 |
+|------|---------|
+| `social/adapter/out/persistence/neo4j/springData/FriendshipNeo4jRepository.java` | `findByUserId` `@Query` 수정 |
+| `social/adapter/out/FriendshipNeo4jRepositoryTest.java` | 비활성 유저 시나리오 테스트 케이스 추가 |
 
 ---
 
 ## 구현 방향
 
-- 감쇄 조건(`r.lastInteractedAt`, `r.interestScore > $threshold`) 및 이관 조건은 변경하지 않는다. 버그는 collect 범위 문제이며, 판정 로직 자체는 정상이다.
-- `findAllById` / `deleteAllById`는 SDN6가 `@Relationship(INCOMING)`을 자동으로 로드하므로 현재 @Query와 동일한 결과를 보장한다.
-- `FriendshipRepository` 포트 인터페이스의 메서드 시그니처도 어댑터 변경에 맞게 수정한다.
+### `findByUserId` 쿼리 (두 단계 분리)
+
+```cypher
+-- 1단계: 익명 (:UserReference) 로 친구 활성 여부만 검증, f만 추출
+MATCH (:UserReference {id: $userId})-[:HAS_FRIENDSHIP]->(f:Friendship)
+      <-[:HAS_FRIENDSHIP]-(:UserReference)
+
+-- 2단계: 걸러진 f에 대해 레이블 제약 없이 양쪽 관계 수집
+MATCH (f)<-[all_r:HAS_FRIENDSHIP]-(all_u)
+RETURN f, collect(all_r), collect(all_u)
+```
+
+- 1단계의 익명 `(:UserReference)` 는 Cypher 경로 내 관계 유일성 규칙에 의해
+  반드시 `$userId` 본인이 아닌 상대방으로 매칭됨
+- 상대방이 비활성이면 1단계에서 f가 결과에서 제외됨 (비즈니스 요구 충족)
+- 2단계에서 레이블 제약 없이 수집하므로 `recognitions` 항상 2개 보장
+
+### `FriendshipNeo4jRepositoryTest` 추가 케이스
+
+기존 테스트들은 모두 활성 유저끼리만 검증하므로 수정 불필요.
+새 쿼리에서도 양쪽이 활성이면 동작이 동일하기 때문이다.
+
+`UserReference` 레이블을 사용하는 모든 쿼리에 대해 비활성 유저 시나리오를 추가한다.
+코드를 수정하지 않더라도 현재 동작을 테스트로 명시하고, 의도와 다를 경우 수정한다.
+
+| 메서드 | 추가 케이스 |
+|--------|-----------|
+| `findByUserId` | 비활성 친구 → 결과에서 제외되는지 |
+| `filterFriendIdsAmong` | 비활성 친구 → `false` 반환인지 (친구 여부 체크 영향) |
+| `findFriendIdsByMuteStatus` | 비활성 친구를 묵음해도 목록에서 제외되는지 |
+| `updateUserRelationshipFields` | 비활성 유저 본인의 관계 필드 수정 불가 여부 |
 
 ---
 
 ## 예상 사이드 이펙트
 
-- `findAllByIds` → `findAllById` 시그니처 변경으로 `InteractionScoreFlushService`의 호출부 수정 필요
-- `deleteAllByIds` → `deleteAllById` 시그니처 변경으로 `FriendshipArchiveService`의 호출부 수정 필요
+없음. 변경 범위가 단일 `@Query` 수정에 한정되며, 비즈니스 동작은 "비활성 친구 제외" 로 명확히 정의된다.
 
 ---
 
 ## 테스트 전략
 
-기본 프로토콜(`TESTING-GUIDE.md`)을 따른다.
-`FriendshipDecayServiceTest` — `applyDecay` 파라미터 전달 단위 검증.
+`Neo4jRepositoryTest` 기반으로 작성한다. `SocialUser.deactivate()` 를 호출하거나
+`@DynamicLabels` 를 직접 조작하여 비활성 노드를 만든 뒤 `findByUserId` 결과를 검증한다.

@@ -20,8 +20,9 @@ public interface FriendshipNeo4jRepository extends Neo4jRepository<Friendship, S
         return existsById(Friendship.generateCompositeId(requesterId, receiverId));
     }
 
-    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ") " +
-            "MATCH (f)<-[all_r:" + HAS_FRIENDSHIP + "]-(all_u:" + USER_REFERENCE + ") " +
+    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ")" +
+            "<-[:" + HAS_FRIENDSHIP + "]-(:" + USER_REFERENCE + ") " +
+            "MATCH (f)<-[all_r:" + HAS_FRIENDSHIP + "]-(all_u) " +
             "RETURN f, collect(all_r), collect(all_u)")
     List<Friendship> findByUserId(@Param("userId") Long userId);
 

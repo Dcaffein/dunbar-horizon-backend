@@ -193,4 +193,82 @@ class FriendshipNeo4jRepositoryTest {
         // then
         assertThat(friendships).hasSize(2);
     }
+
+    @Test
+    @DisplayName("findByUserId — 비활성 친구가 있는 friendship은 결과에서 제외된다")
+    void findByUserId_excludesInactiveFriend() {
+        // given
+        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
+        userC.switchUserStatus(false);
+        socialUserNeo4jRepository.save(userC);
+        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userC));
+
+        // when
+        List<Friendship> friendships = friendshipRepository.findByUserId(userA.getId());
+
+        // then — 비활성 userC와의 friendship은 제외, 활성 userB와의 friendship만 반환
+        assertThat(friendships).hasSize(1);
+        assertThat(friendships.get(0).getFriend(userA.getId()).getId()).isEqualTo(userB.getId());
+    }
+
+    @Test
+    @DisplayName("filterFriendIdsAmong — 비활성 친구는 친구로 인식되지 않는다")
+    void filterFriendIdsAmong_excludesInactiveFriend() {
+        // given
+        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
+        userC.switchUserStatus(false);
+        socialUserNeo4jRepository.save(userC);
+        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userC));
+
+        // when
+        Set<Long> friendIds = friendshipRepository.filterFriendIdsAmong(userA.getId(), Set.of(userB.getId(), userC.getId()));
+
+        // then — 활성 userB만 포함, 비활성 userC는 제외
+        assertThat(friendIds).containsExactly(userB.getId());
+    }
+
+    @Test
+    @DisplayName("findFriendIdsByMuteStatus — 비활성 친구는 묵음 목록에 포함되지 않는다")
+    void findFriendIdsByMuteStatus_excludesInactiveFriend() {
+        // given — userB(활성) 묵음, userC(비활성) 묵음
+        Friendship friendshipAB = FriendTestFactory.createFriendship(userA, userB);
+        friendshipAB.updateMuteStatus(userA.getId(), true);
+        friendshipRepository.save(friendshipAB);
+
+        userC.switchUserStatus(false);
+        socialUserNeo4jRepository.save(userC);
+        Friendship friendshipAC = FriendTestFactory.createFriendship(userA, userC);
+        friendshipAC.updateMuteStatus(userA.getId(), true);
+        friendshipRepository.save(friendshipAC);
+
+        // when
+        Set<Long> mutedIds = friendshipRepository.findFriendIdsByMuteStatus(userA.getId(), true);
+
+        // then — 활성 userB만 포함, 비활성 userC는 제외
+        assertThat(mutedIds).containsExactly(userB.getId());
+    }
+
+    @Test
+    @DisplayName("updateUserRelationshipFields — 비활성 유저 본인의 관계 필드는 수정되지 않는다")
+    void updateUserRelationshipFields_doesNotUpdateInactiveUser() {
+        // given
+        Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.save(friendship);
+
+        userA.switchUserStatus(false);
+        socialUserNeo4jRepository.save(userA);
+
+        // when — 비활성 userA의 필드 수정 시도
+        friendshipRepository.updateUserRelationshipFields(friendship.getId(), userA.getId(), "별명", false, false);
+
+        // then — UserReference 레이블이 없는 비활성 유저는 쿼리 MATCH에서 제외되어 SET이 무시됨
+        // findById도 동일한 레이블 제약으로 실패하므로 Neo4jClient로 직접 검증
+        Optional<String> alias = neo4jClient.query(
+                "MATCH (:SocialUser {id: $userId})-[r:HAS_FRIENDSHIP]->(f:Friendship {id: $fid}) RETURN r.friendAlias"
+        ).bind(userA.getId()).to("userId")
+         .bind(friendship.getId()).to("fid")
+         .fetchAs(String.class)
+         .one();
+        assertThat(alias).isEmpty();
+    }
 }
