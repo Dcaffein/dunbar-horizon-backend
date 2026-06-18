@@ -9,6 +9,8 @@ import java.util.Optional;
 
 public interface UserQueryUseCase {
     List<UserProfileInfo> getUserProfiles(Collection<Long> ids);
+    /** Neo4j sync 전용 — profileImage에 presigned URL이 아닌 raw S3 key를 담아 반환 */
+    List<UserProfileInfo> getUserProfilesForSync(Collection<Long> ids);
     Optional<UserProfileInfo> getActiveUserProfile(Long id);
     Optional<UserProfileInfo> findActiveUserByEmail(String email);
     MyProfileResult getMyProfile(Long id);

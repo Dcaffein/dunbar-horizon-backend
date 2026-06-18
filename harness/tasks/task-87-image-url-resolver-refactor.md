@@ -84,3 +84,47 @@ account·buzz 도메인도 동일한 방향으로 교체된다.
 - presigned PUT URL 발급 흐름 (프론트 직접 업로드 방식)
 - `UserSyncIntegrationEvent` 레코드 구조 (profileImageUrl 필드명 유지, 의미만 key로 변경)
 - Neo4j `SocialUser` 노드의 `profileImageUrl` 프로퍼티명 (Neo4j 스키마 마이그레이션 불필요)
+
+---
+
+## 결과 및 디버그 기록
+
+### 구현 완료 항목
+
+| 항목 | 파일 |
+|------|------|
+| S3 자격증명 명시적 주입 (`StaticCredentialsProvider`) | `global/config/S3Config.java` |
+| URL 해석 공용 컴포넌트 추출 | `global/imageStorage/S3ImageUrlResolver.java` |
+| S3 모델 패키지 이동 (`global/model` → `global/imageStorage`) | `PresignedUploadResult`, `PresignRequest` |
+| 소셜 도메인 포트/어댑터 추가 | `ImageUrlResolverPort`, `ImageUrlResolverAdapter` |
+| `SocialProfileResult`, `FriendshipDetailResult` — 조회 시 URL 생성 | resolver 주입 방식으로 변경 |
+| `UserOutboxDomainEventListener` — raw key 전달로 수정 | presign 호출 제거 |
+| Neo4j sync용 raw key 반환 메서드 추가 | `UserQueryUseCase.getUserProfilesForSync()` |
+| `SocialUserSyncHelper` — raw key 저장으로 변경 | `getUserProfilesForSync()` 사용 |
+| 만료된 legacy presigned URL 자동 재서명 | `S3ImageUrlResolver.extractKeyAndPresign()` |
+
+### 디버그: 프로필 이미지 업데이트 후 친구 목록에 이미지 미표시
+
+**증상**: `GET /api/v1/users/me` → 이미지 정상 반환, `GET /api/v1/friends/{id}` → `friendProfileImageUrl: null`
+
+**원인 분석 과정**:
+
+1. 서버 로그 확인 → MySQL UPDATE는 발생했으나 outbox INSERT가 없음
+2. `UserSyncIntegrationEvent`가 발행되지 않아 `SocialUserEventListener`가 호출되지 않음
+3. 이벤트가 발행되지 않는 이유: `UserProfileUpdateService.updateProfile()`이 JPA dirty checking에만 의존하고 `userRepository.save(user)`를 호출하지 않음
+
+**근본 원인**: Spring Data JPA의 `@DomainEvents`는 `SimpleJpaRepository.save()` 내부에서 `publisher.publishEvents(entity)`를 호출할 때만 동작한다. `save()`를 건너뛰면 Hibernate는 dirty checking으로 UPDATE를 실행하지만 도메인 이벤트는 아무도 발행하지 않는다.
+
+**수정**: `UserProfileUpdateService.updateProfile()` 에 `userRepository.save(user)` 추가
+
+```java
+// 수정 전
+userRepository.findById(userId).orElseThrow(...).updateProfile(nickname, profileImageKey);
+
+// 수정 후
+User user = userRepository.findById(userId).orElseThrow(...);
+user.updateProfile(nickname, profileImageKey);
+userRepository.save(user);  // @DomainEvents 발행 트리거
+```
+
+**함께 제거한 잘못된 접근**: 읽기 경로에서 null profileImageUrl을 감지해 MySQL 재sync하는 로직을 추가했다가 제거. 읽기 경로에 sync를 두는 것은 설계 원칙 위반이며 이벤트 경로를 신뢰해야 한다.

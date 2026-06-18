@@ -40,6 +40,7 @@ class UserProfileUpdateServiceTest {
         userProfileUpdateService.updateProfile(1L, "새닉네임", "profiles/uuid-photo");
 
         verify(user).updateProfile("새닉네임", "profiles/uuid-photo");
+        verify(userRepository).save(user);
     }
 
     @Test
@@ -56,6 +57,7 @@ class UserProfileUpdateServiceTest {
         userProfileUpdateService.updateProfile(1L, "새닉네임", null);
 
         verify(user).updateProfile("새닉네임", null);
+        verify(userRepository).save(user);
     }
 
     @Test
