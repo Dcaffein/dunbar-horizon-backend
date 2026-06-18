@@ -54,6 +54,13 @@ public class BuzzController {
         return ResponseEntity.ok(buzzQueryUseCase.getReceivedBuzzes(currentUserId, pageable));
     }
 
+    @GetMapping("/sent")
+    public ResponseEntity<Slice<BuzzSummaryResult>> getSentBuzzes(
+            @CurrentUserId Long currentUserId,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(buzzQueryUseCase.getSentBuzzes(currentUserId, pageable));
+    }
+
     @GetMapping("/{buzzId}")
     public ResponseEntity<BuzzDetailResult> getBuzzDetail(
             @CurrentUserId Long currentUserId,
