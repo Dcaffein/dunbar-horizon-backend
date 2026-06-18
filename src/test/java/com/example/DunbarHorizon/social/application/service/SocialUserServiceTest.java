@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.SocialProfileResult;
+import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPort;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
@@ -23,13 +24,17 @@ class SocialUserServiceTest {
     @InjectMocks private SocialUserService socialUserService;
     @Mock private SocialUserRepository socialUserRepository;
     @Mock private SocialUserSyncHelper syncHelper;
+    @Mock private ImageUrlResolverPort imageUrlResolverPort;
 
     @Test
     @DisplayName("Neo4j에 존재하는 유저 ID로 조회하면 SocialProfileResult를 반환한다")
     void getSocialProfile_UserExists_ReturnsSocialProfile() {
         // given
-        SocialUser socialUser = new SocialUser(2L, "친구", "https://img.com/friend.png");
+        String key = "profiles/uuid-photo";
+        String resolvedUrl = "https://presigned.s3.url/friend.png";
+        SocialUser socialUser = new SocialUser(2L, "친구", key);
         given(socialUserRepository.findAllUserReferencesById(Set.of(2L))).willReturn(Set.of(socialUser));
+        given(imageUrlResolverPort.resolveUrl(key)).willReturn(resolvedUrl);
 
         // when
         SocialProfileResult result = socialUserService.getSocialProfile(2L);
@@ -37,7 +42,7 @@ class SocialUserServiceTest {
         // then
         assertThat(result.id()).isEqualTo(2L);
         assertThat(result.nickname()).isEqualTo("친구");
-        assertThat(result.profileImageUrl()).isEqualTo("https://img.com/friend.png");
+        assertThat(result.profileImageUrl()).isEqualTo(resolvedUrl);
     }
 
     @Test
