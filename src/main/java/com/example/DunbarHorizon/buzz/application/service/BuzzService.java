@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.buzz.application.port.in.BuzzQueryUseCase;
 import com.example.DunbarHorizon.buzz.application.port.in.command.CreateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
+import com.example.DunbarHorizon.buzz.application.dto.result.BuzzProfileResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
@@ -124,7 +125,10 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
         Buzz buzz = getBuzzOrThrow(buzzId);
         buzz.validateAccess(userId);
         buzzRepository.addReadRecipient(buzzId, userId);
-        return BuzzDetailResult.from(buzz, userId);
+        List<BuzzProfileResult> recipients = buzzSocialPort.getCreatorProfiles(buzz.getRecipientIds()).stream()
+                .map(info -> new BuzzProfileResult(info.id(), info.nickname(), info.profileImageUrl()))
+                .toList();
+        return BuzzDetailResult.from(buzz, userId, recipients);
     }
 
     @Override

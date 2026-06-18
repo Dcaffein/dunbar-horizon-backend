@@ -41,7 +41,8 @@ class BuzzControllerTest extends BaseControllerTest {
             BuzzDetailResult detail = new BuzzDetailResult(
                     "buzz-id",
                     new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
-                    "테스트 버즈", List.of(), List.of(), 25L, false, true
+                    "테스트 버즈", List.of(), List.of(), 25L, false, true,
+                    List.of()
             );
             given(buzzQueryUseCase.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
 
@@ -57,7 +58,8 @@ class BuzzControllerTest extends BaseControllerTest {
             BuzzDetailResult detail = new BuzzDetailResult(
                     "buzz-id",
                     new BuzzProfileResult(2L, "작성자", null),
-                    "테스트 버즈", List.of(), List.of(), 25L, true, false
+                    "테스트 버즈", List.of(), List.of(), 25L, true, false,
+                    List.of(new BuzzProfileResult(CURRENT_USER_ID, "나", null))
             );
             given(buzzQueryUseCase.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
 
@@ -77,7 +79,8 @@ class BuzzControllerTest extends BaseControllerTest {
             BuzzDetailResult detail = new BuzzDetailResult(
                     "buzz-id",
                     new BuzzProfileResult(2L, "버즈작성자", null),
-                    "테스트 버즈", List.of(), List.of(comment), 25L, true, false
+                    "테스트 버즈", List.of(), List.of(comment), 25L, true, false,
+                    List.of(new BuzzProfileResult(CURRENT_USER_ID, "나", null))
             );
             given(buzzQueryUseCase.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
 

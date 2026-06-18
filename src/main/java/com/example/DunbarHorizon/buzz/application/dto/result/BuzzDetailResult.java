@@ -14,9 +14,10 @@ public record BuzzDetailResult(
         List<BuzzCommentResult> comments,
         long remainingMinutes,
         boolean isUnread,
-        boolean isCreator
+        boolean isCreator,
+        List<BuzzProfileResult> recipients
 ) {
-    public static BuzzDetailResult from(Buzz buzz, Long currentUserId) {
+    public static BuzzDetailResult from(Buzz buzz, Long currentUserId, List<BuzzProfileResult> recipients) {
         return new BuzzDetailResult(
                 buzz.getId(),
                 new BuzzProfileResult(buzz.getCreatorId(), buzz.getCreatorNickname(), buzz.getCreatorProfileImageUrl()),
@@ -25,7 +26,8 @@ public record BuzzDetailResult(
                 buzz.getVisibleComments(currentUserId).stream().map(c -> BuzzCommentResult.from(c, currentUserId)).toList(),
                 Math.max(0L, Duration.between(LocalDateTime.now(), buzz.getExpiresAt()).toMinutes()),
                 buzz.isUnreadBy(currentUserId),
-                buzz.isCreator(currentUserId)
+                buzz.isCreator(currentUserId),
+                recipients
         );
     }
 }

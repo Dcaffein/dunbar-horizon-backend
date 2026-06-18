@@ -121,13 +121,17 @@ class BuzzServiceTest {
                     .build();
             ReflectionTestUtils.setField(buzz, "id", "buzz-id");
             given(buzzRepository.findById("buzz-id")).willReturn(buzz);
+            given(buzzSocialPort.getCreatorProfiles(List.of(recipientId)))
+                    .willReturn(List.of(new BuzzCreatorInfo(recipientId, "수신자", "p.png")));
         }
 
         @Test
-        @DisplayName("작성자가 상세 조회하면 isCreator가 true이다")
+        @DisplayName("작성자가 상세 조회하면 isCreator가 true이고 recipients가 포함된다")
         void getBuzzDetail_ByCreator_IsCreatorTrue() {
             BuzzDetailResult result = buzzService.getBuzzDetail(creatorId, "buzz-id");
             assertThat(result.isCreator()).isTrue();
+            assertThat(result.recipients()).hasSize(1);
+            assertThat(result.recipients().get(0).userId()).isEqualTo(recipientId);
         }
 
         @Test
