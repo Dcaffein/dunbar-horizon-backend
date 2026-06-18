@@ -54,7 +54,7 @@ public class Buzz {
         this.imageUrls = imageUrls != null ? imageUrls : new ArrayList<>();
         this.recipientIds = recipientIds;
         this.createdAt = LocalDateTime.now();
-        this.expiresAt = this.createdAt.plusMinutes(30);
+        this.expiresAt = this.createdAt.plusHours(6);
     }
 
     public boolean isExpired() {
