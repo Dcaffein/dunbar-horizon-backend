@@ -41,7 +41,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
             UNWIND friendData AS item
             WITH me, boundary, interestMap,
                  item.member AS member,
-                 toInteger(5 + coalesce(item.friendship.#{INTIMACY}, 0.0) * 25) AS dynamicLimit
+                 toInteger($pruningMin + coalesce(item.friendship.#{INTIMACY}, 0.0) * $pruningRange) AS dynamicLimit
 
             // [3] boundary 내에서 각 친구의 내부 엣지를 dynamicLimit만큼 슬라이싱 (ID만 수집)
             // OPTIONAL MATCH: 연결이 없는 고립 노드도 1 row(null)로 통과시켜 [4]에서 빈 리스트로 반환
@@ -122,7 +122,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
               WHERE mutual.#{ID} IN $skeletonIds
               MATCH (target)-[:#{HF}]->(tf:#{F})<-[:#{HF}]-(mutual)
               ORDER BY tf.#{INTIMACY} DESC
-              LIMIT 5
+              LIMIT $strangerQuota
               RETURN mutual, tf
             }
             RETURN mutual.#{ID} AS friendId
@@ -159,10 +159,12 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
     @Cacheable(cacheNames = "dunbar:network:default", key = "#userId + ':' + #circleSize.name()")
     @Neo4jTransactional(readOnly = true)
     @Override
-    public NetworkGraphResult getDefaultNetworkGraph(Long userId, DunbarCircle circleSize) {
+    public NetworkGraphResult getDefaultNetworkGraph(Long userId, DunbarCircle circleSize, int pruningMin, int pruningRange) {
         List<NodeGraphResult> nodes = neo4jClient.query(GET_DEFAULT_NETWORK_GRAPH)
                 .bind(userId).to("meId")
                 .bind(circleSize.getLimitSize()).to("limitSize")
+                .bind(pruningMin).to("pruningMin")
+                .bind(pruningRange).to("pruningRange")
                 .fetchAs(NodeGraphResult.class)
                 .mappedBy((ts, r) -> mapNodeGraphResult(r))
                 .all().stream().toList();
@@ -172,11 +174,13 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
     @Cacheable(cacheNames = "dunbar:network:label", key = "#userId + ':' + #labelId")
     @Neo4jTransactional(readOnly = true)
     @Override
-    public NetworkGraphResult getLabelCustomNetwork(Long userId, String labelId) {
+    public NetworkGraphResult getLabelCustomNetwork(Long userId, String labelId, DunbarCircle circleSize, int pruningMin, int pruningRange) {
         List<NodeGraphResult> nodes = neo4jClient.query(GET_LABEL_CUSTOM_NETWORK)
                 .bind(userId).to("meId")
                 .bind(labelId).to("labelId")
-                .bind(DunbarCircle.DUNBAR.getLimitSize()).to("limitSize")
+                .bind(circleSize.getLimitSize()).to("limitSize")
+                .bind(pruningMin).to("pruningMin")
+                .bind(pruningRange).to("pruningRange")
                 .fetchAs(NodeGraphResult.class)
                 .mappedBy((ts, r) -> mapNodeGraphResult(r))
                 .all().stream().toList();
@@ -198,11 +202,12 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
 
     @Override
     public List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(
-            Long userId, Long targetId, List<Long> skeletonIds) {
+            Long userId, Long targetId, List<Long> skeletonIds, int strangerQuota) {
         return neo4jClient.query(GET_NETWORK_CONTACTS_OF_TWO_HOP)
                 .bind(userId).to("meId")
                 .bind(targetId).to("targetId")
                 .bind(skeletonIds).to("skeletonIds")
+                .bind(strangerQuota).to("strangerQuota")
                 .fetchAs(NetworkOneHopsByTwoHopResult.class)
                 .mappedBy((typeSystem, record) -> new NetworkOneHopsByTwoHopResult(
                         record.get("friendId").asLong()

@@ -1,93 +1,104 @@
-# PLAN — Task-85: findByUserId 쿼리 비활성 유저 미처리 수정
+# PLAN — Task-86: SocialNetworkRepositoryAdapter 비즈니스 정책 서비스 레이어 이동
 
 ## 작업 목표
 
-`FriendshipNeo4jRepository.findByUserId` 의 쿼리가 비활성 친구가 있을 때 `MappingException`
-을 던지는 버그를 수정하고, 다른 쿼리 메서드들의 동일 문제 여부를 검토한다.
+`SocialNetworkRepositoryAdapter`의 Cypher 문자열 및 어댑터 내부에 하드코딩된
+그래프 노출 정책·프라이버시 정책 값 3건을 서비스 레이어로 이동한다.
 
 ---
 
 ## 현황 분석
 
-### 수정 대상: `findByUserId`
-
+### 문제 1 — `NETWORK_PRUNING_SUFFIX` L44
 ```cypher
--- 현재 (버그)
-MATCH (:UserReference {id: $userId})-[:HAS_FRIENDSHIP]->(f:Friendship)
-MATCH (f)<-[all_r:HAS_FRIENDSHIP]-(all_u:UserReference)  -- 비활성 친구 누락
-RETURN f, collect(all_r), collect(all_u)
+toInteger(5 + coalesce(item.friendship.intimacy, 0.0) * 10) AS dynamicLimit
 ```
+- min=5, range=10 (max=15)이 Cypher에 매몰
+- "친밀도가 높을수록 내부 엣지를 더 많이 허용"이라는 그래프 노출 정책인데 서비스가 인지 불가
+- `SocialExpansionQueryService.calculateLimit()` 이 동일 성격의 결정을 서비스에서 담당하는 것과 일관성 없음
 
-두 번째 MATCH가 `UserReference` 레이블로 필터하므로, 친구가 비활성(`InactiveSocialUser`)이면
-해당 관계가 `collect(all_r)` 에서 빠져 `recognitions.size() == 1` → `FriendshipInvalidException`.
+### 문제 2 — `getLabelCustomNetwork` L179
+```java
+.bind(DunbarCircle.DUNBAR.getLimitSize()).to("limitSize")
+```
+- "라벨 네트워크는 항상 150명 상한" 정책을 어댑터가 직접 결정
+- `getDefaultNetworkGraph`는 `DunbarCircle`을 파라미터로 받아 포트 시그니처 비대칭
+- 컨트롤러 주석("최대 150명(Dunbar's Ceiling)까지 단일 뷰로 제공")이 확인하듯 정책값 자체는 DUNBAR 유지, **위치**만 서비스로 이동
 
-### 다른 쿼리 메서드 검토 결과
-
-| 메서드 | `UserReference` 사용 방식 | 비활성 유저 시 동작 | 판정 |
-|--------|--------------------------|-------------------|------|
-| `findFriendIdsByMuteStatus` | `(friend:UserReference)` | 비활성 친구 ID 누락 | 묵음 목록에서 제외 — 비즈니스상 허용 |
-| `filterFriendIdsAmong` | `(friend:UserReference)` | 비활성 친구 필터 탈락 | 친구 여부 체크에서 false 반환 — 허용 |
-| `applyDecay` | `(u:UserReference)` | 비활성 유저 엣지 감쇄 스킵 | 비활성 유저의 interestScore 미감쇄 — 허용 |
-| `batchUpdateInterestScores` | `(:UserReference)` | 비활성 유저 업데이트 스킵 | 동일 — 허용 |
-| `updateUserRelationshipFields` | `(:UserReference)` | 비활성 유저면 SET 무시 | 비활성 유저 관계 필드 수정 불가 — 허용 |
-
-`findByUserId` 외 다른 메서드들은 엔티티 매핑 없이 ID 반환 또는 순수 SET 쿼리이므로,
-비활성 유저를 제외하는 것이 예외가 아닌 자연스러운 동작이다. **추가 수정 불필요**.
+### 문제 3 — `GET_NETWORK_CONTACTS_OF_TWO_HOP` L126
+```cypher
+LIMIT 5
+```
+- Stranger Quota(CLAUDE.md에 명명된 프라이버시 정책)가 Cypher `LIMIT` 절에 매몰
 
 ---
 
 ## 변경 파일 목록
 
 | 파일 | 변경 내용 |
-|------|---------|
-| `social/adapter/out/persistence/neo4j/springData/FriendshipNeo4jRepository.java` | `findByUserId` `@Query` 수정 |
-| `social/adapter/out/FriendshipNeo4jRepositoryTest.java` | 비활성 유저 시나리오 테스트 케이스 추가 |
+|------|-----------|
+| `social/application/port/out/SocialNetworkRepository.java` | 세 메서드 시그니처에 정책 파라미터 추가 |
+| `social/application/service/SocialNetworkQueryService.java` | 정책 상수 3개 정의, 레포지토리 호출 시 전달 |
+| `social/adapter/out/persistence/neo4j/SocialNetworkRepositoryAdapter.java` | Cypher 파라미터화 3건, 메서드 시그니처 수정 |
+| `social/adapter/in/web/SocialQueryControllerTest.java` | `getLabelNetwork` 성공 케이스 1건 추가 |
 
 ---
 
 ## 구현 방향
 
-### `findByUserId` 쿼리 (두 단계 분리)
+### `SocialNetworkRepository` 포트 시그니처 변경
 
-```cypher
--- 1단계: 익명 (:UserReference) 로 친구 활성 여부만 검증, f만 추출
-MATCH (:UserReference {id: $userId})-[:HAS_FRIENDSHIP]->(f:Friendship)
-      <-[:HAS_FRIENDSHIP]-(:UserReference)
+```java
+// 변경 전
+NetworkGraphResult getDefaultNetworkGraph(Long userId, DunbarCircle circleSize);
+NetworkGraphResult getLabelCustomNetwork(Long userId, String labelId);
+List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(Long userId, Long targetId, List<Long> skeletonIds);
 
--- 2단계: 걸러진 f에 대해 레이블 제약 없이 양쪽 관계 수집
-MATCH (f)<-[all_r:HAS_FRIENDSHIP]-(all_u)
-RETURN f, collect(all_r), collect(all_u)
+// 변경 후
+NetworkGraphResult getDefaultNetworkGraph(Long userId, DunbarCircle circleSize, int pruningMin, int pruningRange);
+NetworkGraphResult getLabelCustomNetwork(Long userId, String labelId, DunbarCircle circleSize, int pruningMin, int pruningRange);
+List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(Long userId, Long targetId, List<Long> skeletonIds, int strangerQuota);
 ```
 
-- 1단계의 익명 `(:UserReference)` 는 Cypher 경로 내 관계 유일성 규칙에 의해
-  반드시 `$userId` 본인이 아닌 상대방으로 매칭됨
-- 상대방이 비활성이면 1단계에서 f가 결과에서 제외됨 (비즈니스 요구 충족)
-- 2단계에서 레이블 제약 없이 수집하므로 `recognitions` 항상 2개 보장
+### `SocialNetworkQueryService` 상수 및 호출 변경
 
-### `FriendshipNeo4jRepositoryTest` 추가 케이스
+```java
+private static final int PRUNING_EDGE_MIN   = 5;
+private static final int PRUNING_EDGE_RANGE = 10;  // max = 5 + 10 = 15
+private static final int STRANGER_QUOTA     = 5;
+```
 
-기존 테스트들은 모두 활성 유저끼리만 검증하므로 수정 불필요.
-새 쿼리에서도 양쪽이 활성이면 동작이 동일하기 때문이다.
+- `getFriendsNetwork` → `getDefaultNetworkGraph(..., PRUNING_EDGE_MIN, PRUNING_EDGE_RANGE)`
+- `getLabelNetwork` → `getLabelCustomNetwork(..., DunbarCircle.DUNBAR, PRUNING_EDGE_MIN, PRUNING_EDGE_RANGE)`
+- `getNetworkContactsOfTwoHop` → `getNetworkContactsOfTwoHop(..., STRANGER_QUOTA)`
 
-`UserReference` 레이블을 사용하는 모든 쿼리에 대해 비활성 유저 시나리오를 추가한다.
-코드를 수정하지 않더라도 현재 동작을 테스트로 명시하고, 의도와 다를 경우 수정한다.
+### `SocialNetworkRepositoryAdapter` Cypher 수정
 
-| 메서드 | 추가 케이스 |
-|--------|-----------|
-| `findByUserId` | 비활성 친구 → 결과에서 제외되는지 |
-| `filterFriendIdsAmong` | 비활성 친구 → `false` 반환인지 (친구 여부 체크 영향) |
-| `findFriendIdsByMuteStatus` | 비활성 친구를 묵음해도 목록에서 제외되는지 |
-| `updateUserRelationshipFields` | 비활성 유저 본인의 관계 필드 수정 불가 여부 |
+```cypher
+-- 문제 1
+toInteger($pruningMin + coalesce(item.friendship.intimacy, 0.0) * $pruningRange) AS dynamicLimit
+
+-- 문제 3
+LIMIT $strangerQuota
+```
+
+- 문제 2: `getLabelCustomNetwork`에서 `.bind(DunbarCircle.DUNBAR.getLimitSize())` 제거,
+  파라미터로 수신한 `circleSize.getLimitSize()`를 바인딩
+
+### `SocialNetworkQueryUseCase`(port/in)과 `SocialQueryController`는 변경하지 않는다.
+
+정책 파라미터는 서비스 내부에서 결정하며 컨트롤러까지 노출할 이유가 없다.
 
 ---
 
 ## 예상 사이드 이펙트
 
-없음. 변경 범위가 단일 `@Query` 수정에 한정되며, 비즈니스 동작은 "비활성 친구 제외" 로 명확히 정의된다.
+- `SocialNetworkRepository` 포트 시그니처 변경 → 구현체가 어댑터 1개뿐이므로 컴파일 에러 범위 한정
+- `@Cacheable` 키·동작 변경 없음 (캐시 파라미터는 `userId`, `circleSize`, `labelId`로 유지)
 
 ---
 
 ## 테스트 전략
 
-`Neo4jRepositoryTest` 기반으로 작성한다. `SocialUser.deactivate()` 를 호출하거나
-`@DynamicLabels` 를 직접 조작하여 비활성 노드를 만든 뒤 `findByUserId` 결과를 검증한다.
+`SocialQueryControllerTest`에 `getLabelNetwork` 성공 케이스 1건 추가.
+나머지는 기존 통합 테스트가 정책 상수 이동을 커버한다.

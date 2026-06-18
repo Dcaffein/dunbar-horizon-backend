@@ -52,11 +52,11 @@ class SocialNetworkQueryServiceTest {
                 new NodeGraphResult(30L, 0.0, List.of())
         );
         NetworkGraphResult expected = new NetworkGraphResult(nodes);
-        given(socialNetworkRepository.getDefaultNetworkGraph(userId, circleSize)).willReturn(expected);
+        given(socialNetworkRepository.getDefaultNetworkGraph(userId, circleSize, 5, 10)).willReturn(expected);
 
         NetworkGraphResult result = service.getFriendsNetwork(userId, circleSize);
 
-        verify(socialNetworkRepository).getDefaultNetworkGraph(userId, circleSize);
+        verify(socialNetworkRepository).getDefaultNetworkGraph(userId, circleSize, 5, 10);
         assertThat(result).isEqualTo(expected);
     }
 
@@ -70,11 +70,11 @@ class SocialNetworkQueryServiceTest {
         NetworkGraphResult expected = new NetworkGraphResult(List.of(
                 new NodeGraphResult(10L, 0.3, List.of(new NodeEdgeResult(20L, 0.85, 0.7)))
         ));
-        given(socialNetworkRepository.getLabelCustomNetwork(userId, labelId)).willReturn(expected);
+        given(socialNetworkRepository.getLabelCustomNetwork(userId, labelId, DunbarCircle.DUNBAR, 5, 10)).willReturn(expected);
 
         NetworkGraphResult result = service.getLabelNetwork(userId, labelId);
 
-        verify(socialNetworkRepository).getLabelCustomNetwork(userId, labelId);
+        verify(socialNetworkRepository).getLabelCustomNetwork(userId, labelId, DunbarCircle.DUNBAR, 5, 10);
         assertThat(result).isEqualTo(expected);
     }
 
@@ -161,11 +161,11 @@ class SocialNetworkQueryServiceTest {
         Long userId = 1L, targetId = 10L;
         List<Long> skeletonIds = List.of(20L, 30L);
         List<NetworkOneHopsByTwoHopResult> expected = List.of(new NetworkOneHopsByTwoHopResult(5L));
-        given(socialNetworkRepository.getNetworkContactsOfTwoHop(userId, targetId, skeletonIds)).willReturn(expected);
+        given(socialNetworkRepository.getNetworkContactsOfTwoHop(userId, targetId, skeletonIds, 5)).willReturn(expected);
 
         List<NetworkOneHopsByTwoHopResult> result = service.getNetworkContactsOfTwoHop(userId, targetId, skeletonIds);
 
-        verify(socialNetworkRepository).getNetworkContactsOfTwoHop(userId, targetId, skeletonIds);
+        verify(socialNetworkRepository).getNetworkContactsOfTwoHop(userId, targetId, skeletonIds, 5);
         assertThat(result).isEqualTo(expected);
     }
 }

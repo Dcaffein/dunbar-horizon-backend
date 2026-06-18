@@ -18,17 +18,21 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
 
+    private static final int PRUNING_EDGE_MIN   = 5;
+    private static final int PRUNING_EDGE_RANGE = 10;
+    private static final int STRANGER_QUOTA     = 5;
+
     private final SocialNetworkRepository socialNetworkRepository;
     private final FriendshipRepository friendshipRepository;
 
     @Override
     public NetworkGraphResult getFriendsNetwork(Long userId, DunbarCircle circleSize) {
-        return socialNetworkRepository.getDefaultNetworkGraph(userId, circleSize);
+        return socialNetworkRepository.getDefaultNetworkGraph(userId, circleSize, PRUNING_EDGE_MIN, PRUNING_EDGE_RANGE);
     }
 
     @Override
     public NetworkGraphResult getLabelNetwork(Long userId, String labelId) {
-        return socialNetworkRepository.getLabelCustomNetwork(userId, labelId);
+        return socialNetworkRepository.getLabelCustomNetwork(userId, labelId, DunbarCircle.DUNBAR, PRUNING_EDGE_MIN, PRUNING_EDGE_RANGE);
     }
 
     @Neo4jTransactional(readOnly = true)
@@ -47,6 +51,6 @@ public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
     @Override
     public List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(Long userId, Long targetId, List<Long> skeletonIds) {
         if (skeletonIds == null || skeletonIds.isEmpty()) return List.of();
-        return socialNetworkRepository.getNetworkContactsOfTwoHop(userId, targetId, skeletonIds);
+        return socialNetworkRepository.getNetworkContactsOfTwoHop(userId, targetId, skeletonIds, STRANGER_QUOTA);
     }
 }
