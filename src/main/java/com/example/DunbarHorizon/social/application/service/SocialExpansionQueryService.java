@@ -34,14 +34,6 @@ public class SocialExpansionQueryService implements SocialExpansionQueryUseCase 
     private final FriendshipRepository friendshipRepository;
 
     @Override
-    public List<AnchorExpansionResult> getTwoHopSuggestionsByOneHop(Long userId, Long anchorId, Double expansionValue) {
-        validateExpansionValue(expansionValue);
-        int limit = calculateLimit(expansionValue);
-        int threshold = calculateThreshold(expansionValue);
-        return socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, threshold, limit);
-    }
-
-    @Override
     public List<AnchorExpansionResult> getAnchorExpansion(Long userId, Long anchorFriendId, Double expansionValue) {
         validateExpansionValue(expansionValue);
         int limit = calculateLimit(expansionValue);

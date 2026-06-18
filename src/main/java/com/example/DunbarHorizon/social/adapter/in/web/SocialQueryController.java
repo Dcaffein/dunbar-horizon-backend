@@ -86,15 +86,6 @@ public class SocialQueryController {
         return ResponseEntity.ok(expansionQueryUseCase.getRecommendationsByAnchor(currentUserId, anchorId));
     }
 
-    @GetMapping("/suggestions/anchor")
-    public ResponseEntity<List<AnchorExpansionResult>> getTwoHopSuggestionsByAnchor(
-            @CurrentUserId Long currentUserId,
-            @RequestParam Long anchorId,
-            @RequestParam Double expansionValue
-    ) {
-        return ResponseEntity.ok(expansionQueryUseCase.getTwoHopSuggestionsByOneHop(currentUserId, anchorId, expansionValue));
-    }
-
     @GetMapping("/path")
     public ResponseEntity<ConnectionPathResult> getConnectionPath(
             @CurrentUserId Long currentUserId,
