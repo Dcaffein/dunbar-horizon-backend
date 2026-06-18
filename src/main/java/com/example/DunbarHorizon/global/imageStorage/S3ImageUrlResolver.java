@@ -22,7 +22,7 @@ public class S3ImageUrlResolver {
     private String bucket;
 
     public String resolveUrl(String key) {
-        if (key == null) return null;
+        if (key == null || key.isBlank()) return null;
         if (key.startsWith("https://")) return key;
         return s3Presigner.presignGetObject(GetObjectPresignRequest.builder()
                         .signatureDuration(PRESIGN_TTL)
