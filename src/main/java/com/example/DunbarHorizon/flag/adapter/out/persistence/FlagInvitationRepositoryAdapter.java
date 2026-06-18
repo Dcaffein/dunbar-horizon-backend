@@ -29,6 +29,16 @@ public class FlagInvitationRepositoryAdapter implements FlagInvitationRepository
     }
 
     @Override
+    public List<FlagInvitation> findByInviteeId(Long inviteeId) {
+        return jpaRepository.findAllByInviteeIdOrderByCreatedAtDesc(inviteeId);
+    }
+
+    @Override
+    public List<FlagInvitation> findByInviterId(Long inviterId) {
+        return jpaRepository.findAllByInviterIdOrderByCreatedAtDesc(inviterId);
+    }
+
+    @Override
     public Optional<FlagInvitation> findById(Long id) {
         return jpaRepository.findById(id);
     }
