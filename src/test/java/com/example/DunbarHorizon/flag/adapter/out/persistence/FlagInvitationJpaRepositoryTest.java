@@ -2,11 +2,13 @@ package com.example.DunbarHorizon.flag.adapter.out.persistence;
 
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagInvitationJpaRepository;
 import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitation;
+import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationStatus;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,41 +32,51 @@ class FlagInvitationJpaRepositoryTest {
         return inv;
     }
 
-    @Test
-    @DisplayName("inviteeId로 받은 초대 목록을 createdAt 내림차순으로 조회한다")
-    void findAllByInviteeIdOrderByCreatedAtDesc_ReturnsInOrder() {
-        // given
-        FlagInvitation first = save(FLAG_ID, INVITER_ID, INVITEE_ID);
-        FlagInvitation second = save(2L, INVITER_ID, INVITEE_ID);
-        save(3L, INVITER_ID, OTHER_USER_ID); // 다른 invitee — 제외 대상
-        em.flush();
-        em.clear();
-
-        // when
-        List<FlagInvitation> results = repository.findAllByInviteeIdOrderByCreatedAtDesc(INVITEE_ID);
-
-        // then
-        assertThat(results).hasSize(2);
-        assertThat(results).extracting(FlagInvitation::getInviteeId)
-                .containsOnly(INVITEE_ID);
+    private FlagInvitation saveWithStatus(Long flagId, Long inviterId, Long inviteeId, FlagInvitationStatus status) {
+        FlagInvitation inv = FlagInvitation.create(flagId, inviterId, inviteeId, LocalDateTime.now().plusHours(24));
+        ReflectionTestUtils.setField(inv, "status", status);
+        em.persist(inv);
+        return inv;
     }
 
     @Test
-    @DisplayName("inviterId로 보낸 초대 목록을 createdAt 내림차순으로 조회한다")
-    void findAllByInviterIdOrderByCreatedAtDesc_ReturnsInOrder() {
+    @DisplayName("inviteeId로 PENDING 초대만 createdAt 내림차순으로 조회한다")
+    void findAllByInviteeIdAndStatus_ReturnsPendingOnly() {
         // given
-        save(FLAG_ID, INVITER_ID, INVITEE_ID);
-        save(2L, INVITER_ID, OTHER_USER_ID);
-        save(3L, OTHER_USER_ID, INVITEE_ID); // 다른 inviter — 제외 대상
+        save(FLAG_ID, INVITER_ID, INVITEE_ID);                                             // PENDING
+        save(2L, INVITER_ID, INVITEE_ID);                                                  // PENDING
+        saveWithStatus(3L, INVITER_ID, INVITEE_ID, FlagInvitationStatus.ACCEPTED);        // 제외 대상
+        saveWithStatus(4L, INVITER_ID, INVITEE_ID, FlagInvitationStatus.REJECTED);        // 제외 대상
+        save(5L, INVITER_ID, OTHER_USER_ID);                                               // 다른 invitee — 제외 대상
         em.flush();
         em.clear();
 
         // when
-        List<FlagInvitation> results = repository.findAllByInviterIdOrderByCreatedAtDesc(INVITER_ID);
+        List<FlagInvitation> results = repository.findAllByInviteeIdAndStatusOrderByCreatedAtDesc(INVITEE_ID, FlagInvitationStatus.PENDING);
 
         // then
         assertThat(results).hasSize(2);
-        assertThat(results).extracting(FlagInvitation::getInviterId)
-                .containsOnly(INVITER_ID);
+        assertThat(results).extracting(FlagInvitation::getInviteeId).containsOnly(INVITEE_ID);
+        assertThat(results).extracting(FlagInvitation::getStatus).containsOnly(FlagInvitationStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("inviterId로 PENDING 초대만 createdAt 내림차순으로 조회한다")
+    void findAllByInviterIdAndStatus_ReturnsPendingOnly() {
+        // given
+        save(FLAG_ID, INVITER_ID, INVITEE_ID);                                             // PENDING
+        save(2L, INVITER_ID, OTHER_USER_ID);                                               // PENDING
+        saveWithStatus(3L, INVITER_ID, INVITEE_ID, FlagInvitationStatus.ACCEPTED);        // 제외 대상
+        save(4L, OTHER_USER_ID, INVITEE_ID);                                               // 다른 inviter — 제외 대상
+        em.flush();
+        em.clear();
+
+        // when
+        List<FlagInvitation> results = repository.findAllByInviterIdAndStatusOrderByCreatedAtDesc(INVITER_ID, FlagInvitationStatus.PENDING);
+
+        // then
+        assertThat(results).hasSize(2);
+        assertThat(results).extracting(FlagInvitation::getInviterId).containsOnly(INVITER_ID);
+        assertThat(results).extracting(FlagInvitation::getStatus).containsOnly(FlagInvitationStatus.PENDING);
     }
 }

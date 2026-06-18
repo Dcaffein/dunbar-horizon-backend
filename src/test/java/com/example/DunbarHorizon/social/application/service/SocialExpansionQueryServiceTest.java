@@ -37,78 +37,78 @@ class SocialExpansionQueryServiceTest {
     @InjectMocks
     private SocialExpansionQueryService service;
 
-    // ── getTwoHopSuggestionsByOneHop ──────────────────────────────────────────
+    // ── getAnchorExpansion ────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("getTwoHopSuggestionsByOneHop: expansionValue=0.0이면 limit=10, threshold=5로 호출된다")
-    void getTwoHopSuggestions_expansionValue_최솟값_파라미터_검증() {
+    @DisplayName("getAnchorExpansion: expansionValue=0.0이면 limit=10, threshold=5로 호출된다")
+    void getAnchorExpansion_expansionValue_최솟값_파라미터_검증() {
         // given
         Long userId = 1L, anchorId = 10L;
-        given(socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, 5, 10))
+        given(socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorId, 5, 10))
                 .willReturn(List.of());
 
         // when
-        service.getTwoHopSuggestionsByOneHop(userId, anchorId, 0.0);
+        service.getAnchorExpansion(userId, anchorId, 0.0);
 
         // then
-        verify(socialExpansionRepository).getRecommendedNetworkByAnchor(userId, anchorId, 5, 10);
+        verify(socialExpansionRepository).getRelatedNetworkByAnchor(userId, anchorId, 5, 10);
     }
 
     @Test
-    @DisplayName("getTwoHopSuggestionsByOneHop: expansionValue=0.8(변곡점)이면 limit=50, threshold=2로 호출된다")
-    void getTwoHopSuggestions_expansionValue_변곡점_파라미터_검증() {
+    @DisplayName("getAnchorExpansion: expansionValue=0.8(변곡점)이면 limit=50, threshold=2로 호출된다")
+    void getAnchorExpansion_expansionValue_변곡점_파라미터_검증() {
         // given
         Long userId = 1L, anchorId = 10L;
-        given(socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, 2, 50))
+        given(socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorId, 2, 50))
                 .willReturn(List.of());
 
         // when
-        service.getTwoHopSuggestionsByOneHop(userId, anchorId, 0.8);
+        service.getAnchorExpansion(userId, anchorId, 0.8);
 
         // then
-        verify(socialExpansionRepository).getRecommendedNetworkByAnchor(userId, anchorId, 2, 50);
+        verify(socialExpansionRepository).getRelatedNetworkByAnchor(userId, anchorId, 2, 50);
     }
 
     @Test
-    @DisplayName("getTwoHopSuggestionsByOneHop: expansionValue=1.0이면 limit=150, threshold=1로 호출된다")
-    void getTwoHopSuggestions_expansionValue_최댓값_파라미터_검증() {
+    @DisplayName("getAnchorExpansion: expansionValue=1.0이면 limit=150, threshold=1로 호출된다")
+    void getAnchorExpansion_expansionValue_최댓값_파라미터_검증() {
         // given
         Long userId = 1L, anchorId = 10L;
-        given(socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, 1, 150))
+        given(socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorId, 1, 150))
                 .willReturn(List.of());
 
         // when
-        service.getTwoHopSuggestionsByOneHop(userId, anchorId, 1.0);
+        service.getAnchorExpansion(userId, anchorId, 1.0);
 
         // then
-        verify(socialExpansionRepository).getRecommendedNetworkByAnchor(userId, anchorId, 1, 150);
+        verify(socialExpansionRepository).getRelatedNetworkByAnchor(userId, anchorId, 1, 150);
     }
 
     @Test
-    @DisplayName("getTwoHopSuggestionsByOneHop: 범위를 벗어난 expansionValue는 예외를 던진다")
-    void getTwoHopSuggestions_잘못된_expansionValue_예외() {
+    @DisplayName("getAnchorExpansion: 범위를 벗어난 expansionValue는 예외를 던진다")
+    void getAnchorExpansion_잘못된_expansionValue_예외() {
         // when & then
-        assertThatThrownBy(() -> service.getTwoHopSuggestionsByOneHop(1L, 10L, -0.1))
+        assertThatThrownBy(() -> service.getAnchorExpansion(1L, 10L, -0.1))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.getTwoHopSuggestionsByOneHop(1L, 10L, 1.1))
+        assertThatThrownBy(() -> service.getAnchorExpansion(1L, 10L, 1.1))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.getTwoHopSuggestionsByOneHop(1L, 10L, null))
+        assertThatThrownBy(() -> service.getAnchorExpansion(1L, 10L, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    @DisplayName("getTwoHopSuggestionsByOneHop: Repository 결과를 그대로 반환한다")
-    void getTwoHopSuggestions_결과_반환() {
+    @DisplayName("getAnchorExpansion: Repository 결과를 그대로 반환한다")
+    void getAnchorExpansion_결과_반환() {
         // given
         Long userId = 1L, anchorId = 10L;
         List<AnchorExpansionResult> expected = List.of(
                 new AnchorExpansionResult(100L, "유저A", 0.8, 2, 1)
         );
-        given(socialExpansionRepository.getRecommendedNetworkByAnchor(eq(userId), eq(anchorId), anyInt(), anyInt()))
+        given(socialExpansionRepository.getRelatedNetworkByAnchor(eq(userId), eq(anchorId), anyInt(), anyInt()))
                 .willReturn(expected);
 
         // when
-        List<AnchorExpansionResult> result = service.getTwoHopSuggestionsByOneHop(userId, anchorId, 0.5);
+        List<AnchorExpansionResult> result = service.getAnchorExpansion(userId, anchorId, 0.5);
 
         // then
         assertThat(result).isEqualTo(expected);

@@ -30,12 +30,12 @@ public class FlagInvitationRepositoryAdapter implements FlagInvitationRepository
 
     @Override
     public List<FlagInvitation> findByInviteeId(Long inviteeId) {
-        return jpaRepository.findAllByInviteeIdOrderByCreatedAtDesc(inviteeId);
+        return jpaRepository.findAllByInviteeIdAndStatusOrderByCreatedAtDesc(inviteeId, FlagInvitationStatus.PENDING);
     }
 
     @Override
     public List<FlagInvitation> findByInviterId(Long inviterId) {
-        return jpaRepository.findAllByInviterIdOrderByCreatedAtDesc(inviterId);
+        return jpaRepository.findAllByInviterIdAndStatusOrderByCreatedAtDesc(inviterId, FlagInvitationStatus.PENDING);
     }
 
     @Override

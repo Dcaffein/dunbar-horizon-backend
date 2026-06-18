@@ -13,9 +13,9 @@ import java.util.Set;
 
 public interface FlagInvitationJpaRepository extends JpaRepository<FlagInvitation, Long> {
 
-    List<FlagInvitation> findAllByInviteeIdOrderByCreatedAtDesc(Long inviteeId);
+    List<FlagInvitation> findAllByInviteeIdAndStatusOrderByCreatedAtDesc(Long inviteeId, FlagInvitationStatus status);
 
-    List<FlagInvitation> findAllByInviterIdOrderByCreatedAtDesc(Long inviterId);
+    List<FlagInvitation> findAllByInviterIdAndStatusOrderByCreatedAtDesc(Long inviterId, FlagInvitationStatus status);
 
     boolean existsByFlagIdAndInviteeIdAndStatus(Long flagId, Long inviteeId, FlagInvitationStatus status);
 
