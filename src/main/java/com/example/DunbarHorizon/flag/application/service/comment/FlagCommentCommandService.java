@@ -11,8 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 public class FlagCommentCommandService implements FlagCommentCommandUseCase {
@@ -23,10 +21,8 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
     @Override
     @Transactional
     public Long createRootComment(Long flagId, Long userId, String content, boolean isPrivate) {
-        Flag flag = flagRepository.findById(flagId)
+        flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
-        List<Long> participantIds = flagRepository.findAllParticipantIds(flagId);
-        flag.validateCommentCreation(userId, participantIds);
 
         FlagComment comment = FlagComment.createRoot(flagId, userId, content, isPrivate);
         return commentRepository.save(comment).getId();
@@ -38,10 +34,8 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
         FlagComment parent = commentRepository.findById(parentId)
                 .orElseThrow(() -> new FlagCommentNotFoundException(parentId));
 
-        Flag flag = flagRepository.findById(parent.getFlagId())
+        flagRepository.findById(parent.getFlagId())
                 .orElseThrow(() -> new FlagNotFoundException(parent.getFlagId()));
-        List<Long> participantIds = flagRepository.findAllParticipantIds(parent.getFlagId());
-        flag.validateCommentCreation(userId, participantIds);
 
         FlagComment reply = parent.createReply(userId, content, isPrivate);
         return commentRepository.save(reply).getId();

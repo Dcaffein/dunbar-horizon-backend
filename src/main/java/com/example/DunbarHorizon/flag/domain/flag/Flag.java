@@ -199,16 +199,6 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
 
     public boolean isRecruiting() { return calculateCurrentStatus().isRecruiting(); }
 
-    public void validateAccess(Long viewerId, List<Long> participantIds) {
-        if (!hostId.equals(viewerId) && !participantIds.contains(viewerId))
-            throw new FlagAuthorizationException("플래그에 접근 권한이 없습니다.");
-    }
-
-    public void validateCommentCreation(Long commenterId, List<Long> participantIds) {
-        if (!hostId.equals(commenterId) && !participantIds.contains(commenterId))
-            throw new FlagAuthorizationException("플래그 참여자만 댓글을 작성할 수 있습니다.");
-    }
-
     public void grantInvitePermission(Long requesterId, FlagParticipant participant) {
         validateHost(requesterId);
         participant.grantInvitePermission();
