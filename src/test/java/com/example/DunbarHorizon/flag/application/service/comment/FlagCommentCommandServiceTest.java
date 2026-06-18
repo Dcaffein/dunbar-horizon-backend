@@ -18,7 +18,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -54,7 +53,6 @@ class FlagCommentCommandServiceTest {
         ReflectionTestUtils.setField(saved, "id", 10L);
 
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(createFlag()));
-        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of(USER_ID));
         given(commentRepository.save(any(FlagComment.class))).willReturn(saved);
 
         // when
@@ -88,7 +86,6 @@ class FlagCommentCommandServiceTest {
 
         given(commentRepository.findById(1L)).willReturn(Optional.of(parent));
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(createFlag()));
-        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of(USER_ID));
         given(commentRepository.save(any(FlagComment.class))).willReturn(savedReply);
 
         // when
@@ -120,7 +117,6 @@ class FlagCommentCommandServiceTest {
 
         given(commentRepository.findById(2L)).willReturn(Optional.of(reply));
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(createFlag()));
-        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of(USER_ID));
 
         // when / then
         assertThatThrownBy(() -> flagCommentCommandService.createReply(2L, USER_ID, "2단 답글", false))
