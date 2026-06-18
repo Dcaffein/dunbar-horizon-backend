@@ -25,4 +25,9 @@ public class AccountUserProfileAdapter implements UserProfilePort {
     public List<UserProfileInfo> getUserProfiles(Collection<Long> ids) {
         return userQueryUseCase.getUserProfiles(ids);
     }
+
+    @Override
+    public List<UserProfileInfo> getUserProfilesForSync(Collection<Long> ids) {
+        return userQueryUseCase.getUserProfilesForSync(ids);
+    }
 }

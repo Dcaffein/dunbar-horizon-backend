@@ -1,18 +1,17 @@
 package com.example.DunbarHorizon.buzz.adapter.out.imageStorage;
 
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
-import com.example.DunbarHorizon.global.model.PresignRequest;
-import com.example.DunbarHorizon.global.model.PresignedUploadResult;
+import com.example.DunbarHorizon.global.imageStorage.PresignRequest;
+import com.example.DunbarHorizon.global.imageStorage.PresignedUploadResult;
+import com.example.DunbarHorizon.global.imageStorage.S3ImageUrlResolver;
+import com.example.DunbarHorizon.global.util.UuidUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
-import com.example.DunbarHorizon.global.util.UuidUtil;
 import java.time.Duration;
 import java.util.List;
 
@@ -23,6 +22,7 @@ public class S3StorageAdapter implements ImageStoragePort {
     private static final Duration PRESIGN_TTL = Duration.ofHours(1);
 
     private final S3Presigner s3Presigner;
+    private final S3ImageUrlResolver s3ImageUrlResolver;
 
     @Value("${aws.s3.bucket}")
     private String bucket;
@@ -49,23 +49,6 @@ public class S3StorageAdapter implements ImageStoragePort {
 
     @Override
     public List<String> resolveUrls(List<String> keys) {
-        return keys.stream()
-                .map(this::resolveUrl)
-                .toList();
-    }
-
-    private String resolveUrl(String key) {
-        if (key.startsWith("https://")) {
-            return key;
-        }
-        return s3Presigner.presignGetObject(GetObjectPresignRequest.builder()
-                        .signatureDuration(PRESIGN_TTL)
-                        .getObjectRequest(GetObjectRequest.builder()
-                                .bucket(bucket)
-                                .key(key)
-                                .build())
-                        .build())
-                .url()
-                .toString();
+        return s3ImageUrlResolver.resolveUrls(keys);
     }
 }

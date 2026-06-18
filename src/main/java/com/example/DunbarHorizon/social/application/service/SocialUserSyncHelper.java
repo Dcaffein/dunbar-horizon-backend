@@ -25,7 +25,7 @@ public class SocialUserSyncHelper {
 
     @Neo4jTransactional
     public Set<UserReference> syncAndSave(Set<Long> missingIds) {
-        List<UserProfileInfo> profiles = userProfilePort.getUserProfiles(missingIds);
+        List<UserProfileInfo> profiles = userProfilePort.getUserProfilesForSync(missingIds);
         List<SocialUser> newUsers = profiles.stream()
                 .map(dto -> new SocialUser(dto.id(), dto.nickname(), dto.profileImage()))
                 .toList();

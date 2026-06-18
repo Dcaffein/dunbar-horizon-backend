@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.account.application.service;
 
 import com.example.DunbarHorizon.account.application.port.in.UserProfileUpdateUseCase;
+import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.account.domain.exception.UserNotFoundException;
 import com.example.DunbarHorizon.account.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +17,9 @@ public class UserProfileUpdateService implements UserProfileUpdateUseCase {
 
     @Override
     public void updateProfile(Long userId, String nickname, String profileImageKey) {
-        userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("존재하지 않는 유저입니다."))
-                .updateProfile(nickname, profileImageKey);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("존재하지 않는 유저입니다."));
+        user.updateProfile(nickname, profileImageKey);
+        userRepository.save(user);
     }
 }

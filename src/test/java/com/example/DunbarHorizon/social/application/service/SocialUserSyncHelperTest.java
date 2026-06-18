@@ -35,10 +35,10 @@ class SocialUserSyncHelperTest {
     void 미싱_유저_ID로_Account에서_프로필을_조회하여_Neo4j에_저장한다() {
         // given
         Set<Long> missingIds = Set.of(1L);
-        UserProfileInfo profile = new UserProfileInfo(1L, "nick", "img.url");
-        SocialUser saved = new SocialUser(1L, "nick", "img.url");
+        UserProfileInfo profile = new UserProfileInfo(1L, "nick", "profiles/img-key");
+        SocialUser saved = new SocialUser(1L, "nick", "profiles/img-key");
 
-        given(userProfilePort.getUserProfiles(missingIds)).willReturn(List.of(profile));
+        given(userProfilePort.getUserProfilesForSync(missingIds)).willReturn(List.of(profile));
         given(socialUserRepository.saveAll(anyList())).willReturn(Set.of(saved));
 
         // when
@@ -46,7 +46,7 @@ class SocialUserSyncHelperTest {
 
         // then
         assertThat(result).hasSize(1);
-        verify(userProfilePort).getUserProfiles(missingIds);
+        verify(userProfilePort).getUserProfilesForSync(missingIds);
         verify(socialUserRepository).saveAll(anyList());
     }
 
@@ -54,7 +54,7 @@ class SocialUserSyncHelperTest {
     void Account에_유저가_없으면_빈_Set을_반환한다() {
         // given
         Set<Long> missingIds = Set.of(99L);
-        given(userProfilePort.getUserProfiles(missingIds)).willReturn(List.of());
+        given(userProfilePort.getUserProfilesForSync(missingIds)).willReturn(List.of());
         given(socialUserRepository.saveAll(anyList())).willReturn(Set.of());
 
         // when
@@ -68,10 +68,10 @@ class SocialUserSyncHelperTest {
     void DataIntegrityViolationException_발생_시_기존_노드를_조회하여_정상_반환한다() {
         // given
         Set<Long> missingIds = Set.of(1L);
-        UserProfileInfo profile = new UserProfileInfo(1L, "nick", "img.url");
-        SocialUser existing = new SocialUser(1L, "nick", "img.url");
+        UserProfileInfo profile = new UserProfileInfo(1L, "nick", "profiles/img-key");
+        SocialUser existing = new SocialUser(1L, "nick", "profiles/img-key");
 
-        given(userProfilePort.getUserProfiles(missingIds)).willReturn(List.of(profile));
+        given(userProfilePort.getUserProfilesForSync(missingIds)).willReturn(List.of(profile));
         given(socialUserRepository.saveAll(anyList())).willThrow(new DataIntegrityViolationException("duplicate"));
         given(socialUserRepository.findAllUserReferencesById(missingIds)).willReturn(Set.of(existing));
 

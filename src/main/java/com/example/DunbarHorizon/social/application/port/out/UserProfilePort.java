@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface UserProfilePort {
     Optional<UserProfileInfo> getActiveUserProfile(Long id);
     List<UserProfileInfo> getUserProfiles(Collection<Long> ids);
+    /** Neo4j sync 전용 — profileImage에 raw S3 key를 담아 반환 */
+    List<UserProfileInfo> getUserProfilesForSync(Collection<Long> ids);
 }

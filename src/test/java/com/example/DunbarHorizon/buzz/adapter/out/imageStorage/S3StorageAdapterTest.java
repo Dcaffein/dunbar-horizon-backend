@@ -1,7 +1,8 @@
 package com.example.DunbarHorizon.buzz.adapter.out.imageStorage;
 
-import com.example.DunbarHorizon.global.model.PresignRequest;
-import com.example.DunbarHorizon.global.model.PresignedUploadResult;
+import com.example.DunbarHorizon.global.imageStorage.PresignRequest;
+import com.example.DunbarHorizon.global.imageStorage.PresignedUploadResult;
+import com.example.DunbarHorizon.global.imageStorage.S3ImageUrlResolver;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -58,7 +59,9 @@ class S3StorageAdapterTest {
 
     @BeforeEach
     void setUp() {
-        adapter = new S3StorageAdapter(s3Presigner);
+        S3ImageUrlResolver resolver = new S3ImageUrlResolver(s3Presigner);
+        ReflectionTestUtils.setField(resolver, "bucket", BUCKET);
+        adapter = new S3StorageAdapter(s3Presigner, resolver);
         ReflectionTestUtils.setField(adapter, "bucket", BUCKET);
     }
 

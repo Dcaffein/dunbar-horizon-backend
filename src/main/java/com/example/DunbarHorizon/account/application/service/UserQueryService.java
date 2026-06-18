@@ -33,6 +33,15 @@ public class UserQueryService implements UserQueryUseCase {
     }
 
     @Override
+    public List<UserProfileInfo> getUserProfilesForSync(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+
+        return userRepository.findActivatedUsers(ids).stream()
+                .map(user -> new UserProfileInfo(user.getId(), user.getNickname(), user.getProfileImage()))
+                .toList();
+    }
+
+    @Override
     public Optional<UserProfileInfo> getActiveUserProfile(Long id) {
         return userRepository.findActivatedUser(id)
                 .map(user -> new UserProfileInfo(user.getId(), user.getNickname(), resolveProfileUrl(user.getProfileImage())));

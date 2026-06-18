@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.FriendshipDetailResult;
 import com.example.DunbarHorizon.social.application.port.in.FriendshipQueryUseCase;
+import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPort;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
@@ -19,13 +20,14 @@ import java.util.Set;
 public class FriendshipQueryService implements FriendshipQueryUseCase {
 
     private final FriendshipRepository friendshipRepository;
+    private final ImageUrlResolverPort imageUrlResolverPort;
 
     @Override
     public List<FriendshipDetailResult> getDetailedFriendships(Long userId) {
         List<Friendship> friendships = friendshipRepository.findByUserId(userId);
 
         return friendships.stream()
-                .map(friendship -> FriendshipDetailResult.from(friendship, userId))
+                .map(friendship -> FriendshipDetailResult.from(friendship, userId, imageUrlResolverPort))
                 .toList();
     }
 
@@ -38,7 +40,7 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
     public FriendshipDetailResult getFriend(Long userId, Long targetId) {
         String friendshipId = Friendship.generateCompositeId(userId, targetId);
         Friendship friendship = friendshipRepository.findById(friendshipId).orElseThrow(() -> new FriendshipNotFoundException(userId, targetId));
-        return FriendshipDetailResult.from(friendship, userId);
+        return FriendshipDetailResult.from(friendship, userId, imageUrlResolverPort);
     }
 
     @Override

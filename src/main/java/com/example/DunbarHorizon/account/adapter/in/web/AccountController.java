@@ -12,7 +12,7 @@ import com.example.DunbarHorizon.account.adapter.in.web.dto.UserProfileUpdateReq
 import com.example.DunbarHorizon.account.adapter.in.web.dto.VerificationEmailRequestDto;
 import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
-import com.example.DunbarHorizon.global.model.PresignedUploadResult;
+import com.example.DunbarHorizon.global.imageStorage.PresignedUploadResult;
 import com.example.DunbarHorizon.global.security.AuthCookieManager;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
