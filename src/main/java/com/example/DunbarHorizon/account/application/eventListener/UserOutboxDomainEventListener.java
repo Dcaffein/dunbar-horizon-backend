@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.account.application.eventListener;
 
+import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
 import com.example.DunbarHorizon.account.domain.outbox.UserEventOutbox;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxEventType;
 import com.example.DunbarHorizon.account.domain.repository.UserEventOutboxRepository;
@@ -28,6 +29,7 @@ public class UserOutboxDomainEventListener {
     private final UserEventOutboxRepository outboxRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final ProfileImageStoragePort profileImageStoragePort;
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void onUserActivated(UserActivatedEvent event) {
@@ -55,13 +57,16 @@ public class UserOutboxDomainEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void onUserProfileUpdated(UserProfileUpdatedEvent event) {
-        String payload = serialize(event.userId(), event.nickname(), event.profileImageUrl(), event.occurredAt());
+        String resolvedUrl = event.profileImageUrl() != null
+                ? profileImageStoragePort.resolveUrl(event.profileImageUrl())
+                : null;
+        String payload = serialize(event.userId(), event.nickname(), resolvedUrl, event.occurredAt());
         UserEventOutbox outbox = outboxRepository.save(
                 UserEventOutbox.pending(event.userId(), UserOutboxEventType.PROFILE_UPDATE, payload)
         );
         eventPublisher.publishEvent(new UserSyncIntegrationEvent(
                 outbox.getId(), outbox.getAggregateId(), outbox.getEventType(),
-                event.nickname(), event.profileImageUrl(), event.occurredAt()
+                event.nickname(), resolvedUrl, event.occurredAt()
         ));
     }
 

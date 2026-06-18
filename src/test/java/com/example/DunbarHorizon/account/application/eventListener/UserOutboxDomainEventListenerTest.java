@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.account.application.eventListener;
 
+import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
 import com.example.DunbarHorizon.account.domain.outbox.UserEventOutbox;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxEventType;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxStatus;
@@ -23,14 +24,16 @@ class UserOutboxDomainEventListenerTest {
 
     private UserEventOutboxRepository outboxRepository;
     private ApplicationEventPublisher eventPublisher;
+    private ProfileImageStoragePort profileImageStoragePort;
     private UserOutboxDomainEventListener listener;
 
     @BeforeEach
     void setUp() {
         outboxRepository = mock(UserEventOutboxRepository.class);
         eventPublisher = mock(ApplicationEventPublisher.class);
+        profileImageStoragePort = mock(ProfileImageStoragePort.class);
         ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-        listener = new UserOutboxDomainEventListener(outboxRepository, eventPublisher, objectMapper);
+        listener = new UserOutboxDomainEventListener(outboxRepository, eventPublisher, objectMapper, profileImageStoragePort);
     }
 
     @Test

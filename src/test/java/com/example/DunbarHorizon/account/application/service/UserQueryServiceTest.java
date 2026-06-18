@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.account.application.service;
 
 import com.example.DunbarHorizon.account.application.dto.MyProfileResult;
 import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
+import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.account.domain.UserStatus;
 import com.example.DunbarHorizon.account.domain.exception.UserNotFoundException;
@@ -25,6 +26,7 @@ class UserQueryServiceTest {
 
     @InjectMocks private UserQueryService userQueryService;
     @Mock private UserRepository userRepository;
+    @Mock private ProfileImageStoragePort profileImageStoragePort;
 
     @Test
     @DisplayName("ACTIVE 유저가 존재하면 UserProfileInfo를 반환한다")
