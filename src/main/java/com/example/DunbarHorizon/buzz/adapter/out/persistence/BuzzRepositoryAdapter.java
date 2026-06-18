@@ -58,6 +58,11 @@ public class BuzzRepositoryAdapter implements BuzzRepository {
     }
 
     @Override
+    public Slice<Buzz> findAllByCreatorId(Long userId, Pageable pageable) {
+        return buzzSDMRepository.findAllByCreatorIdOrderByCreatedAtDesc(userId, pageable);
+    }
+
+    @Override
     public List<Long> findUnreadSenderIds(Long userId, Set<Long> excludedIds) {
         Set<Long> filterIds = (excludedIds == null || excludedIds.isEmpty()) ? Set.of(-1L) : excludedIds;
         return buzzTemplateRepository.findUnreadSenderIds(userId, filterIds);

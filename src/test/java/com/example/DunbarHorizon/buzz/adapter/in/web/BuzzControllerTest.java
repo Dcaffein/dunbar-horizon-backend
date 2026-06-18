@@ -3,11 +3,14 @@ package com.example.DunbarHorizon.buzz.adapter.in.web;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzCommentResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzProfileResult;
+import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.http.MediaType;
 
 import java.time.LocalDateTime;
@@ -15,6 +18,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -79,6 +84,31 @@ class BuzzControllerTest extends BaseControllerTest {
             mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.comments[0].isMine").value(true));
+        }
+    }
+
+    @Nested
+    @DisplayName("내가 작성한 버즈 목록 조회")
+    class GetSentBuzzes {
+
+        private static final Long CURRENT_USER_ID = 1L;
+
+        @Test
+        @WithMockCustomUser
+        @DisplayName("GET /api/v1/buzzes/sent 는 작성한 버즈 목록을 반환한다")
+        void getSentBuzzes_ReturnsSlice() throws Exception {
+            BuzzSummaryResult summary = new BuzzSummaryResult(
+                    "buzz-1",
+                    new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
+                    "내가 보낸 버즈", List.of(), 0, 10L, false, true
+            );
+            given(buzzQueryUseCase.getSentBuzzes(eq(CURRENT_USER_ID), any()))
+                    .willReturn(new SliceImpl<>(List.of(summary), PageRequest.of(0, 20), false));
+
+            mockMvc.perform(get("/api/v1/buzzes/sent"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].buzzId").value("buzz-1"))
+                    .andExpect(jsonPath("$.content[0].isCreator").value(true));
         }
     }
 

@@ -114,6 +114,12 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     }
 
     @Override
+    public Slice<BuzzSummaryResult> getSentBuzzes(Long userId, Pageable pageable) {
+        return buzzRepository.findAllByCreatorId(userId, pageable)
+                .map(buzz -> BuzzSummaryResult.from(buzz, userId));
+    }
+
+    @Override
     public BuzzDetailResult getBuzzDetail(Long userId, String buzzId) {
         Buzz buzz = getBuzzOrThrow(buzzId);
         buzz.validateAccess(userId);

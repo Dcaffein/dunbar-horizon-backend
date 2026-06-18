@@ -21,10 +21,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Set;
+
+import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -154,6 +159,34 @@ class BuzzServiceTest {
 
             assertThat(result.comments()).hasSize(1);
             assertThat(result.comments().get(0).isMine()).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("내가 작성한 버즈 목록 조회")
+    class GetSentBuzzes {
+
+        @Test
+        @DisplayName("creatorId로 작성한 버즈를 페이지 단위로 반환한다")
+        void getSentBuzzes_ReturnsMappedResults() {
+            Buzz buzz = Buzz.builder()
+                    .creatorId(creatorId)
+                    .creatorNickname("작성자")
+                    .creatorProfileImageUrl("p.png")
+                    .text("내가 보낸 버즈")
+                    .recipientIds(List.of(recipientId))
+                    .build();
+            ReflectionTestUtils.setField(buzz, "id", "buzz-1");
+
+            PageRequest pageable = PageRequest.of(0, 20);
+            given(buzzRepository.findAllByCreatorId(creatorId, pageable))
+                    .willReturn(new SliceImpl<>(List.of(buzz), pageable, false));
+
+            Slice<BuzzSummaryResult> result = buzzService.getSentBuzzes(creatorId, pageable);
+
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).isCreator()).isTrue();
+            assertThat(result.getContent().get(0).isUnread()).isFalse();
         }
     }
 

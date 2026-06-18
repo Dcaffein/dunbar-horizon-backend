@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface BuzzQueryUseCase {
     Slice<BuzzSummaryResult> getReceivedBuzzes(Long userId, Pageable pageable);
+    Slice<BuzzSummaryResult> getSentBuzzes(Long userId, Pageable pageable);
     BuzzDetailResult getBuzzDetail(Long userId, String buzzId);
     List<Long> getUnreadSenderIds(Long userId);
 }

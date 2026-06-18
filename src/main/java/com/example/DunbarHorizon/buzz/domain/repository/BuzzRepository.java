@@ -16,6 +16,7 @@ public interface BuzzRepository {
     void removeComment(String buzzId, String commentId);
     void deleteById(String buzzId);
     Slice<Buzz> findAllByRecipientId(Long userId, Set<Long> excludedIds, Pageable pageable);
+    Slice<Buzz> findAllByCreatorId(Long userId, Pageable pageable);
     List<Long> findUnreadSenderIds(Long userId, Set<Long> excludedIds);
     void addReadRecipient(String buzzId, Long userId);
 }

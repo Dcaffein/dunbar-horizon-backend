@@ -10,4 +10,5 @@ import java.util.Set;
 public interface BuzzSDMRepository extends MongoRepository<Buzz, String> {
     Slice<Buzz> findAllByRecipientIdsContainsAndCreatorIdNotInOrderByCreatedAtDesc(
             Long userId, Set<Long> blockedIds, Pageable pageable);
+    Slice<Buzz> findAllByCreatorIdOrderByCreatedAtDesc(Long creatorId, Pageable pageable);
 }
