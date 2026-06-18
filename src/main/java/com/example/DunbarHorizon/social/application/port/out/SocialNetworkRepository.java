@@ -8,9 +8,9 @@ import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import java.util.List;
 
 public interface SocialNetworkRepository {
-    NetworkGraphResult getDefaultNetworkGraph(Long userId, DunbarCircle circleSize);
-    NetworkGraphResult getLabelCustomNetwork(Long userId, String labelId);
+    NetworkGraphResult getDefaultNetworkGraph(Long userId, DunbarCircle circleSize, int pruningMin, int pruningRange);
+    NetworkGraphResult getLabelCustomNetwork(Long userId, String labelId, DunbarCircle circleSize, int pruningMin, int pruningRange);
 
     List<MutualFriendEdgeResult> getNewNodeEdges(Long userId, Long targetId, List<Long> skeletonIds, int dynamicLimit);
-    List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(Long userId, Long targetId, List<Long> skeletonIds);
+    List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(Long userId, Long targetId, List<Long> skeletonIds, int strangerQuota);
 }

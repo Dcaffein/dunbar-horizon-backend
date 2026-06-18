@@ -121,7 +121,7 @@ class SocialNetworkCacheSerdeTest {
     @Test
     @DisplayName("첫 번째 호출 후 Redis 캐시에 NetworkGraphResult 타입으로 저장된다")
     void getDefaultNetworkGraph_첫_호출_후_Redis에_NetworkGraphResult로_저장된다() {
-        networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR);
+        networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
 
         Cache.ValueWrapper cached = cacheManager.getCache("dunbar:network:default").get("1:DUNBAR");
         assertThat(cached).isNotNull();
@@ -132,11 +132,11 @@ class SocialNetworkCacheSerdeTest {
     @DisplayName("두 번째 호출 시 Redis에서 역직렬화해도 ClassCastException 없이 NetworkGraphResult를 반환한다")
     void getDefaultNetworkGraph_두번째_호출은_Redis_역직렬화가_정상_동작한다() {
         // 첫 번째 호출: Neo4j → Redis 저장
-        NetworkGraphResult first = networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR);
+        NetworkGraphResult first = networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
 
         // 두 번째 호출: Redis → 역직렬화 (ClassCastException이 발생하지 않아야 함)
         assertThatNoException().isThrownBy(() -> {
-            NetworkGraphResult second = networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR);
+            NetworkGraphResult second = networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
             assertThat(second).isEqualTo(first);
         });
     }
@@ -145,10 +145,10 @@ class SocialNetworkCacheSerdeTest {
     @DisplayName("Redis에서 복원된 NetworkGraphResult는 6개 노드와 총 4개 엣지를 정확히 보존한다")
     void getDefaultNetworkGraph_역직렬화된_중첩_구조가_정확히_복원된다() {
         // 첫 번째 호출로 캐시 적재
-        networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR);
+        networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
 
         // 두 번째 호출은 Redis에서 반환
-        NetworkGraphResult fromCache = networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR);
+        NetworkGraphResult fromCache = networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
 
         assertThat(fromCache.nodes()).hasSize(6);
         assertThat(fromCache.nodes()).allSatisfy(node -> {
@@ -165,9 +165,9 @@ class SocialNetworkCacheSerdeTest {
     @Test
     @DisplayName("Redis에서 복원된 노드의 interestScore 수치 정밀도가 보존된다")
     void getDefaultNetworkGraph_역직렬화된_interestScore_수치가_보존된다() {
-        networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR);
+        networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
 
-        NetworkGraphResult fromCache = networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR);
+        NetworkGraphResult fromCache = networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
 
         NodeGraphResult nodeA = fromCache.nodes().stream()
                 .filter(n -> n.nodeId().equals(10L))
@@ -181,10 +181,10 @@ class SocialNetworkCacheSerdeTest {
     @Test
     @DisplayName("두 번째 호출 시 Redis에서 역직렬화해도 ClassCastException 없이 NetworkGraphResult를 반환한다")
     void getLabelCustomNetwork_두번째_호출은_Redis_역직렬화가_정상_동작한다() {
-        NetworkGraphResult first = networkRepository.getLabelCustomNetwork(1L, "test-label-id");
+        NetworkGraphResult first = networkRepository.getLabelCustomNetwork(1L, "test-label-id", DunbarCircle.DUNBAR, 5, 10);
 
         assertThatNoException().isThrownBy(() -> {
-            NetworkGraphResult second = networkRepository.getLabelCustomNetwork(1L, "test-label-id");
+            NetworkGraphResult second = networkRepository.getLabelCustomNetwork(1L, "test-label-id", DunbarCircle.DUNBAR, 5, 10);
             assertThat(second).isEqualTo(first);
         });
     }
@@ -192,9 +192,9 @@ class SocialNetworkCacheSerdeTest {
     @Test
     @DisplayName("Redis에서 복원된 라벨 네트워크는 2개 노드와 총 2개 엣지를 정확히 보존한다")
     void getLabelCustomNetwork_역직렬화된_중첩_구조가_정확히_복원된다() {
-        networkRepository.getLabelCustomNetwork(1L, "test-label-id");
+        networkRepository.getLabelCustomNetwork(1L, "test-label-id", DunbarCircle.DUNBAR, 5, 10);
 
-        NetworkGraphResult fromCache = networkRepository.getLabelCustomNetwork(1L, "test-label-id");
+        NetworkGraphResult fromCache = networkRepository.getLabelCustomNetwork(1L, "test-label-id", DunbarCircle.DUNBAR, 5, 10);
 
         // label에는 A(10), B(20)만 포함
         assertThat(fromCache.nodes()).hasSize(2);

@@ -44,7 +44,7 @@ class SocialNetworkRepositoryAdapterCacheTest {
     @Test
     @DisplayName("getDefaultNetworkGraph: 노드와 엣지를 함께 반환한다")
     void getDefaultNetworkGraph_노드와_엣지를_함께_반환한다() {
-        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR);
+        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
 
         assertThat(result.nodes()).hasSize(2); // A, B
         long totalEdges = result.nodes().stream().mapToLong(n -> n.edges().size()).sum();
@@ -56,7 +56,7 @@ class SocialNetworkRepositoryAdapterCacheTest {
     void getDefaultNetworkGraph_데이터가_없으면_빈_nodes를_반환한다() {
         neo4jClient.query("MATCH (n) DETACH DELETE n").run();
 
-        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR);
+        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
 
         assertThat(result.nodes()).isEmpty();
     }
@@ -65,7 +65,7 @@ class SocialNetworkRepositoryAdapterCacheTest {
     @DisplayName("getDefaultNetworkGraph: DunbarCircle SUPPORT는 상위 친구만 반환한다")
     void getDefaultNetworkGraph_SUPPORT_상위_친구만_반환한다() {
         // me(1)의 친구는 A(10, intimacy=0.9), B(20, intimacy=0.8) 2명 → SUPPORT(5) 이내
-        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.SUPPORT);
+        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.SUPPORT, 5, 10);
 
         assertThat(result.nodes()).hasSize(2);
     }
