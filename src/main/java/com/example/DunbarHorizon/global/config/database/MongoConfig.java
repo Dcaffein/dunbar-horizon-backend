@@ -29,7 +29,7 @@ public class MongoConfig {
     public void ensureBuzzTtlIndex() {
         IndexOperations indexOps = mongoTemplate.indexOps(Buzz.class);
         try {
-            indexOps.dropIndex("expiresAt_1");
+            indexOps.dropIndex("expiresAt");
         } catch (Exception ignored) {}
         indexOps.ensureIndex(new Index().on("expiresAt", Sort.Direction.ASC).expire(0));
     }
