@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.buzz.application.port.out;
 
-import com.example.DunbarHorizon.global.model.PresignRequest;
-import com.example.DunbarHorizon.global.model.PresignedUploadResult;
+import com.example.DunbarHorizon.global.imageStorage.PresignRequest;
+import com.example.DunbarHorizon.global.imageStorage.PresignedUploadResult;
 
 import java.util.List;
 

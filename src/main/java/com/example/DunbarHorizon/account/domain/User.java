@@ -29,6 +29,7 @@ public class User extends BaseTimeAggregateRoot {
     @Column(nullable = false, length = 20)
     private String nickname;
 
+    @Column(length = 2048)
     private String profileImage;
 
     @Enumerated(EnumType.STRING)

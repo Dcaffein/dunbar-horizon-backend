@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.account.application.eventListener;
 
-import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
 import com.example.DunbarHorizon.account.domain.outbox.UserEventOutbox;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxEventType;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxStatus;
@@ -24,29 +23,24 @@ class UserOutboxDomainEventListenerTest {
 
     private UserEventOutboxRepository outboxRepository;
     private ApplicationEventPublisher eventPublisher;
-    private ProfileImageStoragePort profileImageStoragePort;
     private UserOutboxDomainEventListener listener;
 
     @BeforeEach
     void setUp() {
         outboxRepository = mock(UserEventOutboxRepository.class);
         eventPublisher = mock(ApplicationEventPublisher.class);
-        profileImageStoragePort = mock(ProfileImageStoragePort.class);
         ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-        listener = new UserOutboxDomainEventListener(outboxRepository, eventPublisher, objectMapper, profileImageStoragePort);
+        listener = new UserOutboxDomainEventListener(outboxRepository, eventPublisher, objectMapper);
     }
 
     @Test
     void 유저_활성화_이벤트_수신_시_PENDING_상태의_Outbox_레코드가_저장된다() {
-        // given
         UserActivatedEvent event = new UserActivatedEvent(1L, "testUser", "https://img.url");
         ArgumentCaptor<UserEventOutbox> captor = ArgumentCaptor.forClass(UserEventOutbox.class);
         given(outboxRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        // when
         listener.onUserActivated(event);
 
-        // then
         verify(outboxRepository).save(captor.capture());
         UserEventOutbox saved = captor.getValue();
         assertThat(saved.getAggregateId()).isEqualTo(1L);
@@ -57,15 +51,12 @@ class UserOutboxDomainEventListenerTest {
 
     @Test
     void 유저_비활성화_이벤트_수신_시_PENDING_상태의_Outbox_레코드가_저장된다() {
-        // given
         UserDeactivatedEvent event = new UserDeactivatedEvent(2L);
         ArgumentCaptor<UserEventOutbox> captor = ArgumentCaptor.forClass(UserEventOutbox.class);
         given(outboxRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        // when
         listener.onUserDeactivated(event);
 
-        // then
         verify(outboxRepository).save(captor.capture());
         UserEventOutbox saved = captor.getValue();
         assertThat(saved.getAggregateId()).isEqualTo(2L);
@@ -75,14 +66,11 @@ class UserOutboxDomainEventListenerTest {
 
     @Test
     void 유저_활성화_이벤트_수신_시_UserSyncIntegrationEvent가_즉시_발행된다() {
-        // given
         UserActivatedEvent event = new UserActivatedEvent(1L, "testUser", "https://img.url");
         given(outboxRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        // when
         listener.onUserActivated(event);
 
-        // then
         ArgumentCaptor<UserSyncIntegrationEvent> captor = ArgumentCaptor.forClass(UserSyncIntegrationEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
         UserSyncIntegrationEvent published = captor.getValue();

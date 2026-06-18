@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.SocialProfileResult;
 import com.example.DunbarHorizon.social.application.port.in.SocialUserQueryUseCase;
+import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPort;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
@@ -21,10 +22,11 @@ import java.util.stream.StreamSupport;
 public class SocialUserService implements SocialUserQueryUseCase {
     private final SocialUserRepository socialUserRepository;
     private final SocialUserSyncHelper syncHelper;
+    private final ImageUrlResolverPort imageUrlResolverPort;
 
     @Override
     public SocialProfileResult getSocialProfile(Long userId) {
-        return SocialProfileResult.from(getUserReference(userId));
+        return SocialProfileResult.from(getUserReference(userId), imageUrlResolverPort);
     }
 
     public UserReference getUserReference(Long userId) {
