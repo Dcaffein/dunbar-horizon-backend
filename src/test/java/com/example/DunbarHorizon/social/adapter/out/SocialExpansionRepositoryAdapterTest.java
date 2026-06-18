@@ -32,10 +32,10 @@ class SocialExpansionRepositoryAdapterTest {
          * 테스트 시나리오 구성
          * - 나(1), 앵커(10), 내친구A(2)
          * - 앵커의 타겟들:
-         * 1. 타겟1(100): 이미 '나'와 친구 (excludeMyFriends 필터링 대상)
-         * 2. 타겟2(200): 고관여 타겟 (공통친구 내친구A 보유, 공유 라벨 보유 -> 점수 2)
-         * 3. 타겟3(300): 저관여 타겟 (공통친구 0, 공유 라벨 0 -> 점수 0)
-         * 4. 타겟4(400): 비공개 타겟 (isRoutable: false -> 조회 불가)
+         * 1. 타겟1(100): 나와 친구 → Related 모드에서만 포함
+         * 2. 타겟2(200): 나와 친구 아님, 고관여 (공통친구 내친구A, 공유 라벨 → 점수 2) → Recommended 모드에서만 포함
+         * 3. 타겟3(300): 나와 친구 아님, 저관여 (공통친구 0, 공유 라벨 0 → 점수 0) → Recommended 모드에서만 포함
+         * 4. 타겟4(400): 비공개 타겟 (isRoutable: false → 어느 모드에서도 조회 불가)
          */
         neo4jClient.query("""
             CREATE (me:UserReference {id: 1, nickname: '나'})
@@ -76,24 +76,22 @@ class SocialExpansionRepositoryAdapterTest {
     }
 
     @Test
-    @DisplayName("Related 모드: 내 친구 여부와 관계없이 노출 가능한 앵커의 모든 타겟을 조회한다")
+    @DisplayName("Related 모드: 앵커의 친구 중 나와도 친구인 사람만 조회한다")
     void getRelatedNetworkByAnchor_Success() {
-        // threshold 0으로 필터링 없이 모두 조회 (excludeMyFriends = false)
         List<AnchorExpansionResult> result = expansionRepository.getRelatedNetworkByAnchor(1L, 10L, 0, 10);
 
-        // t1(100), t2(200), t3(300) 포함, t4(400)는 isRoutable=false라 제외됨
-        assertThat(result).hasSize(3);
+        // 앵커 친구 중 나(1)와도 친구인 t1(100)만 포함, 내 친구 아닌 t2/t3는 제외, t4는 isRoutable=false라 제외
+        assertThat(result).hasSize(1);
         assertThat(result).extracting(AnchorExpansionResult::id)
-                .containsExactlyInAnyOrder(100L, 200L, 300L);
+                .containsExactlyInAnyOrder(100L);
     }
 
     @Test
-    @DisplayName("Recommended 모드: 이미 내 친구인 사용자는 결과에서 제외한다")
-    void getRecommendedNetworkByAnchor_ExcludeFriends() {
-        // excludeMyFriends = true
+    @DisplayName("Recommended 모드: 앵커의 친구 중 나와 친구가 아닌 사람만 조회한다")
+    void getRecommendedNetworkByAnchor_OnlyStrangers() {
         List<AnchorExpansionResult> result = expansionRepository.getRecommendedNetworkByAnchor(1L, 10L, 0, 10);
 
-        // 이미 1촌인 t1(100)은 결과에서 빠져야 함
+        // 나와 친구인 t1(100)은 제외, 친구 아닌 t2(200)·t3(300)만 포함
         assertThat(result).hasSize(2);
         assertThat(result).extracting(AnchorExpansionResult::id)
                 .containsExactlyInAnyOrder(200L, 300L);

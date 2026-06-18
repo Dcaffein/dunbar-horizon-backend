@@ -34,11 +34,11 @@ public class SocialExpansionRepositoryAdapter implements SocialExpansionReposito
             OPTIONAL MATCH (anchor)-[:#{OL}]->(sharedLabel:#{LBL})-[:#{AT}]->(me)
             WITH me, anchor, myFriends, collect(distinct sharedLabel) AS mySharedLabels
 
-            // [3] anchor의 2-hop 후보 탐색, isRoutable 필터 + excludeMyFriends 조건 적용 후 친밀도 내림차순 정렬
+            // [3] anchor의 2-hop 후보 탐색, isRoutable 필터 + 친구 범위 조건 적용 후 친밀도 내림차순 정렬
             MATCH (anchor)-[:#{HF}]->(targetFriendship:#{F})<-[targetRel:#{HF}]-(target:#{UR})
             WHERE target.#{ID} <> me.#{ID}
               AND targetRel.#{IR} = true
-              AND (NOT $excludeMyFriends OR NOT target IN myFriends)
+              AND ($onlyMyFriends = (target IN myFriends))
             WITH target, targetFriendship, me, anchor, myFriends, mySharedLabels
             ORDER BY targetFriendship.#{INTIMACY} DESC
 
@@ -78,21 +78,21 @@ public class SocialExpansionRepositoryAdapter implements SocialExpansionReposito
 
     @Override
     public List<AnchorExpansionResult> getRelatedNetworkByAnchor(Long meId, Long anchorId, int threshold, int limitCount) {
-        return executeQuery(meId, anchorId, threshold, limitCount, false);
+        return executeQuery(meId, anchorId, threshold, limitCount, true);
     }
 
     @Override
     public List<AnchorExpansionResult> getRecommendedNetworkByAnchor(Long meId, Long anchorId, int threshold, int limitCount) {
-        return executeQuery(meId, anchorId, threshold, limitCount, true);
+        return executeQuery(meId, anchorId, threshold, limitCount, false);
     }
 
-    private List<AnchorExpansionResult> executeQuery(Long meId, Long anchorId, int threshold, int limitCount, boolean excludeMyFriends) {
+    private List<AnchorExpansionResult> executeQuery(Long meId, Long anchorId, int threshold, int limitCount, boolean onlyMyFriends) {
         return neo4jClient.query(ANCHOR_EXPANSION_QUERY)
                 .bind(meId).to("meId")
                 .bind(anchorId).to("anchorId")
                 .bind(threshold).to("threshold")
                 .bind(limitCount).to("limitCount")
-                .bind(excludeMyFriends).to("excludeMyFriends")
+                .bind(onlyMyFriends).to("onlyMyFriends")
                 .fetchAs(AnchorExpansionResult.class)
                 .mappedBy((typeSystem, record) -> new AnchorExpansionResult(
                         record.get("id").asLong(),
