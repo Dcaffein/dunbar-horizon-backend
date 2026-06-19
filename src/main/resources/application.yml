@@ -2,9 +2,6 @@ spring:
   application:
     name: dunbarhorizon
 
-server:
-  forward-headers-strategy: native
-
   security:
     oauth2:
       client:
@@ -60,6 +57,9 @@ server:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       timeout: 500ms
+
+server:
+  forward-headers-strategy: native
 
 aws:
   s3:
