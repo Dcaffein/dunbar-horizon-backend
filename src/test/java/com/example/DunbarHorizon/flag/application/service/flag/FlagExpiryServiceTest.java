@@ -27,31 +27,36 @@ class FlagExpiryServiceTest {
     @DisplayName("만료 임계값이 현재 시각 기준 24시간 전으로 계산된다")
     void labelExpiredFlags_ThresholdIs24HoursBefore() {
         // given
-        given(flagRepository.expireAllExceedingThreshold(any())).willReturn(0);
+        given(flagRepository.expireAllExceedingThreshold(any(), any())).willReturn(0);
         LocalDateTime before = LocalDateTime.now().minusHours(Flag.EXPIRATION_THRESHOLD_HOURS);
 
         // when
         flagExpiryService.labelExpiredFlags();
 
         // then
-        ArgumentCaptor<LocalDateTime> captor = ArgumentCaptor.forClass(LocalDateTime.class);
-        verify(flagRepository).expireAllExceedingThreshold(captor.capture());
+        ArgumentCaptor<LocalDateTime> thresholdCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+        ArgumentCaptor<LocalDateTime> nowCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(flagRepository).expireAllExceedingThreshold(thresholdCaptor.capture(), nowCaptor.capture());
 
-        LocalDateTime threshold = captor.getValue();
+        LocalDateTime threshold = thresholdCaptor.getValue();
         assertThat(threshold).isBeforeOrEqualTo(before.plusSeconds(1));
         assertThat(threshold).isAfterOrEqualTo(before.minusSeconds(1));
+
+        LocalDateTime now = nowCaptor.getValue();
+        assertThat(now).isAfterOrEqualTo(threshold);
+        assertThat(now).isBeforeOrEqualTo(LocalDateTime.now().plusSeconds(1));
     }
 
     @Test
     @DisplayName("만료된 플래그가 있으면 expireAllExceedingThreshold가 호출된다")
     void labelExpiredFlags_CallsRepository() {
         // given
-        given(flagRepository.expireAllExceedingThreshold(any())).willReturn(3);
+        given(flagRepository.expireAllExceedingThreshold(any(), any())).willReturn(3);
 
         // when
         flagExpiryService.labelExpiredFlags();
 
         // then
-        verify(flagRepository).expireAllExceedingThreshold(any(LocalDateTime.class));
+        verify(flagRepository).expireAllExceedingThreshold(any(LocalDateTime.class), any(LocalDateTime.class));
     }
 }

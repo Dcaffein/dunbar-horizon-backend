@@ -58,8 +58,8 @@ public class FlagRepositoryAdapter implements FlagRepository {
     }
 
     @Override
-    public int expireAllExceedingThreshold(LocalDateTime threshold) {
-        return flagJpaRepository.expireAllExceedingThreshold(threshold);
+    public int expireAllExceedingThreshold(LocalDateTime threshold, LocalDateTime now) {
+        return flagJpaRepository.expireAllExceedingThreshold(threshold, now);
     }
 
     @Override

@@ -32,11 +32,12 @@ public interface FlagJpaRepository extends JpaRepository<Flag, Long> {
     Optional<Flag> findByIdExclusive(@Param("id") Long id);
 
     @Modifying(clearAutomatically = true)
-    @Query("UPDATE Flag f SET f.deletedAt = CURRENT_TIMESTAMP " +
+    @Query("UPDATE Flag f SET f.deletedAt = :now " +
             "WHERE f.schedule.endDateTime < :threshold " +
             "AND f.autoExpiryExempt = false " +
             "AND f.deletedAt IS NULL")
-    int expireAllExceedingThreshold(@Param("threshold") LocalDateTime threshold);
+    int expireAllExceedingThreshold(@Param("threshold") LocalDateTime threshold,
+                                    @Param("now") LocalDateTime now);
 
     @Query("SELECT f FROM Flag f WHERE f.hostId IN :hostIds AND f.schedule.deadline > :now")
     List<Flag> findRecruitingByHostIds(@Param("hostIds") Collection<Long> hostIds, @Param("now") LocalDateTime now);

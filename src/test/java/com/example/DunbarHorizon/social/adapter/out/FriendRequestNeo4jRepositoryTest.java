@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.SocialUserNeo4jRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
+import java.time.LocalDateTime;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.support.Neo4jRepositoryTest;
@@ -44,7 +45,7 @@ class FriendRequestNeo4jRepositoryTest {
 
         // when
         FriendRequest saved = friendRequestRepository.mergeFriendRequest(
-                requester.getId(), receiver.getId(), newRequest.getId());
+                requester.getId(), receiver.getId(), newRequest.getId(), LocalDateTime.now());
 
         // then
         assertThat(saved.getId()).isNotNull();
@@ -61,7 +62,7 @@ class FriendRequestNeo4jRepositoryTest {
         // given
         FriendRequest newRequest = FriendTestFactory.createRequest(requester, receiver);
         friendRequestRepository.mergeFriendRequest(
-                requester.getId(), receiver.getId(), newRequest.getId());
+                requester.getId(), receiver.getId(), newRequest.getId(), LocalDateTime.now());
 
         // findById로 관계(receiver 등)가 함께 로드된 엔티티를 가져옴
         FriendRequest saved = friendRequestRepository.findById(newRequest.getId())
@@ -86,7 +87,7 @@ class FriendRequestNeo4jRepositoryTest {
         // given
         FriendRequest newRequest = FriendTestFactory.createRequest(requester, receiver);
         friendRequestRepository.mergeFriendRequest(
-                requester.getId(), receiver.getId(), newRequest.getId());
+                requester.getId(), receiver.getId(), newRequest.getId(), LocalDateTime.now());
 
         // when
         boolean forward = friendRequestRepository.existsRequestBetween(requester.getId(), receiver.getId());

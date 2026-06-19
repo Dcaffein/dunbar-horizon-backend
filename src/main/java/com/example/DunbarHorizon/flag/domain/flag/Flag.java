@@ -13,7 +13,6 @@ import com.example.DunbarHorizon.global.util.UuidUtil;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.DynamicUpdate;
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
@@ -25,7 +24,6 @@ import java.util.UUID;
 @Table(name = "flags", uniqueConstraints = {
         @UniqueConstraint(name = "uq_flags_parent_id", columnNames = "parent_id")
 })
-@SQLDelete(sql = "UPDATE flags SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
