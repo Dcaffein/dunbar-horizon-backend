@@ -2,6 +2,9 @@ spring:
   application:
     name: dunbarhorizon
 
+server:
+  forward-headers-strategy: native
+
   security:
     oauth2:
       client:
