@@ -39,7 +39,7 @@ public class Buzz {
 
     private LocalDateTime createdAt;
 
-    @Indexed(expireAfter = "0s")
+    @Indexed(expireAfter = "1s")
     private LocalDateTime expiresAt;
 
     @Builder

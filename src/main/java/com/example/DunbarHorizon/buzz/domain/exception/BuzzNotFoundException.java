@@ -4,6 +4,6 @@ import org.springframework.http.HttpStatus;
 
 public class BuzzNotFoundException extends BuzzException {
   public BuzzNotFoundException() {
-    super("존재하지 않는 캐스트입니다.", HttpStatus.NOT_FOUND);
+    super("존재하지 않는 Buzz입니다.", HttpStatus.NOT_FOUND);
   }
 }
