@@ -87,6 +87,8 @@ jobs:
           echo "AWS_IMAGE_BUCKET=$AWS_IMAGE_BUCKET" >> .env
           echo "AWS_S3_REGION=ap-northeast-2" >> .env
           echo "FRONTEND_BASE_URL=$FRONTEND_BASE_URL" >> .env
+          echo "COOKIE_DOMAIN=dunbarhorizon.link" >> .env
+          echo "COOKIE_SECURE=true" >> .env
           echo "ECR_REGISTRY=$ECR_REGISTRY" >> .env
           echo "ECR_REPOSITORY=$ECR_REPOSITORY" >> .env
           echo "IMAGE_TAG=$IMAGE_TAG" >> .env
