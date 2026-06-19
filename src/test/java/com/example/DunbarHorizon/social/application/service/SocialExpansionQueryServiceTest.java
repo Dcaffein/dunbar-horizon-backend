@@ -121,18 +121,18 @@ class SocialExpansionQueryServiceTest {
     void getRecommendationsByAnchor_intimacy_기반_파라미터_검증() {
         // given
         Long userId = 1L, anchorId = 10L;
-        double intimacy = 0.5; // limit=35, threshold=3
+        double intimacy = 0.5; // limit=7, threshold=3
         given(friendshipRepository.findById(Friendship.generateCompositeId(userId, anchorId)))
                 .willReturn(Optional.of(friendship));
         given(friendship.getIntimacy()).willReturn(intimacy);
-        given(socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, 3, 35))
+        given(socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, 3, 7))
                 .willReturn(List.of());
 
         // when
         service.getRecommendationsByAnchor(userId, anchorId);
 
         // then
-        verify(socialExpansionRepository).getRecommendedNetworkByAnchor(userId, anchorId, 3, 35);
+        verify(socialExpansionRepository).getRecommendedNetworkByAnchor(userId, anchorId, 3, 7);
     }
 
     @Test
