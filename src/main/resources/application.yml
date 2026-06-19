@@ -49,7 +49,7 @@ spring:
       password: ${NEO4J_PASSWORD}
   data:
     neo4j:
-      database: neo4j
+      database: ${NEO4J_USERNAME:neo4j}
     mongodb:
       uri: ${MONGO_URI:mongodb://localhost:27017/dunbar_horizon_notification}
       auto-index-creation: true
