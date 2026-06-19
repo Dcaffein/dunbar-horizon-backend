@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.Arrays;
 
@@ -18,6 +19,12 @@ public class AuthCookieManager {
 
     @Value("${jwt.refresh-expiration-seconds}")
     private long refreshExpiration;
+
+    @Value("${app.cookie.domain:}")
+    private String cookieDomain;
+
+    @Value("${app.cookie.secure:false}")
+    private boolean cookieSecure;
 
     public void addAccessTokenCookie(HttpServletResponse response, String accessToken) {
         response.addHeader(HttpHeaders.SET_COOKIE, createCookie("access_token", accessToken, accessExpiration).toString());
@@ -33,23 +40,29 @@ public class AuthCookieManager {
     }
 
     private ResponseCookie createCookie(String name, String value, long maxAge) {
-        return ResponseCookie.from(name, value)
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, value)
                 .httpOnly(true)
-                .secure(false)
+                .secure(cookieSecure)
                 .path("/")
                 .maxAge(maxAge)
-                .sameSite("Lax")
-                .build();
+                .sameSite("Lax");
+        if (StringUtils.hasText(cookieDomain)) {
+            builder.domain(cookieDomain);
+        }
+        return builder.build();
     }
 
     private ResponseCookie createExpiredCookie(String name) {
-        return ResponseCookie.from(name)
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name)
                 .httpOnly(true)
-                .secure(false)
+                .secure(cookieSecure)
                 .path("/")
                 .maxAge(0)
-                .sameSite("Lax")
-                .build();
+                .sameSite("Lax");
+        if (StringUtils.hasText(cookieDomain)) {
+            builder.domain(cookieDomain);
+        }
+        return builder.build();
     }
 
     public String extractAccessToken(HttpServletRequest request) {
