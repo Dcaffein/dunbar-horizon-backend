@@ -6,6 +6,7 @@ import com.example.DunbarHorizon.account.domain.outbox.UserOutboxStatus;
 import com.example.DunbarHorizon.account.domain.repository.UserEventOutboxRepository;
 import com.example.DunbarHorizon.global.event.user.UserActivatedEvent;
 import com.example.DunbarHorizon.global.event.user.UserDeactivatedEvent;
+import com.example.DunbarHorizon.global.event.user.UserSyncCompletedEvent;
 import com.example.DunbarHorizon.global.event.user.UserSyncIntegrationEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -14,23 +15,25 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
-class UserOutboxDomainEventListenerTest {
+class UserOutboxEventListenerTest {
 
     private UserEventOutboxRepository outboxRepository;
     private ApplicationEventPublisher eventPublisher;
-    private UserOutboxDomainEventListener listener;
+    private UserOutboxEventListener listener;
 
     @BeforeEach
     void setUp() {
         outboxRepository = mock(UserEventOutboxRepository.class);
         eventPublisher = mock(ApplicationEventPublisher.class);
         ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-        listener = new UserOutboxDomainEventListener(outboxRepository, eventPublisher, objectMapper);
+        listener = new UserOutboxEventListener(outboxRepository, eventPublisher, objectMapper);
     }
 
     @Test
@@ -78,5 +81,26 @@ class UserOutboxDomainEventListenerTest {
         assertThat(published.eventType()).isEqualTo(UserOutboxEventType.ACTIVATE);
         assertThat(published.nickname()).isEqualTo("testUser");
         assertThat(published.outboxId()).isNotNull();
+    }
+
+    @Test
+    void UserSyncCompletedEvent_수신_시_해당_Outbox를_COMPLETED로_변경한다() {
+        UserEventOutbox outbox = UserEventOutbox.pending(3L, UserOutboxEventType.ACTIVATE, "{}");
+        given(outboxRepository.findById(outbox.getId())).willReturn(Optional.of(outbox));
+        given(outboxRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        listener.onSyncCompleted(new UserSyncCompletedEvent(outbox.getId()));
+
+        assertThat(outbox.getStatus()).isEqualTo(UserOutboxStatus.COMPLETED);
+        assertThat(outbox.getProcessedAt()).isNotNull();
+    }
+
+    @Test
+    void 존재하지_않는_outboxId로_완료_이벤트가_오면_아무_동작도_하지_않는다() {
+        given(outboxRepository.findById("unknown-id")).willReturn(Optional.empty());
+
+        listener.onSyncCompleted(new UserSyncCompletedEvent("unknown-id"));
+
+        verify(outboxRepository, never()).save(any());
     }
 }

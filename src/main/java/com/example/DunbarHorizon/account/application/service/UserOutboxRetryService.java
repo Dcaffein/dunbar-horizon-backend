@@ -2,14 +2,12 @@ package com.example.DunbarHorizon.account.application.service;
 
 import com.example.DunbarHorizon.account.domain.outbox.UserEventOutbox;
 import com.example.DunbarHorizon.account.domain.repository.UserEventOutboxRepository;
-import com.example.DunbarHorizon.global.event.user.UserSyncCompletedEvent;
 import com.example.DunbarHorizon.global.event.user.UserSyncIntegrationEvent;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,15 +44,6 @@ public class UserOutboxRetryService {
             outboxRepository.save(outbox);
             eventPublisher.publishEvent(buildIntegrationEvent(outbox));
         }
-    }
-
-    @EventListener
-    @Transactional
-    public void onSyncCompleted(UserSyncCompletedEvent event) {
-        outboxRepository.findById(event.outboxId()).ifPresent(outbox -> {
-            outbox.markCompleted();
-            outboxRepository.save(outbox);
-        });
     }
 
     private UserSyncIntegrationEvent buildIntegrationEvent(UserEventOutbox outbox) {
