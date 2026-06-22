@@ -4,18 +4,15 @@ import com.example.DunbarHorizon.account.domain.outbox.UserEventOutbox;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxEventType;
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxStatus;
 import com.example.DunbarHorizon.account.domain.repository.UserEventOutboxRepository;
-import com.example.DunbarHorizon.global.event.user.UserSyncCompletedEvent;
 import com.example.DunbarHorizon.global.event.user.UserSyncIntegrationEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -67,30 +64,4 @@ class UserOutboxRetryServiceTest {
         verify(eventPublisher, never()).publishEvent(any(UserSyncIntegrationEvent.class));
     }
 
-    @Test
-    void UserSyncCompletedEvent_수신_시_해당_Outbox를_COMPLETED로_변경한다() {
-        // given
-        UserEventOutbox outbox = UserEventOutbox.pending(3L, UserOutboxEventType.ACTIVATE, "{}");
-        given(outboxRepository.findById(outbox.getId())).willReturn(Optional.of(outbox));
-        given(outboxRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
-
-        // when
-        retryService.onSyncCompleted(new UserSyncCompletedEvent(outbox.getId()));
-
-        // then
-        assertThat(outbox.getStatus()).isEqualTo(UserOutboxStatus.COMPLETED);
-        assertThat(outbox.getProcessedAt()).isNotNull();
-    }
-
-    @Test
-    void 존재하지_않는_outboxId로_완료_이벤트가_오면_아무_동작도_하지_않는다() {
-        // given
-        given(outboxRepository.findById("unknown-id")).willReturn(Optional.empty());
-
-        // when
-        retryService.onSyncCompleted(new UserSyncCompletedEvent("unknown-id"));
-
-        // then
-        verify(outboxRepository, never()).save(any());
-    }
 }

@@ -6,13 +6,16 @@ import com.example.DunbarHorizon.account.domain.repository.UserEventOutboxReposi
 import com.example.DunbarHorizon.global.event.user.UserActivatedEvent;
 import com.example.DunbarHorizon.global.event.user.UserDeactivatedEvent;
 import com.example.DunbarHorizon.global.event.user.UserProfileUpdatedEvent;
+import com.example.DunbarHorizon.global.event.user.UserSyncCompletedEvent;
 import com.example.DunbarHorizon.global.event.user.UserSyncIntegrationEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -23,7 +26,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class UserOutboxDomainEventListener {
+public class UserOutboxEventListener {
 
     private final UserEventOutboxRepository outboxRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -65,6 +68,15 @@ public class UserOutboxDomainEventListener {
         ));
     }
 
+    @EventListener
+    @Transactional
+    public void onSyncCompleted(UserSyncCompletedEvent event) {
+        outboxRepository.findById(event.outboxId()).ifPresent(outbox -> {
+            outbox.markCompleted();
+            outboxRepository.save(outbox);
+        });
+    }
+
     private String serialize(Long userId, String nickname, String profileImageUrl, LocalDateTime occurredAt) {
         Map<String, Object> map = new HashMap<>();
         map.put("userId", userId);
@@ -74,7 +86,7 @@ public class UserOutboxDomainEventListener {
         try {
             return objectMapper.writeValueAsString(map);
         } catch (JsonProcessingException e) {
-            log.warn("[UserOutboxDomainEventListener] Failed to serialize payload for userId={}", userId);
+            log.warn("[UserOutboxEventListener] Failed to serialize payload for userId={}", userId);
             return "{}";
         }
     }
