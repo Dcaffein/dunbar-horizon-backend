@@ -2,8 +2,6 @@ package com.example.DunbarHorizon.social.adapter.out;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.SocialNetworkRepositoryAdapter;
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
-import com.example.DunbarHorizon.social.application.dto.result.NetworkGraphResult;
-import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.support.Neo4jRepositoryTest;
@@ -75,54 +73,54 @@ class SocialNetworkRepositoryAdapterTest {
     @Test
     @DisplayName("DUNBAR 크기로 조회 시 경계 내 모든 친구 노드를 반환한다 (6명)")
     void getDefaultNetworkGraph_DUNBAR_경계_내_모든_노드를_반환한다() {
-        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
+        List<NodeGraphResult> result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
 
-        assertThat(result.nodes()).hasSize(6);
-        assertThat(result.nodes()).extracting(NodeGraphResult::nodeId)
+        assertThat(result).hasSize(6);
+        assertThat(result).extracting(NodeGraphResult::nodeId)
                 .containsExactlyInAnyOrder(10L, 20L, 30L, 40L, 50L, 60L);
     }
 
     @Test
     @DisplayName("DUNBAR 크기로 조회 시 A-B, A-F 엣지가 양방향으로 포함된다 (총 4개)")
     void getDefaultNetworkGraph_DUNBAR_경계_내_엣지를_양방향으로_반환한다() {
-        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
+        List<NodeGraphResult> result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
 
-        long totalEdges = result.nodes().stream().mapToLong(n -> n.edges().size()).sum();
+        long totalEdges = result.stream().mapToLong(n -> n.edges().size()).sum();
         assertThat(totalEdges).isEqualTo(4);
 
-        NodeGraphResult nodeA = result.nodes().stream().filter(n -> n.nodeId().equals(10L)).findFirst().orElseThrow();
+        NodeGraphResult nodeA = result.stream().filter(n -> n.nodeId().equals(10L)).findFirst().orElseThrow();
         assertThat(nodeA.edges()).extracting(e -> e.friendId()).containsExactlyInAnyOrder(20L, 60L);
     }
 
     @Test
     @DisplayName("SUPPORT(5) 크기로 조회 시 F(60)가 경계에서 제외되고 A-F 엣지도 제외된다")
     void getDefaultNetworkGraph_SUPPORT_경계_밖의_친구와_엣지가_제외된다() {
-        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.SUPPORT, 5, 10);
+        List<NodeGraphResult> result = repository.getDefaultNetworkGraph(1L, DunbarCircle.SUPPORT, 5, 10);
 
-        assertThat(result.nodes()).hasSize(5);
-        assertThat(result.nodes()).extracting(NodeGraphResult::nodeId).doesNotContain(60L);
+        assertThat(result).hasSize(5);
+        assertThat(result).extracting(NodeGraphResult::nodeId).doesNotContain(60L);
 
-        long totalEdges = result.nodes().stream().mapToLong(n -> n.edges().size()).sum();
+        long totalEdges = result.stream().mapToLong(n -> n.edges().size()).sum();
         assertThat(totalEdges).isEqualTo(2); // A→B, B→A
     }
 
     @Test
     @DisplayName("고립 노드(엣지 없는 친구)도 빈 edges 리스트로 반환된다")
     void getDefaultNetworkGraph_고립_노드도_빈_엣지로_반환된다() {
-        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
+        List<NodeGraphResult> result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
 
         // C(30), D(40), E(50)는 연결이 없는 고립 노드
-        assertThat(result.nodes()).filteredOn(n -> List.of(30L, 40L, 50L).contains(n.nodeId()))
+        assertThat(result).filteredOn(n -> List.of(30L, 40L, 50L).contains(n.nodeId()))
                 .allMatch(n -> n.edges().isEmpty());
     }
 
     @Test
     @DisplayName("interestScore가 노드별로 올바르게 반환된다")
     void getDefaultNetworkGraph_interestScore가_노드별로_올바르게_반환된다() {
-        NetworkGraphResult result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
+        List<NodeGraphResult> result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
 
-        NodeGraphResult nodeA = result.nodes().stream().filter(n -> n.nodeId().equals(10L)).findFirst().orElseThrow();
-        NodeGraphResult nodeB = result.nodes().stream().filter(n -> n.nodeId().equals(20L)).findFirst().orElseThrow();
+        NodeGraphResult nodeA = result.stream().filter(n -> n.nodeId().equals(10L)).findFirst().orElseThrow();
+        NodeGraphResult nodeB = result.stream().filter(n -> n.nodeId().equals(20L)).findFirst().orElseThrow();
         assertThat(nodeA.interestScore()).isEqualTo(0.7);
         assertThat(nodeB.interestScore()).isEqualTo(0.3);
 
@@ -134,9 +132,9 @@ class SocialNetworkRepositoryAdapterTest {
     @Test
     @DisplayName("친구가 없는 유저는 빈 nodes를 반환한다")
     void getDefaultNetworkGraph_친구가_없는_유저는_빈_결과를_반환한다() {
-        NetworkGraphResult result = repository.getDefaultNetworkGraph(999L, DunbarCircle.DUNBAR, 5, 10);
+        List<NodeGraphResult> result = repository.getDefaultNetworkGraph(999L, DunbarCircle.DUNBAR, 5, 10);
 
-        assertThat(result.nodes()).isEmpty();
+        assertThat(result).isEmpty();
     }
 
     // ───────── Label Network ─────────
@@ -144,24 +142,24 @@ class SocialNetworkRepositoryAdapterTest {
     @Test
     @DisplayName("라벨 네트워크 조회 시 라벨 멤버만 노드로 반환하고 멤버 간 엣지를 포함한다")
     void getLabelCustomNetwork_라벨_멤버_노드와_엣지를_반환한다() {
-        NetworkGraphResult result = repository.getLabelCustomNetwork(1L, "test-label-id", DunbarCircle.DUNBAR, 5, 10);
+        List<NodeGraphResult> result = repository.getLabelCustomNetwork(1L, "test-label-id", DunbarCircle.DUNBAR, 5, 10);
 
         // label에는 A(10), B(20)만 포함
-        assertThat(result.nodes()).hasSize(2);
-        assertThat(result.nodes()).extracting(NodeGraphResult::nodeId)
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(NodeGraphResult::nodeId)
                 .containsExactlyInAnyOrder(10L, 20L);
 
         // A-B 양방향 엣지
-        long totalEdges = result.nodes().stream().mapToLong(n -> n.edges().size()).sum();
+        long totalEdges = result.stream().mapToLong(n -> n.edges().size()).sum();
         assertThat(totalEdges).isEqualTo(2);
     }
 
     @Test
     @DisplayName("존재하지 않는 라벨 ID로 조회하면 빈 nodes를 반환한다")
     void getLabelCustomNetwork_존재하지_않는_라벨ID는_빈_결과를_반환한다() {
-        NetworkGraphResult result = repository.getLabelCustomNetwork(1L, "non-existent-label-id", DunbarCircle.DUNBAR, 5, 10);
+        List<NodeGraphResult> result = repository.getLabelCustomNetwork(1L, "non-existent-label-id", DunbarCircle.DUNBAR, 5, 10);
 
-        assertThat(result.nodes()).isEmpty();
+        assertThat(result).isEmpty();
     }
 
     // ───────── Two-Hop Contacts ─────────
@@ -170,19 +168,19 @@ class SocialNetworkRepositoryAdapterTest {
     @DisplayName("2-Hop 접점 조회 시 skeletonIds에 포함된 실제 공통 친구를 반환한다")
     void getNetworkContactsOfTwoHop_skeletonIds_내_공통_친구를_반환한다() {
         // me(1)의 친구 중 targetX(100)와도 연결된: B(20), C(30)
-        List<NetworkOneHopsByTwoHopResult> result =
+        List<Long> result =
                 repository.getNetworkContactsOfTwoHop(1L, 100L, List.of(10L, 20L, 30L, 40L, 50L, 60L), 5);
 
         assertThat(result).hasSize(2);
-        assertThat(result).anyMatch(r -> r.friendId() == 20L);
-        assertThat(result).anyMatch(r -> r.friendId() == 30L);
+        assertThat(result).anyMatch(r -> r.equals(20L));
+        assertThat(result).anyMatch(r -> r.equals(30L));
     }
 
     @Test
     @DisplayName("2-Hop 접점 조회 시 skeletonIds에 없는 친구는 결과에 포함되지 않는다")
     void getNetworkContactsOfTwoHop_skeletonIds_밖의_친구는_결과에_포함되지_않는다() {
         // B(20), C(30)를 skeletonIds에서 제외
-        List<NetworkOneHopsByTwoHopResult> result =
+        List<Long> result =
                 repository.getNetworkContactsOfTwoHop(1L, 100L, List.of(10L, 40L, 50L, 60L), 5);
 
         assertThat(result).isEmpty();
@@ -192,7 +190,7 @@ class SocialNetworkRepositoryAdapterTest {
     @DisplayName("2-Hop 접점 조회 시 실제 내 친구가 아닌 ID는 HAS_FRIENDSHIP 검증에서 제외된다")
     void getNetworkContactsOfTwoHop_비친구_ID는_보안_검증에서_제외된다() {
         // 999, 998은 me의 친구가 아님
-        List<NetworkOneHopsByTwoHopResult> result =
+        List<Long> result =
                 repository.getNetworkContactsOfTwoHop(1L, 100L, List.of(999L, 998L), 5);
 
         assertThat(result).isEmpty();

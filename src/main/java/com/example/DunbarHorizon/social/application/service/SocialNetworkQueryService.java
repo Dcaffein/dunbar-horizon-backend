@@ -1,8 +1,7 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
-import com.example.DunbarHorizon.social.application.dto.result.NetworkGraphResult;
-import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
+import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkRepository;
@@ -26,12 +25,12 @@ public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
     private final FriendshipRepository friendshipRepository;
 
     @Override
-    public NetworkGraphResult getFriendsNetwork(Long userId, DunbarCircle circleSize) {
+    public List<NodeGraphResult> getFriendsNetwork(Long userId, DunbarCircle circleSize) {
         return socialNetworkRepository.getDefaultNetworkGraph(userId, circleSize, PRUNING_EDGE_MIN, PRUNING_EDGE_RANGE);
     }
 
     @Override
-    public NetworkGraphResult getLabelNetwork(Long userId, String labelId) {
+    public List<NodeGraphResult> getLabelNetwork(Long userId, String labelId) {
         return socialNetworkRepository.getLabelCustomNetwork(userId, labelId, DunbarCircle.DUNBAR, PRUNING_EDGE_MIN, PRUNING_EDGE_RANGE);
     }
 
@@ -49,7 +48,7 @@ public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
 
     @Neo4jTransactional(readOnly = true)
     @Override
-    public List<NetworkOneHopsByTwoHopResult> getNetworkContactsOfTwoHop(Long userId, Long targetId, List<Long> skeletonIds) {
+    public List<Long> getNetworkContactsOfTwoHop(Long userId, Long targetId, List<Long> skeletonIds) {
         if (skeletonIds == null || skeletonIds.isEmpty()) return List.of();
         return socialNetworkRepository.getNetworkContactsOfTwoHop(userId, targetId, skeletonIds, STRANGER_QUOTA);
     }

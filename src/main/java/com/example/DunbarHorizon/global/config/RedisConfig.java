@@ -1,7 +1,8 @@
 package com.example.DunbarHorizon.global.config;
 
-import com.example.DunbarHorizon.social.application.dto.result.NetworkGraphResult;
+import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
+import java.util.List;
 
 @Slf4j
 @Configuration
@@ -67,14 +69,17 @@ public class RedisConfig implements CachingConfigurer {
                         )
                 );
 
-        // NetworkGraphResult는 record(final class)라 GenericJackson2JsonRedisSerializer의
+        // NodeGraphResult는 record(final class)라 GenericJackson2JsonRedisSerializer의
         // NON_FINAL 타입 정책에서 제외되어 LinkedHashMap으로 역직렬화됨.
-        // 해당 캐시에 타입을 명시한 Jackson2JsonRedisSerializer를 별도 설정한다.
+        // List<NodeGraphResult>는 Class<T>로 지정할 수 없어 JavaType 생성자를 사용한다.
+        @SuppressWarnings("deprecation")
+        Jackson2JsonRedisSerializer<List<NodeGraphResult>> networkGraphSerializer =
+                new Jackson2JsonRedisSerializer<>(
+                        TypeFactory.defaultInstance().constructCollectionType(List.class, NodeGraphResult.class)
+                );
         RedisCacheConfiguration networkGraphConfig = defaultConfig
                 .serializeValuesWith(
-                        RedisSerializationContext.SerializationPair.fromSerializer(
-                                new Jackson2JsonRedisSerializer<>(objectMapper, NetworkGraphResult.class)
-                        )
+                        RedisSerializationContext.SerializationPair.fromSerializer(networkGraphSerializer)
                 );
 
         return RedisCacheManager.builder(connectionFactory)

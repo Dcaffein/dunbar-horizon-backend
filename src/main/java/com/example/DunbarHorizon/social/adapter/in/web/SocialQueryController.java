@@ -4,8 +4,7 @@ import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
-import com.example.DunbarHorizon.social.application.dto.result.NetworkGraphResult;
-import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
+import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.port.in.SocialConnectionPathQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.in.SocialExpansionQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
@@ -30,7 +29,7 @@ public class SocialQueryController {
      * 프론트엔드는 슬라이더 위치에 따라 circleSize(SUPPORT, SYMPATHY, KINSHIP, DUNBAR)를 보냄
      */
     @GetMapping("/me")
-    public ResponseEntity<NetworkGraphResult> getFriendsNetwork(
+    public ResponseEntity<List<NodeGraphResult>> getFriendsNetwork(
             @CurrentUserId Long currentUserId,
             @RequestParam(defaultValue = "DUNBAR") DunbarCircle circleSize
     ) {
@@ -42,7 +41,7 @@ public class SocialQueryController {
      * 라벨 크기와 무관하게 최대 150명(Dunbar's Ceiling)까지 단일 뷰로 제공
      */
     @GetMapping("/labels/{labelId}")
-    public ResponseEntity<NetworkGraphResult> getLabelNetwork(
+    public ResponseEntity<List<NodeGraphResult>> getLabelNetwork(
             @CurrentUserId Long currentUserId,
             @PathVariable String labelId
     ) {
@@ -67,7 +66,7 @@ public class SocialQueryController {
      * 클라이언트가 현재 화면의 skeleton ID 목록을 전달하여 동적 컨텍스트 반영 및 보안 검증
      */
     @GetMapping("/mutual/two-hop")
-    public ResponseEntity<List<NetworkOneHopsByTwoHopResult>> getTwoHopMutualFriends(
+    public ResponseEntity<List<Long>> getTwoHopMutualFriends(
             @CurrentUserId Long currentUserId,
             @RequestParam Long targetId,
             @RequestParam List<Long> skeletonIds

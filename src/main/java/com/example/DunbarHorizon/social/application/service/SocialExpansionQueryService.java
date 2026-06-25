@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
-import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
 import com.example.DunbarHorizon.social.application.port.in.SocialExpansionQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.SocialExpansionRepository;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;

@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.application.port.out;
 
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
-import com.example.DunbarHorizon.social.application.dto.result.NetworkOneHopsByTwoHopResult;
 
 import java.util.List;
 
