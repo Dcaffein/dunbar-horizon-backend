@@ -1,16 +1,13 @@
 package com.example.DunbarHorizon.social.application.eventListener;
 
-import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import com.example.DunbarHorizon.global.event.user.UserSyncCompletedEvent;
 import com.example.DunbarHorizon.global.event.user.UserSyncIntegrationEvent;
-import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
-import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
+import com.example.DunbarHorizon.social.application.service.SocialUserSyncCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -19,52 +16,19 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class SocialUserEventListener {
 
-    private final SocialUserRepository socialUserRepository;
+    private final SocialUserSyncCommandService syncCommandService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Neo4jTransactional(propagation = Propagation.REQUIRES_NEW)
     public void onUserSync(UserSyncIntegrationEvent event) {
         try {
-            switch (event.eventType()) {
-                case ACTIVATE -> handleActivate(event);
-                case DEACTIVATE -> handleDeactivate(event);
-                case PROFILE_UPDATE -> handleProfileUpdate(event);
-            }
+            // 별도 빈의 트랜잭션 프록시가 커밋까지 마친 뒤에만 완료를 알린다.
+            syncCommandService.sync(event);
             eventPublisher.publishEvent(new UserSyncCompletedEvent(event.outboxId()));
         } catch (Exception e) {
             log.error("[SocialUserEventListener] Sync failed — outboxId={}, userId={}, eventType={}",
                     event.outboxId(), event.userId(), event.eventType(), e);
         }
-    }
-
-    private void handleActivate(UserSyncIntegrationEvent event) {
-        socialUserRepository.findById(event.userId())
-                .ifPresentOrElse(
-                        socialUser -> {
-                            socialUser.switchUserStatus(true);
-                            socialUserRepository.save(socialUser);
-                        },
-                        () -> socialUserRepository.save(
-                                new SocialUser(event.userId(), event.nickname(), event.profileImageUrl())
-                        )
-                );
-    }
-
-    private void handleDeactivate(UserSyncIntegrationEvent event) {
-        socialUserRepository.findById(event.userId())
-                .ifPresent(socialUser -> {
-                    socialUser.switchUserStatus(false);
-                    socialUserRepository.save(socialUser);
-                });
-    }
-
-    private void handleProfileUpdate(UserSyncIntegrationEvent event) {
-        socialUserRepository.findById(event.userId())
-                .ifPresent(socialUser -> {
-                    socialUser.updateProfile(event.nickname(), event.profileImageUrl(), event.occurredAt());
-                    socialUserRepository.save(socialUser);
-                });
     }
 }

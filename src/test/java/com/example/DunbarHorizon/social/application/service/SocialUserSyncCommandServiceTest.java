@@ -1,10 +1,9 @@
-package com.example.DunbarHorizon.social.application;
+package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.account.domain.outbox.UserOutboxEventType;
-import com.example.DunbarHorizon.global.event.user.UserSyncCompletedEvent;
 import com.example.DunbarHorizon.global.event.user.UserSyncIntegrationEvent;
-import com.example.DunbarHorizon.social.application.eventListener.SocialUserEventListener;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
+import com.example.DunbarHorizon.social.domain.socialUser.constant.SocialUserConstants;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,31 +12,28 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class SocialUserEventListenerTest {
+class SocialUserSyncCommandServiceTest {
 
     @InjectMocks
-    private SocialUserEventListener socialUserEventListener;
+    private SocialUserSyncCommandService syncCommandService;
 
     @Mock
     private SocialUserRepository socialUserRepository;
 
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
-
     @Test
-    @DisplayName("ACTIVATE 이벤트 수신 시 SocialUser가 없으면 새로 생성하고 완료 이벤트를 발행한다")
-    void onUserSync_Activate_NewUser_CreatesSocialUserAndPublishesCompleted() {
+    @DisplayName("ACTIVATE 이벤트의 SocialUser가 없으면 새로 생성한다")
+    void sync_Activate_NewUser_CreatesSocialUser() {
         // given
         UserSyncIntegrationEvent event = new UserSyncIntegrationEvent(
                 "outbox-1", 1L, UserOutboxEventType.ACTIVATE, "테스트유저", "https://example.com/image.png", null
@@ -46,22 +42,19 @@ class SocialUserEventListenerTest {
         given(socialUserRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
         // when
-        socialUserEventListener.onUserSync(event);
+        syncCommandService.sync(event);
 
         // then
         ArgumentCaptor<SocialUser> captor = ArgumentCaptor.forClass(SocialUser.class);
         verify(socialUserRepository).save(captor.capture());
         assertThat(captor.getValue().getId()).isEqualTo(1L);
         assertThat(captor.getValue().getNickname()).isEqualTo("테스트유저");
-
-        ArgumentCaptor<UserSyncCompletedEvent> completedCaptor = ArgumentCaptor.forClass(UserSyncCompletedEvent.class);
-        verify(eventPublisher).publishEvent(completedCaptor.capture());
-        assertThat(completedCaptor.getValue().outboxId()).isEqualTo("outbox-1");
+        assertThat(captor.getValue().getStatusLabels()).containsExactly(SocialUserConstants.USER_REFERENCE);
     }
 
     @Test
     @DisplayName("ACTIVATE 이벤트 수신 시 SocialUser가 이미 존재하면 활성화 상태로 전환한다")
-    void onUserSync_Activate_ExistingUser_ReactivatesSocialUser() {
+    void sync_Activate_ExistingUser_ReactivatesSocialUser() {
         // given
         UserSyncIntegrationEvent event = new UserSyncIntegrationEvent(
                 "outbox-2", 1L, UserOutboxEventType.ACTIVATE, "테스트유저", null, null
@@ -72,16 +65,16 @@ class SocialUserEventListenerTest {
         given(socialUserRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
         // when
-        socialUserEventListener.onUserSync(event);
+        syncCommandService.sync(event);
 
         // then
         verify(socialUserRepository).save(existing);
-        verify(eventPublisher).publishEvent(any(UserSyncCompletedEvent.class));
+        assertThat(existing.getStatusLabels()).containsExactly(SocialUserConstants.USER_REFERENCE);
     }
 
     @Test
-    @DisplayName("DEACTIVATE 이벤트 수신 시 SocialUser를 비활성화하고 완료 이벤트를 발행한다")
-    void onUserSync_Deactivate_DeactivatesSocialUser() {
+    @DisplayName("DEACTIVATE 이벤트 수신 시 SocialUser를 비활성화한다")
+    void sync_Deactivate_DeactivatesSocialUser() {
         // given
         UserSyncIntegrationEvent event = new UserSyncIntegrationEvent(
                 "outbox-3", 1L, UserOutboxEventType.DEACTIVATE, null, null, null
@@ -91,16 +84,16 @@ class SocialUserEventListenerTest {
         given(socialUserRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
         // when
-        socialUserEventListener.onUserSync(event);
+        syncCommandService.sync(event);
 
         // then
         verify(socialUserRepository).save(socialUser);
-        verify(eventPublisher).publishEvent(any(UserSyncCompletedEvent.class));
+        assertThat(socialUser.getStatusLabels()).containsExactly(SocialUserConstants.INACTIVE_SOCIAL_USER);
     }
 
     @Test
     @DisplayName("DEACTIVATE 이벤트 수신 시 SocialUser가 없으면 아무것도 하지 않는다")
-    void onUserSync_Deactivate_NoSocialUser_DoesNothing() {
+    void sync_Deactivate_NoSocialUser_DoesNothing() {
         // given
         UserSyncIntegrationEvent event = new UserSyncIntegrationEvent(
                 "outbox-4", 99L, UserOutboxEventType.DEACTIVATE, null, null, null
@@ -108,32 +101,30 @@ class SocialUserEventListenerTest {
         given(socialUserRepository.findById(99L)).willReturn(Optional.empty());
 
         // when
-        socialUserEventListener.onUserSync(event);
+        syncCommandService.sync(event);
 
         // then
         verify(socialUserRepository, never()).save(any());
-        verify(eventPublisher).publishEvent(any(UserSyncCompletedEvent.class));
     }
 
     @Test
-    @DisplayName("Neo4j 처리 중 예외가 발생하면 완료 이벤트를 발행하지 않는다")
-    void onUserSync_Exception_DoesNotPublishCompleted() {
+    @DisplayName("Neo4j 처리 중 예외는 트랜잭션 프록시가 롤백하도록 전파한다")
+    void sync_Exception_PropagatesForRollback() {
         // given
         UserSyncIntegrationEvent event = new UserSyncIntegrationEvent(
                 "outbox-5", 4L, UserOutboxEventType.ACTIVATE, "nick", null, null
         );
         given(socialUserRepository.findById(4L)).willThrow(new RuntimeException("Neo4j error"));
 
-        // when
-        socialUserEventListener.onUserSync(event);
-
-        // then
-        verify(eventPublisher, never()).publishEvent(any(UserSyncCompletedEvent.class));
+        // when & then
+        assertThatThrownBy(() -> syncCommandService.sync(event))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Neo4j error");
     }
 
     @Test
-    @DisplayName("PROFILE_UPDATE 이벤트가 최신이면 SocialUser 프로필을 갱신하고 완료 이벤트를 발행한다")
-    void onUserSync_ProfileUpdate_NewerEvent_UpdatesProfileAndPublishesCompleted() {
+    @DisplayName("PROFILE_UPDATE 이벤트가 최신이면 SocialUser 프로필을 갱신한다")
+    void sync_ProfileUpdate_NewerEvent_UpdatesProfile() {
         // given
         LocalDateTime oldTime = LocalDateTime.of(2024, 1, 1, 0, 0);
         LocalDateTime newTime = LocalDateTime.of(2024, 6, 1, 0, 0);
@@ -148,18 +139,17 @@ class SocialUserEventListenerTest {
         given(socialUserRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
         // when
-        socialUserEventListener.onUserSync(event);
+        syncCommandService.sync(event);
 
         // then
         assertThat(socialUser.getNickname()).isEqualTo("새닉네임");
         assertThat(socialUser.getProfileImageUrl()).isEqualTo("https://new.img");
         verify(socialUserRepository).save(socialUser);
-        verify(eventPublisher).publishEvent(any(UserSyncCompletedEvent.class));
     }
 
     @Test
     @DisplayName("PROFILE_UPDATE 이벤트가 오래된 것이면 LWW 규칙에 따라 프로필을 갱신하지 않는다")
-    void onUserSync_ProfileUpdate_OlderEvent_SkipsUpdateDueToLww() {
+    void sync_ProfileUpdate_OlderEvent_SkipsUpdateDueToLww() {
         // given
         LocalDateTime recentTime = LocalDateTime.of(2024, 6, 1, 0, 0);
         LocalDateTime staleTime = LocalDateTime.of(2024, 1, 1, 0, 0);
@@ -174,17 +164,17 @@ class SocialUserEventListenerTest {
         given(socialUserRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
         // when
-        socialUserEventListener.onUserSync(event);
+        syncCommandService.sync(event);
 
         // then
         assertThat(socialUser.getNickname()).isEqualTo("현재닉네임");
         assertThat(socialUser.getProfileImageUrl()).isEqualTo("https://current.img");
-        verify(eventPublisher).publishEvent(any(UserSyncCompletedEvent.class));
+        verify(socialUserRepository).save(socialUser);
     }
 
     @Test
-    @DisplayName("PROFILE_UPDATE 이벤트 수신 시 SocialUser가 없으면 저장하지 않고 완료 이벤트를 발행한다")
-    void onUserSync_ProfileUpdate_NoSocialUser_DoesNotSave() {
+    @DisplayName("PROFILE_UPDATE 이벤트 수신 시 SocialUser가 없으면 저장하지 않는다")
+    void sync_ProfileUpdate_NoSocialUser_DoesNotSave() {
         // given
         UserSyncIntegrationEvent event = new UserSyncIntegrationEvent(
                 "outbox-8", 99L, UserOutboxEventType.PROFILE_UPDATE, "닉네임", null,
@@ -193,10 +183,9 @@ class SocialUserEventListenerTest {
         given(socialUserRepository.findById(99L)).willReturn(Optional.empty());
 
         // when
-        socialUserEventListener.onUserSync(event);
+        syncCommandService.sync(event);
 
         // then
         verify(socialUserRepository, never()).save(any());
-        verify(eventPublisher).publishEvent(any(UserSyncCompletedEvent.class));
     }
 }
