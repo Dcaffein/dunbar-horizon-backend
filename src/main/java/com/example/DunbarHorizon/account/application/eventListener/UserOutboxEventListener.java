@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -69,7 +70,7 @@ public class UserOutboxEventListener {
     }
 
     @EventListener
-    @Transactional
+    @Transactional(transactionManager = "transactionManager", propagation = Propagation.REQUIRES_NEW)
     public void onSyncCompleted(UserSyncCompletedEvent event) {
         outboxRepository.findById(event.outboxId()).ifPresent(outbox -> {
             outbox.markCompleted();
