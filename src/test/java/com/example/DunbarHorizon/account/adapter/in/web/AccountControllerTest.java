@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.account.adapter.in.web;
 
 import com.example.DunbarHorizon.account.adapter.in.web.dto.LoginRequestDto;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.SignupRequestDto;
-import com.example.DunbarHorizon.account.adapter.in.web.dto.UserProfileUpdateRequest;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.VerificationEmailRequestDto;
 import com.example.DunbarHorizon.account.application.dto.AuthTokenResult;
 import com.example.DunbarHorizon.account.domain.exception.InvalidCredentialsException;
@@ -12,7 +11,6 @@ import com.example.DunbarHorizon.account.domain.exception.TokenTheftDetectedExce
 import com.example.DunbarHorizon.global.security.exception.ExpiredTokenException;
 import com.example.DunbarHorizon.global.security.exception.InvalidTokenException;
 import com.example.DunbarHorizon.support.BaseControllerTest;
-import com.example.DunbarHorizon.support.WithMockCustomUser;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,7 +36,7 @@ class AccountControllerTest extends BaseControllerTest {
         given(signupUseCase.signup(anyString(), anyString(), anyString()))
                 .willReturn(new AuthTokenResult("access-token", "refresh-token"));
 
-        mockMvc.perform(post("/api/auth/users")
+        mockMvc.perform(post("/api/v1/auth/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
@@ -56,7 +54,7 @@ class AccountControllerTest extends BaseControllerTest {
         given(signupUseCase.signup(anyString(), anyString(), anyString()))
                 .willThrow(new InvalidVerificationTokenException());
 
-        mockMvc.perform(post("/api/auth/users")
+        mockMvc.perform(post("/api/v1/auth/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isGone())
@@ -72,7 +70,7 @@ class AccountControllerTest extends BaseControllerTest {
         given(loginUseCase.login(anyString(), anyString()))
                 .willThrow(new InvalidCredentialsException());
 
-        mockMvc.perform(post("/api/auth/tokens")
+        mockMvc.perform(post("/api/v1/auth/tokens")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
@@ -88,7 +86,7 @@ class AccountControllerTest extends BaseControllerTest {
 
         given(loginUseCase.login(anyString(), anyString())).willReturn(result);
 
-        mockMvc.perform(post("/api/auth/tokens")
+        mockMvc.perform(post("/api/v1/auth/tokens")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
@@ -100,7 +98,7 @@ class AccountControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("로그아웃 시 쿠키를 만료시키고 204 No Content를 반환한다")
     void logout_Success() throws Exception {
-        mockMvc.perform(delete("/api/auth/tokens")
+        mockMvc.perform(delete("/api/v1/auth/tokens")
                         .cookie(new Cookie("refresh_token", "some-rt")))
                 .andExpect(status().isNoContent());
 
@@ -116,7 +114,7 @@ class AccountControllerTest extends BaseControllerTest {
 
         given(loginUseCase.reissue(oldRt)).willReturn(newResult);
 
-        mockMvc.perform(patch("/api/auth/tokens")
+        mockMvc.perform(patch("/api/v1/auth/tokens")
                         .cookie(new Cookie("refresh_token", oldRt)))
                 .andExpect(status().isOk());
 
@@ -133,7 +131,7 @@ class AccountControllerTest extends BaseControllerTest {
         given(loginUseCase.reissue(oldRt)).willThrow(new ExpiredTokenException());
 
         // when & then
-        mockMvc.perform(patch("/api/auth/tokens")
+        mockMvc.perform(patch("/api/v1/auth/tokens")
                         .cookie(new Cookie("refresh_token", oldRt)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("ExpiredTokenException"))
@@ -148,7 +146,7 @@ class AccountControllerTest extends BaseControllerTest {
         given(loginUseCase.reissue(forgedRt)).willThrow(new InvalidTokenException());
 
         // when & then
-        mockMvc.perform(patch("/api/auth/tokens")
+        mockMvc.perform(patch("/api/v1/auth/tokens")
                         .cookie(new Cookie("refresh_token", forgedRt)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("InvalidTokenException"));
@@ -161,7 +159,7 @@ class AccountControllerTest extends BaseControllerTest {
         given(loginUseCase.reissue(null)).willThrow(new RefreshTokenNotFoundException());
 
         // when & then
-        mockMvc.perform(patch("/api/auth/tokens"))
+        mockMvc.perform(patch("/api/v1/auth/tokens"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("RefreshTokenNotFoundException"));
     }
@@ -174,7 +172,7 @@ class AccountControllerTest extends BaseControllerTest {
         given(loginUseCase.reissue(stolenRt)).willThrow(new TokenTheftDetectedException());
 
         // when & then
-        mockMvc.perform(patch("/api/auth/tokens")
+        mockMvc.perform(patch("/api/v1/auth/tokens")
                         .cookie(new Cookie("refresh_token", stolenRt)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").value("TokenTheftDetectedException"));
@@ -185,7 +183,7 @@ class AccountControllerTest extends BaseControllerTest {
     void requestVerification_Success() throws Exception {
         VerificationEmailRequestDto request = new VerificationEmailRequestDto("test@test.com");
 
-        mockMvc.perform(post("/api/auth/verifications")
+        mockMvc.perform(post("/api/v1/auth/verifications")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
@@ -198,7 +196,7 @@ class AccountControllerTest extends BaseControllerTest {
     void resolveVerification_Success() throws Exception {
         given(verificationUseCase.resolveEmail("valid-token")).willReturn("test@test.com");
 
-        mockMvc.perform(get("/api/auth/verifications/{token}", "valid-token"))
+        mockMvc.perform(get("/api/v1/auth/verifications/{token}", "valid-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("test@test.com"));
     }
@@ -209,36 +207,9 @@ class AccountControllerTest extends BaseControllerTest {
         given(verificationUseCase.resolveEmail("expired-token"))
                 .willThrow(new InvalidVerificationTokenException());
 
-        mockMvc.perform(get("/api/auth/verifications/{token}", "expired-token"))
+        mockMvc.perform(get("/api/v1/auth/verifications/{token}", "expired-token"))
                 .andExpect(status().isGone())
                 .andExpect(jsonPath("$.error").value("InvalidVerificationTokenException"));
     }
 
-    @Test
-    @WithMockCustomUser
-    @DisplayName("profileImageKey와 함께 프로필을 수정하면 200 OK를 반환하고 updateProfile()을 호출한다")
-    void updateProfile_withImageKey_Success() throws Exception {
-        UserProfileUpdateRequest request = new UserProfileUpdateRequest("새닉네임", "profiles/uuid-photo");
-
-        mockMvc.perform(patch("/api/auth/users/me")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
-
-        verify(userProfileUpdateUseCase).updateProfile(any(), eq("새닉네임"), eq("profiles/uuid-photo"));
-    }
-
-    @Test
-    @WithMockCustomUser
-    @DisplayName("profileImageKey 없이 닉네임만 수정하면 200 OK를 반환하고 profileImageKey=null로 updateProfile()을 호출한다")
-    void updateProfile_withoutImageKey_Success() throws Exception {
-        UserProfileUpdateRequest request = new UserProfileUpdateRequest("새닉네임", null);
-
-        mockMvc.perform(patch("/api/auth/users/me")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
-
-        verify(userProfileUpdateUseCase).updateProfile(any(), eq("새닉네임"), isNull());
-    }
 }

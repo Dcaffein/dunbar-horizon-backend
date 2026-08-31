@@ -2,18 +2,13 @@ package com.example.DunbarHorizon.account.adapter.in.web;
 
 import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
 import com.example.DunbarHorizon.account.application.port.in.SignupUseCase;
-import com.example.DunbarHorizon.account.application.port.in.UserProfileUpdateUseCase;
 import com.example.DunbarHorizon.account.application.port.in.VerificationUseCase;
 import com.example.DunbarHorizon.account.application.dto.AuthTokenResult;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.LoginRequestDto;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.LogoutRequest;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.SignupRequestDto;
-import com.example.DunbarHorizon.account.adapter.in.web.dto.UserProfileUpdateRequest;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.VerificationEmailRequestDto;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.VerificationTokenResponse;
-import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
-import com.example.DunbarHorizon.global.annotation.CurrentUserId;
-import com.example.DunbarHorizon.global.imageStorage.PresignedUploadResult;
 import com.example.DunbarHorizon.global.security.AuthCookieManager;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -23,15 +18,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AccountController {
 
     private final SignupUseCase signupUseCase;
     private final LoginUseCase loginUseCase;
     private final VerificationUseCase verificationUseCase;
-    private final UserProfileUpdateUseCase userProfileUpdateUseCase;
-    private final ProfileImageStoragePort profileImageStoragePort;
     private final AuthCookieManager authCookieManager;
 
     @PostMapping("/users")
@@ -84,21 +77,6 @@ public class AccountController {
     @GetMapping("/verifications/{token}")
     public ResponseEntity<VerificationTokenResponse> resolveVerification(@PathVariable String token) {
         return ResponseEntity.ok(new VerificationTokenResponse(verificationUseCase.resolveEmail(token)));
-    }
-
-    @PostMapping("/users/me/profile-image/presign")
-    public ResponseEntity<PresignedUploadResult> presignProfileImage(
-            @CurrentUserId Long userId,
-            @RequestParam String contentType) {
-        return ResponseEntity.ok(profileImageStoragePort.presignUpload(contentType));
-    }
-
-    @PatchMapping("/users/me")
-    public ResponseEntity<Void> updateProfile(
-            @CurrentUserId Long userId,
-            @RequestBody @Valid UserProfileUpdateRequest request) {
-        userProfileUpdateUseCase.updateProfile(userId, request.nickname(), request.profileImageKey());
-        return ResponseEntity.ok().build();
     }
 
     private void addTokenResponse(HttpServletResponse response, AuthTokenResult tokens) {

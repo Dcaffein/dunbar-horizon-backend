@@ -2,16 +2,25 @@ package com.example.DunbarHorizon.account.adapter.in.web;
 
 import com.example.DunbarHorizon.account.application.dto.MyProfileResult;
 import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
+import com.example.DunbarHorizon.account.adapter.in.web.dto.UserProfileUpdateRequest;
 import com.example.DunbarHorizon.account.domain.exception.UserNotFoundException;
+import com.example.DunbarHorizon.global.imageStorage.PresignedUploadResult;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -44,6 +53,53 @@ class UserControllerTest extends BaseControllerTest {
         // when & then
         mockMvc.perform(get("/api/v1/users/me"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("profileImageKey와 함께 프로필을 수정하면 200 OK를 반환하고 updateProfile()을 호출한다")
+    void updateProfile_withImageKey_Success() throws Exception {
+        // given
+        UserProfileUpdateRequest request = new UserProfileUpdateRequest("새닉네임", "profiles/uuid-photo");
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/users/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        verify(userProfileUpdateUseCase).updateProfile(any(), eq("새닉네임"), eq("profiles/uuid-photo"));
+    }
+
+    @Test
+    @DisplayName("profileImageKey 없이 닉네임만 수정하면 200 OK를 반환하고 profileImageKey=null로 updateProfile()을 호출한다")
+    void updateProfile_withoutImageKey_Success() throws Exception {
+        // given
+        UserProfileUpdateRequest request = new UserProfileUpdateRequest("새닉네임", null);
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/users/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        verify(userProfileUpdateUseCase).updateProfile(any(), eq("새닉네임"), isNull());
+    }
+
+    @Test
+    @DisplayName("프로필 이미지 presign 요청 시 생성 결과를 반환한다")
+    void presignProfileImage_Success() throws Exception {
+        // given
+        PresignedUploadResult result = new PresignedUploadResult("https://upload.example.com", "profiles/uuid-photo");
+        given(profileImageStoragePort.presignUpload("image/png")).willReturn(result);
+
+        // when & then
+        mockMvc.perform(post("/api/v1/users/me/profile-image/presign")
+                        .param("contentType", "image/png"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.uploadUrl").value("https://upload.example.com"))
+                .andExpect(jsonPath("$.objectKey").value("profiles/uuid-photo"));
+
+        verify(profileImageStoragePort).presignUpload("image/png");
     }
 
     @Test

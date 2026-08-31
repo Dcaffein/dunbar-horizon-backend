@@ -1,3 +1,105 @@
+# PLAN — Account API URL 정리
+
+## 작업 목표
+
+자체 공개 REST API의 버전 규칙을 `/api/v1`으로 통일한다. Account 인증 API의
+`/api/auth/**`를 `/api/v1/auth/**`로 옮기고, 사용자 리소스인 프로필 수정과
+프로필 이미지 presign은 `/api/v1/users/me/**`로 정렬한다. OAuth/Spring Security
+경로(`/oauth2/**`, `/login/oauth2/**`), 루트 경로, `/api/dev/**`는 변경하지 않는다.
+
+## 현황 분석
+
+- `AccountController` 하나가 현재 `/api/auth` 아래의 가입·로그인·로그아웃·재발급·이메일
+  검증과 사용자 리소스 두 개를 함께 제공한다.
+- `UserController`는 이미 `/api/v1/users` 아래에서 `GET /me`, `GET /search`를 제공한다.
+  따라서 `PATCH /users/me`와 `POST /users/me/profile-image/presign`은 이 컨트롤러로
+  옮기는 것이 동일 사용자 리소스의 책임과 URL을 함께 정리한다.
+- `SecurityConfig`는 `/api/auth/users`, `/tokens`, `/verifications` 및 토큰 갱신·로그아웃,
+  검증 토큰 조회를 공개 matcher로 열고 있다. 새 인증 URL에 같은 HTTP 메서드와 공개 범위를
+  정확히 이관해야 가입·로그인·재발급 흐름이 유지된다.
+- `JwtAuthenticationFilter`에는 `shouldNotFilter()` 같은 URL 예외가 없다. 실패해도
+  필터 체인을 계속 진행하는 구조이므로 matcher 변경은 필요 없고, 재발급 URL을 설명하는
+  주석과 테스트 설명만 새 경로에 맞춘다.
+- `AccountControllerTest`는 모든 기존 `/api/auth/**` 호출과 두 프로필 수정 호출을 포함한다.
+  프로필 presign의 웹 경로를 직접 검증하는 테스트는 아직 없다.
+- API 문서는 `CLAUDE.md`에만 있으며 공개 엔드포인트, API convention, Account 표가 모두
+  이전 경로를 적고 있다. 저장소 및 상위 디렉터리에서 `AGENTS.md`는 발견되지 않았다.
+
+## URL 계약과 호환성 결정
+
+| 기존 | 목표 |
+|---|---|
+| `POST /api/auth/users` | `POST /api/v1/auth/users` |
+| `POST /api/auth/tokens` | `POST /api/v1/auth/tokens` |
+| `DELETE /api/auth/tokens` | `DELETE /api/v1/auth/tokens` |
+| `PATCH /api/auth/tokens` | `PATCH /api/v1/auth/tokens` |
+| `POST /api/auth/verifications` | `POST /api/v1/auth/verifications` |
+| `GET /api/auth/verifications/{token}` | `GET /api/v1/auth/verifications/{token}` |
+| `PATCH /api/auth/users/me` | `PATCH /api/v1/users/me` |
+| `POST /api/auth/users/me/profile-image/presign` | `POST /api/v1/users/me/profile-image/presign` |
+
+기존 `/api/auth/**` controller 별칭은 남기지 않는다. 이는 공개 자체 REST API의 `/api/v1`
+통일 목표와 양립하지 않으며, 클라이언트는 목표 URL로 전환해야 한다. 이관 뒤 기존 비인증
+요청은 더 이상 permit matcher에 맞지 않아 401, 인증된 요청은 controller mapping 부재로 404가
+될 수 있다. OAuth 경로, 루트, `/api/dev/**`의 matcher와 동작은 그대로 둔다.
+
+`AuthCookieManager`는 두 JWT 쿠키를 현재 `Path=/`로 발급·만료하므로 이번 URL 변경만으로
+쿠키 전달이 끊기지 않는다. 향후 refresh cookie path를 제한하는 별도 작업을 재개한다면 새
+`/api/v1/auth/tokens` 경로를 사용해야 한다.
+
+## 변경 파일
+
+| 파일 | 변경 |
+|---|---|
+| `src/main/java/com/example/DunbarHorizon/account/adapter/in/web/AccountController.java` | 클래스 매핑을 `/api/v1/auth`로 변경하고 인증·검증 endpoint만 유지한다. |
+| `src/main/java/com/example/DunbarHorizon/account/adapter/in/web/UserController.java` | 프로필 수정과 profile-image presign handler 및 의존성을 이관해 `/api/v1/users/me/**`를 제공한다. |
+| `src/main/java/com/example/DunbarHorizon/global/security/SecurityConfig.java` | 공개 인증 matcher를 새 `/api/v1/auth/**` 계약의 동일 메서드·깊이로 교체한다. OAuth, 루트, dev matcher는 보존한다. |
+| `src/main/java/com/example/DunbarHorizon/global/security/JwtAuthenticationFilter.java` | 재발급 경로를 설명하는 주석만 새 URL로 갱신한다. 필터 동작은 바꾸지 않는다. |
+| `src/test/java/com/example/DunbarHorizon/account/adapter/in/web/AccountControllerTest.java` | 인증·검증 요청 URL을 새 계약으로 교체한다. |
+| `src/test/java/com/example/DunbarHorizon/account/adapter/in/web/UserControllerTest.java` | 프로필 수정 테스트를 사용자 리소스 책임에 맞게 이관하고, profile-image presign의 새 URL·위임을 검증한다. |
+| `src/test/java/com/example/DunbarHorizon/global/security/JwtAuthenticationFilterTest.java` | 재발급 경로 설명을 새 URL로 갱신한다. |
+| `CLAUDE.md` | public endpoint 목록, API convention, Account API 표를 새 `/api/v1/auth` 및 `/api/v1/users` 계약으로 갱신한다. |
+
+## 구현 방향과 예상 영향
+
+- 컨트롤러 이동은 web adapter 내부의 책임 정리이며 UseCase, DTO, 응답 상태·본문, JWT cookie
+  발급 방식은 바꾸지 않는다.
+- SecurityConfig의 인증 API 공개 범위는 기존과 같게 유지한다. 프로필 관련 두 새 URL은 인증이
+  계속 필요하다.
+- Swagger/OpenAPI는 annotation 기반 별도 경로 정의나 정적 API 문서가 없어 controller mapping
+  변경을 따라간다. 과거 task 문서는 이력 자료이므로 수정하지 않는다.
+- 프론트엔드, OAuth redirect/callback, health check, dev/perf API와 도메인·DB 스키마는 범위 밖이다.
+
+## 테스트 전략
+
+승인 후 controller web slice 테스트로 새 인증·검증 URL, 인증된 사용자 리소스 URL, presign 위임과
+기존 HTTP 응답 계약을 검증한다. 또한 JWT filter 단위 테스트로 만료 access token이 새 토큰
+재발급 흐름에서도 체인을 계속 통과한다는 기존 보장을 유지한다.
+
+```powershell
+$env:JAVA_HOME='C:\\Users\\TFX5470H\\.jdks\\corretto-17.0.15'
+$env:Path="$env:JAVA_HOME\\bin;$env:Path"
+.\\gradlew.bat test --no-daemon --rerun-tasks --tests '*AccountControllerTest' --tests '*UserControllerTest' --tests '*JwtAuthenticationFilterTest'
+```
+
+## 구현 및 검증 결과
+
+- `ai/refactor-account-api-url-cleanup` 브랜치에서 Account 인증 API를 `/api/v1/auth/**`로
+  이관하고, 프로필 수정과 이미지 presign handler를 `UserController`로 옮겨
+  `/api/v1/users/me/**`로 제공하도록 구현했다.
+- 공개 Security matcher는 새 인증 경로로 같은 HTTP 메서드와 접근 범위를 유지했다. OAuth,
+  루트, `/api/dev/**` matcher 및 JWT filter 동작은 변경하지 않았다.
+- Account·User controller 테스트를 새 URL로 갱신하고 profile-image presign의 새 경로와 포트
+  위임을 검증하는 테스트를 추가했다. `CLAUDE.md`의 Account API 문서도 새 계약으로 갱신했다.
+- 경로 검색 결과, 이력 task와 계획 문서를 제외한 실행 코드·테스트·현재 API 문서에는
+  `/api/auth` 참조가 남지 않았다. `git diff --check`도 통과했다.
+- 새 worktree의 Java 21 toolchain·의존성 초기화와 Gradle 캐시 파일 권한을 정리한 뒤 선택
+  테스트를 재실행했다. `AccountControllerTest` 13개, `UserControllerTest` 7개,
+  `JwtAuthenticationFilterTest` 4개와 glob에 함께 포함된 `SocialUserControllerTest` 2개,
+  총 26개가 모두 통과했다.
+
+---
+
 # PLAN — Friend Request 수신 상태 조회 완화
 
 ## 1. 작업 목표

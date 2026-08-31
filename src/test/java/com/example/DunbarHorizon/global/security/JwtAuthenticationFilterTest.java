@@ -65,7 +65,7 @@ class JwtAuthenticationFilterTest {
     @DisplayName("토큰 검증에 실패해도 필터 체인은 계속 진행되고 예외가 request 속성에 저장된다")
     void doFilterInternal_ValidationFailed_ContinuesChain() throws ServletException, IOException {
         // given - 체인을 끊으면 permitAll 엔드포인트가 막힌다. 특히 만료된 access token을 들고 오는
-        //         토큰 재발급 요청(PATCH /api/auth/tokens)이 컨트롤러에 도달하지 못하게 된다.
+        //         토큰 재발급 요청(PATCH /api/v1/auth/tokens)이 컨트롤러에 도달하지 못하게 된다.
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         String token = "expired-token";

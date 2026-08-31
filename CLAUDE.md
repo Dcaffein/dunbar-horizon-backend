@@ -85,7 +85,7 @@ Local defaults:
 - **JWT (email/password):** Tokens stored as HTTP-only cookies (`access_token`, `refresh_token`). HMAC-SHA512. Refresh token default TTL: 7 days (604800s).
 - **OAuth2 (Google):** `CustomOAuth2UserService`(공급자 `email_verified` 검증) → `OAuth2AuthenticationSuccessHandler` issues JWT cookies.
 - **로그인 실패는 세 경우 모두 동일한 401 + 동일 본문**(계정 열거 차단). 사유는 로그로만 남긴다.
-- Public endpoints: `POST /api/auth/users`, `POST /api/auth/tokens`, `PATCH/DELETE /api/auth/tokens`, `POST /api/auth/verifications`, `GET /api/auth/verifications/*`, `/oauth2/**`, `/login/oauth2/**`
+- Public endpoints: `POST /api/v1/auth/users`, `POST /api/v1/auth/tokens`, `PATCH/DELETE /api/v1/auth/tokens`, `POST /api/v1/auth/verifications`, `GET /api/v1/auth/verifications/*`, `/oauth2/**`, `/login/oauth2/**`
 - All other endpoints require authentication.
 - Roles: `ROLE_USER`, `ROLE_ADMIN`.
 - `@CurrentUserId` — custom parameter annotation resolving authenticated user's ID from JWT in controllers.
@@ -93,21 +93,23 @@ Local defaults:
 ### API Conventions
 
 - REST JSON API: `201` on creation, `200` on success, `204` on no-content.
-- Auth endpoints: `/api/auth/`
+- Auth endpoints: `/api/v1/auth/`
 - Feature endpoints: `/api/v1/{domain}/`
 - Paginated responses: `Slice<T>`
 - Error response shape: `{ "error": "ExceptionClassName", "message": "...", "validation": {...} }`
 
 ## API Endpoints Reference
 
-### Account (`/api/auth/`)
+### Account
 ```
-POST   /api/auth/verifications            # 가입 접수 + 메일 발송 (재요청 = 재발송)
-GET    /api/auth/verifications/{token}    # 토큰 유효성 확인 → { email }
-POST   /api/auth/users                    # 가입 완료: {token, password, nickname} → 계정 생성 + 쿠키
-POST   /api/auth/tokens                   # login → JWT cookies
-DELETE /api/auth/tokens                   # logout
-PATCH  /api/auth/tokens                   # refresh tokens
+POST   /api/v1/auth/verifications            # 가입 접수 + 메일 발송 (재요청 = 재발송)
+GET    /api/v1/auth/verifications/{token}    # 토큰 유효성 확인 → { email }
+POST   /api/v1/auth/users                    # 가입 완료: {token, password, nickname} → 계정 생성 + 쿠키
+POST   /api/v1/auth/tokens                   # login → JWT cookies
+DELETE /api/v1/auth/tokens                   # logout
+PATCH  /api/v1/auth/tokens                   # refresh tokens
+PATCH  /api/v1/users/me                       # 내 프로필 수정
+POST   /api/v1/users/me/profile-image/presign # 프로필 이미지 업로드 URL 발급
 ```
 
 > 로컬 가입은 **사전 인증** 방식이다. 이메일 소유가 증명되기 전에는 `users`/`auths`에

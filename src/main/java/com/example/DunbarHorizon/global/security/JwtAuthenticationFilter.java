@@ -49,7 +49,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         // 검증 실패 시에도 체인을 계속 진행해야 한다. 여기서 응답을 쓰거나 체인을 끊으면
         // permitAll 엔드포인트가 막힌다. 특히 만료된 access token을 들고 오는 토큰 재발급
-        // 요청(PATCH /api/auth/tokens)은 정상 시나리오이므로 컨트롤러까지 도달해야 한다.
+        // 요청(PATCH /api/v1/auth/tokens)은 정상 시나리오이므로 컨트롤러까지 도달해야 한다.
         filterChain.doFilter(request, response);
     }
 }
