@@ -57,6 +57,69 @@ class FlagControllerTest extends BaseControllerTest {
     }
 
     @Test
+    @DisplayName("제목이 20자를 초과하면 400과 validation.title을 반환한다")
+    void createFlag_TitleTooLong_Returns400() throws Exception {
+        String longTitle = "가".repeat(Flag.TITLE_MAX_LENGTH + 1);
+        String body = """
+                {
+                  "title": "%s",
+                  "description": "설명",
+                  "capacity": 10,
+                  "startDateTime": "2030-12-01T10:00:00",
+                  "endDateTime": "2030-12-01T12:00:00"
+                }
+                """.formatted(longTitle);
+
+        mockMvc.perform(post("/api/v1/flags")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validation.title").value(Flag.TITLE_LENGTH_MESSAGE));
+    }
+
+    @Test
+    @DisplayName("제목이 정확히 20자이면 201을 반환한다")
+    void createFlag_TitleAtMaxLength_Returns201() throws Exception {
+        given(flagHostUseCase.hostFlag(any())).willReturn(1L);
+        String maxTitle = "가".repeat(Flag.TITLE_MAX_LENGTH);
+        String body = """
+                {
+                  "title": "%s",
+                  "description": "설명",
+                  "capacity": 10,
+                  "startDateTime": "2030-12-01T10:00:00",
+                  "endDateTime": "2030-12-01T12:00:00"
+                }
+                """.formatted(maxTitle);
+
+        mockMvc.perform(post("/api/v1/flags")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("설명이 500자를 초과하면 400과 validation.description을 반환한다")
+    void createFlag_DescriptionTooLong_Returns400() throws Exception {
+        String longDescription = "가".repeat(Flag.DESCRIPTION_MAX_LENGTH + 1);
+        String body = """
+                {
+                  "title": "제목",
+                  "description": "%s",
+                  "capacity": 10,
+                  "startDateTime": "2030-12-01T10:00:00",
+                  "endDateTime": "2030-12-01T12:00:00"
+                }
+                """.formatted(longDescription);
+
+        mockMvc.perform(post("/api/v1/flags")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validation.description").value(Flag.DESCRIPTION_LENGTH_MESSAGE));
+    }
+
+    @Test
     @DisplayName("parentFlagId가 있으면 encoreFlag()를 호출한다")
     void createFlag_Encore_CallsEncoreFlag() throws Exception {
         given(flagHostUseCase.encoreFlag(any())).willReturn(2L);
