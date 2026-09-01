@@ -12,6 +12,9 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BuzzComment {
 
+    public static final int TEXT_MAX_LENGTH = 300;
+    public static final String TEXT_LENGTH_MESSAGE = "댓글은 1자 이상 300자 이하로 작성해주세요.";
+
     private String commentId;
 
     private Long commenterId;
@@ -31,6 +34,7 @@ public class BuzzComment {
 
     public static BuzzComment of(String commentId, Long commenterId, String nickname, String profileImageUrl,
                                  String text, List<String> imageUrls, boolean isPublic) {
+        validateContent(text);
         return new BuzzComment(
                 commentId,
                 commenterId,
@@ -53,9 +57,9 @@ public class BuzzComment {
         this.imageUrls = imageUrls != null ? imageUrls : new ArrayList<>();
     }
 
-    private void validateContent(String text) {
-        if (text == null || text.isBlank()) {
-            throw new BuzzInvalidStateException("댓글 내용은 비어있을 수 없습니다.");
+    private static void validateContent(String text) {
+        if (text == null || text.isBlank() || text.length() > TEXT_MAX_LENGTH) {
+            throw new BuzzInvalidStateException(TEXT_LENGTH_MESSAGE);
         }
     }
 }

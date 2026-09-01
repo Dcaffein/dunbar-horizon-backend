@@ -4,6 +4,8 @@ import com.example.DunbarHorizon.buzz.application.dto.result.BuzzCommentResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzProfileResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
+import com.example.DunbarHorizon.buzz.domain.Buzz;
+import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
@@ -166,6 +168,44 @@ class BuzzControllerTest extends BaseControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isCreated());
+        }
+
+        @Test
+        @WithMockCustomUser
+        @DisplayName("본문이 1000자를 초과하면 400과 validation.text를 반환한다")
+        void createBuzz_Fail_TextOverLimit() throws Exception {
+            String longText = "가".repeat(Buzz.TEXT_MAX_LENGTH + 1);
+            String body = """
+                    {
+                      "text": "%s",
+                      "recipient": { "type": "MANUAL", "memberIds": [2] }
+                    }
+                    """.formatted(longText);
+
+            mockMvc.perform(post("/api/v1/buzzes")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.validation.text").value(Buzz.TEXT_LENGTH_MESSAGE));
+        }
+
+        @Test
+        @WithMockCustomUser
+        @DisplayName("댓글이 300자를 초과하면 400과 validation.text를 반환한다")
+        void comment_Fail_TextOverLimit() throws Exception {
+            String longText = "가".repeat(BuzzComment.TEXT_MAX_LENGTH + 1);
+            String body = """
+                    {
+                      "text": "%s",
+                      "isPublic": true
+                    }
+                    """.formatted(longText);
+
+            mockMvc.perform(post("/api/v1/buzzes/buzz-1/comments")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.validation.text").value(BuzzComment.TEXT_LENGTH_MESSAGE));
         }
     }
 }

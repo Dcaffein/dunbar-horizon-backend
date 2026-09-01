@@ -81,6 +81,38 @@ class BuzzTest {
         }
 
         @Test
+        @DisplayName("본문이 비어있으면 생성에 실패한다")
+        void createBuzz_Fail_BlankText() {
+            assertThatThrownBy(() -> Buzz.builder()
+                    .creatorId(creatorId).creatorNickname(creatorNickname).creatorProfileImageUrl(creatorProfile)
+                    .text("  ").recipientIds(List.of(recipientId)).build())
+                    .isInstanceOf(BuzzInvalidStateException.class);
+        }
+
+        @Test
+        @DisplayName("본문이 1000자를 초과하면 생성에 실패한다")
+        void createBuzz_Fail_TooLongText() {
+            String tooLong = "가".repeat(Buzz.TEXT_MAX_LENGTH + 1);
+
+            assertThatThrownBy(() -> Buzz.builder()
+                    .creatorId(creatorId).creatorNickname(creatorNickname).creatorProfileImageUrl(creatorProfile)
+                    .text(tooLong).recipientIds(List.of(recipientId)).build())
+                    .isInstanceOf(BuzzInvalidStateException.class);
+        }
+
+        @Test
+        @DisplayName("본문이 정확히 1000자이면 생성에 성공한다")
+        void createBuzz_Success_MaxLengthText() {
+            String boundary = "가".repeat(Buzz.TEXT_MAX_LENGTH);
+
+            Buzz buzz = Buzz.builder()
+                    .creatorId(creatorId).creatorNickname(creatorNickname).creatorProfileImageUrl(creatorProfile)
+                    .text(boundary).recipientIds(List.of(recipientId)).build();
+
+            assertThat(buzz.getText()).hasSize(Buzz.TEXT_MAX_LENGTH);
+        }
+
+        @Test
         @DisplayName("생성 시 필드들이 정상적으로 초기화된다")
         void createBuzz_Success() {
             Buzz buzz = Buzz.builder()
