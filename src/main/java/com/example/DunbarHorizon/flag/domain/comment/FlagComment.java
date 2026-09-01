@@ -15,6 +15,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FlagComment extends BaseTimeAggregateRoot {
 
+    public static final int CONTENT_MAX_LENGTH = 500;
+    public static final String CONTENT_LENGTH_MESSAGE = "내용은 1자 이상 500자 이하로 작성해주세요.";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -27,7 +30,7 @@ public class FlagComment extends BaseTimeAggregateRoot {
 
     private Long parentId;
 
-    @Column(nullable = false, length = 500)
+    @Column(nullable = false, length = CONTENT_MAX_LENGTH)
     private String content;
 
     @Column(nullable = false)
@@ -84,8 +87,8 @@ public class FlagComment extends BaseTimeAggregateRoot {
     }
 
     private void validateContent(String content) {
-        if (content == null || content.isBlank() || content.length() > 500) {
-            throw new FlagCommentInvalidContentException("내용은 1자 이상 500자 이하로 작성해주세요.");
+        if (content == null || content.isBlank() || content.length() > CONTENT_MAX_LENGTH) {
+            throw new FlagCommentInvalidContentException(CONTENT_LENGTH_MESSAGE);
         }
     }
 

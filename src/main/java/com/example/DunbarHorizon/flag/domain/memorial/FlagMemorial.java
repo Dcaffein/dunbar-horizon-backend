@@ -14,13 +14,17 @@ import lombok.NoArgsConstructor;
 @Table(name = "flag_memorials")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FlagMemorial extends BaseTimeAggregateRoot {
+
+    public static final int CONTENT_MAX_LENGTH = 1000;
+    public static final String CONTENT_LENGTH_MESSAGE = "내용은 1자 이상 1000자 이하로 작성해주세요.";
+
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private Long flagId;
     private Long writerId;
 
-    @Column(length = 1000, nullable = false)
+    @Column(length = CONTENT_MAX_LENGTH, nullable = false)
     private String content;
 
     FlagMemorial(Long flagId, Long writerId, String content) {
@@ -32,8 +36,8 @@ public class FlagMemorial extends BaseTimeAggregateRoot {
     }
 
     private void validateContent(String content) {
-        if (content == null || content.isBlank() || content.length() > 1000) {
-            throw new FlagMemorialInvalidContentException("flag memorial은 1자 이상 1000자 이하로 작성해야 합니다.");
+        if (content == null || content.isBlank() || content.length() > CONTENT_MAX_LENGTH) {
+            throw new FlagMemorialInvalidContentException(CONTENT_LENGTH_MESSAGE);
         }
     }
 
