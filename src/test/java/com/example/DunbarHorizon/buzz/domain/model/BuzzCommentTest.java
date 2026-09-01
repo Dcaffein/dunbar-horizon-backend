@@ -30,6 +30,25 @@ class BuzzCommentTest {
     }
 
     @Test
+    @DisplayName("300자를 초과하는 내용으로 댓글을 생성하면 예외가 발생한다")
+    void of_Fail_TooLongText() {
+        String tooLong = "가".repeat(BuzzComment.TEXT_MAX_LENGTH + 1);
+
+        assertThatThrownBy(() -> BuzzComment.of("com-1", 1L, "닉", "p.jpg", tooLong, null, true))
+                .isInstanceOf(BuzzInvalidStateException.class);
+    }
+
+    @Test
+    @DisplayName("300자를 초과하는 내용으로 댓글을 수정하면 예외가 발생한다")
+    void update_Fail_TooLongText() {
+        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "Old", null, true);
+        String tooLong = "가".repeat(BuzzComment.TEXT_MAX_LENGTH + 1);
+
+        assertThatThrownBy(() -> comment.update(tooLong, null))
+                .isInstanceOf(BuzzInvalidStateException.class);
+    }
+
+    @Test
     @DisplayName("commenterId와 같은 userId이면 isCommenter가 true이다")
     void isCommenter_WithCommenterId_ReturnsTrue() {
         BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "내용", null, true);

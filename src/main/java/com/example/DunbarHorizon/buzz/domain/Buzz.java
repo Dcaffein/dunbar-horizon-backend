@@ -16,6 +16,9 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Buzz {
 
+    public static final int TEXT_MAX_LENGTH = 1000;
+    public static final String TEXT_LENGTH_MESSAGE = "본문은 1자 이상 1000자 이하로 입력해주세요.";
+
     @Id
     private String id;
 
@@ -46,6 +49,7 @@ public class Buzz {
     public Buzz(Long creatorId, String creatorNickname, String creatorProfileImageUrl,
                 String text, List<String> imageUrls, List<Long> recipientIds) {
         validateRecipientIds(recipientIds);
+        validateText(text);
 
         this.creatorId = creatorId;
         this.creatorNickname = creatorNickname;
@@ -95,16 +99,15 @@ public class Buzz {
             markAsRead(commenterId);
         }
 
-        return BuzzComment.builder()
-                .commentId(UuidUtil.createV7().toString())
-                .commenterId(commenterId)
-                .commenterNickname(nickname)
-                .commenterProfileImageUrl(profileImageUrl)
-                .text(text)
-                .imageUrls(imageUrls)
-                .createdAt(LocalDateTime.now())
-                .isPublic(isPublic)
-                .build();
+        return BuzzComment.of(
+                UuidUtil.createV7().toString(),
+                commenterId,
+                nickname,
+                profileImageUrl,
+                text,
+                imageUrls,
+                isPublic
+        );
     }
 
     public void updateComment(Long requesterId, String commentId, String newText, List<String> newImageUrls) {
@@ -182,6 +185,12 @@ public class Buzz {
         }
         if (recipientIds.size() > 150) {
             throw new BuzzInvalidStateException("수신자는 최대 150명까지 지정할 수 있습니다.");
+        }
+    }
+
+    private void validateText(String text) {
+        if (text == null || text.isBlank() || text.length() > TEXT_MAX_LENGTH) {
+            throw new BuzzInvalidStateException(TEXT_LENGTH_MESSAGE);
         }
     }
 }
