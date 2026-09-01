@@ -7,6 +7,7 @@ import com.example.DunbarHorizon.flag.domain.flag.event.FlagMeetingChangedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagDeadlinePassedException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagFullCapacityException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidBasicInfoException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidCapacityException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
 import com.example.DunbarHorizon.global.common.BaseTimeAggregateRoot;
@@ -31,6 +32,11 @@ import java.util.UUID;
 public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
 
     public static final int EXPIRATION_THRESHOLD_HOURS = 24;
+
+    public static final int TITLE_MAX_LENGTH = 20;
+    public static final String TITLE_LENGTH_MESSAGE = "제목은 1자 이상 20자 이하로 입력해주세요.";
+    public static final int DESCRIPTION_MAX_LENGTH = 500;
+    public static final String DESCRIPTION_LENGTH_MESSAGE = "설명은 1자 이상 500자 이하로 입력해주세요.";
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) @Getter
     private Long id;
@@ -65,7 +71,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
 
     private Flag(Long hostId, String title, String description, Integer capacity,
                  FlagSchedule schedule, Long parentId, UUID groupId) {
-        validateBasicInfo(hostId, title);
+        validateBasicInfo(hostId, title, description);
         validateCapacity(capacity);
 
         this.hostId = hostId;
@@ -140,10 +146,8 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
     public void updateBasicInfo(Long requesterId, String title, String description) {
         validateHost(requesterId);
         validateNotEnded();
-
-        if (title == null || title.isBlank()) {
-            throw new FlagInvalidStatusException("타이틀 정보는 필수입니다.");
-        }
+        validateTitle(title);
+        validateDescription(description);
 
         this.title = title;
         this.description = description;
@@ -220,9 +224,22 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
         if (isEnded()) throw new FlagInvalidStatusException("종료된 플래그는 수정할 수 없습니다.");
     }
 
-    private void validateBasicInfo(Long hostId, String title) {
+    private void validateBasicInfo(Long hostId, String title, String description) {
         if (hostId == null) throw new FlagInvalidStatusException("호스트 정보는 필수입니다.");
-        if (title == null || title.isBlank()) throw new FlagInvalidStatusException("타이틀 정보는 필수입니다.");
+        validateTitle(title);
+        validateDescription(description);
+    }
+
+    private void validateTitle(String title) {
+        if (title == null || title.isBlank() || title.length() > TITLE_MAX_LENGTH) {
+            throw new FlagInvalidBasicInfoException(TITLE_LENGTH_MESSAGE);
+        }
+    }
+
+    private void validateDescription(String description) {
+        if (description == null || description.isBlank() || description.length() > DESCRIPTION_MAX_LENGTH) {
+            throw new FlagInvalidBasicInfoException(DESCRIPTION_LENGTH_MESSAGE);
+        }
     }
 
     private void validateCapacity(Integer capacity) {

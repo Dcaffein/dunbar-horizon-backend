@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagDeadlinePassedException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagFullCapacityException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidBasicInfoException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -59,10 +60,37 @@ class FlagTest {
     }
 
     @Test
-    @DisplayName("title이 비어있으면 플래그 생성 시 예외가 발생한다")
+    @DisplayName("title이 비어있으면 플래그 생성 시 FlagInvalidBasicInfoException이 발생한다")
     void create_BlankTitle_ThrowsException() {
         assertThatThrownBy(() -> Flag.create(HOST_ID, "  ", "설명", 10, recruitingSchedule()))
-                .isInstanceOf(FlagInvalidStatusException.class);
+                .isInstanceOf(FlagInvalidBasicInfoException.class);
+    }
+
+    @Test
+    @DisplayName("title이 20자를 초과하면 플래그 생성 시 FlagInvalidBasicInfoException이 발생한다")
+    void create_TooLongTitle_ThrowsException() {
+        String tooLong = "가".repeat(Flag.TITLE_MAX_LENGTH + 1);
+
+        assertThatThrownBy(() -> Flag.create(HOST_ID, tooLong, "설명", 10, recruitingSchedule()))
+                .isInstanceOf(FlagInvalidBasicInfoException.class);
+    }
+
+    @Test
+    @DisplayName("title이 정확히 20자이면 플래그를 생성할 수 있다")
+    void create_MaxLengthTitle_Success() {
+        String boundary = "가".repeat(Flag.TITLE_MAX_LENGTH);
+
+        assertThatNoException().isThrownBy(() ->
+                Flag.create(HOST_ID, boundary, "설명", 10, recruitingSchedule()));
+    }
+
+    @Test
+    @DisplayName("description이 500자를 초과하면 플래그 생성 시 FlagInvalidBasicInfoException이 발생한다")
+    void create_TooLongDescription_ThrowsException() {
+        String tooLong = "가".repeat(Flag.DESCRIPTION_MAX_LENGTH + 1);
+
+        assertThatThrownBy(() -> Flag.create(HOST_ID, "제목", tooLong, 10, recruitingSchedule()))
+                .isInstanceOf(FlagInvalidBasicInfoException.class);
     }
 
     @Test

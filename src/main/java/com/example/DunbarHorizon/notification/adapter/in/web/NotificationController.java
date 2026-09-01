@@ -6,6 +6,7 @@ import com.example.DunbarHorizon.notification.adapter.in.web.dto.DeviceTokenStat
 import com.example.DunbarHorizon.notification.adapter.in.web.dto.NotificationResponse;
 import com.example.DunbarHorizon.notification.application.NotificationService;
 import com.example.DunbarHorizon.notification.domain.Notification;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -23,7 +24,7 @@ public class NotificationController {
     @PostMapping("/device-token")
     public ResponseEntity<Void> registerDeviceToken(
             @CurrentUserId Long currentUserId,
-            @RequestBody DeviceTokenRequest dto) {
+            @Valid @RequestBody DeviceTokenRequest dto) {
         notificationService.registerDeviceToken(currentUserId, dto.token());
         return ResponseEntity.ok().build();
     }
