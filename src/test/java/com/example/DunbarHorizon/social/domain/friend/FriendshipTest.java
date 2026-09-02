@@ -1,9 +1,11 @@
 package com.example.DunbarHorizon.social.domain.friend;
 
+import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.within;
 
@@ -130,5 +132,15 @@ class FriendshipTest {
 
         // then
         assertThat(friendship.getFriendAlias(1L)).isEqualTo("동기");
+    }
+
+    @Test
+    @DisplayName("별명이 20자를 초과하면 InvalidFriendAliasException이 발생한다")
+    void updateUserFields_withTooLongAlias_throws() {
+        Friendship friendship = new Friendship(new SocialUser(1L, "A", ""), new SocialUser(2L, "B", ""));
+        String tooLong = "가".repeat(Friendship.ALIAS_MAX_LENGTH + 1);
+
+        assertThatThrownBy(() -> friendship.updateUserFields(1L, tooLong, null, null))
+                .isInstanceOf(InvalidFriendAliasException.class);
     }
 }
