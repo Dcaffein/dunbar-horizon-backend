@@ -88,4 +88,23 @@ class LabelTest {
         // then
         assertThat(label.getMembers()).isEmpty();
     }
+
+    @Test
+    @DisplayName("라벨 이름이 20자를 초과하면 생성 시 예외가 발생한다")
+    void createLabel_Fail_TooLongName() {
+        String tooLong = "가".repeat(Label.NAME_MAX_LENGTH + 1);
+
+        assertThatThrownBy(() -> new Label(owner, tooLong))
+                .isInstanceOf(InvalidLabelNameException.class);
+    }
+
+    @Test
+    @DisplayName("라벨 이름을 20자 초과로 변경하면 예외가 발생한다")
+    void applyNewLabelName_Fail_TooLongName() {
+        Label label = new Label(owner, "친구들");
+        String tooLong = "가".repeat(Label.NAME_MAX_LENGTH + 1);
+
+        assertThatThrownBy(() -> label.applyNewLabelName(tooLong))
+                .isInstanceOf(InvalidLabelNameException.class);
+    }
 }

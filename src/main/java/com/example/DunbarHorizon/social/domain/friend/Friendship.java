@@ -23,6 +23,10 @@ import static com.example.DunbarHorizon.social.domain.friend.constant.FriendCons
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Node(FRIENDSHIP)
 public class Friendship {
+
+    public static final int ALIAS_MAX_LENGTH = 20;
+    public static final String ALIAS_LENGTH_MESSAGE = "별명은 20자 이하로 입력해주세요.";
+
     @Getter
     @Id
     private String id;

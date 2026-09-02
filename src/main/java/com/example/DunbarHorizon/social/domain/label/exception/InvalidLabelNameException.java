@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.social.domain.label.exception;
 import org.springframework.http.HttpStatus;
 
 public class InvalidLabelNameException extends LabelException {
-    public InvalidLabelNameException() {
-        super("라벨 이름은 공백일 수 없습니다.", HttpStatus.BAD_REQUEST);
+    public InvalidLabelNameException(String message) {
+        super(message, HttpStatus.BAD_REQUEST);
     }
 }

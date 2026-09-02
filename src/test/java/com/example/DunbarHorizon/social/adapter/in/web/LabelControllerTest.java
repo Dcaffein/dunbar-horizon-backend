@@ -55,6 +55,19 @@ class LabelControllerTest extends BaseControllerTest {
     }
 
     @Test
+    @DisplayName("라벨 이름이 20자를 초과하면 400과 validation.labelName을 반환한다")
+    void createLabel_Fail_TooLongName() throws Exception {
+        String tooLong = "가".repeat(Label.NAME_MAX_LENGTH + 1);
+        LabelCreateRequest dto = new LabelCreateRequest(tooLong);
+
+        mockMvc.perform(post("/api/v1/labels")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validation.labelName").value(Label.NAME_LENGTH_MESSAGE));
+    }
+
+    @Test
     @DisplayName("라벨을 삭제한다")
     void deleteLabel_Success() throws Exception {
         mockMvc.perform(delete("/api/v1/labels/{labelId}", labelId))

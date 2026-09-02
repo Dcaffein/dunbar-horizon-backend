@@ -21,6 +21,10 @@ import static com.example.DunbarHorizon.social.domain.label.constant.LabelConsta
 @Getter
 @Node(LABEL)
 public class Label {
+
+    public static final int NAME_MAX_LENGTH = 20;
+    public static final String NAME_LENGTH_MESSAGE = "라벨 이름은 1자 이상 20자 이하로 입력해주세요.";
+
     @Id
     private String id;
 
@@ -36,6 +40,7 @@ public class Label {
     private Set<UserReference> members = new HashSet<>();
 
     Label(UserReference owner, String labelName) {
+        validateName(labelName);
         this.id = UuidUtil.createV7().toString();
         this.owner = owner;
         this.labelName = labelName;
@@ -57,10 +62,14 @@ public class Label {
     }
 
     void applyNewLabelName(String newLabelName) {
-        if (newLabelName == null || newLabelName.isBlank()) {
-            throw new InvalidLabelNameException();
-        }
+        validateName(newLabelName);
         this.labelName = newLabelName;
+    }
+
+    private void validateName(String name) {
+        if (name == null || name.isBlank() || name.length() > NAME_MAX_LENGTH) {
+            throw new InvalidLabelNameException(NAME_LENGTH_MESSAGE);
+        }
     }
 
 }

@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.social.domain.friend;
 
+import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -63,6 +64,9 @@ public class FriendRecognition {
     }
 
     public void updateFriendAlias(String newAlias) {
+        if (newAlias != null && newAlias.length() > Friendship.ALIAS_MAX_LENGTH) {
+            throw new InvalidFriendAliasException(Friendship.ALIAS_LENGTH_MESSAGE);
+        }
         this.friendAlias = newAlias;
     }
 

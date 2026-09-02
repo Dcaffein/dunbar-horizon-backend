@@ -1,10 +1,11 @@
 package com.example.DunbarHorizon.social.adapter.in.web.dto;
 
 import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
+import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import jakarta.validation.constraints.Size;
 
 public record FriendUpdateRequest(
-        @Size(max = 20, message = "별명은 20자 이내여야 합니다.")
+        @Size(max = Friendship.ALIAS_MAX_LENGTH, message = Friendship.ALIAS_LENGTH_MESSAGE)
         String friendAlias,
         Boolean isMuted,
         Boolean isRoutable
