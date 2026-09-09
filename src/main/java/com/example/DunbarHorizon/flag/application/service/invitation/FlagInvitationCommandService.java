@@ -14,6 +14,7 @@ import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitatio
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -51,6 +52,8 @@ public class FlagInvitationCommandService implements FlagInvitationUseCase {
     }
 
     @Override
+    // 초대 조회가 만든 read view와 무관하게, Flag 락 뒤 최신 참여자 수로 정원을 확인해야 한다.
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void updateStatus(Long invitationId, Long requesterId, FlagInvitationStatus status) {
         FlagParticipant newParticipant = invitationManager.updateStatus(invitationId, requesterId, status);
         flagRepository.saveParticipant(newParticipant);
