@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.flag.adapter.in.web;
 
 import com.example.DunbarHorizon.flag.application.dto.FlagInvitationDirection;
 import com.example.DunbarHorizon.flag.application.dto.result.FlagInvitationResult;
-import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationStatus;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
@@ -131,8 +130,7 @@ class FlagInvitationControllerTest extends BaseControllerTest {
                         .content(body))
                 .andExpect(status().isNoContent());
 
-        verify(flagInvitationUseCase)
-                .updateStatus(INVITATION_ID, CURRENT_USER_ID, FlagInvitationStatus.ACCEPTED);
+        verify(flagInvitationUseCase).accept(INVITATION_ID, CURRENT_USER_ID);
     }
 
     @Test

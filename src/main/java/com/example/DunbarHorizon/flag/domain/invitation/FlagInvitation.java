@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.domain.invitation;
 
 import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationAccessException;
-import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationInvalidException;
 import com.example.DunbarHorizon.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -31,10 +30,7 @@ public class FlagInvitation extends BaseTimeEntity {
         return new FlagInvitation(flagId, inviterId, inviteeId);
     }
 
-    public void updateStatus(Long requesterId, FlagInvitationStatus status) {
-        if (status != FlagInvitationStatus.ACCEPTED) {
-            throw new FlagInvitationInvalidException("초대 상태는 ACCEPTED로만 변경할 수 있습니다.");
-        }
+    public void accept(Long requesterId) {
         validateInvitee(requesterId);
     }
 

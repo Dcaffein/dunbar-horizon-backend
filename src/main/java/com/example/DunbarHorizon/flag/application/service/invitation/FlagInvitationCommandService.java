@@ -7,7 +7,6 @@ import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundExceptio
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitation;
 import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationManager;
-import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationStatus;
 import com.example.DunbarHorizon.flag.domain.invitation.event.FlagInvitationSentEvent;
 import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationNotFoundException;
 import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitationRepository;
@@ -54,8 +53,8 @@ public class FlagInvitationCommandService implements FlagInvitationUseCase {
     @Override
     // 초대 조회가 만든 read view와 무관하게, Flag 락 뒤 최신 참여자 수로 정원을 확인해야 한다.
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public void updateStatus(Long invitationId, Long requesterId, FlagInvitationStatus status) {
-        FlagParticipant newParticipant = invitationManager.updateStatus(invitationId, requesterId, status);
+    public void accept(Long invitationId, Long requesterId) {
+        FlagParticipant newParticipant = invitationManager.accept(invitationId, requesterId);
         flagRepository.saveParticipant(newParticipant);
         invitationRepository.deleteById(invitationId);
     }

@@ -13,7 +13,6 @@ import com.example.DunbarHorizon.flag.domain.flag.exception.FlagDeadlinePassedEx
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagFullCapacityException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitation;
-import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationStatus;
 import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitationRepository;
 import com.example.DunbarHorizon.support.TestContainerConfig;
 import org.junit.jupiter.api.AfterEach;
@@ -362,7 +361,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
                                             Long invitationId, Long inviteeId) {
         executor.submit(() -> {
             try {
-                flagInvitationUseCase.updateStatus(invitationId, inviteeId, FlagInvitationStatus.ACCEPTED);
+                flagInvitationUseCase.accept(invitationId, inviteeId);
                 successCount.incrementAndGet();
             } catch (Throwable throwable) {
                 firstFailure.compareAndSet(null, throwable);

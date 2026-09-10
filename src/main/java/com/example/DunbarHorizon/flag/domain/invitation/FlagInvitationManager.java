@@ -71,15 +71,11 @@ public class FlagInvitationManager {
         return FlagInvitation.create(flagId, inviterId, inviteeId);
     }
 
-    public FlagParticipant updateStatus(
-            Long invitationId,
-            Long requesterId,
-            FlagInvitationStatus status
-    ) {
+    public FlagParticipant accept(Long invitationId, Long requesterId) {
         FlagInvitation invitation = invitationRepository.findById(invitationId)
                 .orElseThrow(() -> new FlagInvitationNotFoundException(invitationId));
 
-        invitation.updateStatus(requesterId, status);
+        invitation.accept(requesterId);
 
         return flagParticipationManager.participateByInvitation(invitation.getFlagId(), requesterId);
     }
