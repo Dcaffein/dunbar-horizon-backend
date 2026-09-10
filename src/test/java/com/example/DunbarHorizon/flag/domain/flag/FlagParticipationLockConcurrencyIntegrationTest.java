@@ -8,9 +8,12 @@ import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
 import com.example.DunbarHorizon.flag.application.port.in.FlagInvitationUseCase;
 import com.example.DunbarHorizon.flag.application.port.in.FlagModificationUseCase;
 import com.example.DunbarHorizon.flag.application.port.in.FlagParticipationUseCase;
+import com.example.DunbarHorizon.flag.application.port.in.command.FlagCapacityUpdateCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
+import com.example.DunbarHorizon.flag.application.port.in.command.FlagScheduleUpdateCommand;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagDeadlinePassedException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagFullCapacityException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitation;
 import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitationRepository;
@@ -212,6 +215,116 @@ class FlagParticipationLockConcurrencyIntegrationTest {
 
         // then
         assertThat(failure.get()).isInstanceOf(FlagDeadlinePassedException.class);
+    }
+
+    @Test
+    @DisplayName("일정 변경은 모집 마감 커밋 뒤 Flag 락에서 최신 상태를 읽는다")
+    void reschedule_afterRecruitmentClosedBeforeLock_readsLatestFlagState() throws InterruptedException {
+        // given
+        Long flagId = hostRecruitingFlag(2);
+        LocalDateTime base = LocalDateTime.now().withNano(0);
+        FlagScheduleUpdateCommand command = new FlagScheduleUpdateCommand(
+                flagId, HOST_ID, base.plusHours(1), base.plusHours(2), base.plusHours(3));
+        CountDownLatch lockAttempted = new CountDownLatch(1);
+        CountDownLatch continueToLock = new CountDownLatch(1);
+        CountDownLatch completed = new CountDownLatch(1);
+        AtomicBoolean blockOnce = new AtomicBoolean(true);
+        AtomicReference<Boolean> recruitingAtLock = new AtomicReference<>();
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+
+        doAnswer(invocation -> {
+            if (blockOnce.compareAndSet(true, false)) {
+                lockAttempted.countDown();
+                await(continueToLock, "일정 변경 락 조회 재개");
+                @SuppressWarnings("unchecked")
+                Optional<Flag> lockedFlag = (Optional<Flag>) invocation.callRealMethod();
+                recruitingAtLock.set(lockedFlag.orElseThrow().isRecruiting());
+                return lockedFlag;
+            }
+            return invocation.callRealMethod();
+        }).when(flagRepository).findByIdForUpdate(flagId);
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.submit(() -> {
+            try {
+                flagModificationUseCase.reschedule(command);
+            } catch (Throwable throwable) {
+                failure.set(throwable);
+            } finally {
+                completed.countDown();
+            }
+        });
+
+        try {
+            // when
+            assertThat(lockAttempted.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            flagModificationUseCase.closeRecruitment(flagId, HOST_ID);
+            continueToLock.countDown();
+            assertThat(completed.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+            // then
+            assertThat(failure.get()).isNull();
+            assertThat(recruitingAtLock).hasValue(false);
+            // 현행 정책: 마감 뒤에도 미래 deadline으로 재일정하면 모집이 다시 열린다.
+            assertThat(flagJpaRepository.findById(flagId).orElseThrow().isRecruiting()).isTrue();
+        } finally {
+            continueToLock.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("정원 변경은 락 전 일반 조회가 있어도 커밋된 참여자 수보다 작게 줄일 수 없다")
+    void modifyCapacity_afterProjectionBeforeLock_rejectsBelowCommittedParticipantCount() throws InterruptedException {
+        // given
+        Long flagId = hostRecruitingFlag(3);
+        given(flagUserAdapter.areFriends(HOST_ID, PARTICIPANT_A_ID)).willReturn(true);
+        given(flagUserAdapter.areFriends(HOST_ID, PARTICIPANT_B_ID)).willReturn(true);
+        flagParticipationUseCase.participateInFlag(flagId, PARTICIPANT_A_ID);
+
+        CountDownLatch projectionRead = new CountDownLatch(1);
+        CountDownLatch continueToLock = new CountDownLatch(1);
+        CountDownLatch completed = new CountDownLatch(1);
+        AtomicBoolean blockOnce = new AtomicBoolean(true);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+
+        doAnswer(invocation -> {
+            if (blockOnce.compareAndSet(true, false)) {
+                // 트랜잭션 A: 테스트용 일반 조회가 REPEATABLE READ 읽기 뷰를 먼저 만든다.
+                assertThat(flagRepository.findHostIdById(flagId)).contains(HOST_ID);
+                projectionRead.countDown();
+                await(continueToLock, "정원 변경 락 조회 재개");
+            }
+            return invocation.callRealMethod();
+        }).when(flagRepository).findByIdForUpdate(flagId);
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.submit(() -> {
+            try {
+                flagModificationUseCase.modifyFlagCapacity(new FlagCapacityUpdateCommand(flagId, HOST_ID, 1));
+            } catch (Throwable throwable) {
+                failure.set(throwable);
+            } finally {
+                completed.countDown();
+            }
+        });
+
+        try {
+            // when
+            assertThat(projectionRead.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            // 트랜잭션 B: A가 Flag 락을 얻기 전 두 번째 참여를 커밋한다.
+            flagParticipationUseCase.participateInFlag(flagId, PARTICIPANT_B_ID);
+            continueToLock.countDown();
+            assertThat(completed.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+            // then
+            assertThat(failure.get()).isInstanceOf(FlagInvalidStatusException.class);
+            assertThat(participantJpaRepository.countByFlagId(flagId)).isEqualTo(2);
+            assertThat(flagJpaRepository.findById(flagId).orElseThrow().getCapacity()).isEqualTo(3);
+        } finally {
+            continueToLock.countDown();
+            executor.shutdownNow();
+        }
     }
 
     @Test

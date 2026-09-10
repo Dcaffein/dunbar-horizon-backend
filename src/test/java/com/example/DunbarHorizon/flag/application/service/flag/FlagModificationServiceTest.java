@@ -154,7 +154,7 @@ class FlagModificationServiceTest {
     void reschedule_Success() {
         // given
         Flag flag = recruitingFlag();
-        given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
+        given(flagRepository.findByIdForUpdate(1L)).willReturn(Optional.of(flag));
 
         LocalDateTime newStart = NOW.plusHours(5);
         LocalDateTime newEnd = NOW.plusHours(6);
@@ -167,6 +167,7 @@ class FlagModificationServiceTest {
         assertThat(flag.getSchedule().getStartDateTime()).isEqualTo(newStart);
         assertThat(flag.getSchedule().getEndDateTime()).isEqualTo(newEnd);
         assertThat(flag.getDomainEvents()).hasAtLeastOneElementOfType(FlagMeetingChangedEvent.class);
+        verify(flagRepository).findByIdForUpdate(1L);
         verify(flagRepository).save(flag);
     }
 
@@ -175,7 +176,7 @@ class FlagModificationServiceTest {
     void reschedule_SameMeetingTime_DoesNotRegisterEvent() {
         // given
         Flag flag = recruitingFlag();
-        given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
+        given(flagRepository.findByIdForUpdate(1L)).willReturn(Optional.of(flag));
 
         FlagScheduleUpdateCommand command = new FlagScheduleUpdateCommand(
                 1L, HOST_ID, NOW.plusHours(1),
@@ -187,6 +188,7 @@ class FlagModificationServiceTest {
         // then
         assertThat(flag.getSchedule().getDeadline()).isEqualTo(NOW.plusHours(1));
         assertThat(flag.getDomainEvents()).isEmpty();
+        verify(flagRepository).findByIdForUpdate(1L);
     }
 
     @Test

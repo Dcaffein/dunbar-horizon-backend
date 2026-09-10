@@ -10,6 +10,7 @@ import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundExceptio
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -26,6 +27,8 @@ public class FlagModificationService implements FlagModificationUseCase {
     }
 
     @Override
+    // Flag 행을 잠근 뒤 countParticipants가 먼저 커밋한 참여자를 읽어야 현재 인원보다 작은 정원을 막을 수 있다.
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void modifyFlagCapacity(FlagCapacityUpdateCommand command) {
         // 참여 경로(FlagParticipationManager)와 같은 순서로 잠근 뒤 센다.
         // 잠금 밖에서 센 값을 쓰면 그 사이 참여가 끼어들어 정원보다 참여자가 많아질 수 있다.
@@ -39,7 +42,8 @@ public class FlagModificationService implements FlagModificationUseCase {
     @Override
     public void reschedule(FlagScheduleUpdateCommand command) {
         FlagSchedule newSchedule = FlagSchedule.of(command.deadline(), command.startDateTime(), command.endDateTime());
-        Flag flag = getFlagOrThrow(command.flagId());
+        Flag flag = flagRepository.findByIdForUpdate(command.flagId())
+                .orElseThrow(() -> new FlagNotFoundException(command.flagId()));
         flag.reschedule(command.hostId(), newSchedule);
         flagRepository.save(flag);
     }
