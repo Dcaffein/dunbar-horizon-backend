@@ -22,18 +22,14 @@ public class FlagParticipationManager {
             throw new FlagAuthorizationException("호스트의 친구만 참여할 수 있는 플래그입니다.");
         }
 
-        Flag lockedFlag = flagRepository.findByIdForUpdate(flagId)
-                .orElseThrow(() -> new FlagNotFoundException(flagId));
-
-        if (flagRepository.isParticipating(flagId, userId)) {
-            throw new FlagParticipationDuplicateException(flagId, userId);
-        }
-
-        int count = flagRepository.countParticipants(flagId);
-        return lockedFlag.participate(userId, count);
+        return confirmParticipation(flagId, userId);
     }
 
     public FlagParticipant participateByInvitation(Long flagId, Long userId) {
+        return confirmParticipation(flagId, userId);
+    }
+
+    private FlagParticipant confirmParticipation(Long flagId, Long userId) {
         Flag lockedFlag = flagRepository.findByIdForUpdate(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
 
