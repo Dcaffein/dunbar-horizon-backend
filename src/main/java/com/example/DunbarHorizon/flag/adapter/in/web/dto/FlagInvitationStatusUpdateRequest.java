@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.flag.adapter.in.web.dto;
 
-import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationStatus;
 import jakarta.validation.constraints.NotNull;
 
 public record FlagInvitationStatusUpdateRequest(

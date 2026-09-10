@@ -7,7 +7,6 @@ import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitatio
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitation;
 import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationManager;
-import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationStatus;
 import com.example.DunbarHorizon.flag.domain.invitation.event.FlagInvitationSentEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -76,18 +75,18 @@ class FlagInvitationServiceTest {
     }
 
     @Test
-    @DisplayName("ACCEPTED 상태 변경은 참여자를 저장하고 초대를 삭제한다")
-    void updateStatus_Accepted_SavesParticipantAndDeletesInvitation() {
+    @DisplayName("초대 수락은 참여자를 저장하고 초대를 삭제한다")
+    void accept_SavesParticipantAndDeletesInvitation() {
         // given
         FlagParticipant newParticipant = mock(FlagParticipant.class);
-        given(invitationManager.updateStatus(10L, INVITEE_ID, FlagInvitationStatus.ACCEPTED))
+        given(invitationManager.accept(10L, INVITEE_ID))
                 .willReturn(newParticipant);
 
         // when
-        flagInvitationService.updateStatus(10L, INVITEE_ID, FlagInvitationStatus.ACCEPTED);
+        flagInvitationService.accept(10L, INVITEE_ID);
 
         // then
-        verify(invitationManager).updateStatus(10L, INVITEE_ID, FlagInvitationStatus.ACCEPTED);
+        verify(invitationManager).accept(10L, INVITEE_ID);
         verify(flagRepository).saveParticipant(newParticipant);
         verify(invitationRepository).deleteById(10L);
     }

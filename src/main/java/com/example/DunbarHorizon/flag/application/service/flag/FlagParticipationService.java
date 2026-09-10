@@ -6,6 +6,7 @@ import com.example.DunbarHorizon.flag.domain.flag.FlagParticipationManager;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -16,6 +17,8 @@ public class FlagParticipationService implements FlagParticipationUseCase {
     private final FlagParticipationManager flagParticipationManager;
 
     @Override
+    // Flag 행을 잠근 뒤 countParticipants가 먼저 커밋한 참여자를 읽어야 정원을 지킬 수 있다.
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void participateInFlag(Long flagId, Long userId) {
         FlagParticipant newParticipant = flagParticipationManager.participate(flagId, userId);
         flagRepository.saveParticipant(newParticipant);

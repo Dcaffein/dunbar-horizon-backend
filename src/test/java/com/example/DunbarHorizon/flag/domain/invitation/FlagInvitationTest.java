@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.domain.invitation;
 
 import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationAccessException;
-import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationInvalidException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -15,12 +14,13 @@ class FlagInvitationTest {
     private static final Long INVITEE_ID = 3L;
 
     @Test
-    @DisplayName("초대 상태는 ACCEPTED로만 변경할 수 있다")
-    void updateStatus_UnsupportedStatus_Throws() {
+    @DisplayName("초대받은 사람은 초대를 수락할 수 있다")
+    void accept_ByInvitee_Succeeds() {
+        // given
         FlagInvitation invitation = FlagInvitation.create(FLAG_ID, INVITER_ID, INVITEE_ID);
 
-        assertThatThrownBy(() -> invitation.updateStatus(INVITEE_ID, null))
-                .isInstanceOf(FlagInvitationInvalidException.class);
+        // when / then
+        assertThatNoException().isThrownBy(() -> invitation.accept(INVITEE_ID));
     }
 
     @Test

@@ -213,7 +213,7 @@ class FlagInvitationManagerTest {
         given(flagParticipationManager.participateByInvitation(FLAG_ID, INVITEE_ID)).willReturn(participant);
 
         // when
-        FlagParticipant result = policy.updateStatus(10L, INVITEE_ID, FlagInvitationStatus.ACCEPTED);
+        FlagParticipant result = policy.accept(10L, INVITEE_ID);
 
         // then
         assertThat(result.getParticipantId()).isEqualTo(INVITEE_ID);
@@ -231,7 +231,7 @@ class FlagInvitationManagerTest {
                 .willThrow(new FlagParticipationDuplicateException(FLAG_ID, INVITEE_ID));
 
         // when / then
-        assertThatThrownBy(() -> policy.updateStatus(10L, INVITEE_ID, FlagInvitationStatus.ACCEPTED))
+        assertThatThrownBy(() -> policy.accept(10L, INVITEE_ID))
                 .isInstanceOf(FlagParticipationDuplicateException.class);
     }
 
@@ -247,7 +247,7 @@ class FlagInvitationManagerTest {
                 .willThrow(new FlagDeadlinePassedException());
 
         // when / then
-        assertThatThrownBy(() -> policy.updateStatus(10L, INVITEE_ID, FlagInvitationStatus.ACCEPTED))
+        assertThatThrownBy(() -> policy.accept(10L, INVITEE_ID))
                 .isInstanceOf(FlagDeadlinePassedException.class);
     }
 
@@ -262,7 +262,7 @@ class FlagInvitationManagerTest {
 
         // when / then
         Long otherId = 99L;
-        assertThatThrownBy(() -> policy.updateStatus(10L, otherId, FlagInvitationStatus.ACCEPTED))
+        assertThatThrownBy(() -> policy.accept(10L, otherId))
                 .isInstanceOf(FlagInvitationAccessException.class);
     }
 

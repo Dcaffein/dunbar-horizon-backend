@@ -48,7 +48,9 @@ public class FlagInvitationController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid FlagInvitationStatusUpdateRequest request
     ) {
-        flagInvitationUseCase.updateStatus(invitationId, currentUserId, request.status());
+        switch (request.status()) {
+            case ACCEPTED -> flagInvitationUseCase.accept(invitationId, currentUserId);
+        }
         return ResponseEntity.noContent().build();
     }
 
