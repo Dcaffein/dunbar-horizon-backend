@@ -22,7 +22,8 @@ import java.util.Map;
  * 컨트롤러를 거쳐 나온 예외의 출구.
  *
  * <p>시큐리티 필터 체인에서 나오는 예외는 여기까지 오지 않는다. 인증 실패는
- * {@code JwtAuthenticationEntryPoint}가 맡는다. 응답 형식을 바꿀 때는 두 곳을 함께 고쳐야 한다.
+ * {@code JwtAuthenticationEntryPoint}, 인가 실패는 {@code JwtAccessDeniedHandler}가 맡는다.
+ * 응답 형식을 바꿀 때는 세 곳을 함께 고쳐야 한다.
  *
  * <p>응답 {@code message}에 예외의 원본 메시지를 실어도 되는 것은 {@link BusinessException}뿐이다.
  * 그건 우리가 쓴 문장이기 때문이다. 그 외 예외는 우리가 새로 쓴 문구를 넣는다.
