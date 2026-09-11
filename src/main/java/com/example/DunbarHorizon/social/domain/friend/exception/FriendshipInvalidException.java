@@ -1,9 +1,9 @@
 package com.example.DunbarHorizon.social.domain.friend.exception;
 
-import org.springframework.http.HttpStatus;
+import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;
 
 public class FriendshipInvalidException extends FriendException {
     public FriendshipInvalidException(String message) {
-        super(message, HttpStatus.CONFLICT);
+        super(SocialErrorCode.FRIENDSHIP_INVALID, message);
     }
 }

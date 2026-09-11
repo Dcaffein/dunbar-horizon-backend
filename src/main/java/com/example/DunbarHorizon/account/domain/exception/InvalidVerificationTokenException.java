@@ -1,7 +1,5 @@
 package com.example.DunbarHorizon.account.domain.exception;
 
-import org.springframework.http.HttpStatus;
-
 /**
  * 가입 인증 토큰이 만료되었거나, 존재하지 않거나, 이미 사용되었다.
  *
@@ -10,6 +8,6 @@ import org.springframework.http.HttpStatus;
  */
 public class InvalidVerificationTokenException extends AccountException {
     public InvalidVerificationTokenException() {
-        super("유효하지 않거나 만료된 인증 링크입니다.", HttpStatus.GONE);
+        super(AccountErrorCode.ACCOUNT_VERIFICATION_TOKEN_INVALID, "유효하지 않거나 만료된 인증 링크입니다.");
     }
 }

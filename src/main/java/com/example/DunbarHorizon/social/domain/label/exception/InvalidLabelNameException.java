@@ -1,9 +1,9 @@
 package com.example.DunbarHorizon.social.domain.label.exception;
 
-import org.springframework.http.HttpStatus;
+import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;
 
 public class InvalidLabelNameException extends LabelException {
     public InvalidLabelNameException(String message) {
-        super(message, HttpStatus.BAD_REQUEST);
+        super(SocialErrorCode.LABEL_INVALID_NAME, message);
     }
 }

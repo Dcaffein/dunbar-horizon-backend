@@ -1,10 +1,10 @@
 package com.example.DunbarHorizon.flag.domain.invitation.exception;
 
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagException;
-import org.springframework.http.HttpStatus;
+import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;
 
 public class FlagInvitationAccessException extends FlagException {
     public FlagInvitationAccessException(String message) {
-        super(message, HttpStatus.FORBIDDEN);
+        super(FlagErrorCode.FLAG_INVITATION_ACCESS_DENIED, message);
     }
 }

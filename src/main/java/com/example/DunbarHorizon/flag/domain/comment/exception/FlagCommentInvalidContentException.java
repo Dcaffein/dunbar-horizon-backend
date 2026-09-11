@@ -1,9 +1,9 @@
 package com.example.DunbarHorizon.flag.domain.comment.exception;
 
-import org.springframework.http.HttpStatus;
+import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;
 
 public class FlagCommentInvalidContentException extends FlagCommentException {
     public FlagCommentInvalidContentException(String message) {
-        super(message, HttpStatus.BAD_REQUEST);
+        super(FlagErrorCode.FLAG_COMMENT_INVALID_CONTENT, message);
     }
 }

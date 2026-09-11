@@ -1,9 +1,9 @@
 package com.example.DunbarHorizon.flag.domain.flag.exception;
 
-import org.springframework.http.HttpStatus;
+import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;
 
 public class FlagAuthorizationException  extends FlagException {
     public FlagAuthorizationException(String message) {
-        super(message, HttpStatus.FORBIDDEN);
+        super(FlagErrorCode.FLAG_ACCESS_DENIED, message);
     }
 }
