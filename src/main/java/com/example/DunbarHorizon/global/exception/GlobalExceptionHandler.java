@@ -6,11 +6,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
@@ -79,12 +81,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoResourceFoundException(NoResourceFoundException e) {
+        log.warn("[No Resource Found] {}", e.getResourcePath());
+
         return build(GlobalErrorCode.RESOURCE_NOT_FOUND,
                 "요청하신 경로를 찾을 수 없습니다: " + e.getResourcePath());
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
+        log.warn("[Method Not Allowed] {}", e.getMethod());
+
         return build(GlobalErrorCode.METHOD_NOT_ALLOWED,
                 "지원하지 않는 요청 메서드입니다: " + e.getMethod());
     }
@@ -94,6 +100,31 @@ public class GlobalExceptionHandler {
         log.warn("[Request Binding] {}", e.getMessage());
 
         return build(GlobalErrorCode.INVALID_REQUEST, "요청 파라미터가 올바르지 않습니다.");
+    }
+
+    /**
+     * 경로변수·쿼리파라미터의 타입이 맞지 않는 경우. {@code /api/v1/flags/abc} 같은 요청이다.
+     *
+     * <p>{@code TypeMismatchException} 계열이라 {@link ServletRequestBindingException} 핸들러가
+     * 잡지 못한다. 상속 관계가 없다.
+     *
+     * <p>응답에는 파라미터 이름만 싣는다. 사용자가 보낸 값을 되비추면 그대로 반사되는 통로가 된다.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        log.warn("[Type Mismatch] parameter={}, requiredType={}",
+                e.getName(),
+                e.getRequiredType() != null ? e.getRequiredType().getSimpleName() : "unknown");
+
+        return build(GlobalErrorCode.INVALID_PARAMETER_TYPE,
+                "요청 파라미터의 형식이 올바르지 않습니다: " + e.getName());
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
+        log.warn("[Unsupported Media Type] {}", e.getContentType());
+
+        return build(GlobalErrorCode.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 요청 형식입니다.");
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
