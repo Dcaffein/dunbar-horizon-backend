@@ -25,6 +25,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationEntryPoint unauthorizedHandler;
+    private final JwtAccessDeniedHandler accessDeniedHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     private final CustomOAuth2UserService customOAuth2UserService;
@@ -38,6 +39,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(unauthorizedHandler)
+                        .accessDeniedHandler(accessDeniedHandler)
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

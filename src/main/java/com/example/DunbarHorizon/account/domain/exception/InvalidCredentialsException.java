@@ -1,7 +1,5 @@
 package com.example.DunbarHorizon.account.domain.exception;
 
-import org.springframework.http.HttpStatus;
-
 /**
  * 로그인 실패. 미가입 이메일·LOCAL 자격증명 없음·비밀번호 불일치를 구분하지 않는다.
  *
@@ -13,6 +11,6 @@ import org.springframework.http.HttpStatus;
  */
 public class InvalidCredentialsException extends AccountException {
     public InvalidCredentialsException() {
-        super("이메일 또는 비밀번호가 올바르지 않습니다.", HttpStatus.UNAUTHORIZED);
+        super(AccountErrorCode.ACCOUNT_INVALID_CREDENTIALS, "이메일 또는 비밀번호가 올바르지 않습니다.");
     }
 }

@@ -1,10 +1,10 @@
 package com.example.DunbarHorizon.trace.domain.exception;
 
 import com.example.DunbarHorizon.global.exception.BusinessException;
-import org.springframework.http.HttpStatus;
+import com.example.DunbarHorizon.global.exception.ErrorCode;
 
 public abstract class TraceException extends BusinessException {
-    protected TraceException(String message, HttpStatus httpStatus) {
-        super(message, httpStatus);
+    protected TraceException(ErrorCode errorCode, String message) {
+        super(errorCode, message);
     }
 }

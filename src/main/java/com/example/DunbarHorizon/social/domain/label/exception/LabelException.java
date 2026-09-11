@@ -1,10 +1,10 @@
 package com.example.DunbarHorizon.social.domain.label.exception;
 
 import com.example.DunbarHorizon.global.exception.BusinessException;
-import org.springframework.http.HttpStatus;
+import com.example.DunbarHorizon.global.exception.ErrorCode;
 
 public abstract class LabelException extends BusinessException {
-    protected LabelException(String message, HttpStatus httpStatus) {
-        super(message, httpStatus);
+    protected LabelException(ErrorCode errorCode, String message) {
+        super(errorCode, message);
     }
 }

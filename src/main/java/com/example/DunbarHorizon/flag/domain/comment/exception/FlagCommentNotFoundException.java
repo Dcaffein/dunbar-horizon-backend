@@ -1,9 +1,9 @@
 package com.example.DunbarHorizon.flag.domain.comment.exception;
 
-import org.springframework.http.HttpStatus;
+import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;
 
 public class FlagCommentNotFoundException extends FlagCommentException {
     public FlagCommentNotFoundException(Long id) {
-        super("존재하지 않는 flagComment : " + id, HttpStatus.NOT_FOUND);
+        super(FlagErrorCode.FLAG_COMMENT_NOT_FOUND, "존재하지 않는 flagComment : " + id);
     }
 }

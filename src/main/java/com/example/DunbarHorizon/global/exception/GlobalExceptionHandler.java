@@ -2,31 +2,42 @@ package com.example.DunbarHorizon.global.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 컨트롤러를 거쳐 나온 예외의 출구.
+ *
+ * <p>시큐리티 필터 체인에서 나오는 예외는 여기까지 오지 않는다. 인증 실패는
+ * {@code JwtAuthenticationEntryPoint}, 인가 실패는 {@code JwtAccessDeniedHandler}가 맡는다.
+ * 응답 형식을 바꿀 때는 세 곳을 함께 고쳐야 한다.
+ *
+ * <p>응답 {@code message}에 예외의 원본 메시지를 실어도 되는 것은 {@link BusinessException}뿐이다.
+ * 그건 우리가 쓴 문장이기 때문이다. 그 외 예외는 우리가 새로 쓴 문구를 넣는다.
+ */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
-        log.warn("{}: {}", e.getClass().getSimpleName(), e.getMessage());
+        log.warn("{}: {}", e.getCode(), e.getMessage());
 
         ErrorResponse response = ErrorResponse.builder()
-                .error(e.getClass().getSimpleName())
+                .error(e.getCode())
                 .message(e.getMessage())
                 .build();
 
@@ -39,14 +50,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException e) {
         log.warn("[Access Denied] {}", e.getMessage());
 
-        ErrorResponse response = ErrorResponse.builder()
-                .error("AccessDeniedException")
-                .message("해당 리소스에 접근할 권한이 없습니다.")
-                .build();
-
-        return ResponseEntity
-                .status(HttpStatus.FORBIDDEN)
-                .body(response);
+        return build(GlobalErrorCode.ACCESS_DENIED, "해당 리소스에 접근할 권한이 없습니다.");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -59,13 +63,13 @@ public class GlobalExceptionHandler {
         }
 
         ErrorResponse response = ErrorResponse.builder()
-                .error("InvalidInputException")
+                .error(GlobalErrorCode.INVALID_INPUT.code())
                 .message("입력값이 올바르지 않습니다.")
                 .validation(errors)
                 .build();
 
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+                .status(GlobalErrorCode.INVALID_INPUT.status())
                 .body(response);
     }
 
@@ -73,70 +77,83 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleJsonException(HttpMessageNotReadableException e) {
         log.warn("[JSON Parse Exception] {}", e.getMessage());
 
-        ErrorResponse response = ErrorResponse.builder()
-                .error("InvalidJsonFormatException")
-                .message("요청 JSON 형식이 올바르지 않습니다.")
-                .build();
-
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(response);
+        return build(GlobalErrorCode.INVALID_JSON_FORMAT, "요청 JSON 형식이 올바르지 않습니다.");
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoResourceFoundException(NoResourceFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ErrorResponse.builder()
-                        .error("NotFoundException")
-                        .message("요청하신 경로를 찾을 수 없습니다: " + e.getResourcePath())
-                        .build());
+        log.warn("[No Resource Found] {}", e.getResourcePath());
+
+        return build(GlobalErrorCode.RESOURCE_NOT_FOUND,
+                "요청하신 경로를 찾을 수 없습니다: " + e.getResourcePath());
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
-        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
-                .body(ErrorResponse.builder()
-                        .error("MethodNotAllowedException")
-                        .message("지원하지 않는 요청 메서드입니다: " + e.getMethod())
-                        .build());
+        log.warn("[Method Not Allowed] {}", e.getMethod());
+
+        return build(GlobalErrorCode.METHOD_NOT_ALLOWED,
+                "지원하지 않는 요청 메서드입니다: " + e.getMethod());
     }
 
     @ExceptionHandler(ServletRequestBindingException.class)
     public ResponseEntity<ErrorResponse> handleRequestBinding(ServletRequestBindingException e) {
         log.warn("[Request Binding] {}", e.getMessage());
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponse.builder()
-                        .error("InvalidRequestException")
-                        .message("요청 파라미터가 올바르지 않습니다.")
-                        .build());
+        return build(GlobalErrorCode.INVALID_REQUEST, "요청 파라미터가 올바르지 않습니다.");
+    }
+
+    /**
+     * 경로변수·쿼리파라미터의 타입이 맞지 않는 경우. {@code /api/v1/flags/abc} 같은 요청이다.
+     *
+     * <p>{@code TypeMismatchException} 계열이라 {@link ServletRequestBindingException} 핸들러가
+     * 잡지 못한다. 상속 관계가 없다.
+     *
+     * <p>응답에는 파라미터 이름만 싣는다. 사용자가 보낸 값을 되비추면 그대로 반사되는 통로가 된다.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        log.warn("[Type Mismatch] parameter={}, requiredType={}",
+                e.getName(),
+                e.getRequiredType() != null ? e.getRequiredType().getSimpleName() : "unknown");
+
+        return build(GlobalErrorCode.INVALID_PARAMETER_TYPE,
+                "요청 파라미터의 형식이 올바르지 않습니다: " + e.getName());
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
+        log.warn("[Unsupported Media Type] {}", e.getContentType());
+
+        return build(GlobalErrorCode.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 요청 형식입니다.");
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
     public ResponseEntity<ErrorResponse> handleOptimisticLockingFailureException(OptimisticLockingFailureException e) {
         log.warn("[Optimistic Locking Failure] {}", e.getMessage());
 
-        ErrorResponse response = ErrorResponse.builder()
-                .error("ConcurrentModificationException")
-                .message("다른 요청과 충돌이 발생했습니다. 잠시 후 다시 시도해주세요.")
-                .build();
-
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(response);
+        return build(GlobalErrorCode.CONCURRENT_MODIFICATION,
+                "다른 요청과 충돌이 발생했습니다. 잠시 후 다시 시도해주세요.");
     }
 
+    /**
+     * 예상하지 못한 예외를 전부 500 + 고정 문구로 덮는다. 스택트레이스·SQL·드라이버 메시지가
+     * 응답으로 새지 않게 하는 안전장치이므로 원본은 로그로만 남긴다.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception e) {
         log.error("[Unhandled Exception] ", e);
 
-        ErrorResponse response = ErrorResponse.builder()
-                .error("InternalServerException")
-                .message("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.")
-                .build();
+        return build(GlobalErrorCode.INTERNAL_SERVER_ERROR,
+                "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    }
 
+    private ResponseEntity<ErrorResponse> build(GlobalErrorCode errorCode, String message) {
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(response);
+                .status(errorCode.status())
+                .body(ErrorResponse.builder()
+                        .error(errorCode.code())
+                        .message(message)
+                        .build());
     }
 }

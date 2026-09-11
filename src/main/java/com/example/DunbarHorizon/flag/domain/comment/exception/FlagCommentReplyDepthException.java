@@ -1,9 +1,9 @@
 package com.example.DunbarHorizon.flag.domain.comment.exception;
 
-import org.springframework.http.HttpStatus;
+import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;
 
 public class FlagCommentReplyDepthException extends FlagCommentException {
     public FlagCommentReplyDepthException() {
-        super("대댓글에는 답글을 달 수 없습니다.", HttpStatus.BAD_REQUEST);
+        super(FlagErrorCode.FLAG_COMMENT_REPLY_DEPTH_EXCEEDED, "대댓글에는 답글을 달 수 없습니다.");
     }
 }

@@ -91,8 +91,8 @@ class AuthErrorResponseConsistencyTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("sharedTokenExceptions")
-    @DisplayName("두 출구 모두 응답의 error를 예외 클래스명에서 파생시킨다")
-    void errorNameIsDerivedFromExceptionClass(String label, BusinessException exception) throws IOException {
+    @DisplayName("두 출구 모두 예외가 들고 있는 코드를 error로 내보내고 클래스명을 노출하지 않는다")
+    void errorNameIsErrorCodeNotClassName(String label, BusinessException exception) throws IOException {
         // given
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -103,8 +103,9 @@ class AuthErrorResponseConsistencyTest {
         });
         JsonNode filterPathBody = objectMapper.readTree(response.getContentAsString());
 
-        // then - 하드코딩된 문자열이 아니라 클래스명에서 파생되어야 드리프트가 발생하지 않는다
+        // then - 클래스명에서 파생시키면 이름을 바꾸는 순간 계약이 조용히 깨진다
         assertThat(filterPathBody.get("error").asText())
-                .isEqualTo(exception.getClass().getSimpleName());
+                .isEqualTo(exception.getCode())
+                .isNotEqualTo(exception.getClass().getSimpleName());
     }
 }
