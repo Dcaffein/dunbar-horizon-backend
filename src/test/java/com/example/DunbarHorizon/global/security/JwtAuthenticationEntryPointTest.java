@@ -39,7 +39,7 @@ class JwtAuthenticationEntryPointTest {
     }
 
     @Test
-    @DisplayName("만료 예외가 저장되어 있으면 예외에서 파생된 error와 message로 401을 응답한다")
+    @DisplayName("만료 예외가 저장되어 있으면 예외가 들고 있는 코드와 message로 401을 응답한다")
     void commence_ExpiredToken() throws IOException {
         // given
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -51,12 +51,12 @@ class JwtAuthenticationEntryPointTest {
 
         // then
         assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_UNAUTHORIZED);
-        assertThat(body.get("error").asText()).isEqualTo("ExpiredTokenException");
+        assertThat(body.get("error").asText()).isEqualTo("AUTH_TOKEN_EXPIRED");
         assertThat(body.get("message").asText()).isEqualTo("만료된 토큰입니다.");
     }
 
     @Test
-    @DisplayName("위조 토큰 예외가 저장되어 있으면 InvalidTokenException으로 401을 응답한다")
+    @DisplayName("위조 토큰 예외가 저장되어 있으면 AUTH_TOKEN_INVALID로 401을 응답한다")
     void commence_InvalidToken() throws IOException {
         // given
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -68,7 +68,7 @@ class JwtAuthenticationEntryPointTest {
 
         // then
         assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_UNAUTHORIZED);
-        assertThat(body.get("error").asText()).isEqualTo("InvalidTokenException");
+        assertThat(body.get("error").asText()).isEqualTo("AUTH_TOKEN_INVALID");
         assertThat(body.get("message").asText()).isEqualTo("유효하지 않은 토큰입니다.");
     }
 
@@ -84,7 +84,7 @@ class JwtAuthenticationEntryPointTest {
 
         // then
         assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_UNAUTHORIZED);
-        assertThat(body.get("error").asText()).isEqualTo("UnAuthorizedException");
+        assertThat(body.get("error").asText()).isEqualTo("UNAUTHORIZED");
         assertThat(body.get("message").asText()).isEqualTo("인증되지 않은 사용자입니다.");
     }
 
@@ -101,7 +101,7 @@ class JwtAuthenticationEntryPointTest {
 
         // then
         assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_UNAUTHORIZED);
-        assertThat(body.get("error").asText()).isEqualTo("UnAuthorizedException");
+        assertThat(body.get("error").asText()).isEqualTo("UNAUTHORIZED");
         assertThat(body.get("message").asText()).doesNotContain("내부 구현 세부사항");
     }
 }

@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.global.security;
 
 import com.example.DunbarHorizon.global.exception.BusinessException;
 import com.example.DunbarHorizon.global.exception.ErrorResponse;
+import com.example.DunbarHorizon.global.exception.GlobalErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -32,19 +33,19 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
                 authException.getMessage());
 
         // 토큰이 아예 없어 예외조차 발생하지 않은 경우의 기본값.
-        String errorName = "UnAuthorizedException";
+        String errorCode = GlobalErrorCode.UNAUTHORIZED.code();
         String message = "인증되지 않은 사용자입니다.";
 
         // JwtTokenProvider가 jjwt 예외를 BusinessException으로 변환해두므로 타입 나열이 필요 없다.
-        // GlobalExceptionHandler와 동일하게 예외에서 error/message를 파생시킨다.
+        // GlobalExceptionHandler와 동일하게 예외가 들고 있는 코드를 그대로 쓴다.
         // 두 출구가 같은 방식으로 값을 뽑아내므로 응답 어휘가 어긋날 수 없다.
         if (exception instanceof BusinessException businessException) {
-            errorName = businessException.getClass().getSimpleName();
+            errorCode = businessException.getCode();
             message = businessException.getMessage();
         }
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .error(errorName)
+                .error(errorCode)
                 .message(message)
                 .build();
 

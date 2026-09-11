@@ -58,7 +58,7 @@ class AccountControllerTest extends BaseControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isGone())
-                .andExpect(jsonPath("$.error").value("InvalidVerificationTokenException"));
+                .andExpect(jsonPath("$.error").value("ACCOUNT_VERIFICATION_TOKEN_INVALID"));
 
         verify(authCookieManager, never()).addAccessTokenCookie(any(), any());
     }
@@ -74,7 +74,7 @@ class AccountControllerTest extends BaseControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error").value("InvalidCredentialsException"))
+                .andExpect(jsonPath("$.error").value("ACCOUNT_INVALID_CREDENTIALS"))
                 .andExpect(jsonPath("$.message").value("이메일 또는 비밀번호가 올바르지 않습니다."));
     }
 
@@ -134,7 +134,7 @@ class AccountControllerTest extends BaseControllerTest {
         mockMvc.perform(patch("/api/v1/auth/tokens")
                         .cookie(new Cookie("refresh_token", oldRt)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error").value("ExpiredTokenException"))
+                .andExpect(jsonPath("$.error").value("AUTH_TOKEN_EXPIRED"))
                 .andExpect(jsonPath("$.message").value("만료된 토큰입니다."));
     }
 
@@ -149,7 +149,7 @@ class AccountControllerTest extends BaseControllerTest {
         mockMvc.perform(patch("/api/v1/auth/tokens")
                         .cookie(new Cookie("refresh_token", forgedRt)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error").value("InvalidTokenException"));
+                .andExpect(jsonPath("$.error").value("AUTH_TOKEN_INVALID"));
     }
 
     @Test
@@ -161,7 +161,7 @@ class AccountControllerTest extends BaseControllerTest {
         // when & then
         mockMvc.perform(patch("/api/v1/auth/tokens"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error").value("RefreshTokenNotFoundException"));
+                .andExpect(jsonPath("$.error").value("ACCOUNT_REFRESH_TOKEN_NOT_FOUND"));
     }
 
     @Test
@@ -175,7 +175,7 @@ class AccountControllerTest extends BaseControllerTest {
         mockMvc.perform(patch("/api/v1/auth/tokens")
                         .cookie(new Cookie("refresh_token", stolenRt)))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error").value("TokenTheftDetectedException"));
+                .andExpect(jsonPath("$.error").value("ACCOUNT_TOKEN_THEFT_DETECTED"));
     }
 
     @Test
@@ -209,7 +209,7 @@ class AccountControllerTest extends BaseControllerTest {
 
         mockMvc.perform(get("/api/v1/auth/verifications/{token}", "expired-token"))
                 .andExpect(status().isGone())
-                .andExpect(jsonPath("$.error").value("InvalidVerificationTokenException"));
+                .andExpect(jsonPath("$.error").value("ACCOUNT_VERIFICATION_TOKEN_INVALID"));
     }
 
 }
