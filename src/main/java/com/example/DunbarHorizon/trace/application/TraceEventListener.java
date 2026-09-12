@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.trace.application;
 
-import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
+
+import java.util.Map;import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
 import com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
@@ -14,7 +15,6 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Component

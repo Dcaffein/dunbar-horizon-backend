@@ -1,6 +1,8 @@
 package com.example.DunbarHorizon.social.domain.friend;
 
-import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestAuthorizationException;
+
+
+import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestAuthorizationException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestInvalidException;
 
 public enum FriendRequestStatus {
@@ -9,10 +11,7 @@ public enum FriendRequestStatus {
         @Override
         public FriendRequestStatus update(FriendRequest request, Long userId) {
             if (request.getStatus() != HIDDEN) {
-                return throwInvalidException(
-                        "[%s] 상태에서 [%s] 상태로 변경할 수 없습니다.",
-                        request.getStatus(), PENDING
-                );
+                return throwTransitionInvalid(request.getStatus(), PENDING);
             }
             validateReceiver(request, userId);
             return this;
@@ -28,10 +27,7 @@ public enum FriendRequestStatus {
         @Override
         public FriendRequestStatus update(FriendRequest request, Long userId) {
             if (request.getStatus() != PENDING && request.getStatus() != HIDDEN) {
-                return throwInvalidException(
-                        "[%s] 상태에서 [%s] 상태로 변경할 수 없습니다.",
-                        request.getStatus(), ACCEPTED
-                );
+                return throwTransitionInvalid(request.getStatus(), ACCEPTED);
             }
             validateReceiver(request, userId);
             return this;
@@ -42,10 +38,7 @@ public enum FriendRequestStatus {
         @Override
         public FriendRequestStatus update(FriendRequest request, Long userId) {
             if (request.getStatus() != PENDING) {
-                return throwInvalidException(
-                        "[%s] 상태에서 [%s] 상태로 변경할 수 없습니다.",
-                        request.getStatus(), HIDDEN
-                );
+                return throwTransitionInvalid(request.getStatus(), HIDDEN);
             }
             validateReceiver(request, userId);
             return this;
@@ -53,14 +46,11 @@ public enum FriendRequestStatus {
     };
 
     public FriendRequestStatus update(FriendRequest request, Long userId) {
-        return throwInvalidException(
-                "[%s] 상태에서 [%s] 상태로 변경할 수 없습니다.",
-                request.getStatus(), this
-        );
+        return throwTransitionInvalid(request.getStatus(), this);
     }
 
     public void cancel(FriendRequest request, Long userId) {
-        throwInvalidException("[%s] 상태에서는 취소할 수 없습니다.", this);
+        throwCancelNotAllowed(this);
     }
 
     protected void validateReceiver(FriendRequest request, Long userId) {
@@ -75,7 +65,13 @@ public enum FriendRequestStatus {
         }
     }
 
-    private static FriendRequestStatus throwInvalidException(String message, Object... args) {
-        throw new FriendRequestInvalidException(String.format(message, args));
+    private static FriendRequestStatus throwTransitionInvalid(FriendRequestStatus from, FriendRequestStatus to) {
+        throw new FriendRequestInvalidException(SocialErrorCode.FRIEND_REQUEST_STATUS_TRANSITION_INVALID,
+                ErrorContext.of("from", from).and("to", to));
+    }
+
+    private static void throwCancelNotAllowed(FriendRequestStatus status) {
+        throw new FriendRequestInvalidException(SocialErrorCode.FRIEND_REQUEST_CANCEL_NOT_ALLOWED,
+                ErrorContext.of("status", status));
     }
 }

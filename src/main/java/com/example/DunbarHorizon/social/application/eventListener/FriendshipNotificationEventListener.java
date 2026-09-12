@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.application.eventListener;
 
-import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
+
+import java.util.Map;import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +11,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import java.util.Map;
 
 @Component
 @RequiredArgsConstructor

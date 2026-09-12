@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.buzz.domain;
 
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
+
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzErrorCode;import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -59,7 +60,7 @@ public class BuzzComment {
 
     private static void validateContent(String text) {
         if (text == null || text.isBlank() || text.length() > TEXT_MAX_LENGTH) {
-            throw new BuzzInvalidStateException(TEXT_LENGTH_MESSAGE);
+            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_COMMENT_INVALID_TEXT);
         }
     }
 }

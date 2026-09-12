@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.flag.application.service.comment;
 
-import com.example.DunbarHorizon.flag.application.dto.result.CommentResult;
+
+import java.util.Map;import com.example.DunbarHorizon.flag.application.dto.result.CommentResult;
 import com.example.DunbarHorizon.flag.application.port.out.FlagUserPort;
 import com.example.DunbarHorizon.flag.domain.comment.FlagComment;
 import com.example.DunbarHorizon.flag.domain.comment.repository.FlagCommentRepository;
@@ -19,7 +20,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;

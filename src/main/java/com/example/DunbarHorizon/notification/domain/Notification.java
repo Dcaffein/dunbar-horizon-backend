@@ -54,14 +54,14 @@ public class Notification {
 
     public void read(Long currentUserId) {
         if (!isOwnedBy(currentUserId)) {
-            throw new NotificationAccessDeniedException("본인의 알림만 상태를 변경할 수 있습니다.");
+            throw new NotificationAccessDeniedException(id, currentUserId);
         }
         this.isRead = true;
     }
 
     public void requireOwnership(Long currentUserId) {
         if (!isOwnedBy(currentUserId)) {
-            throw new NotificationAccessDeniedException("본인의 알림만 삭제할 수 있습니다.");
+            throw new NotificationAccessDeniedException(id, currentUserId);
         }
     }
 

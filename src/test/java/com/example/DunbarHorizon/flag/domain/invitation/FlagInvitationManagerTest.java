@@ -244,7 +244,7 @@ class FlagInvitationManagerTest {
 
         given(invitationRepository.findById(10L)).willReturn(Optional.of(invitation));
         given(flagParticipationManager.participateByInvitation(FLAG_ID, INVITEE_ID))
-                .willThrow(new FlagDeadlinePassedException());
+                .willThrow(new FlagDeadlinePassedException(1L, null));
 
         // when / then
         assertThatThrownBy(() -> policy.accept(10L, INVITEE_ID))

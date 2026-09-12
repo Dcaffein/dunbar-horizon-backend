@@ -1,6 +1,8 @@
 package com.example.DunbarHorizon.flag.domain.invitation;
 
-import com.example.DunbarHorizon.flag.domain.flag.Flag;
+
+
+import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipationManager;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
@@ -44,11 +46,11 @@ public class FlagInvitationManager {
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
 
         if (!flag.isRecruiting()) {
-            throw new FlagInvalidStatusException("모집 중인 플래그에만 초대할 수 있습니다.");
+            throw new FlagInvalidStatusException(FlagErrorCode.FLAG_NOT_RECRUITING, ErrorContext.of("flagId", flag.getId()));
         }
 
         if (flag.getHostId().equals(inviteeId)) {
-            throw new FlagAuthorizationException("호스트는 초대 대상이 될 수 없습니다.");
+            throw new FlagAuthorizationException(FlagErrorCode.FLAG_HOST_NOT_ELIGIBLE, ErrorContext.of("flagId", flag.getId()).and("userId", inviteeId));
         }
 
         if (!flag.getHostId().equals(inviterId)) {
@@ -56,7 +58,7 @@ public class FlagInvitationManager {
                     .findParticipant(flagId, inviterId)
                     .orElseThrow(() -> new FlagParticipantNotFoundException(inviterId));
             if (!inviter.isCanInvite()) {
-                throw new FlagAuthorizationException("초대 권한이 없습니다.");
+                throw new FlagAuthorizationException(FlagErrorCode.FLAG_INVITE_NOT_ALLOWED, ErrorContext.of("flagId", flag.getId()).and("userId", inviterId));
             }
         }
 

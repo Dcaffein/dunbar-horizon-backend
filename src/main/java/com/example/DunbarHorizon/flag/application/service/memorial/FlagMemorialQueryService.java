@@ -1,6 +1,8 @@
 package com.example.DunbarHorizon.flag.application.service.memorial;
 
-import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialQueryUseCase;
+
+
+import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialQueryUseCase;
 import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 import com.example.DunbarHorizon.flag.application.dto.result.MemorialListResult;
 import com.example.DunbarHorizon.flag.application.dto.result.MemorialResult;
@@ -31,7 +33,7 @@ public class FlagMemorialQueryService implements FlagMemorialQueryUseCase {
         Long hostId = flagRepository.findHostIdById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
         if (!hostId.equals(viewerId) && !flagRepository.isParticipating(flagId, viewerId)) {
-            throw new FlagAuthorizationException("플래그 참여자만 Memorial을 조회할 수 있습니다.");
+            throw new FlagAuthorizationException(FlagErrorCode.FLAG_PARTICIPANT_ONLY, ErrorContext.of("flagId", flagId).and("userId", viewerId));
         }
 
         List<FlagMemorial> memorials = memorialRepository.findAllByFlagId(flagId);

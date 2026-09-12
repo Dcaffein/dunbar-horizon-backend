@@ -1,6 +1,8 @@
 package com.example.DunbarHorizon.flag.domain.invitation;
 
-import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationAccessException;
+
+
+import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationAccessException;
 import com.example.DunbarHorizon.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -52,13 +54,13 @@ public class FlagInvitation extends BaseTimeEntity {
 
     private void validateInvitee(Long requesterId) {
         if (!inviteeId.equals(requesterId)) {
-            throw new FlagInvitationAccessException("초대받은 본인만 응답할 수 있습니다.");
+            throw new FlagInvitationAccessException(FlagErrorCode.FLAG_INVITATION_INVITEE_ONLY, ErrorContext.of("invitationId", id).and("userId", requesterId));
         }
     }
 
     private void validateInviter(Long requesterId) {
         if (!inviterId.equals(requesterId)) {
-            throw new FlagInvitationAccessException("초대를 보낸 본인만 취소할 수 있습니다.");
+            throw new FlagInvitationAccessException(FlagErrorCode.FLAG_INVITATION_SENDER_ONLY, ErrorContext.of("invitationId", id).and("userId", requesterId));
         }
     }
 

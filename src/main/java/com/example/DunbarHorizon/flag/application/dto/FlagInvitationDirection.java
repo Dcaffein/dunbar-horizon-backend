@@ -12,7 +12,7 @@ public enum FlagInvitationDirection {
         try {
             return valueOf(value.toUpperCase(Locale.ROOT));
         } catch (RuntimeException e) {
-            throw new FlagInvitationInvalidException("direction은 received 또는 sent만 사용할 수 있습니다.");
+            throw new FlagInvitationInvalidException(value);
         }
     }
 }

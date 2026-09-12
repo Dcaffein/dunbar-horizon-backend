@@ -29,7 +29,7 @@ class GlobalExceptionHandlerTest extends BaseControllerTest {
     @DisplayName("도메인 예외의 error는 클래스명이 아니라 코드 상수다")
     void domainException_ReturnsErrorCode() throws Exception {
         // given
-        willThrow(new FlagFullCapacityException())
+        willThrow(new FlagFullCapacityException(1L, 8, 8))
                 .given(flagParticipationUseCase).participateInFlag(anyLong(), anyLong());
 
         // when & then
@@ -50,7 +50,9 @@ class GlobalExceptionHandlerTest extends BaseControllerTest {
         mockMvc.perform(post("/api/v1/flags/1/participants"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("FLAG_NOT_FOUND"))
-                .andExpect(jsonPath("$.error").value(not(containsString("Exception"))));
+                .andExpect(jsonPath("$.error").value(not(containsString("Exception"))))
+                .andExpect(jsonPath("$.message").value("요청하신 깃발을 찾을 수 없습니다."))
+                .andExpect(jsonPath("$.message").value(not(containsString("331"))));
     }
 
     @Test

@@ -7,9 +7,10 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum NotificationErrorCode implements ErrorCode {
 
-    NOTIFICATION_ACCESS_DENIED(HttpStatus.FORBIDDEN);
+    NOTIFICATION_OWNER_ONLY(HttpStatus.FORBIDDEN, "본인의 알림만 처리할 수 있습니다.");
 
     private final HttpStatus status;
+    private final String message;
 
     @Override
     public String code() {
@@ -19,5 +20,10 @@ public enum NotificationErrorCode implements ErrorCode {
     @Override
     public HttpStatus status() {
         return status;
+    }
+
+    @Override
+    public String message() {
+        return message;
     }
 }

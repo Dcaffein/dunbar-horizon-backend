@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.flag.application.eventListener;
 
-import com.example.DunbarHorizon.flag.domain.invitation.event.FlagInvitationSentEvent;
+
+import java.util.Map;import com.example.DunbarHorizon.flag.domain.invitation.event.FlagInvitationSentEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,6 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
-import java.util.Map;
 
 @Component
 @RequiredArgsConstructor

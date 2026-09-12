@@ -1,6 +1,8 @@
 package com.example.DunbarHorizon.flag.domain.flag;
 
-import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
+
+
+import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipantNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipationDuplicateException;
@@ -19,7 +21,7 @@ public class FlagParticipationManager {
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
 
         if (!friendshipChecker.areFriends(hostId, userId)) {
-            throw new FlagAuthorizationException("호스트의 친구만 참여할 수 있는 플래그입니다.");
+            throw new FlagAuthorizationException(FlagErrorCode.FLAG_FRIENDS_ONLY, ErrorContext.of("flagId", flagId).and("userId", userId));
         }
 
         return confirmParticipation(flagId, userId);

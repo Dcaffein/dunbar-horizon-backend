@@ -149,7 +149,7 @@ public class Trace extends BaseTimeAggregateRoot {
 
     private void validateNotSelf(Long visitorId, Long targetId) {
         if (Objects.equals(visitorId, targetId)) {
-            throw new TraceSelfVisitException();
+            throw new TraceSelfVisitException(visitorId);
         }
     }
 }

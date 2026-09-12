@@ -65,7 +65,7 @@ public class FriendRecognition {
 
     public void updateFriendAlias(String newAlias) {
         if (newAlias != null && newAlias.length() > Friendship.ALIAS_MAX_LENGTH) {
-            throw new InvalidFriendAliasException(Friendship.ALIAS_LENGTH_MESSAGE);
+            throw new InvalidFriendAliasException();
         }
         this.friendAlias = newAlias;
     }

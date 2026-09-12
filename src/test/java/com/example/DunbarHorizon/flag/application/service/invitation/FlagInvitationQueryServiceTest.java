@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.flag.application.service.invitation;
 
-import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
+
+import java.util.Map;import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 import com.example.DunbarHorizon.flag.application.dto.FlagInvitationDirection;
 import com.example.DunbarHorizon.flag.application.dto.result.FlagInvitationResult;
 import com.example.DunbarHorizon.flag.application.port.out.FlagUserPort;
@@ -22,7 +23,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 

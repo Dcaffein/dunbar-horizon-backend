@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.flag.application.service.memorial;
 
+import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
@@ -104,7 +105,7 @@ class FlagMemorialCommandServiceTest {
         FlagMemorial mockMemorial = mock(FlagMemorial.class);
         given(mockMemorial.getFlagId()).willReturn(FLAG_ID);
         given(memorialRepository.findById(1L)).willReturn(Optional.of(mockMemorial));
-        willThrow(new FlagAuthorizationException("후기 작성자만 접근 가능합니다."))
+        willThrow(new FlagAuthorizationException(FlagErrorCode.FLAG_MEMORIAL_AUTHOR_ONLY))
                 .given(mockMemorial).updateContent(OTHER_ID, "수정 시도");
 
         // when / then
@@ -147,7 +148,7 @@ class FlagMemorialCommandServiceTest {
         FlagMemorial mockMemorial = mock(FlagMemorial.class);
         given(mockMemorial.getFlagId()).willReturn(FLAG_ID);
         given(memorialRepository.findById(1L)).willReturn(Optional.of(mockMemorial));
-        willThrow(new FlagAuthorizationException("후기 작성자만 접근 가능합니다."))
+        willThrow(new FlagAuthorizationException(FlagErrorCode.FLAG_MEMORIAL_AUTHOR_ONLY))
                 .given(mockMemorial).validateDeletion(OTHER_ID);
 
         // when / then

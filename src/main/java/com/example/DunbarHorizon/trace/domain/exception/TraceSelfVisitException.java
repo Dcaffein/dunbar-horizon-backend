@@ -1,8 +1,11 @@
 package com.example.DunbarHorizon.trace.domain.exception;
 
+import com.example.DunbarHorizon.global.exception.ErrorContext;
+
 
 public class TraceSelfVisitException extends TraceException {
-    public TraceSelfVisitException() {
-        super(TraceErrorCode.TRACE_SELF_VISIT, "자기 자신을 방문할 수 없습니다.");
+
+    public TraceSelfVisitException(Long userId) {
+        super(TraceErrorCode.TRACE_SELF_VISIT, ErrorContext.of("userId", userId));
     }
 }

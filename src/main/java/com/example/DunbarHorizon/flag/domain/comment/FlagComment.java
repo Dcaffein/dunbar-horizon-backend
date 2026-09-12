@@ -70,25 +70,25 @@ public class FlagComment extends BaseTimeAggregateRoot {
 
     private void validateAsParent() {
         if (this.isReply()) {
-            throw new FlagCommentReplyDepthException();
+            throw new FlagCommentReplyDepthException(id);
         }
     }
 
     public void validateDeletionAuthority(Long requesterId, Long hostId) {
         if (!this.writerId.equals(requesterId) && !hostId.equals(requesterId)) {
-            throw new FlagCommentAuthorizationException("삭제 권한이 없습니다.");
+            throw new FlagCommentAuthorizationException(id, requesterId);
         }
     }
 
     private void validateWriter(Long requesterId) {
         if (!this.writerId.equals(requesterId)) {
-            throw new FlagCommentAuthorizationException("수정 권한은 작성자에게만 있습니다.");
+            throw new FlagCommentAuthorizationException(id, requesterId);
         }
     }
 
     private void validateContent(String content) {
         if (content == null || content.isBlank() || content.length() > CONTENT_MAX_LENGTH) {
-            throw new FlagCommentInvalidContentException(CONTENT_LENGTH_MESSAGE);
+            throw new FlagCommentInvalidContentException();
         }
     }
 
