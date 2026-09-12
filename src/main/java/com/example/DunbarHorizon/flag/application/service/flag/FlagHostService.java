@@ -1,6 +1,8 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagEncoreCommand;
+
+
+import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;import com.example.DunbarHorizon.flag.application.port.in.command.FlagEncoreCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
 import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
@@ -41,7 +43,8 @@ public class FlagHostService implements FlagHostUseCase {
         try {
             return flagRepository.save(encoreFlag).getId();
         } catch (DataIntegrityViolationException e) {
-            throw new FlagInvalidStatusException("이미 앵콜이 존재하는 플래그입니다.");
+            throw new FlagInvalidStatusException(FlagErrorCode.FLAG_ENCORE_ALREADY_EXISTS,
+                    ErrorContext.of("parentFlagId", command.parentFlagId()));
         }
     }
 }

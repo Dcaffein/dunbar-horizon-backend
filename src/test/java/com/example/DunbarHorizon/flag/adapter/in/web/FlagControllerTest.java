@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.flag.adapter.in.web;
 
+import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;
 import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 import com.example.DunbarHorizon.flag.application.dto.result.FlagDetailResult;
 import com.example.DunbarHorizon.flag.application.port.in.FlagRole;
@@ -377,7 +378,7 @@ class FlagControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("모집 종료 후 탈퇴하면 409를 반환한다")
     void leave_AfterRecruitmentClosed_Returns409() throws Exception {
-        willThrow(new FlagInvalidStatusException("모집 기간이 종료된 이후에는 참여를 취소할 수 없습니다."))
+        willThrow(new FlagInvalidStatusException(FlagErrorCode.FLAG_RECRUITMENT_CLOSED))
                 .given(flagParticipationUseCase).leaveFlag(1L, CURRENT_USER_ID);
 
         mockMvc.perform(delete("/api/v1/flags/1/participants/me"))

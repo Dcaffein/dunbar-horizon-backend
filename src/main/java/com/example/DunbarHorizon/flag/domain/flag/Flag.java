@@ -1,6 +1,8 @@
 package com.example.DunbarHorizon.flag.domain.flag;
 
-import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
+
+
+import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagEncoreEvent;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagMeetingChangedEvent;
@@ -91,7 +93,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
 
     Flag createEncore(Long hostId, LocalDateTime deadline, LocalDateTime start, LocalDateTime end) {
         if (!this.isEnded()) {
-            throw new FlagInvalidStatusException("종료된 플래그만 앵코르를 생성할 수 있습니다.");
+            throw new FlagInvalidStatusException(FlagErrorCode.FLAG_NOT_ENDED, ErrorContext.of("flagId", id).and("status", calculateCurrentStatus()));
         }
 
         FlagSchedule newSchedule = FlagSchedule.of(deadline, start, end);
@@ -104,15 +106,15 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
 
     FlagParticipant participate(Long userId, int currentCount) {
         if (this.hostId.equals(userId)) {
-            throw new FlagAuthorizationException("호스트는 참여자 명단에 등록될 수 없습니다.");
+            throw new FlagAuthorizationException(FlagErrorCode.FLAG_HOST_NOT_ELIGIBLE, ErrorContext.of("flagId", id).and("userId", userId));
         }
 
         if (!this.isRecruiting()) {
-            throw new FlagDeadlinePassedException();
+            throw new FlagDeadlinePassedException(id, schedule.getDeadline());
         }
 
         if (this.capacity != null && currentCount >= this.capacity) {
-            throw new FlagFullCapacityException();
+            throw new FlagFullCapacityException(id, capacity, currentCount);
         }
 
         return new FlagParticipant(this.id, userId);
@@ -120,18 +122,18 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
 
     void unparticipate(FlagParticipant participant, Long requesterId) {
         if (!participant.getParticipantId().equals(requesterId)) {
-            throw new FlagAuthorizationException("본인의 참여만 취소할 수 있습니다.");
+            throw new FlagAuthorizationException(FlagErrorCode.FLAG_SELF_PARTICIPATION_ONLY, ErrorContext.of("flagId", id).and("userId", requesterId));
         }
 
         if (!this.calculateCurrentStatus().isBeforeActivity()) {
-            throw new FlagInvalidStatusException("모집 기간이 종료된 이후에는 참여를 취소할 수 없습니다.");
+            throw new FlagInvalidStatusException(FlagErrorCode.FLAG_RECRUITMENT_CLOSED, ErrorContext.of("flagId", id));
         }
     }
 
     public void delete(Long requesterId) {
         validateHost(requesterId);
         if (isDeleted()) {
-            throw new FlagInvalidStatusException("이미 삭제된 플래그입니다.");
+            throw new FlagInvalidStatusException(FlagErrorCode.FLAG_ALREADY_DELETED, ErrorContext.of("flagId", id));
         }
         softDelete();
         registerEvent(new FlagDeletedEvent(
@@ -166,7 +168,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
         validateNotEnded();
 
         if (!calculateCurrentStatus().isBeforeActivity()) {
-            throw new FlagInvalidStatusException("모임 시작 후에는 시간을 수정할 수 없습니다.");
+            throw new FlagInvalidStatusException(FlagErrorCode.FLAG_ALREADY_STARTED, ErrorContext.of("flagId", id));
         }
 
         if (isMeetingTimeChanged(this.schedule, newSchedule)) {
@@ -180,7 +182,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
     public void closeRecruitment(Long requesterId) {
         validateHost(requesterId);
         if (!isRecruiting()) {
-            throw new FlagInvalidStatusException("현재 모집 중인 상태가 아닙니다.");
+            throw new FlagInvalidStatusException(FlagErrorCode.FLAG_NOT_RECRUITING, ErrorContext.of("flagId", id).and("status", calculateCurrentStatus()));
         }
 
         this.schedule = this.schedule.withDeadline(LocalDateTime.now());
@@ -217,43 +219,42 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
     }
 
     private void validateHost(Long userId) {
-        if (!this.hostId.equals(userId)) throw new FlagAuthorizationException("호스트 권한이 없습니다.");
+        if (!this.hostId.equals(userId)) throw new FlagAuthorizationException(FlagErrorCode.FLAG_HOST_ONLY, ErrorContext.of("flagId", id).and("userId", userId));
     }
 
     private void validateNotEnded() {
-        if (isEnded()) throw new FlagInvalidStatusException("종료된 플래그는 수정할 수 없습니다.");
+        if (isEnded()) throw new FlagInvalidStatusException(FlagErrorCode.FLAG_ALREADY_ENDED, ErrorContext.of("flagId", id));
     }
 
     private void validateBasicInfo(Long hostId, String title, String description) {
-        if (hostId == null) throw new FlagInvalidStatusException("호스트 정보는 필수입니다.");
+        if (hostId == null) throw new FlagInvalidStatusException(FlagErrorCode.FLAG_HOST_REQUIRED);
         validateTitle(title);
         validateDescription(description);
     }
 
     private void validateTitle(String title) {
         if (title == null || title.isBlank() || title.length() > TITLE_MAX_LENGTH) {
-            throw new FlagInvalidBasicInfoException(TITLE_LENGTH_MESSAGE);
+            throw new FlagInvalidBasicInfoException(FlagErrorCode.FLAG_TITLE_LENGTH_INVALID);
         }
     }
 
     private void validateDescription(String description) {
         if (description == null || description.isBlank() || description.length() > DESCRIPTION_MAX_LENGTH) {
-            throw new FlagInvalidBasicInfoException(DESCRIPTION_LENGTH_MESSAGE);
+            throw new FlagInvalidBasicInfoException(FlagErrorCode.FLAG_DESCRIPTION_LENGTH_INVALID);
         }
     }
 
     private void validateCapacity(Integer capacity) {
         if (capacity == null) return;
-        if (capacity < 1) throw new FlagInvalidCapacityException("인원 제한은 최소 1명 이상이어야 합니다.");
+        if (capacity < 1) throw new FlagInvalidCapacityException(capacity);
     }
 
     private void validateNewCapacity(Integer newCapacity, int currentCount) {
         validateCapacity(newCapacity);
 
         if (newCapacity < currentCount) {
-            throw new FlagInvalidStatusException(
-                    String.format("현재 참여 인원(%d명)보다 적은 수로 정원을 변경할 수 없습니다.", currentCount)
-            );
+            throw new FlagInvalidStatusException(FlagErrorCode.FLAG_CAPACITY_BELOW_PARTICIPANTS,
+                    ErrorContext.of("flagId", id).and("newCapacity", newCapacity).and("participantCount", currentCount));
         }
     }
 

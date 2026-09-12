@@ -98,13 +98,19 @@ class LoginServiceTest {
         Throwable noLocalAuth = catchThrowable(() -> loginService.login("oauth@test.com", "pw"));
         Throwable wrongPassword = catchThrowable(() -> loginService.login("local@test.com", "wrong-pw"));
 
-        // then - 타입도 메시지도 갈리지 않아야 상태코드나 본문으로 가입 여부를 판별할 수 없다
+        // then - 타입도 응답 문구도 갈리지 않아야 상태코드나 본문으로 가입 여부를 판별할 수 없다
         assertThat(unknownEmail).isInstanceOf(InvalidCredentialsException.class);
         assertThat(noLocalAuth).isInstanceOf(InvalidCredentialsException.class);
         assertThat(wrongPassword).isInstanceOf(InvalidCredentialsException.class);
 
-        assertThat(noLocalAuth.getMessage()).isEqualTo(unknownEmail.getMessage());
-        assertThat(wrongPassword.getMessage()).isEqualTo(unknownEmail.getMessage());
+        // 응답에 실리는 것은 getUserMessage()다. getMessage()는 로그용이라 시도한 이메일이
+        // 들어가고 세 경우가 갈리는데, 그건 의도한 것이다. 조사에 필요한 값은 로그에 남는다.
+        assertThat(((InvalidCredentialsException) noLocalAuth).getUserMessage())
+                .isEqualTo(((InvalidCredentialsException) unknownEmail).getUserMessage());
+        assertThat(((InvalidCredentialsException) wrongPassword).getUserMessage())
+                .isEqualTo(((InvalidCredentialsException) unknownEmail).getUserMessage());
+        assertThat(((InvalidCredentialsException) unknownEmail).getCode())
+                .isEqualTo(((InvalidCredentialsException) wrongPassword).getCode());
 
         assertThat(((InvalidCredentialsException) unknownEmail).getHttpStatus())
                 .isEqualTo(HttpStatus.UNAUTHORIZED);

@@ -1,8 +1,11 @@
 package com.example.DunbarHorizon.buzz.domain.exception;
 
+import com.example.DunbarHorizon.global.exception.ErrorContext;
+
 
 public class BuzzNotFoundException extends BuzzException {
-  public BuzzNotFoundException() {
-    super(BuzzErrorCode.BUZZ_NOT_FOUND, "존재하지 않는 Buzz입니다.");
-  }
+
+    public BuzzNotFoundException(String buzzId) {
+        super(BuzzErrorCode.BUZZ_NOT_FOUND, ErrorContext.of("buzzId", buzzId));
+    }
 }

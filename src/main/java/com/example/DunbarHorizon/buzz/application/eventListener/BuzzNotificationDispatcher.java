@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.buzz.application.eventListener;
 
-import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
+
+import java.util.Map;import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import java.util.Map;
 
 @Component
 @RequiredArgsConstructor

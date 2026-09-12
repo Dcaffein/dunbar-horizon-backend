@@ -1,6 +1,8 @@
 package com.example.DunbarHorizon.social.application.service;
 
-import com.example.DunbarHorizon.social.application.port.in.FriendRequestQueryUseCase;
+
+
+import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;import com.example.DunbarHorizon.social.application.port.in.FriendRequestQueryUseCase;
 import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
 import com.example.DunbarHorizon.social.application.dto.FriendRequestDirection;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestInvalidException;
@@ -25,9 +27,8 @@ public class FriendRequestQueryService implements FriendRequestQueryUseCase {
 
         if (direction == FriendRequestDirection.SENT) {
             if (status != null) {
-                throw new FriendRequestInvalidException(
-                        "sent 조회에는 status를 사용할 수 없습니다."
-                );
+                throw new FriendRequestInvalidException(SocialErrorCode.FRIEND_REQUEST_STATUS_NOT_ALLOWED_FOR_SENT,
+                        ErrorContext.of("status", status));
             }
             return findSentRequests(userId);
         }

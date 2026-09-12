@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.flag.domain.flag;
 
-import com.example.DunbarHorizon.flag.domain.flag.exception.FlagScheduleInvalidException;
+import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;import com.example.DunbarHorizon.flag.domain.flag.exception.FlagScheduleInvalidException;
 import jakarta.persistence.Embeddable;
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
@@ -20,7 +20,7 @@ public class FlagSchedule {
 
     private FlagSchedule(LocalDateTime deadline, LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {
-            throw new FlagScheduleInvalidException("시작/종료 시간은 필수입니다.");
+            throw new FlagScheduleInvalidException(FlagErrorCode.FLAG_SCHEDULE_REQUIRED);
         }
 
         this.deadline = (deadline != null) ? deadline : start.minusMinutes(1);
@@ -40,11 +40,13 @@ public class FlagSchedule {
 
     private void validateTimeOrder(LocalDateTime deadline, LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null)
-            throw new FlagScheduleInvalidException("시작/종료 시간은 필수입니다.");
+            throw new FlagScheduleInvalidException(FlagErrorCode.FLAG_SCHEDULE_REQUIRED);
         if (!end.isAfter(start))
-            throw new FlagScheduleInvalidException("종료는 시작보다 늦어야 합니다.");
+            throw new FlagScheduleInvalidException(FlagErrorCode.FLAG_SCHEDULE_END_BEFORE_START,
+                    ErrorContext.of("startDateTime", startDateTime).and("endDateTime", endDateTime));
         if (deadline != null && deadline.isAfter(start)) {
-            throw new FlagScheduleInvalidException("모집 마감은 시작보다 빨라야 합니다.");
+            throw new FlagScheduleInvalidException(FlagErrorCode.FLAG_SCHEDULE_DEADLINE_AFTER_START,
+                    ErrorContext.of("deadline", deadline).and("startDateTime", startDateTime));
         }
     }
 

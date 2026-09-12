@@ -34,14 +34,14 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
         // 토큰이 아예 없어 예외조차 발생하지 않은 경우의 기본값.
         String errorCode = GlobalErrorCode.UNAUTHORIZED.code();
-        String message = "인증되지 않은 사용자입니다.";
+        String message = GlobalErrorCode.UNAUTHORIZED.message();
 
         // JwtTokenProvider가 jjwt 예외를 BusinessException으로 변환해두므로 타입 나열이 필요 없다.
         // GlobalExceptionHandler와 동일하게 예외가 들고 있는 코드를 그대로 쓴다.
         // 두 출구가 같은 방식으로 값을 뽑아내므로 응답 어휘가 어긋날 수 없다.
         if (exception instanceof BusinessException businessException) {
             errorCode = businessException.getCode();
-            message = businessException.getMessage();
+            message = businessException.getUserMessage();
         }
 
         ErrorResponse errorResponse = ErrorResponse.builder()

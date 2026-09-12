@@ -51,7 +51,7 @@ class JwtTokenProviderTest {
         // when & then
         assertThatThrownBy(() -> expiredProvider.validateToken(token))
                 .isInstanceOf(ExpiredTokenException.class)
-                .hasMessage("만료된 토큰입니다.");
+                .hasMessage("AUTH_TOKEN_EXPIRED");   // getMessage()는 로그용, 사용자 문구는 getUserMessage()
     }
 
     @Test
@@ -64,7 +64,7 @@ class JwtTokenProviderTest {
         // when & then
         assertThatThrownBy(() -> jwtTokenProvider.validateToken(forgedToken))
                 .isInstanceOf(InvalidTokenException.class)
-                .hasMessage("유효하지 않은 토큰입니다.");
+                .hasMessage("AUTH_TOKEN_INVALID");   // getMessage()는 로그용, 사용자 문구는 getUserMessage()
     }
 
     @ParameterizedTest

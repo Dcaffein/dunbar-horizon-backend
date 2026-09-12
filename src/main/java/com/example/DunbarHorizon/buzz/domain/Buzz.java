@@ -1,6 +1,9 @@
 package com.example.DunbarHorizon.buzz.domain;
 
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
+
+
+import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.buzz.domain.exception.BuzzErrorCode;import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzCommentNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import lombok.*;
 import org.springframework.data.annotation.Id;
@@ -79,7 +82,7 @@ public class Buzz {
 
     public void markAsRead(Long userId) {
         if (!isRecipient(userId)) {
-            throw new BuzzAccessDeniedException("해당 Buzz의 수신자가 아닙니다.");
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_NOT_RECIPIENT, ErrorContext.of("buzzId", id).and("userId", userId));
         }
         if (!readRecipientIds.contains(userId)) {
             this.readRecipientIds.add(userId);
@@ -89,10 +92,10 @@ public class Buzz {
     public BuzzComment createComment(Long commenterId, String nickname, String profileImageUrl,
                                      String text, List<String> imageUrls, boolean isPublic) {
         if (isExpired()) {
-            throw new BuzzInvalidStateException("만료된 Buzz에는 댓글을 남길 수 없습니다.");
+            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", id));
         }
         if (!isRecipient(commenterId) && !isCreator(commenterId)) {
-            throw new BuzzAccessDeniedException("이 Buzz에 댓글을 남길 권한이 없습니다.");
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_NOT_RECIPIENT, ErrorContext.of("buzzId", id).and("userId", commenterId));
         }
 
         if (isRecipient(commenterId)) {
@@ -112,13 +115,13 @@ public class Buzz {
 
     public void updateComment(Long requesterId, String commentId, String newText, List<String> newImageUrls) {
         if (isExpired()) {
-            throw new BuzzInvalidStateException("만료된 Buzz의 댓글은 수정할 수 없습니다.");
+            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", id));
         }
 
         BuzzComment target = findComments(commentId);
 
         if (!target.getCommenterId().equals(requesterId)) {
-            throw new BuzzAccessDeniedException("댓글 수정 권한이 없습니다.");
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_COMMENT_AUTHOR_ONLY, ErrorContext.of("buzzId", id).and("userId", requesterId));
         }
 
         target.update(newText, newImageUrls);
@@ -126,43 +129,43 @@ public class Buzz {
 
     public void validateCommentDeletion(Long requesterId, String commentId) {
         if (isExpired()) {
-            throw new BuzzInvalidStateException("만료된 Buzz의 댓글은 삭제할 수 없습니다.");
+            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", id));
         }
         BuzzComment target = findComments(commentId);
 
         if (!target.getCommenterId().equals(requesterId) && !isCreator(requesterId)) {
-            throw new BuzzAccessDeniedException("댓글 삭제 권한이 없습니다.");
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_COMMENT_AUTHOR_ONLY, ErrorContext.of("buzzId", id).and("userId", requesterId));
         }
     }
 
     public void validateAccess(Long userId) {
         if (!isRecipient(userId) && !isCreator(userId)) {
-            throw new BuzzAccessDeniedException("접근 권한이 없습니다.");
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_NOT_RECIPIENT, ErrorContext.of("buzzId", id).and("userId", userId));
         }
     }
 
     public void validateDeletion(Long requesterId) {
         if (!isCreator(requesterId)) {
-            throw new BuzzAccessDeniedException("버즈 삭제 권한이 없습니다.");
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_CREATOR_ONLY, ErrorContext.of("buzzId", id).and("userId", requesterId));
         }
     }
 
     public void validateCommentCreation(Long commenterId) {
         if (isExpired()) {
-            throw new BuzzInvalidStateException("만료된 Buzz에는 댓글을 남길 수 없습니다.");
+            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", id));
         }
         if (!isRecipient(commenterId) && !isCreator(commenterId)) {
-            throw new BuzzAccessDeniedException("이 Buzz에 댓글을 남길 권한이 없습니다.");
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_NOT_RECIPIENT, ErrorContext.of("buzzId", id).and("userId", commenterId));
         }
     }
 
     public void validateCommentUpdate(Long requesterId, String commentId) {
         if (isExpired()) {
-            throw new BuzzInvalidStateException("만료된 Buzz의 댓글은 수정할 수 없습니다.");
+            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", id));
         }
         BuzzComment target = findComments(commentId);
         if (!target.getCommenterId().equals(requesterId)) {
-            throw new BuzzAccessDeniedException("댓글 수정 권한이 없습니다.");
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_COMMENT_AUTHOR_ONLY, ErrorContext.of("buzzId", id).and("userId", requesterId));
         }
     }
 
@@ -176,21 +179,22 @@ public class Buzz {
         return comments.stream()
                 .filter(c -> c.getCommentId().equals(commentId))
                 .findFirst()
-                .orElseThrow(() -> new BuzzInvalidStateException("존재하지 않는 댓글입니다."));
+                .orElseThrow(() -> new BuzzCommentNotFoundException(this.id, commentId));
     }
 
     private void validateRecipientIds(List<Long> recipientIds) {
         if (recipientIds == null || recipientIds.isEmpty()) {
-            throw new BuzzInvalidStateException("수신자가 최소 한 명 이상 지정되어야 합니다.");
+            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_RECIPIENTS_REQUIRED);
         }
         if (recipientIds.size() > 150) {
-            throw new BuzzInvalidStateException("수신자는 최대 150명까지 지정할 수 있습니다.");
+            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_RECIPIENTS_EXCEEDED,
+                    ErrorContext.of("recipientCount", recipientIds.size()));
         }
     }
 
     private void validateText(String text) {
         if (text == null || text.isBlank() || text.length() > TEXT_MAX_LENGTH) {
-            throw new BuzzInvalidStateException(TEXT_LENGTH_MESSAGE);
+            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_INVALID_TEXT);
         }
     }
 }

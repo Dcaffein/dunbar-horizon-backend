@@ -68,7 +68,7 @@ public class Label {
 
     private void validateName(String name) {
         if (name == null || name.isBlank() || name.length() > NAME_MAX_LENGTH) {
-            throw new InvalidLabelNameException(NAME_LENGTH_MESSAGE);
+            throw new InvalidLabelNameException();
         }
     }
 

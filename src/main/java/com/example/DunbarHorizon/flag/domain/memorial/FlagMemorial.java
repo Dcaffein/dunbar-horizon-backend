@@ -1,6 +1,8 @@
 package com.example.DunbarHorizon.flag.domain.memorial;
 
-import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
+
+
+import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.memorial.event.MemorialCreatedEvent;
 import com.example.DunbarHorizon.flag.domain.memorial.exception.FlagMemorialInvalidContentException;
 import com.example.DunbarHorizon.global.common.BaseTimeAggregateRoot;
@@ -37,13 +39,13 @@ public class FlagMemorial extends BaseTimeAggregateRoot {
 
     private void validateContent(String content) {
         if (content == null || content.isBlank() || content.length() > CONTENT_MAX_LENGTH) {
-            throw new FlagMemorialInvalidContentException(CONTENT_LENGTH_MESSAGE);
+            throw new FlagMemorialInvalidContentException();
         }
     }
 
     private void validateOwner(Long requesterId) {
         if (!this.writerId.equals(requesterId)) {
-            throw new FlagAuthorizationException("후기 작성자만 접근 가능합니다.");
+            throw new FlagAuthorizationException(FlagErrorCode.FLAG_MEMORIAL_AUTHOR_ONLY, ErrorContext.of("memorialId", id).and("userId", requesterId));
         }
     }
 

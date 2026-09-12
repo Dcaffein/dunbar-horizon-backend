@@ -48,18 +48,18 @@ public class LoginService implements LoginUseCase {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> {
                     log.warn("[login] 미가입 이메일로 로그인 시도");
-                    return new InvalidCredentialsException();
+                    return new InvalidCredentialsException(email);
                 });
 
         Auth localAuth = authRepository.findByUserIdAndProvider(user.getId(), AuthProvider.LOCAL)
                 .orElseThrow(() -> {
                     log.warn("[login] LOCAL 자격증명 없는 계정으로 로그인 시도. userId={}", user.getId());
-                    return new InvalidCredentialsException();
+                    return new InvalidCredentialsException(email);
                 });
 
         if (!passwordHasher.matches(password, localAuth.hashedPassword())) {
             log.warn("[login] 비밀번호 불일치. userId={}", user.getId());
-            throw new InvalidCredentialsException();
+            throw new InvalidCredentialsException(email);
         }
 
         return issueTokens(user);
@@ -99,7 +99,7 @@ public class LoginService implements LoginUseCase {
 
         if (tokenOpt.isEmpty()) {
             refreshTokenRepository.deleteAllByUserId(authPrincipal.id());
-            throw new TokenTheftDetectedException();
+            throw new TokenTheftDetectedException(authPrincipal.id());
         }
 
         RefreshToken refreshToken = tokenOpt.get();

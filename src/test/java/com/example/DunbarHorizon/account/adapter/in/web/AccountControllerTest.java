@@ -68,7 +68,7 @@ class AccountControllerTest extends BaseControllerTest {
     void login_Failure_Returns401() throws Exception {
         LoginRequestDto request = new LoginRequestDto("test@test.com", "wrong-password");
         given(loginUseCase.login(anyString(), anyString()))
-                .willThrow(new InvalidCredentialsException());
+                .willThrow(new InvalidCredentialsException("user@example.com"));
 
         mockMvc.perform(post("/api/v1/auth/tokens")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -169,7 +169,7 @@ class AccountControllerTest extends BaseControllerTest {
     void reissue_TokenTheft_Returns403() throws Exception {
         // given - 만료·위조(401)와 달리 재사용 탐지는 방어 동작이므로 403을 유지한다
         String stolenRt = "stolen-rt";
-        given(loginUseCase.reissue(stolenRt)).willThrow(new TokenTheftDetectedException());
+        given(loginUseCase.reissue(stolenRt)).willThrow(new TokenTheftDetectedException(1L));
 
         // when & then
         mockMvc.perform(patch("/api/v1/auth/tokens")

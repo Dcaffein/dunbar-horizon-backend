@@ -140,7 +140,7 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     private Buzz getBuzzOrThrow(String buzzId) {
         Buzz buzz = buzzRepository.findById(buzzId);
         if (buzz == null) {
-            throw new BuzzNotFoundException();
+            throw new BuzzNotFoundException(buzzId);
         }
         return buzz;
     }

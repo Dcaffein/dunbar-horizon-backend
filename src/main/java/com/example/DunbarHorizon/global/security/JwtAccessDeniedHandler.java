@@ -37,7 +37,7 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .error(GlobalErrorCode.ACCESS_DENIED.code())
-                .message("해당 리소스에 접근할 권한이 없습니다.")
+                .message(GlobalErrorCode.ACCESS_DENIED.message())
                 .build();
 
         response.setContentType("application/json;charset=UTF-8");

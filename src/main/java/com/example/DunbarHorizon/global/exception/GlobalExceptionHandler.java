@@ -34,11 +34,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
-        log.warn("{}: {}", e.getCode(), e.getMessage());
+        log.warn("{}", e.getMessage());
 
         ErrorResponse response = ErrorResponse.builder()
                 .error(e.getCode())
-                .message(e.getMessage())
+                .message(e.getUserMessage())
                 .build();
 
         return ResponseEntity
@@ -50,7 +50,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException e) {
         log.warn("[Access Denied] {}", e.getMessage());
 
-        return build(GlobalErrorCode.ACCESS_DENIED, "해당 리소스에 접근할 권한이 없습니다.");
+        return build(GlobalErrorCode.ACCESS_DENIED);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -64,7 +64,7 @@ public class GlobalExceptionHandler {
 
         ErrorResponse response = ErrorResponse.builder()
                 .error(GlobalErrorCode.INVALID_INPUT.code())
-                .message("입력값이 올바르지 않습니다.")
+                .message(GlobalErrorCode.INVALID_INPUT.message())
                 .validation(errors)
                 .build();
 
@@ -77,30 +77,28 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleJsonException(HttpMessageNotReadableException e) {
         log.warn("[JSON Parse Exception] {}", e.getMessage());
 
-        return build(GlobalErrorCode.INVALID_JSON_FORMAT, "요청 JSON 형식이 올바르지 않습니다.");
+        return build(GlobalErrorCode.INVALID_JSON_FORMAT);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoResourceFoundException(NoResourceFoundException e) {
         log.warn("[No Resource Found] {}", e.getResourcePath());
 
-        return build(GlobalErrorCode.RESOURCE_NOT_FOUND,
-                "요청하신 경로를 찾을 수 없습니다: " + e.getResourcePath());
+        return build(GlobalErrorCode.RESOURCE_NOT_FOUND);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
         log.warn("[Method Not Allowed] {}", e.getMethod());
 
-        return build(GlobalErrorCode.METHOD_NOT_ALLOWED,
-                "지원하지 않는 요청 메서드입니다: " + e.getMethod());
+        return build(GlobalErrorCode.METHOD_NOT_ALLOWED);
     }
 
     @ExceptionHandler(ServletRequestBindingException.class)
     public ResponseEntity<ErrorResponse> handleRequestBinding(ServletRequestBindingException e) {
         log.warn("[Request Binding] {}", e.getMessage());
 
-        return build(GlobalErrorCode.INVALID_REQUEST, "요청 파라미터가 올바르지 않습니다.");
+        return build(GlobalErrorCode.INVALID_REQUEST);
     }
 
     /**
@@ -117,23 +115,21 @@ public class GlobalExceptionHandler {
                 e.getName(),
                 e.getRequiredType() != null ? e.getRequiredType().getSimpleName() : "unknown");
 
-        return build(GlobalErrorCode.INVALID_PARAMETER_TYPE,
-                "요청 파라미터의 형식이 올바르지 않습니다: " + e.getName());
+        return build(GlobalErrorCode.INVALID_PARAMETER_TYPE);
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
         log.warn("[Unsupported Media Type] {}", e.getContentType());
 
-        return build(GlobalErrorCode.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 요청 형식입니다.");
+        return build(GlobalErrorCode.UNSUPPORTED_MEDIA_TYPE);
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
     public ResponseEntity<ErrorResponse> handleOptimisticLockingFailureException(OptimisticLockingFailureException e) {
         log.warn("[Optimistic Locking Failure] {}", e.getMessage());
 
-        return build(GlobalErrorCode.CONCURRENT_MODIFICATION,
-                "다른 요청과 충돌이 발생했습니다. 잠시 후 다시 시도해주세요.");
+        return build(GlobalErrorCode.CONCURRENT_MODIFICATION);
     }
 
     /**
@@ -144,16 +140,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleException(Exception e) {
         log.error("[Unhandled Exception] ", e);
 
-        return build(GlobalErrorCode.INTERNAL_SERVER_ERROR,
-                "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+        return build(GlobalErrorCode.INTERNAL_SERVER_ERROR);
     }
 
-    private ResponseEntity<ErrorResponse> build(GlobalErrorCode errorCode, String message) {
+    private ResponseEntity<ErrorResponse> build(GlobalErrorCode errorCode) {
         return ResponseEntity
                 .status(errorCode.status())
                 .body(ErrorResponse.builder()
                         .error(errorCode.code())
-                        .message(message)
+                        .message(errorCode.message())
                         .build());
     }
 }
