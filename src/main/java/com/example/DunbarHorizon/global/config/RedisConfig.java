@@ -29,7 +29,10 @@ import java.util.List;
 
 @Slf4j
 @Configuration
-@EnableCaching
+// 캐시 어드바이스를 트랜잭션보다 바깥에 둔다. 두 어드바이저의 기본 order가 LOWEST_PRECEDENCE로
+// 같아서, 명시하지 않으면 설정 클래스 등록 순서에 따라 순서가 뒤집힌다. 트랜잭션이 바깥으로
+// 잡히면 캐시 히트에도 Neo4j 세션과 BEGIN·COMMIT 왕복이 붙는다.
+@EnableCaching(order = 1000)
 public class RedisConfig implements CachingConfigurer {
 
     @Bean
