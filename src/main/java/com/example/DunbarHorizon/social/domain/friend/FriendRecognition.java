@@ -19,7 +19,7 @@ public class FriendRecognition {
     public static final double INITIAL_RAW_SCORE = 21.4;
 
     @Id @GeneratedValue()
-    private String id;
+    private Long id;
 
     @TargetNode
     private UserReference user;

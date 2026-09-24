@@ -60,6 +60,32 @@ class FriendshipNeo4jRepositoryTest {
     }
 
     @Test
+    @DisplayName("기존 Friendship을 수정 후 다시 저장해도 두 HAS_FRIENDSHIP 관계를 유지한다")
+    void saveExistingFriendshipAfterRelationshipUpdate_preservesRelationships() {
+        // given
+        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
+        Friendship existing = friendshipRepository.findById("1_2").orElseThrow();
+        existing.updateUserFields(userA.getId(), "수정 별명", true, false);
+
+        // when
+        friendshipRepository.save(existing);
+
+        // then
+        Friendship reloaded = friendshipRepository.findById("1_2").orElseThrow();
+        Long relationshipCount = neo4jClient.query(
+                "MATCH (:UserReference)-[:HAS_FRIENDSHIP]->(f:Friendship {id: $friendshipId}) RETURN count(*)"
+        ).bind("1_2").to("friendshipId")
+                .fetchAs(Long.class)
+                .one()
+                .orElseThrow();
+
+        assertThat(relationshipCount).isEqualTo(2L);
+        assertThat(reloaded.getFriendAlias(userA.getId())).isEqualTo("수정 별명");
+        assertThat(reloaded.isMuted(userA.getId())).isTrue();
+        assertThat(reloaded.isRoutable(userA.getId())).isFalse();
+    }
+
+    @Test
     @DisplayName("existsFriendshipBetween은 방향에 관계없이 친구 여부를 확인한다")
     void existsFriendshipBetween_Success() {
         // given
