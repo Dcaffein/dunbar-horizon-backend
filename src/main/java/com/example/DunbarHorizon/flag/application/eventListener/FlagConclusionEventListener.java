@@ -34,6 +34,6 @@ public class FlagConclusionEventListener {
                 : InteractionType.FLAG_ENDED;
 
         eventPublisher.publishEvent(
-                new BatchMutualInteractionEvent(event.participantIds(), event.hostId(), type));
+                new BatchMutualInteractionEvent(event.flagId(), event.participantIds(), event.hostId(), type));
     }
 }

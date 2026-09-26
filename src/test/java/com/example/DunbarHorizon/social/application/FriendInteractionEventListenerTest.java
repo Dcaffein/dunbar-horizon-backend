@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import com.example.DunbarHorizon.social.application.eventListener.FriendInteractionEventListener;
 import com.example.DunbarHorizon.social.application.port.out.InteractionScoreDeltaPort;
+import com.example.DunbarHorizon.social.application.service.IntimacyScoreManager;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +29,9 @@ class FriendInteractionEventListenerTest {
 
     @Mock
     private InteractionScoreDeltaPort deltaPort;
+
+    @Mock
+    private IntimacyScoreManager intimacyScoreManager;
 
     private static final Long USER_A = 1L;
     private static final Long USER_B = 2L;
@@ -57,19 +62,17 @@ class FriendInteractionEventListenerTest {
     }
 
     @Test
-    @DisplayName("배치 이벤트 수신 시 호스트↔참여자, 참여자 간 모든 쌍에 accumulateMutual을 호출한다")
-    void handleBatchMutualInteraction_callsAccumulateMutualForAllPairs() {
+    @DisplayName("배치 이벤트 수신 시 Flag score manager에 전체 참가자를 전달한다")
+    void handleBatchMutualInteraction_delegatesAllParticipantsToManager() {
         List<Long> participants = List.of(USER_A, USER_B);
-        BatchMutualInteractionEvent event = new BatchMutualInteractionEvent(participants, HOST, InteractionType.FLAG_ENDED);
+        Long flagId = 91L;
+        BatchMutualInteractionEvent event = new BatchMutualInteractionEvent(flagId, participants, HOST, InteractionType.FLAG_ENDED);
         double delta = InteractionScorePolicy.scoreOf(InteractionType.FLAG_ENDED);
 
         listener.handleBatchMutualInteraction(event);
 
-        verify(deltaPort).accumulateMutual(Friendship.generateCompositeId(HOST, USER_A), delta);
-        verify(deltaPort).accumulateMutual(Friendship.generateCompositeId(HOST, USER_B), delta);
-        verify(deltaPort).accumulateMutual(Friendship.generateCompositeId(USER_A, USER_B), delta);
-        verify(deltaPort, times(3)).accumulateMutual(
-                org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyDouble());
+        verify(intimacyScoreManager).applyFlagConclusion(flagId, HOST, participants, delta);
+        verify(deltaPort, never()).accumulateMutual(
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyDouble());
     }
 }

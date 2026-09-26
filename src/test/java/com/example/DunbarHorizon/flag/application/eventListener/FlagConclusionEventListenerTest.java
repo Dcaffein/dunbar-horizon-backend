@@ -46,6 +46,7 @@ class FlagConclusionEventListenerTest {
 
         // then
         BatchMutualInteractionEvent event = capturedInteraction();
+        assertThat(event.flagId()).isEqualTo(FLAG_ID);
         assertThat(event.participantIds()).containsExactlyElementsOf(PARTICIPANT_IDS);
         assertThat(event.hostId()).isEqualTo(HOST_ID);
         assertThat(event.type()).isEqualTo(InteractionType.FLAG_ENDED);
