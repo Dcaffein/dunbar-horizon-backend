@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
 import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,9 +16,6 @@ import org.springframework.dao.TransientDataAccessResourceException;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -40,6 +38,11 @@ class IntimacyScoreManagerTest {
     @InjectMocks private IntimacyScoreManager intimacyScoreManager;
     @Mock private FriendshipRepository friendshipRepository;
     @Mock private FriendshipDecayPolicy decayPolicy;
+
+    @AfterEach
+    void shutDownQueue() {
+        intimacyScoreManager.shutdown();
+    }
 
     @Test
     @DisplayName("Flag 결론은 host-참가자와 참가자 쌍 전체를 하나의 batch로 갱신한다")
@@ -93,21 +96,13 @@ class IntimacyScoreManagerTest {
             return null;
         }).when(friendshipRepository).applyDecay(anyDouble(), anyDouble(), any());
 
-        ExecutorService executor = Executors.newFixedThreadPool(2);
-        try {
-            Future<?> flag = executor.submit(() ->
-                    intimacyScoreManager.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, 10.0));
-            assertThat(flagEntered.await(1, TimeUnit.SECONDS)).isTrue();
+        intimacyScoreManager.enqueueFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, 10.0);
+        assertThat(flagEntered.await(1, TimeUnit.SECONDS)).isTrue();
 
-            Future<?> decay = executor.submit(intimacyScoreManager::applyDecay);
-            assertThat(decayEntered.await(100, TimeUnit.MILLISECONDS)).isFalse();
-            releaseFlag.countDown();
+        intimacyScoreManager.enqueueDecay();
+        assertThat(decayEntered.await(100, TimeUnit.MILLISECONDS)).isFalse();
+        releaseFlag.countDown();
 
-            flag.get();
-            decay.get();
-            assertThat(decayEntered.await(1, TimeUnit.SECONDS)).isTrue();
-        } finally {
-            executor.shutdownNow();
-        }
+        assertThat(decayEntered.await(1, TimeUnit.SECONDS)).isTrue();
     }
 }

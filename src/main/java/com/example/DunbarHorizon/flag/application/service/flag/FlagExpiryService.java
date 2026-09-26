@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -21,7 +20,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FlagExpiryService {
 
-    private static final long PAIR_BUDGET = 5_000;
+    private static final int BATCH_SIZE = 100;
 
     private final FlagRepository flagRepository;
     private final FlagMaintenancePort maintenancePort;
@@ -44,14 +43,11 @@ public class FlagExpiryService {
 
         // 지우기 전에 조회한다. 벌크 UPDATE는 건수만 돌려주는데 플래그마다 이벤트를 발행해야 하고,
         // 소프트 삭제 후에는 @SQLRestriction 때문에 hostId·parentId를 다시 읽을 수 없다.
-        List<FlagExpiryTarget> candidates = flagRepository.findExpiryTargets(threshold);
-        List<Long> candidateIds = candidates.stream().map(FlagExpiryTarget::getId).toList();
+        List<FlagExpiryTarget> targets = flagRepository.findExpiryTargets(threshold, BATCH_SIZE);
+        List<Long> targetIds = targets.stream().map(FlagExpiryTarget::getId).toList();
 
         Map<Long, List<Long>> participantsByFlagId =
-                flagRepository.findAllParticipantIdsByFlagIds(candidateIds);
-
-        List<FlagExpiryTarget> targets = selectWithinPairBudget(candidates, participantsByFlagId);
-        List<Long> targetIds = targets.stream().map(FlagExpiryTarget::getId).toList();
+                flagRepository.findAllParticipantIdsByFlagIds(targetIds);
 
         // 조건을 다시 쓰지 않고 id로 찍는다. 두 번 실행하면 그사이 면제가 붙은 플래그가 생겨
         // 발행한 집합과 삭제한 집합이 어긋날 수 있다.
@@ -73,30 +69,4 @@ public class FlagExpiryService {
                 target.getId(), target.getHostId(), target.getParentId(), participantIds));
     }
 
-    private List<FlagExpiryTarget> selectWithinPairBudget(
-            List<FlagExpiryTarget> candidates,
-            Map<Long, List<Long>> participantsByFlagId
-    ) {
-        long usedPairs = 0;
-        List<FlagExpiryTarget> selected = new ArrayList<>();
-
-        for (FlagExpiryTarget candidate : candidates) {
-            int participantCount = participantsByFlagId.getOrDefault(candidate.getId(), List.of()).size();
-            long pairCount = pairCount(participantCount);
-            if (pairCount > PAIR_BUDGET) {
-                log.error("자동 만료를 건너뜀: flagId={}, participants={}, pairs={}, budget={}",
-                        candidate.getId(), participantCount, pairCount, PAIR_BUDGET);
-                continue;
-            }
-            if (usedPairs + pairCount > PAIR_BUDGET) continue;
-
-            selected.add(candidate);
-            usedPairs += pairCount;
-        }
-        return selected;
-    }
-
-    private long pairCount(int participantCount) {
-        return (long) participantCount * (participantCount + 1) / 2;
-    }
 }

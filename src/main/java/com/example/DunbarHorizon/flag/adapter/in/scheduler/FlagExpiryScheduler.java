@@ -11,7 +11,7 @@ public class FlagExpiryScheduler {
 
     private final FlagExpiryService expiryService;
 
-    @Scheduled(cron = "0 0 0/6 * * *")
+    @Scheduled(cron = "0 0 * * * *")
     public void runExpiry() {
         expiryService.expireEndedFlags();
     }

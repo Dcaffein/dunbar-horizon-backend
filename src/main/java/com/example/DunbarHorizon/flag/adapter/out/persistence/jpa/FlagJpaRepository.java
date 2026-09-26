@@ -42,7 +42,7 @@ public interface FlagJpaRepository extends JpaRepository<Flag, Long> {
             "WHERE f.schedule.endDateTime < :threshold " +
             "AND f.autoExpiryExempt = false " +
             "ORDER BY f.schedule.endDateTime ASC")
-    List<FlagExpiryTarget> findExpiryTargets(@Param("threshold") LocalDateTime threshold);
+    List<FlagExpiryTarget> findExpiryTargets(@Param("threshold") LocalDateTime threshold, Pageable pageable);
 
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Flag f SET f.deletedAt = :now WHERE f.id IN :ids AND f.deletedAt IS NULL")

@@ -19,10 +19,11 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
@@ -37,6 +38,8 @@ class FlagExpiryServiceTest {
     @Mock private FlagMaintenancePort maintenancePort;
     @Mock private ApplicationEventPublisher eventPublisher;
 
+    private static final int BATCH_SIZE = 100;
+
     private record Target(Long id, Long hostId, Long parentId) implements FlagExpiryTarget {
         @Override public Long getId() { return id; }
         @Override public Long getHostId() { return hostId; }
@@ -44,13 +47,9 @@ class FlagExpiryServiceTest {
     }
 
     private void givenTargets(List<FlagExpiryTarget> targets, Map<Long, List<Long>> participants) {
-        given(flagRepository.findExpiryTargets(any())).willReturn(targets);
+        given(flagRepository.findExpiryTargets(any(), anyInt())).willReturn(targets);
         given(flagRepository.findAllParticipantIdsByFlagIds(any())).willReturn(participants);
         given(flagRepository.expireByIds(any(), any())).willReturn(targets.size());
-    }
-
-    private List<Long> participants(int count) {
-        return LongStream.range(0, count).boxed().toList();
     }
 
     private List<FlagConcludedEvent> publishedConclusions() {
@@ -71,7 +70,7 @@ class FlagExpiryServiceTest {
 
         // then
         ArgumentCaptor<LocalDateTime> thresholdCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
-        verify(flagRepository).findExpiryTargets(thresholdCaptor.capture());
+        verify(flagRepository).findExpiryTargets(thresholdCaptor.capture(), anyInt());
         assertThat(thresholdCaptor.getValue()).isBetween(before.minusSeconds(1), before.plusSeconds(1));
     }
 
@@ -142,39 +141,16 @@ class FlagExpiryServiceTest {
     }
 
     @Test
-    @DisplayName("실제 participant 수로 계산한 pair budget 안의 Flag만 만료한다")
-    void expireEndedFlags_SelectsOnlyTargetsWithinPairBudget() {
+    @DisplayName("한 회차가 가져가는 만료 대상 수에 상한이 있다")
+    void expireEndedFlags_LimitsBatchSize() {
         // given
-        givenTargets(
-                List.of(new Target(1L, 10L, null), new Target(2L, 11L, null), new Target(3L, 12L, null)),
-                Map.of(1L, participants(99), 2L, participants(10), 3L, participants(7))
-        );
+        givenTargets(List.of(), Map.of());
 
         // when
         flagExpiryService.expireEndedFlags();
 
         // then
-        ArgumentCaptor<Collection<Long>> idCaptor = ArgumentCaptor.forClass(Collection.class);
-        verify(flagRepository).expireByIds(idCaptor.capture(), any(LocalDateTime.class));
-        assertThat(idCaptor.getValue()).containsExactly(1L, 3L);
-    }
-
-    @Test
-    @DisplayName("단일 Flag가 pair budget을 넘으면 분할하지 않고 자동 만료에서 건너뛴다")
-    void expireEndedFlags_SkipsOversizedFlagWithoutChunking() {
-        // given
-        givenTargets(
-                List.of(new Target(1L, 10L, null), new Target(2L, 11L, null)),
-                Map.of(1L, participants(100), 2L, participants(1))
-        );
-
-        // when
-        flagExpiryService.expireEndedFlags();
-
-        // then
-        ArgumentCaptor<Collection<Long>> idCaptor = ArgumentCaptor.forClass(Collection.class);
-        verify(flagRepository).expireByIds(idCaptor.capture(), any(LocalDateTime.class));
-        assertThat(idCaptor.getValue()).containsExactly(2L);
+        verify(flagRepository).findExpiryTargets(any(LocalDateTime.class), eq(BATCH_SIZE));
     }
 
     @Test
@@ -191,7 +167,7 @@ class FlagExpiryServiceTest {
         // 순서가 뒤집히면 방금 소프트 삭제된 플래그가 초대 삭제 쿼리의 서브쿼리에서 빠진다.
         InOrder inOrder = inOrder(maintenancePort, flagRepository);
         inOrder.verify(maintenancePort).purgeInvitationsOfEndedFlags(any(LocalDateTime.class));
-        inOrder.verify(flagRepository).findExpiryTargets(any());
+        inOrder.verify(flagRepository).findExpiryTargets(any(), anyInt());
         inOrder.verify(flagRepository).expireByIds(any(), any());
     }
 
@@ -209,7 +185,7 @@ class FlagExpiryServiceTest {
         ArgumentCaptor<LocalDateTime> invitationThreshold = ArgumentCaptor.forClass(LocalDateTime.class);
         ArgumentCaptor<LocalDateTime> flagThreshold = ArgumentCaptor.forClass(LocalDateTime.class);
         verify(maintenancePort).purgeInvitationsOfEndedFlags(invitationThreshold.capture());
-        verify(flagRepository).findExpiryTargets(flagThreshold.capture());
+        verify(flagRepository).findExpiryTargets(flagThreshold.capture(), anyInt());
 
         assertThat(invitationThreshold.getValue()).isEqualTo(flagThreshold.getValue());
     }

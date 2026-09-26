@@ -66,21 +66,19 @@ Redis는 같은 Friendship delta가 반복될 때만 Neo4j write를 병합한다
 
 ### Flag와 decay는 IntimacyScoreManager가 직렬화한다
 
-`IntimacyScoreManager`는 multi-Friendship 작업의 실행 경계다.
+`IntimacyScoreManager`는 multi-Friendship 작업을 전용 단일 worker queue에서 실행한다.
 
 - Flag 하나는 참가자 관계 전체를 하나의 `UNWIND` Cypher batch transaction으로 반영한다.
 - 참가자 목록은 유일하고 host를 중복 포함하지 않는다는 도메인 전제 아래, 한 Flag 내부의 Friendship은 중복되지 않는다. 불필요한 Friendship별 delta 병합을 추가하지 않는다.
-- manager는 한 Flag의 batch가 commit 또는 rollback된 뒤 다음 Flag를 실행한다.
+- manager는 호출자를 block하지 않고 작업을 queue에 넣으며, 한 Flag의 batch가 commit 또는 rollback된 뒤 다음 작업을 실행한다.
 - decay도 manager를 통해 실행하므로 Flag batch와 동시에 실행되지 않는다.
 - 일반 단건 상호작용은 manager를 거치지 않는다. 대신 같은 Friendship 공통 lock 규칙을 사용해 Flag/decay와 만날 때 score와 intimacy의 정합성을 보장한다.
 
 이 직렬화는 대형 batch끼리의 deadlock을 정상 흐름에서 제거한다. 제한된 재시도는 예상하지 못한 transient failure의 안전망일 뿐, deadlock을 정상 처리 방식으로 허용하지 않는다.
 
-### 자동 Flag 만료는 pair budget을 사용한다
+### 자동 Flag 만료는 오래된 100개씩 처리한다
 
-자동 만료 작업량의 단위는 Flag 수가 아니라 각 Flag가 만드는 Friendship pair 수다. 만료 scheduler는 한 실행에서 처리할 Flag를 선택할 때 각 Flag의 예상 갱신 수 `n(n+1)/2`를 합산해 pair budget을 넘지 않도록 제한한다. 단일 Flag가 budget을 넘는 경우의 처리 정책은 pair budget을 무시하거나 임의 chunk로 쪼개지 않고, 코드 탐색과 측정 뒤 계획에서 명시한다.
-
-하나의 Flag가 허용 budget을 넘을 수 있는지 여부와 Flag 참여자 상한은 코드 탐색 및 측정 뒤 계획에서 결정한다. 이 작업에서는 Flag 하나를 임의 chunk로 분할하지 않는다. 한 Flag를 하나의 transaction으로 처리해 전체 성공 또는 전체 rollback을 유지한다.
+만료 scheduler는 매시간 종료 시각이 오래된 Flag부터 최대 100개를 선택해 soft delete한다. 각 Flag의 종료 사실은 score worker queue에 순서대로 들어가며, Flag 내부의 모든 Friendship pair는 하나의 transaction으로 처리한다.
 
 ### 실패는 best-effort로 관측·복구한다
 
@@ -94,8 +92,8 @@ Flag batch가 rollback된 것이 확인된 transient failure에만 제한된 재
 2. Friendship persistence port와 Neo4j adapter에 단방향·상호 score delta 및 intimacy 재계산을 수행하는 Cypher 갱신을 구현한다.
 3. 모든 점수 mutation Cypher가 Friendship dummy-property lock을 score read 이전에 획득하도록 통일한다.
 4. Flag 종료의 Friendship pair를 하나의 `UNWIND` Cypher batch로 갱신하는 use case를 구현한다.
-5. Flag batch와 decay를 하나씩 실행하는 `IntimacyScoreManager`를 구현하고, 기존 `@Async` fan-out이 multi-Friendship batch를 병렬 실행하지 않도록 변경한다.
-6. Flag 자동 만료가 Flag 수가 아닌 pair budget으로 작업량을 제한하도록 변경한다.
+5. Flag batch와 decay를 전용 단일 worker queue에서 하나씩 실행하는 `IntimacyScoreManager`를 구현한다.
+6. Flag 자동 만료가 매시간 오래된 Flag 최대 100개를 soft delete하고, Flag별 점수 갱신을 queue에 넣도록 변경한다.
 7. Redis interaction-score buffer 전용 port, adapter, flush service, flush scheduler 및 테스트를 제거한다.
 8. aggregate 메서드로 계산한 기대값과 Cypher 갱신 뒤 실제 그래프 값이 동일함을 검증하는 테스트를 추가한다.
 9. Flag batch 실패의 제한된 재시도와 실패 맥락 로그를 추가한다.
@@ -119,6 +117,6 @@ Flag batch가 rollback된 것이 확인된 transient failure에만 제한된 재
 - Flag 하나는 참가자 전체 Friendship을 개별 Neo4j 요청이 아닌 하나의 Cypher batch transaction으로 반영한다.
 - 여러 Flag 종료가 들어와도 multi-Friendship Cypher batch는 동시에 두 개 이상 실행되지 않는다.
 - decay와 Flag batch는 동시에 실행되지 않는다.
-- 자동 Flag 만료는 단일 Flag가 budget을 넘지 않는 경우, 선택한 Flag들의 총 예상 pair 수가 설정된 budget을 넘지 않도록 제한한다.
+- 자동 Flag 만료는 매시간 종료 시각이 오래된 Flag 최대 100개만 soft delete하고, 각 Flag의 점수 갱신을 queue에 넣는다.
 - Flag batch의 반복 실패는 식별 가능한 맥락과 함께 로그로 남는다.
 - interaction-score Redis buffer/flush bean과 scheduler가 프로덕션 애플리케이션 컨텍스트에 남지 않는다.

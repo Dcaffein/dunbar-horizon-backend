@@ -9,6 +9,6 @@ public class FriendshipDecayService {
     private final IntimacyScoreManager intimacyScoreManager;
 
     public void processDecay() {
-        intimacyScoreManager.applyDecay();
+        intimacyScoreManager.enqueueDecay();
     }
 }

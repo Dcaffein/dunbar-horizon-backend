@@ -70,7 +70,7 @@ class FriendInteractionEventListenerTest {
 
         listener.handleBatchMutualInteraction(event);
 
-        verify(intimacyScoreManager).applyFlagConclusion(flagId, HOST, participants, delta);
+        verify(intimacyScoreManager).enqueueFlagConclusion(flagId, HOST, participants, delta);
         verify(friendshipRepository, never()).incrementMutualInterestScore(
                 org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyLong(),
                 org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyDouble());
