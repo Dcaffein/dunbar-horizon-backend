@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.social.domain.friend.repository;
 
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
+import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -25,6 +26,9 @@ public interface FriendshipRepository {
 
     void applyDecay(double rate, double threshold, LocalDateTime decayTime);
     void updateUserFields(Friendship friendship, Long userId);
+    void incrementInterestScore(String friendshipId, Long userId, Long friendId, double delta);
+    void incrementMutualInterestScore(String friendshipId, Long userAId, Long userBId, double delta);
+    void incrementMutualInterestScoresBatch(List<MutualInterestScoreUpdate> updates);
     List<Friendship> findAllByIds(List<String> ids);
     void batchUpdateInterestScores(List<Map<String, Object>> updates, LocalDateTime lastInteractedAt);
     List<FriendshipArchiveCandidate> findArchiveCandidates(double threshold);

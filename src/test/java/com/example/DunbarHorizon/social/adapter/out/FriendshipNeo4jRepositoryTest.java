@@ -12,11 +12,19 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.neo4j.core.Neo4jClient;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -175,6 +183,128 @@ class FriendshipNeo4jRepositoryTest {
         // then — 버그 시 intimacy = 0.0, 수정 후 양쪽 점수 기반 정상 계산값 > 0
         Friendship updated = friendshipRepository.findById("1_2").orElseThrow();
         assertThat(updated.getIntimacy()).isGreaterThan(0.0);
+    }
+
+    @Test
+    @DisplayName("단방향 관심도 Cypher 갱신은 aggregate 정책과 동일한 score와 intimacy를 남긴다")
+    void incrementInterestScore_matchesAggregatePolicy() {
+        // given
+        Friendship actual = FriendTestFactory.createFriendship(userA, userB);
+        Friendship expected = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.save(actual);
+        expected.adjustInterestScore(userA.getId(), 10.0);
+
+        // when
+        friendshipRepository.incrementInterestScore(actual.getId(), userA.getId(), userB.getId(), 10.0);
+
+        // then
+        Friendship updated = friendshipRepository.findById(actual.getId()).orElseThrow();
+        assertThat(updated.getMyInterestScore(userA.getId()))
+                .isCloseTo(expected.getMyInterestScore(userA.getId()), within(0.0001));
+        assertThat(updated.getMyInterestScore(userB.getId()))
+                .isCloseTo(expected.getMyInterestScore(userB.getId()), within(0.0001));
+        assertThat(updated.getIntimacy()).isCloseTo(expected.getIntimacy(), within(0.0001));
+    }
+
+    @Test
+    @DisplayName("상호 관심도 Cypher 갱신은 aggregate 정책과 동일하게 양쪽 score와 intimacy를 갱신한다")
+    void incrementMutualInterestScore_matchesAggregatePolicy() {
+        // given
+        Friendship actual = FriendTestFactory.createFriendship(userA, userB);
+        Friendship expected = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.save(actual);
+        expected.adjustMutualInterestScore(10.0);
+
+        // when
+        friendshipRepository.incrementMutualInterestScore(actual.getId(), userA.getId(), userB.getId(), 10.0);
+
+        // then
+        Friendship updated = friendshipRepository.findById(actual.getId()).orElseThrow();
+        assertThat(updated.getMyInterestScore(userA.getId()))
+                .isCloseTo(expected.getMyInterestScore(userA.getId()), within(0.0001));
+        assertThat(updated.getMyInterestScore(userB.getId()))
+                .isCloseTo(expected.getMyInterestScore(userB.getId()), within(0.0001));
+        assertThat(updated.getIntimacy()).isCloseTo(expected.getIntimacy(), within(0.0001));
+    }
+
+    @Test
+    @DisplayName("상호 관심도 batch Cypher는 모든 Friendship의 score와 intimacy를 갱신한다")
+    void incrementMutualInterestScoresBatch_updatesEveryPair() {
+        // given
+        Friendship friendshipAB = FriendTestFactory.createFriendship(userA, userB);
+        Friendship friendshipAC = FriendTestFactory.createFriendship(userA, userC);
+        friendshipRepository.save(friendshipAB);
+        friendshipRepository.save(friendshipAC);
+
+        // when
+        friendshipRepository.incrementMutualInterestScoresBatch(List.of(
+                Map.of("friendshipId", friendshipAC.getId(), "userAId", userA.getId(), "userBId", userC.getId(), "delta", 10.0),
+                Map.of("friendshipId", friendshipAB.getId(), "userAId", userA.getId(), "userBId", userB.getId(), "delta", 20.0)
+        ));
+
+        // then
+        Friendship updatedAB = friendshipRepository.findById(friendshipAB.getId()).orElseThrow();
+        Friendship updatedAC = friendshipRepository.findById(friendshipAC.getId()).orElseThrow();
+        assertThat(updatedAB.getMyInterestScore(userA.getId()))
+                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + 20.0, within(0.0001));
+        assertThat(updatedAB.getMyInterestScore(userB.getId()))
+                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + 20.0, within(0.0001));
+        assertThat(updatedAC.getMyInterestScore(userA.getId()))
+                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + 10.0, within(0.0001));
+        assertThat(updatedAC.getMyInterestScore(userC.getId()))
+                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + 10.0, within(0.0001));
+        assertThat(updatedAB.getIntimacy()).isCloseTo(
+                FriendRecognition.normalize(FriendRecognition.INITIAL_RAW_SCORE + 20.0), within(0.0001)
+        );
+        assertThat(updatedAC.getIntimacy()).isCloseTo(
+                FriendRecognition.normalize(FriendRecognition.INITIAL_RAW_SCORE + 10.0), within(0.0001)
+        );
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("동일 Friendship의 병렬 갱신은 이벤트 수만큼 누적되고 최종 intimacy를 재계산한다")
+    void incrementInterestScore_concurrently_accumulatesEveryEvent() throws Exception {
+        // given
+        Friendship friendship = friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
+        int eventCount = 16;
+        ExecutorService executor = Executors.newFixedThreadPool(eventCount);
+        CountDownLatch ready = new CountDownLatch(eventCount);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<?>> futures = new ArrayList<>();
+
+        try {
+            for (int i = 0; i < eventCount; i++) {
+                futures.add(executor.submit(() -> {
+                    ready.countDown();
+                    start.await();
+                    friendshipRepository.incrementInterestScore(
+                            friendship.getId(), userA.getId(), userB.getId(), 1.0
+                    );
+                    return null;
+                }));
+            }
+            ready.await();
+
+            // when
+            start.countDown();
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+
+        // then
+        Friendship updated = friendshipRepository.findById(friendship.getId()).orElseThrow();
+        double expectedScoreA = FriendRecognition.INITIAL_RAW_SCORE + eventCount;
+        double expectedScoreB = FriendRecognition.INITIAL_RAW_SCORE;
+        double expectedIntimacy = Math.sqrt(
+                FriendRecognition.normalize(expectedScoreA) * FriendRecognition.normalize(expectedScoreB)
+        );
+        assertThat(updated.getMyInterestScore(userA.getId())).isCloseTo(expectedScoreA, within(0.0001));
+        assertThat(updated.getMyInterestScore(userB.getId())).isCloseTo(expectedScoreB, within(0.0001));
+        assertThat(updated.getIntimacy()).isCloseTo(expectedIntimacy, within(0.0001));
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.neo4j;
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.FriendshipNeo4jRepository;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
+import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -73,6 +74,31 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
                 friendship.getFriendAlias(userId),
                 friendship.isMuted(userId),
                 friendship.isRoutable(userId)
+        );
+    }
+
+    @Override
+    public void incrementInterestScore(String friendshipId, Long userId, Long friendId, double delta) {
+        friendshipNeo4jRepository.incrementInterestScore(friendshipId, userId, friendId, delta);
+    }
+
+    @Override
+    public void incrementMutualInterestScore(String friendshipId, Long userAId, Long userBId, double delta) {
+        friendshipNeo4jRepository.incrementMutualInterestScore(friendshipId, userAId, userBId, delta);
+    }
+
+    @Override
+    public void incrementMutualInterestScoresBatch(List<MutualInterestScoreUpdate> updates) {
+        if (updates.isEmpty()) return;
+        friendshipNeo4jRepository.incrementMutualInterestScoresBatch(
+                updates.stream()
+                        .map(update -> Map.<String, Object>of(
+                                "friendshipId", update.friendshipId(),
+                                "userAId", update.userAId(),
+                                "userBId", update.userBId(),
+                                "delta", update.delta()
+                        ))
+                        .toList()
         );
     }
 
