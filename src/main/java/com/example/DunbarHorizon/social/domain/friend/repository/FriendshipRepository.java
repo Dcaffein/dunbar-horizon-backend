@@ -7,7 +7,6 @@ import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -29,8 +28,6 @@ public interface FriendshipRepository {
     void incrementInterestScore(String friendshipId, Long userId, Long friendId, double delta);
     void incrementMutualInterestScore(String friendshipId, Long userAId, Long userBId, double delta);
     void incrementMutualInterestScoresBatch(List<MutualInterestScoreUpdate> updates);
-    List<Friendship> findAllByIds(List<String> ids);
-    void batchUpdateInterestScores(List<Map<String, Object>> updates, LocalDateTime lastInteractedAt);
     List<FriendshipArchiveCandidate> findArchiveCandidates(double threshold);
     void deleteAllByIds(Collection<String> ids);
 }

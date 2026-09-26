@@ -58,12 +58,6 @@ public interface FriendshipNeo4jRepository extends Neo4jRepository<Friendship, S
             "SET friendship.intimacy = sqrt((scores[0] / (scores[0] + 50.0)) * (scores[1] / (scores[1] + 50.0)))")
     void applyDecay(@Param("rate") double rate, @Param("threshold") double threshold, @Param("decayTime") LocalDateTime decayTime);
 
-    @Query("UNWIND $updates AS u " +
-            "MATCH (:" + USER_REFERENCE + " {id: u.userId})-[r:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + " {id: u.friendshipId}) " +
-            "SET r.interestScore = u.interestScore, r.lastInteractedAt = $lastInteractedAt, f.intimacy = u.intimacy")
-    void batchUpdateInterestScores(@Param("updates") List<Map<String, Object>> updates,
-                                   @Param("lastInteractedAt") LocalDateTime lastInteractedAt);
-
     @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[r:" + HAS_FRIENDSHIP + "]->(:" + FRIENDSHIP + " {id: $friendshipId}) " +
             "SET r.friendAlias = $alias, r.isMuted = $isMuted, r.isRoutable = $isRoutable")
     void updateUserRelationshipFields(@Param("friendshipId") String friendshipId,

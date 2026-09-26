@@ -2,10 +2,10 @@ package com.example.DunbarHorizon.social.application.eventListener;
 
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
-import com.example.DunbarHorizon.social.application.port.out.InteractionScoreDeltaPort;
 import com.example.DunbarHorizon.social.application.service.IntimacyScoreManager;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -18,7 +18,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class FriendInteractionEventListener {
 
-    private final InteractionScoreDeltaPort deltaPort;
+    private final FriendshipRepository friendshipRepository;
     private final IntimacyScoreManager intimacyScoreManager;
 
     @Async
@@ -29,13 +29,17 @@ public class FriendInteractionEventListener {
             double delta = InteractionScorePolicy.scoreOf(event.type());
 
             if (event.type().isMutual()) {
-                deltaPort.accumulateMutual(friendshipId, delta);
+                friendshipRepository.incrementMutualInterestScore(
+                        friendshipId, event.userA(), event.userB(), delta
+                );
             } else {
-                deltaPort.accumulate(friendshipId, event.userA(), delta);
+                friendshipRepository.incrementInterestScore(
+                        friendshipId, event.userA(), event.userB(), delta
+                );
             }
-            log.debug("Interaction buffered: {} <-> {}, type={}", event.userA(), event.userB(), event.type());
+            log.debug("Interaction score updated: {} <-> {}, type={}", event.userA(), event.userB(), event.type());
         } catch (Exception e) {
-            log.error("Failed to buffer interaction: {} <-> {}", event.userA(), event.userB(), e);
+            log.error("Failed to update interaction score: {} <-> {}", event.userA(), event.userB(), e);
         }
     }
 

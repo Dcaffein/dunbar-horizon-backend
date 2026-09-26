@@ -16,8 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 @Repository
 @RequiredArgsConstructor
@@ -100,18 +98,6 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
                         ))
                         .toList()
         );
-    }
-
-    @Override
-    public List<Friendship> findAllByIds(List<String> ids) {
-        return StreamSupport.stream(
-                friendshipNeo4jRepository.findAllById(ids).spliterator(), false
-        ).collect(Collectors.toList());
-    }
-
-    @Override
-    public void batchUpdateInterestScores(List<Map<String, Object>> updates, LocalDateTime lastInteractedAt) {
-        friendshipNeo4jRepository.batchUpdateInterestScores(updates, lastInteractedAt);
     }
 
     @Override

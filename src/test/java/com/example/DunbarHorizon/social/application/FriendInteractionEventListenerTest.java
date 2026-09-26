@@ -4,10 +4,10 @@ import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteraction
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import com.example.DunbarHorizon.social.application.eventListener.FriendInteractionEventListener;
-import com.example.DunbarHorizon.social.application.port.out.InteractionScoreDeltaPort;
 import com.example.DunbarHorizon.social.application.service.IntimacyScoreManager;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,7 +19,6 @@ import java.util.List;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class FriendInteractionEventListenerTest {
@@ -28,7 +27,7 @@ class FriendInteractionEventListenerTest {
     private FriendInteractionEventListener listener;
 
     @Mock
-    private InteractionScoreDeltaPort deltaPort;
+    private FriendshipRepository friendshipRepository;
 
     @Mock
     private IntimacyScoreManager intimacyScoreManager;
@@ -38,27 +37,27 @@ class FriendInteractionEventListenerTest {
     private static final Long HOST = 10L;
 
     @Test
-    @DisplayName("mutual=false 타입 수신 시 userA 방향으로 accumulate를 호출한다")
-    void handleUserInteraction_unilateral_callsAccumulate() {
+    @DisplayName("mutual=false 타입 수신 시 userA 방향의 Cypher score 갱신을 호출한다")
+    void handleUserInteraction_unilateral_updatesOneSideImmediately() {
         UserInteractionEvent event = new UserInteractionEvent(USER_A, USER_B, InteractionType.VISIT);
         String friendshipId = Friendship.generateCompositeId(USER_A, USER_B);
         double delta = InteractionScorePolicy.scoreOf(InteractionType.VISIT);
 
         listener.handleUserInteraction(event);
 
-        verify(deltaPort).accumulate(friendshipId, USER_A, delta);
+        verify(friendshipRepository).incrementInterestScore(friendshipId, USER_A, USER_B, delta);
     }
 
     @Test
-    @DisplayName("mutual=true 타입 수신 시 accumulateMutual을 호출한다")
-    void handleUserInteraction_mutual_callsAccumulateMutual() {
+    @DisplayName("mutual=true 타입 수신 시 양 방향 Cypher score 갱신을 호출한다")
+    void handleUserInteraction_mutual_updatesBothSidesImmediately() {
         UserInteractionEvent event = new UserInteractionEvent(USER_A, USER_B, InteractionType.FLAG_ENDED);
         String friendshipId = Friendship.generateCompositeId(USER_A, USER_B);
         double delta = InteractionScorePolicy.scoreOf(InteractionType.FLAG_ENDED);
 
         listener.handleUserInteraction(event);
 
-        verify(deltaPort).accumulateMutual(friendshipId, delta);
+        verify(friendshipRepository).incrementMutualInterestScore(friendshipId, USER_A, USER_B, delta);
     }
 
     @Test
@@ -72,7 +71,8 @@ class FriendInteractionEventListenerTest {
         listener.handleBatchMutualInteraction(event);
 
         verify(intimacyScoreManager).applyFlagConclusion(flagId, HOST, participants, delta);
-        verify(deltaPort, never()).accumulateMutual(
-                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyDouble());
+        verify(friendshipRepository, never()).incrementMutualInterestScore(
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyDouble());
     }
 }
