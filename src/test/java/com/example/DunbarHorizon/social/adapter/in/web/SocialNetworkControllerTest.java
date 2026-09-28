@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.social.adapter.in.web;
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
+import com.example.DunbarHorizon.social.application.dto.result.NodeEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.support.BaseControllerTest;
@@ -41,6 +42,23 @@ class SocialNetworkControllerTest extends BaseControllerTest {
         mockMvc.perform(get("/api/v1/network/labels/{labelId}", labelId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    @DisplayName("네트워크 응답은 노드 관심도만 제공하고 엣지 관심도는 제공하지 않는다")
+    void getFriendsNetwork_노드에만_관심도를_반환한다() throws Exception {
+        // given
+        given(socialNetworkQueryUseCase.getFriendsNetwork(eq(1L), eq(DunbarCircle.DUNBAR)))
+                .willReturn(List.of(new NodeGraphResult(2L, 0.7, List.of(new NodeEdgeResult(3L, 0.6)))));
+
+        // when & then
+        mockMvc.perform(get("/api/v1/network"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].nodeId").value(2))
+                .andExpect(jsonPath("$[0].interestScore").value(0.7))
+                .andExpect(jsonPath("$[0].edges[0].friendId").value(3))
+                .andExpect(jsonPath("$[0].edges[0].intimacy").value(0.6))
+                .andExpect(jsonPath("$[0].edges[0].friendInterest").doesNotExist());
     }
 
     @Test

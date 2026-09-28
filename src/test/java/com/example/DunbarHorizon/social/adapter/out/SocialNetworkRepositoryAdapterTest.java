@@ -124,9 +124,6 @@ class SocialNetworkRepositoryAdapterTest {
         assertThat(nodeA.interestScore()).isEqualTo(0.7);
         assertThat(nodeB.interestScore()).isEqualTo(0.3);
 
-        // A→B 엣지에서 B의 friendInterest
-        nodeA.edges().stream().filter(e -> e.friendId().equals(20L)).findFirst()
-                .ifPresent(e -> assertThat(e.friendInterest()).isEqualTo(0.3));
     }
 
     @Test

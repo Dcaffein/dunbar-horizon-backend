@@ -45,7 +45,7 @@ class SocialNetworkQueryServiceTest {
     @DisplayName("getFriendsNetwork: 기본 네트워크 결과를 반환한다")
     void getFriendsNetwork_결과를_반환한다() {
         List<NodeGraphResult> expected = List.of(
-                new NodeGraphResult(10L, 0.7, List.of(new NodeEdgeResult(20L, 0.85, 0.3)))
+                new NodeGraphResult(10L, 0.7, List.of(new NodeEdgeResult(20L, 0.85)))
         );
         given(socialNetworkRepository.getDefaultNetworkGraph(1L, DunbarCircle.KINSHIP, 5, 10))
                 .willReturn(expected);

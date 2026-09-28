@@ -61,8 +61,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
                    interestMap[toString(member.#{ID})] AS nodeInterest,
                    [e IN topEdges | {
                      friendId:       e.targetMemberId,
-                     intimacy:       e.intimacy,
-                     friendInterest: interestMap[toString(e.targetMemberId)]
+                     intimacy:       e.intimacy
                    }] AS memberEdges
             """)
             .replace("#{UR}", USER_REFERENCE)
@@ -189,8 +188,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
         List<NodeEdgeResult> edges = record.get("memberEdges").asList(e ->
                 new NodeEdgeResult(
                         e.get("friendId").asLong(),
-                        e.get("intimacy").asDouble(0.0),
-                        e.get("friendInterest").asDouble(0.0)
+                        e.get("intimacy").asDouble(0.0)
                 )
         );
         return new NodeGraphResult(nodeId, nodeInterest, edges);
