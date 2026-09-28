@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.social.application.dto.result.NodeEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkRepository;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
+import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -184,7 +185,8 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
 
     private static NodeGraphResult mapNodeGraphResult(org.neo4j.driver.Record record) {
         Long nodeId = record.get("nodeId").asLong();
-        double nodeInterest = record.get("nodeInterest").asDouble(0.0);
+        // interestScore는 그래프에 raw 값으로 저장되므로, 엣지의 intimacy와 같은 0~1 스케일로 맞춰 내보낸다
+        double nodeInterest = FriendRecognition.normalize(record.get("nodeInterest").asDouble(0.0));
         List<NodeEdgeResult> edges = record.get("memberEdges").asList(e ->
                 new NodeEdgeResult(
                         e.get("friendId").asLong(),

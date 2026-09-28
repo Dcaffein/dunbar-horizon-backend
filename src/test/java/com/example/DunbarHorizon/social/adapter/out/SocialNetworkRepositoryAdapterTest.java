@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.SocialNetw
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
+import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.support.Neo4jRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +16,7 @@ import org.springframework.data.neo4j.core.Neo4jClient;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 /**
  * 테스트 그래프:
@@ -48,8 +50,8 @@ class SocialNetworkRepositoryAdapterTest {
                 CREATE (ff:UserReference {id: 60})
                 CREATE (tx:UserReference {id: 100})
 
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.7}]->(:Friendship {intimacy: 0.9})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fa)
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.3}]->(:Friendship {intimacy: 0.8})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fb)
+                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 21.4}]->(:Friendship {intimacy: 0.9})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fa)
+                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 150.0}]->(:Friendship {intimacy: 0.8})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fb)
                 CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.7})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fc)
                 CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.6})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fd)
                 CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.5})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fe)
@@ -115,15 +117,24 @@ class SocialNetworkRepositoryAdapterTest {
     }
 
     @Test
-    @DisplayName("interestScore가 노드별로 올바르게 반환된다")
-    void getDefaultNetworkGraph_interestScore가_노드별로_올바르게_반환된다() {
+    @DisplayName("interestScore가 노드별로 정규화되어 반환된다")
+    void getDefaultNetworkGraph_interestScore가_노드별로_정규화되어_반환된다() {
         List<NodeGraphResult> result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
 
         NodeGraphResult nodeA = result.stream().filter(n -> n.nodeId().equals(10L)).findFirst().orElseThrow();
         NodeGraphResult nodeB = result.stream().filter(n -> n.nodeId().equals(20L)).findFirst().orElseThrow();
-        assertThat(nodeA.interestScore()).isEqualTo(0.7);
-        assertThat(nodeB.interestScore()).isEqualTo(0.3);
+        assertThat(nodeA.interestScore()).isCloseTo(FriendRecognition.normalize(21.4), within(1e-9));
+        assertThat(nodeB.interestScore()).isCloseTo(FriendRecognition.normalize(150.0), within(1e-9));
+    }
 
+    @Test
+    @DisplayName("그래프에 저장된 raw interestScore가 정규화 없이 노출되지 않는다")
+    void getDefaultNetworkGraph_raw_interestScore가_그대로_노출되지_않는다() {
+        List<NodeGraphResult> result = repository.getDefaultNetworkGraph(1L, DunbarCircle.DUNBAR, 5, 10);
+
+        // 엣지의 intimacy와 같은 0~1 스케일이어야 한다. raw(21.4, 150.0)가 새어 나오면 실패한다.
+        assertThat(result).allSatisfy(node ->
+                assertThat(node.interestScore()).isBetween(0.0, 1.0));
     }
 
     @Test
