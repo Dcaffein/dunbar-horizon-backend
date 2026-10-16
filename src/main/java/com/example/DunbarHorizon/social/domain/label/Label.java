@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.social.domain.label;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.social.domain.label.exception.InvalidLabelNameException;
 import lombok.*;
-import org.springframework.data.annotation.Version;
 import com.example.DunbarHorizon.global.util.UuidUtil;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
@@ -28,9 +27,6 @@ public class Label {
     @Id
     private String id;
 
-    @Version
-    private Long version;
-
     private String labelName;
 
     @Relationship(type = OWNS_LABEL, direction = Relationship.Direction.INCOMING)
@@ -44,21 +40,6 @@ public class Label {
         this.id = UuidUtil.createV7().toString();
         this.owner = owner;
         this.labelName = labelName;
-    }
-
-    void addNewMember(UserReference newMember) {
-        this.members.add(newMember);
-    }
-
-    public void removeMember(UserReference memberToRemove) {
-        members.remove(memberToRemove);
-    }
-
-    void updateMembers(Set<UserReference> newMembers) {
-        this.members.clear();
-        if (newMembers != null) {
-            this.members.addAll(newMembers);
-        }
     }
 
     void applyNewLabelName(String newLabelName) {
