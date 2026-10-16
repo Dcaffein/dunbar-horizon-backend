@@ -40,7 +40,7 @@ public class FriendRequestReceiverActionService implements FriendRequestReceiver
 
     private void acceptRequest(FriendRequest request, String requestId) {
         Friendship friendship = friendshipBroker.createFrom(request);
-        friendshipRepository.save(friendship);
+        friendshipRepository.create(friendship);
         friendRequestRepository.deleteById(requestId);
 
         eventPublisher.publishEvent(new FriendshipCreatedEvent(

@@ -146,6 +146,10 @@ public class Friendship {
         return getSelfRecognition(myId).isRoutable();
     }
 
+    public List<FriendRecognition> getRecognitions() {
+        return List.copyOf(recognitions);
+    }
+
     public void updateUserFields(Long userId, String alias, Boolean isMuted, Boolean isRoutable) {
         FriendRecognition rec = getSelfRecognition(userId);
         if (alias != null)      rec.updateFriendAlias(alias.isEmpty() ? null : alias);

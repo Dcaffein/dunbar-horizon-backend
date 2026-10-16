@@ -1,21 +1,31 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.neo4j;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.FriendshipNeo4jRepository;
+import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
 import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.neo4j.core.Neo4jClient;
+import org.springframework.data.neo4j.core.mapping.Constants;
+import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
+import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.FRIENDSHIP;
+import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.HAS_FRIENDSHIP;
+import static com.example.DunbarHorizon.social.domain.socialUser.constant.SocialUserConstants.USER_REFERENCE;
 
 @Repository
 @RequiredArgsConstructor
@@ -23,10 +33,57 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
 
     private final FriendshipNeo4jRepository friendshipNeo4jRepository;
     private final Neo4jClient neo4jClient;
+    private final Neo4jMappingContext mappingContext;
+
+    private static final String CREATE_FRIENDSHIP =
+            "OPTIONAL MATCH (a:" + USER_REFERENCE + " {id: $userAId}) " +
+            "OPTIONAL MATCH (b:" + USER_REFERENCE + " {id: $userBId}) " +
+            "CALL { " +
+            "  WITH a, b " +
+            "  WITH a, b WHERE a IS NOT NULL AND b IS NOT NULL " +
+            "  MERGE (f:" + FRIENDSHIP + " {id: $friendshipId}) ON CREATE SET f += $friendship " +
+            "  MERGE (a)-[ra:" + HAS_FRIENDSHIP + "]->(f) ON CREATE SET ra += $recognitionA " +
+            "  MERGE (b)-[rb:" + HAS_FRIENDSHIP + "]->(f) ON CREATE SET rb += $recognitionB " +
+            "  RETURN count(f) AS created " +
+            "} " +
+            "RETURN a IS NULL AS missingA, b IS NULL AS missingB";
 
     @Override
-    public Friendship save(Friendship friendship) {
-        return friendshipNeo4jRepository.save(friendship);
+    public void create(Friendship friendship) {
+        List<FriendRecognition> recognitions = friendship.getRecognitions().stream()
+                .sorted(Comparator.comparing(recognition -> recognition.getUser().getId()))
+                .toList();
+        FriendRecognition recognitionA = recognitions.get(0);
+        FriendRecognition recognitionB = recognitions.get(1);
+        Long userAId = recognitionA.getUser().getId();
+        Long userBId = recognitionB.getUser().getId();
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("friendshipId", friendship.getId());
+        params.put("friendship", propertiesOf(Friendship.class, friendship));
+        params.put("userAId", userAId);
+        params.put("userBId", userBId);
+        params.put("recognitionA", propertiesOf(FriendRecognition.class, recognitionA));
+        params.put("recognitionB", propertiesOf(FriendRecognition.class, recognitionB));
+
+        Map<String, Object> result = neo4jClient.query(CREATE_FRIENDSHIP)
+                .bindAll(params)
+                .fetch()
+                .one()
+                .orElseThrow();
+
+        if ((Boolean) result.get("missingA")) throw new UserReferenceNotFoundException(userAId);
+        if ((Boolean) result.get("missingB")) throw new UserReferenceNotFoundException(userBId);
+    }
+
+    /**
+     * SDN 매핑이 정한 엔티티 자신의 속성만 꺼낸다. 관계와 연결 노드는 포함하지 않는다.
+     */
+    @SuppressWarnings("unchecked")
+    private <T> Map<String, Object> propertiesOf(Class<T> type, T entity) {
+        return (Map<String, Object>) mappingContext.getRequiredBinderFunctionFor(type)
+                .apply(entity)
+                .get(Constants.NAME_OF_PROPERTIES_PARAM);
     }
 
     @Override
