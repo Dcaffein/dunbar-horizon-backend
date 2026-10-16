@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.social.application;
 import com.example.DunbarHorizon.social.application.service.LabelService;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
+import com.example.DunbarHorizon.social.domain.label.event.LabelMemberChangedEvent;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
@@ -27,6 +28,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -55,6 +57,7 @@ class LabelServiceTest {
     private ApplicationEventPublisher eventPublisher;
 
     private final Long currentUserId = 1L;
+    private final Long nonOwnerId = 99L;
     private final String labelId = "label-uuid-123";
     private Label mockLabel;
 
@@ -63,16 +66,23 @@ class LabelServiceTest {
         mockLabel = mock(Label.class);
     }
 
+    private void givenLabelOwnedByCurrentUser() {
+        SocialUser owner = mock(SocialUser.class);
+        given(owner.getId()).willReturn(currentUserId);
+        given(labelRepository.findById(labelId)).willReturn(Optional.of(mockLabel));
+        given(mockLabel.getOwner()).willReturn(owner);
+    }
+
     @Test
-    @DisplayName("라벨 생성 시 이름 중복 확인과 소유자 조회를 거쳐 저장한다")
+    @DisplayName("라벨 생성 시 이름 중복 확인과 소유자 조회를 거쳐 생성하고, 만든 라벨을 그대로 반환한다")
     void createLabel_Success() {
         // given
         String name = "친구들";
         SocialUser mockOwner = mock(SocialUser.class);
+        Label newLabel = mock(Label.class);
 
         given(socialUserRepository.findById(currentUserId)).willReturn(Optional.of(mockOwner));
-        given(labelFactory.create(any(), anyString())).willReturn(mock(Label.class));
-        given(labelRepository.save(any(Label.class))).willReturn(mockLabel);
+        given(labelFactory.create(any(), anyString())).willReturn(newLabel);
 
         // when
         Label result = labelService.createLabel(currentUserId, name);
@@ -80,71 +90,132 @@ class LabelServiceTest {
         // then
         verify(labelNamePolicy).validateLabelNameUniqueness(currentUserId, name);
         verify(socialUserRepository).findById(currentUserId);
-        verify(labelRepository).save(any(Label.class));
-        assertThat(result).isEqualTo(mockLabel);
+        verify(labelRepository).create(newLabel);
+        assertThat(result).isSameAs(newLabel);
     }
 
     @Test
-    @DisplayName("라벨 삭제 시 소유자 확인 후 삭제를 수행한다")
+    @DisplayName("라벨 삭제 시 소유자 확인 후 ID로 삭제한다")
     void deleteLabel_Success() {
         // given
-        SocialUser owner = mock(SocialUser.class);
-        given(owner.getId()).willReturn(currentUserId);
-
-        given(labelRepository.findById(labelId)).willReturn(Optional.of(mockLabel));
-        given(mockLabel.getOwner()).willReturn(owner);
+        givenLabelOwnedByCurrentUser();
 
         // when
         labelService.deleteLabel(currentUserId, labelId);
 
         // then
-        verify(labelRepository).delete(mockLabel);
+        verify(labelRepository).delete(labelId);
+        verify(eventPublisher).publishEvent(any(LabelMemberChangedEvent.class));
     }
 
     @Test
-    @DisplayName("라벨에 멤버 추가 시 도메인 서비스에 ID를 전달하고 저장한다")
+    @DisplayName("소유자가 아닌 유저가 라벨 삭제를 요청하면 아무것도 삭제하지 않는다")
+    void deleteLabel_ByNonOwner_DoesNothing() {
+        // given
+        givenLabelOwnedByCurrentUser();
+
+        // when
+        labelService.deleteLabel(nonOwnerId, labelId);
+
+        // then
+        verify(labelRepository, never()).delete(anyString());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    @DisplayName("라벨에 멤버 추가 시 소유자 확인 후 도메인 서비스에 식별자를 전달한다")
     void addMemberToLabel_Success() {
         // given
         Long newMemberId = 2L;
-        SocialUser owner = mock(SocialUser.class);
-        given(owner.getId()).willReturn(currentUserId);
-
-        given(labelRepository.findById(labelId)).willReturn(Optional.of(mockLabel));
-        given(mockLabel.getOwner()).willReturn(owner);
+        givenLabelOwnedByCurrentUser();
 
         // when
         labelService.addMemberToLabel(currentUserId, labelId, newMemberId);
 
         // then
-        verify(labelMemberEnroller).addNewMember(mockLabel, newMemberId);
-        verify(labelRepository).save(mockLabel);
+        verify(labelMemberEnroller).addNewMember(labelId, currentUserId, newMemberId);
+        verify(eventPublisher).publishEvent(any(LabelMemberChangedEvent.class));
     }
 
     @Test
-    @DisplayName("라벨 정보 업데이트 시 이름이 있으면 반영한다")
-    void updateLabel_PartialUpdate() {
+    @DisplayName("라벨에서 멤버 제거 시 사용자 조회 없이 식별자로 제거한다")
+    void removeMemberFromLabel_Success() {
+        // given
+        Long memberId = 2L;
+        givenLabelOwnedByCurrentUser();
+
+        // when
+        labelService.removeMemberFromLabel(currentUserId, labelId, memberId);
+
+        // then
+        verify(labelRepository).removeMember(labelId, memberId);
+        verifyNoInteractions(socialUserRepository);
+        verify(eventPublisher).publishEvent(any(LabelMemberChangedEvent.class));
+    }
+
+    @Test
+    @DisplayName("라벨 멤버 교체 시 소유자 확인 후 도메인 서비스에 식별자를 전달한다")
+    void replaceLabelMembers_Success() {
+        // given
+        List<Long> memberIds = List.of(2L, 3L);
+        givenLabelOwnedByCurrentUser();
+
+        // when
+        labelService.replaceLabelMembers(currentUserId, labelId, memberIds);
+
+        // then
+        verify(labelMemberEnroller).updateMembers(labelId, currentUserId, memberIds);
+        verify(eventPublisher).publishEvent(any(LabelMemberChangedEvent.class));
+    }
+
+    @Test
+    @DisplayName("라벨 이름 변경 시 정책을 거친 이름으로 갱신한다")
+    void updateLabel_Success() {
         // given
         String newName = "새이름";
-
-        given(labelRepository.findById(labelId)).willReturn(Optional.of(mockLabel));
+        givenLabelOwnedByCurrentUser();
+        given(mockLabel.getLabelName()).willReturn(newName);
 
         // when
         labelService.updateLabel(labelId, currentUserId, newName);
 
         // then
         verify(labelNamePolicy).changeLabelName(mockLabel, newName);
-        verify(labelRepository).save(mockLabel);
+        verify(labelRepository).rename(labelId, newName);
+    }
+
+    @Test
+    @DisplayName("라벨 이름이 없으면 아무것도 갱신하지 않는다")
+    void updateLabel_NullName_DoesNothing() {
+        // given
+        givenLabelOwnedByCurrentUser();
+
+        // when
+        labelService.updateLabel(labelId, currentUserId, null);
+
+        // then
+        verifyNoInteractions(labelNamePolicy);
+        verify(labelRepository, never()).rename(anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("소유자가 아닌 유저가 라벨 이름을 바꾸려 하면 LabelAuthorizationException이 발생한다")
+    void updateLabel_ByNonOwner_Fail() {
+        // given
+        givenLabelOwnedByCurrentUser();
+
+        // when & then
+        assertThatThrownBy(() -> labelService.updateLabel(labelId, nonOwnerId, "새이름"))
+                .isInstanceOf(LabelAuthorizationException.class);
+        verifyNoInteractions(labelNamePolicy);
+        verify(labelRepository, never()).rename(anyString(), anyString());
     }
 
     @Test
     @DisplayName("소유자가 라벨을 단건 조회하면 LabelResult를 반환한다")
     void getLabelById_Success() {
         // given
-        SocialUser owner = mock(SocialUser.class);
-        given(owner.getId()).willReturn(currentUserId);
-
-        given(labelRepository.findById(labelId)).willReturn(Optional.of(mockLabel));
-        given(mockLabel.getOwner()).willReturn(owner);
+        givenLabelOwnedByCurrentUser();
         given(mockLabel.getId()).willReturn(labelId);
         given(mockLabel.getLabelName()).willReturn("친구들");
         given(mockLabel.getMembers()).willReturn(Set.of());
@@ -180,12 +251,7 @@ class LabelServiceTest {
     @DisplayName("소유자가 아닌 유저가 라벨을 조회하면 LabelAuthorizationException이 발생한다")
     void getLabelById_ByNonOwner_Fail() {
         // given
-        Long nonOwnerId = 99L;
-        SocialUser owner = mock(SocialUser.class);
-        given(owner.getId()).willReturn(currentUserId);
-
-        given(labelRepository.findById(labelId)).willReturn(Optional.of(mockLabel));
-        given(mockLabel.getOwner()).willReturn(owner);
+        givenLabelOwnedByCurrentUser();
 
         // when & then
         assertThatThrownBy(() -> labelService.getLabelById(nonOwnerId, labelId))
@@ -196,11 +262,7 @@ class LabelServiceTest {
     @DisplayName("소유자가 라벨 멤버 목록을 조회하면 멤버 결과 리스트를 반환한다")
     void getLabelMembers_Success() {
         // given
-        SocialUser owner = mock(SocialUser.class);
-        given(owner.getId()).willReturn(currentUserId);
-
-        given(labelRepository.findById(labelId)).willReturn(Optional.of(mockLabel));
-        given(mockLabel.getOwner()).willReturn(owner);
+        givenLabelOwnedByCurrentUser();
         given(mockLabel.getMembers()).willReturn(Set.of());
 
         // when

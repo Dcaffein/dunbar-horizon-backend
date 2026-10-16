@@ -46,7 +46,7 @@ class FriendRequestReceiverActionServiceTest {
     private ApplicationEventPublisher eventPublisher;
 
     @Test
-    @DisplayName("수신자가 요청을 수락하면 Friendship이 저장되고 요청은 삭제되며 이벤트가 발행된다")
+    @DisplayName("수신자가 요청을 수락하면 Friendship이 생성되고 요청은 삭제되며 이벤트가 발행된다")
     void acceptFriendRequest_Success() {
         // given
         Long counterpartId = 1L;
@@ -69,7 +69,7 @@ class FriendRequestReceiverActionServiceTest {
 
         // then
         verify(friendshipBroker).createFrom(request);
-        verify(friendshipRepository).save(mockFriendship);
+        verify(friendshipRepository).create(mockFriendship);
         verify(friendRequestRepository).deleteById(requestId);
         verify(eventPublisher).publishEvent(any(FriendshipCreatedEvent.class));
         verify(eventPublisher).publishEvent(any(FriendRequestAcceptedEvent.class));

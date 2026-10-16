@@ -4,9 +4,7 @@ import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFou
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
-import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
-import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
+import com.example.DunbarHorizon.social.domain.label.repository.LabelRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -18,30 +16,27 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class LabelMemberEnroller {
     private final FriendshipRepository friendshipRepository;
-    private final SocialUserRepository socialUserRepository;
+    private final LabelRepository labelRepository;
 
-    public void addNewMember(Label label, Long newMemberId) {
-        if (!friendshipRepository.existsFriendshipBetween(label.getOwner().getId(), newMemberId)) {
-            throw new FriendshipNotFoundException(label.getOwner().getId(), newMemberId);
+    public void addNewMember(String labelId, Long ownerId, Long newMemberId) {
+        if (!friendshipRepository.existsFriendshipBetween(ownerId, newMemberId)) {
+            throw new FriendshipNotFoundException(ownerId, newMemberId);
         }
 
-        if (label.getMembers().stream().anyMatch(m -> m.getId().equals(newMemberId))) {
+        if (labelRepository.existsMember(labelId, newMemberId)) {
             throw new DuplicateLabelMemberException(newMemberId);
         }
 
-        UserReference newMember = socialUserRepository.findById(newMemberId)
-                .orElseThrow(() -> new UserReferenceNotFoundException(newMemberId));
-        label.addNewMember(newMember);
+        labelRepository.addMember(labelId, newMemberId);
     }
 
-    public void updateMembers(Label label, List<Long> newMemberIds) {
+    public void updateMembers(String labelId, Long ownerId, List<Long> newMemberIds) {
         if (newMemberIds == null || newMemberIds.isEmpty()) {
-            label.updateMembers(Set.of());
+            labelRepository.replaceMembers(labelId, Set.of());
             return;
         }
 
         List<Long> distinctIds = newMemberIds.stream().distinct().toList();
-        Long ownerId = label.getOwner().getId();
 
         Set<Long> validFriendIds = friendshipRepository.filterFriendIdsAmong(ownerId, distinctIds);
 
@@ -50,8 +45,7 @@ public class LabelMemberEnroller {
             throw new NonFriendLabelMemberException(invalidIds);
         }
 
-        Set<UserReference> validMembers = socialUserRepository.findAllUserReferencesById(validFriendIds);
-        label.updateMembers(validMembers);
+        labelRepository.replaceMembers(labelId, validFriendIds);
     }
 
     private List<Long> findInvalidIds(Set<Long> requestedIds, Set<Long> validFriendIds) {

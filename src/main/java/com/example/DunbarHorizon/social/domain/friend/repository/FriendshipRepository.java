@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface FriendshipRepository {
-    Friendship save(Friendship friendship);
+    void create(Friendship friendship);
     Optional<Friendship> findById(String id);
     void delete(String friendshipId);
 

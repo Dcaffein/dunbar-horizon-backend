@@ -39,14 +39,16 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
         labelNamePolicy.validateLabelNameUniqueness(currentUserId, labelName);
         UserReference owner = socialUserRepository.findById(currentUserId)
                 .orElseThrow(() -> new UserReferenceNotFoundException(currentUserId));
-        return labelRepository.save(labelFactory.create(owner, labelName));
+        Label label = labelFactory.create(owner, labelName);
+        labelRepository.create(label);
+        return label;
     }
 
     @Neo4jTransactional
     public void deleteLabel(Long currentUserId, String labelId) {
         Label label = getLabel(labelId);
         if (label.getOwner().getId().equals(currentUserId)) {
-            labelRepository.delete(label);
+            labelRepository.delete(labelId);
             eventPublisher.publishEvent(new LabelMemberChangedEvent(currentUserId, labelId));
         }
     }
@@ -55,8 +57,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     public void addMemberToLabel(Long currentUserId, String labelId, Long newMemberId) {
         Label label = getLabel(labelId);
         validateOwner(label, currentUserId);
-        labelMemberEnroller.addNewMember(label, newMemberId);
-        labelRepository.save(label);
+        labelMemberEnroller.addNewMember(labelId, currentUserId, newMemberId);
         eventPublisher.publishEvent(new LabelMemberChangedEvent(currentUserId, labelId));
     }
 
@@ -64,10 +65,7 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     public void removeMemberFromLabel(Long currentUserId, String labelId, Long memberIdToRemove) {
         Label label = getLabel(labelId);
         validateOwner(label, currentUserId);
-        UserReference memberToRemove = socialUserRepository.findById(memberIdToRemove)
-                .orElseThrow(() -> new UserReferenceNotFoundException(memberIdToRemove));
-        label.removeMember(memberToRemove);
-        labelRepository.save(label);
+        labelRepository.removeMember(labelId, memberIdToRemove);
         eventPublisher.publishEvent(new LabelMemberChangedEvent(currentUserId, labelId));
     }
 
@@ -75,18 +73,19 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     public void replaceLabelMembers(Long currentUserId, String labelId, List<Long> potentialMemberIds) {
         Label label = getLabel(labelId);
         validateOwner(label, currentUserId);
-        labelMemberEnroller.updateMembers(label, potentialMemberIds);
-        labelRepository.save(label);
+        labelMemberEnroller.updateMembers(labelId, currentUserId, potentialMemberIds);
         eventPublisher.publishEvent(new LabelMemberChangedEvent(currentUserId, labelId));
     }
 
     @Neo4jTransactional
     public void updateLabel(String labelId, Long currentUserId, String labelName) {
         Label label = getLabel(labelId);
+        validateOwner(label, currentUserId);
 
-        applyIfPresent(labelName, newLabelName -> labelNamePolicy.changeLabelName(label, newLabelName));
-
-        labelRepository.save(label);
+        applyIfPresent(labelName, newLabelName -> {
+            labelNamePolicy.changeLabelName(label, newLabelName);
+            labelRepository.rename(labelId, label.getLabelName());
+        });
     }
 
     @Override

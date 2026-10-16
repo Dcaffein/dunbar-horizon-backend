@@ -77,13 +77,11 @@ class LabelNeo4jRepositoryTest {
     @DisplayName("ownerId + memberId 기준으로 해당 멤버가 속한 라벨만 조회한다")
     void findLabelsByOwnerAndMember_멤버가_속한_라벨만_반환() {
         // given
-        Label labelWithFriend1 = LabelTestFactory.createLabel(owner, "라벨A");
-        LabelTestFactory.addMember(labelWithFriend1, friend1);
-        labelRepository.save(labelWithFriend1);
+        Label labelWithFriend1 = labelRepository.save(LabelTestFactory.createLabel(owner, "라벨A"));
+        labelRepository.addMember(labelWithFriend1.getId(), friend1.getId());
 
-        Label labelWithFriend2 = LabelTestFactory.createLabel(owner, "라벨B");
-        LabelTestFactory.addMember(labelWithFriend2, friend2);
-        labelRepository.save(labelWithFriend2);
+        Label labelWithFriend2 = labelRepository.save(LabelTestFactory.createLabel(owner, "라벨B"));
+        labelRepository.addMember(labelWithFriend2.getId(), friend2.getId());
 
         // when
         List<Label> result = labelRepository.findLabelsByOwnerAndMember(owner.getId(), friend1.getId());
@@ -111,10 +109,9 @@ class LabelNeo4jRepositoryTest {
     @DisplayName("OWNS_LABEL 관계 기반으로 소유자와 라벨 ID에 해당하는 멤버 ID를 조회한다")
     void findMemberIdsByOwnerAndLabelIds_올바른_멤버_ID_반환() {
         // given
-        Label label = LabelTestFactory.createLabel(owner, "라벨A");
-        LabelTestFactory.addMember(label, friend1);
-        LabelTestFactory.addMember(label, friend2);
-        Label saved = labelRepository.save(label);
+        Label saved = labelRepository.save(LabelTestFactory.createLabel(owner, "라벨A"));
+        labelRepository.addMember(saved.getId(), friend1.getId());
+        labelRepository.addMember(saved.getId(), friend2.getId());
 
         // when
         Set<Long> memberIds = labelRepository.findMemberIdsByOwnerAndLabelIds(
@@ -122,24 +119,5 @@ class LabelNeo4jRepositoryTest {
 
         // then
         assertThat(memberIds).containsExactlyInAnyOrder(friend1.getId(), friend2.getId());
-    }
-
-    @Test
-    @DisplayName("멤버 교체 시 그래프 상의 HAS_MEMBER 관계가 갱신되어야 한다")
-    void updateMembers_Graph_Consistency() {
-        // given
-        Label label = LabelTestFactory.createLabel(owner, "프로젝트");
-        LabelTestFactory.addMember(label, friend1);
-        labelRepository.save(label);
-
-        // when
-        Label savedLabel = labelRepository.findAllByOwner_Id(owner.getId()).get(0);
-        LabelTestFactory.updateMembers(savedLabel, Set.of(friend2));
-        labelRepository.save(savedLabel);
-
-        // then
-        Label retrieved = labelRepository.findById(savedLabel.getId()).get();
-        assertThat(retrieved.getMembers()).hasSize(1);
-        assertThat(retrieved.getMembers().iterator().next().getId()).isEqualTo(friend2.getId());
     }
 }
