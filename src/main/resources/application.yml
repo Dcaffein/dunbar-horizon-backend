@@ -13,6 +13,14 @@ spring:
               - profile
               - email
 
+  # 비동기 작업 종료 드레인: 큐에 남은 작업을 최대 30초 기다린 뒤 종료한다.
+  # await-termination이 waitForTasksToCompleteOnShutdown까지 켜므로, 대기 중에 큐가 계속 소진된다.
+  task:
+    execution:
+      shutdown:
+        await-termination: true
+        await-termination-period: 30s
+
   mail:
     host: smtp.gmail.com
     port: 587
