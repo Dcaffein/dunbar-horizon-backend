@@ -17,7 +17,7 @@
 
 ## Objective
 
-`IntimacyScoreManager`의 단일 스레드 익스큐터가 없어지고, 점수 갱신이 호출자 스레드에서 바로 실행된다. 이미 `@Async` 기본 풀 위에서 호출되므로 그 풀이 워커 역할을 하게 되고, buzz·trace 경로와 같은 모양이 된다. 종료 시 처리하지 못한 작업이 있으면 개수가 로그에 남는다.
+`IntimacyScoreManager`의 단일 스레드 익스큐터가 없어지고, 점수 갱신이 호출자 스레드에서 바로 실행된다. 이미 `@Async` 기본 풀 위에서 호출되므로 그 풀이 워커 역할을 하게 되고, buzz·trace 경로와 같은 모양이 된다. 종료 시 처리하지 못한 작업이 있으면 개수가 로그에 남는다. 큐가 사라지면서 드러나는 클래스 구성도 큐 이전으로 돌아간다. 이벤트에서 들어오는 점수 쓰기 둘이 한 서비스에 모여 델타 선택과 실패 처리와 재시도를 그곳에서 정하고 리스너는 이벤트를 유스케이스 호출로 옮기기만 하며, 감쇄는 `FriendshipDecayService`가 본문을 되찾는다. 클래스 이름이 각자 소유한 범위를 그대로 말한다.
 
 ## Decision
 
@@ -49,11 +49,51 @@
 
 대신 `@PreDestroy`의 30초 드레인은 버리지 않고 스프링 기본 익스큐터 설정으로 옮긴다. 아웃박스를 두지 않기로 한 이상 그것이 유일한 완충이다.
 
+### 큐가 만든 클래스 배치를 같이 되돌린다
+
+`IntimacyScoreManager`는 `b5b6159 feat(social): serialize flag and decay score mutations`에서 만들어졌다. 그 전에는 Flag 종료의 쌍 펼치기가 `FriendInteractionEventListener` 안에 있었고, 감쇄는 `FriendshipDecayService`가 정책 값을 읽어 저장소를 직접 불렀다. 둘이 한 클래스로 모인 유일한 이유가 같은 큐를 탄다는 것이었으므로, 큐를 걷어내는 이 작업에서 같이 되돌린다.
+
+`FriendshipDecayService`는 본문을 넘긴 뒤 한 줄 위임만 남아 있다.
+
+### 가르는 기준은 다루는 필드가 아니라 트리거와 정책이다
+
+셋 다 `interestScore`와 `intimacy`를 쓴다. 그 기준으로 묶으면 셋이 전부 한 클래스에 들어가야 하고 선이 그어지지 않는다.
+
+| | buzz·trace 단건 | Flag 배치 | 감쇄 |
+|---|---|---|---|
+| 트리거 | 이벤트 (AFTER_COMMIT) | 이벤트 (AFTER_COMMIT) | 스케줄러 (03:00) |
+| 점수 정책 | `InteractionScorePolicy` | `InteractionScorePolicy` | `FriendshipDecayPolicy` |
+| 실패가 가는 곳 | 트랜잭션 동기화 로거 | 트랜잭션 동기화 로거 | 스케줄러 에러 핸들러 |
+| 재시도 | 없음 | 3회 | 없음 |
+
+앞 둘은 네 칸이 같은데 서로 다른 곳에 있고, 감쇄는 네 칸이 다 다른데 Flag 배치와 한 클래스에 있다. 그리고 모아서 얻는 것(델타를 고르는 자리 하나, 실패 처리 하나, 재시도 비대칭 해소)이 전부 앞 둘 사이의 문제다. 감쇄를 끌어와도 그 이득이 늘지 않는다.
+
+### 이름은 Interaction 축으로 맞추고 Manager를 뗀다
+
+그 경로의 다른 이름이 전부 상호작용이다. `UserInteractionEvent`, `BatchMutualInteractionEvent`, `FriendInteractionEventListener`, `InteractionScorePolicy`. `IntimacyScore`만 다른 축의 단어였다. 감쇄는 상호작용이 아니라 상호작용의 부재를 다루므로, 이름을 상호작용 축으로 맞추면 감쇄가 왜 밖에 있는지 따로 설명할 필요가 없어진다.
+
+`Manager`를 떼는 이유는 따로 있다. `application/service` 안에서 `Manager`로 끝나는 것은 이 클래스뿐이다. 코드베이스의 다른 `Manager`는 도메인 서비스(`FlagParticipationManager`, `FlagInvitationManager`), 보안 유틸(`AuthCookieManager`), 포트 인터페이스(`SocialNetworkCacheManager`)로 계층이 다르다.
+
+### 셋을 한 서비스로 합치는 선택지는 기각한다
+
+셋을 한 서비스가 소유하고 `FriendshipDecayService`를 없애는 안도 그 자체로 일관된다. 택하지 않는 이유는 그렇게 하면 트리거도 정책도 실패 경로도 다른 둘이 한 지붕 아래 남남으로 남고, 얻는 것이 클래스 하나 줄어드는 것뿐이기 때문이다.
+
+본문을 되찾은 `FriendshipDecayService`가 작다는 것은 기각 사유가 되지 않는다. 같은 크기의 주기 실행 유스케이스가 이미 있다(`FriendRequestCleanupService`).
+
+### 재시도 범위는 PLAN에서 정해 승인받는다
+
+재시도가 Flag 배치에만 붙어 있는 근거는 어디에도 기록되어 있지 않다. 재시도 역시 `b5b6159`에서 큐와 같은 커밋으로 들어왔고 그 커밋은 본문이 비어 있다.
+
+이벤트 기반이라 재시도할 주체가 그 지점밖에 없다는 근거는 단건 증분에도 그대로 적용된다. 단건도 `AFTER_COMMIT`이고 호출자가 없고 실패하면 그 점수가 그대로 날아간다. 그 근거를 받아들이면 둘을 통일하는 쪽이고, 배치만 재시도하는 쪽을 택한다면 왜 배치만인지가 코드에 남아야 한다. 어느 쪽이든 흘러온 상태가 아니라 선택한 설계가 되어야 하며, 현행 비대칭을 근거 없이 그대로 옮기는 것은 택하지 않는다.
+
 ## Out of Scope
 
 - 아웃박스 도입. 위 Decision 참조
 - 감쇄 쿼리의 청크 분할
 - 자동 만료 스윕의 배치 상한 제거. 소비 쪽이 넓어진 뒤에 별도로 다룬다
+- 점수 쓰기 Cypher 네 개의 변경
+- 델타 수치와 `InteractionScorePolicy`의 제품적 변경
+- 친구인 쌍만 갱신된다는 규칙 자체의 변경. 비친구 쌍이 `MATCH`에 걸리지 않아 조용히 빠지는 현행 동작은 의도된 것이다
 
 ## Acceptance Criteria
 
