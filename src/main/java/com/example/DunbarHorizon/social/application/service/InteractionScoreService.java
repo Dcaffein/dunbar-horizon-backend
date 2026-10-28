@@ -13,50 +13,55 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class InteractionScoreService {
 
-    private static final int FLAG_UPDATE_MAX_ATTEMPTS = 3;
+    private static final int MAX_ATTEMPTS = 3;
 
     private final FriendshipRepository friendshipRepository;
 
     public void applyInteraction(Long userAId, Long userBId, InteractionType type) {
-        try {
-            String friendshipId = Friendship.generateCompositeId(userAId, userBId);
-            double delta = InteractionScorePolicy.scoreOf(type);
+        String friendshipId = Friendship.generateCompositeId(userAId, userBId);
+        double delta = InteractionScorePolicy.scoreOf(type);
 
-            if (type.isMutual()) {
-                friendshipRepository.incrementMutualInterestScore(friendshipId, userAId, userBId, delta);
-            } else {
-                friendshipRepository.incrementInterestScore(friendshipId, userAId, userBId, delta);
-            }
-            log.debug("Interaction score updated: {} <-> {}, type={}", userAId, userBId, type);
-        } catch (Exception exception) {
-            log.error("Failed to update interaction score: {} <-> {}", userAId, userBId, exception);
-        }
+        write(
+                () -> {
+                    if (type.isMutual()) {
+                        friendshipRepository.incrementMutualInterestScore(friendshipId, userAId, userBId, delta);
+                    } else {
+                        friendshipRepository.incrementInterestScore(friendshipId, userAId, userBId, delta);
+                    }
+                },
+                () -> "%d <-> %d, type=%s".formatted(userAId, userBId, type)
+        );
     }
 
     public void applyFlagConclusion(Long flagId, Long hostId, List<Long> participantIds, InteractionType type) {
         double delta = InteractionScorePolicy.scoreOf(type);
         List<MutualInterestScoreUpdate> updates = createFlagUpdates(hostId, participantIds, delta);
 
-        for (int attempt = 1; attempt <= FLAG_UPDATE_MAX_ATTEMPTS; attempt++) {
+        write(
+                () -> friendshipRepository.incrementMutualInterestScoresBatch(updates),
+                () -> "flagId=%d, participants=%d, pairs=%d".formatted(flagId, participantIds.size(), updates.size())
+        );
+    }
+
+    private void write(Runnable command, Supplier<String> target) {
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
-                friendshipRepository.incrementMutualInterestScoresBatch(updates);
-                log.debug("Flag intimacy scores updated: flagId={}, participants={}, pairs={}",
-                        flagId, participantIds.size(), updates.size());
+                command.run();
+                log.debug("Interaction score updated: {}", target.get());
                 return;
             } catch (RuntimeException exception) {
-                if (!isTransientFailure(exception) || attempt == FLAG_UPDATE_MAX_ATTEMPTS) {
-                    log.error("Flag intimacy score update failed: flagId={}, participants={}, pairs={}, attempts={}",
-                            flagId, participantIds.size(), updates.size(), attempt, exception);
+                if (!isTransientFailure(exception) || attempt == MAX_ATTEMPTS) {
+                    log.error("Interaction score update failed: {}, attempts={}", target.get(), attempt, exception);
                     throw exception;
                 }
-                log.warn("Retrying transient flag intimacy score update: flagId={}, participants={}, pairs={}, attempt={}",
-                        flagId, participantIds.size(), updates.size(), attempt, exception);
+                log.warn("Retrying transient interaction score update: {}, attempt={}", target.get(), attempt, exception);
             }
         }
     }

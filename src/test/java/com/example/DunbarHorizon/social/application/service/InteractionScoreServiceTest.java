@@ -19,6 +19,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
@@ -119,5 +120,46 @@ class InteractionScoreServiceTest {
         // then
         verify(friendshipRepository).incrementInterestScore(
                 Friendship.generateCompositeId(1L, 2L), 1L, 2L, InteractionScorePolicy.scoreOf(type));
+    }
+
+    @Test
+    @DisplayName("단건 증분도 rollback이 확인된 transient 실패를 재시도한다")
+    void applyInteraction_retriesTransientFailure() {
+        // given
+        doThrow(new TransientDataAccessResourceException("deadlock"))
+                .doNothing()
+                .when(friendshipRepository).incrementInterestScore(any(), any(), any(), anyDouble());
+
+        // when
+        interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT);
+
+        // then
+        verify(friendshipRepository, times(2)).incrementInterestScore(any(), any(), any(), anyDouble());
+    }
+
+    @Test
+    @DisplayName("단건 증분이 재시도를 소진하면 삼키지 않고 호출자에게 올린다")
+    void applyInteraction_rethrowsAfterExhaustingRetries() {
+        // given
+        doThrow(new TransientDataAccessResourceException("deadlock"))
+                .when(friendshipRepository).incrementInterestScore(any(), any(), any(), anyDouble());
+
+        // when & then
+        assertThatThrownBy(() -> interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT))
+                .isInstanceOf(TransientDataAccessResourceException.class);
+        verify(friendshipRepository, times(3)).incrementInterestScore(any(), any(), any(), anyDouble());
+    }
+
+    @Test
+    @DisplayName("단건 증분의 비일시적 실패는 재시도하지 않고 바로 올린다")
+    void applyInteraction_rethrowsNonTransientFailureImmediately() {
+        // given
+        doThrow(new IllegalStateException("not transient"))
+                .when(friendshipRepository).incrementInterestScore(any(), any(), any(), anyDouble());
+
+        // when & then
+        assertThatThrownBy(() -> interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT))
+                .isInstanceOf(IllegalStateException.class);
+        verify(friendshipRepository, times(1)).incrementInterestScore(any(), any(), any(), anyDouble());
     }
 }
