@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
 import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +9,6 @@ import org.neo4j.driver.exceptions.TransientException;
 import org.springframework.dao.TransientDataAccessException;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +20,6 @@ public class IntimacyScoreManager {
     private static final int FLAG_UPDATE_MAX_ATTEMPTS = 3;
 
     private final FriendshipRepository friendshipRepository;
-    private final FriendshipDecayPolicy decayPolicy;
 
     public void applyFlagConclusion(Long flagId, Long hostId, List<Long> participantIds, double delta) {
         List<MutualInterestScoreUpdate> updates = createFlagUpdates(hostId, participantIds, delta);
@@ -42,18 +39,6 @@ public class IntimacyScoreManager {
                 log.warn("Retrying transient flag intimacy score update: flagId={}, participants={}, pairs={}, attempt={}",
                         flagId, participantIds.size(), updates.size(), attempt, exception);
             }
-        }
-    }
-
-    public void applyDecay() {
-        try {
-            double rate = decayPolicy.getDecayRate();
-            double minThreshold = decayPolicy.getMinThreshold();
-            LocalDateTime thresholdTime = decayPolicy.getDecayThresholdTime();
-            friendshipRepository.applyDecay(rate, minThreshold, thresholdTime);
-        } catch (RuntimeException exception) {
-            log.error("Failed to apply intimacy score decay", exception);
-            throw exception;
         }
     }
 

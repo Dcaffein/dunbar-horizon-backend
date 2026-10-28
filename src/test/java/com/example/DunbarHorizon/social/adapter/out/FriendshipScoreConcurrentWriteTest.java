@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.social.adapter.out;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.FriendshipRepositoryAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.SocialUserNeo4jRepository;
+import com.example.DunbarHorizon.social.application.service.FriendshipDecayService;
 import com.example.DunbarHorizon.social.application.service.IntimacyScoreManager;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
@@ -49,7 +50,8 @@ import static org.assertj.core.api.Assertions.within;
  */
 @Neo4jRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipRepositoryAdapter.class, IntimacyScoreManager.class, FriendshipDecayPolicy.class})
+@Import({FriendshipRepositoryAdapter.class, IntimacyScoreManager.class,
+        FriendshipDecayService.class, FriendshipDecayPolicy.class})
 class FriendshipScoreConcurrentWriteTest {
 
     private static final long FIRST_USER_ID = 1L;
@@ -63,6 +65,9 @@ class FriendshipScoreConcurrentWriteTest {
 
     @Autowired
     private IntimacyScoreManager intimacyScoreManager;
+
+    @Autowired
+    private FriendshipDecayService friendshipDecayService;
 
     @Autowired
     private SocialUserNeo4jRepository socialUserNeo4jRepository;
@@ -268,7 +273,7 @@ class FriendshipScoreConcurrentWriteTest {
         List<Long> participantIds = List.of(2L, 3L, 4L);
         List<Callable<Void>> tasks = new ArrayList<>();
         tasks.add(() -> {
-            intimacyScoreManager.applyDecay();
+            friendshipDecayService.processDecay();
             return null;
         });
         for (long flagId = 1; flagId <= 3; flagId++) {

@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
 import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -18,7 +17,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
@@ -33,7 +31,6 @@ class IntimacyScoreManagerTest {
 
     @InjectMocks private IntimacyScoreManager intimacyScoreManager;
     @Mock private FriendshipRepository friendshipRepository;
-    @Mock private FriendshipDecayPolicy decayPolicy;
 
     @Test
     @DisplayName("Flag 결론은 host-참가자와 참가자 쌍 전체를 하나의 batch로 갱신한다")
@@ -90,17 +87,5 @@ class IntimacyScoreManagerTest {
         assertThatThrownBy(() -> intimacyScoreManager.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, 10.0))
                 .isInstanceOf(IllegalStateException.class);
         verify(friendshipRepository, times(1)).incrementMutualInterestScoresBatch(any());
-    }
-
-    @Test
-    @DisplayName("decay 실패도 삼키지 않고 호출자에게 올린다")
-    void applyDecay_rethrowsFailure() {
-        // given
-        doThrow(new TransientDataAccessResourceException("deadlock"))
-                .when(friendshipRepository).applyDecay(anyDouble(), anyDouble(), any());
-
-        // when & then
-        assertThatThrownBy(() -> intimacyScoreManager.applyDecay())
-                .isInstanceOf(TransientDataAccessResourceException.class);
     }
 }
