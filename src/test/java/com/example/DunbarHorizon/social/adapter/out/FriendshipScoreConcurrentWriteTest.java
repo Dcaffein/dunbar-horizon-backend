@@ -2,9 +2,11 @@ package com.example.DunbarHorizon.social.adapter.out;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.FriendshipRepositoryAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.SocialUserNeo4jRepository;
+import com.example.DunbarHorizon.social.application.service.IntimacyScoreManager;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
 import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.support.Neo4jRepositoryTest;
@@ -47,7 +49,7 @@ import static org.assertj.core.api.Assertions.within;
  */
 @Neo4jRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import(FriendshipRepositoryAdapter.class)
+@Import({FriendshipRepositoryAdapter.class, IntimacyScoreManager.class, FriendshipDecayPolicy.class})
 class FriendshipScoreConcurrentWriteTest {
 
     private static final long FIRST_USER_ID = 1L;
@@ -58,6 +60,9 @@ class FriendshipScoreConcurrentWriteTest {
 
     @Autowired
     private FriendshipRepositoryAdapter friendshipRepository;
+
+    @Autowired
+    private IntimacyScoreManager intimacyScoreManager;
 
     @Autowired
     private SocialUserNeo4jRepository socialUserNeo4jRepository;
@@ -237,6 +242,52 @@ class FriendshipScoreConcurrentWriteTest {
                 .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + 2 * DELTA, within(0.0001));
     }
 
+    @Test
+    @DisplayName("Flag 종료 점수가 호출이 끝난 시점에 모든 참가자 쌍에 반영되어 있다")
+    void Flag_종료_점수가_호출이_끝난_시점에_모든_참가자_쌍에_반영되어_있다() {
+        // given
+        List<Long> participantIds = List.of(2L, 3L, 4L);
+
+        // when
+        intimacyScoreManager.applyFlagConclusion(77L, FIRST_USER_ID, participantIds, DELTA);
+
+        // then
+        for (String friendshipId : friendshipIds) {
+            assertThat(interestScoresOf(friendshipId))
+                    .as("%s의 양쪽 점수가 반영되어 있어야 한다", friendshipId)
+                    .allSatisfy(score -> assertThat(score)
+                            .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + DELTA, within(0.0001)));
+        }
+    }
+
+    @Test
+    @DisplayName("Flag 종료 점수와 감쇄를 동시에 실행해도 교착이 없다")
+    void Flag_종료_점수와_감쇄를_동시에_실행해도_교착이_없다() {
+        // given
+        ageAllInteractions(60);
+        List<Long> participantIds = List.of(2L, 3L, 4L);
+        List<Callable<Void>> tasks = new ArrayList<>();
+        tasks.add(() -> {
+            intimacyScoreManager.applyDecay();
+            return null;
+        });
+        for (long flagId = 1; flagId <= 3; flagId++) {
+            long currentFlagId = flagId;
+            tasks.add(() -> {
+                intimacyScoreManager.applyFlagConclusion(currentFlagId, FIRST_USER_ID, participantIds, DELTA);
+                return null;
+            });
+        }
+
+        // when
+        List<Throwable> failures = runConcurrently(tasks);
+
+        // then
+        assertThat(failures)
+                .as("교착이 재시도에 삼켜지지 않고 올라온다. 실패들=%s", failures)
+                .isEmpty();
+    }
+
     private Void lockInGivenOrder(String firstId, String secondId) {
         neo4jClient.query(LOCK_TWO_FRIENDSHIPS_IN_GIVEN_ORDER)
                 .bind(firstId).to("firstId")
@@ -244,6 +295,18 @@ class FriendshipScoreConcurrentWriteTest {
                 .bind(LOCK_HOLD_MILLIS).to("holdMillis")
                 .run();
         return null;
+    }
+
+    /**
+     * 감쇄는 유예 기간이 지난 관계만 건드린다. 갓 만든 픽스처로는 아무 행도 잠그지 않아
+     * 경합이 만들어지지 않으므로 마지막 교류 시각을 과거로 밀어 둔다.
+     */
+    private void ageAllInteractions(int days) {
+        neo4jClient.query(
+                        "MATCH (:UserReference)-[r:HAS_FRIENDSHIP]->(:Friendship) " +
+                        "SET r.lastInteractedAt = localdatetime() - duration({days: $days})")
+                .bind(days).to("days")
+                .run();
     }
 
     private List<MutualInterestScoreUpdate> shuffledUpdates() {

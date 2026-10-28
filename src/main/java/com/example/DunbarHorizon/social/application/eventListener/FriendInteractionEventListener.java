@@ -46,6 +46,6 @@ public class FriendInteractionEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleBatchMutualInteraction(BatchMutualInteractionEvent event) {
         double delta = InteractionScorePolicy.scoreOf(event.type());
-        intimacyScoreManager.enqueueFlagConclusion(event.flagId(), event.hostId(), event.participantIds(), delta);
+        intimacyScoreManager.applyFlagConclusion(event.flagId(), event.hostId(), event.participantIds(), delta);
     }
 }

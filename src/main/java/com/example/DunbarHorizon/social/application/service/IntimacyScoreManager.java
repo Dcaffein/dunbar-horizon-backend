@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
 import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
-import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.neo4j.driver.exceptions.TransientException;
@@ -14,9 +13,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -27,22 +23,8 @@ public class IntimacyScoreManager {
 
     private final FriendshipRepository friendshipRepository;
     private final FriendshipDecayPolicy decayPolicy;
-    private final ExecutorService scoreMutationExecutor = Executors.newSingleThreadExecutor(runnable -> {
-        Thread thread = new Thread(runnable, "intimacy-score-manager");
-        thread.setDaemon(false);
-        return thread;
-    });
 
-    public void enqueueFlagConclusion(Long flagId, Long hostId, List<Long> participantIds, double delta) {
-        List<Long> queuedParticipantIds = List.copyOf(participantIds);
-        scoreMutationExecutor.execute(() -> applyFlagConclusion(flagId, hostId, queuedParticipantIds, delta));
-    }
-
-    public void enqueueDecay() {
-        scoreMutationExecutor.execute(this::applyDecay);
-    }
-
-    void applyFlagConclusion(Long flagId, Long hostId, List<Long> participantIds, double delta) {
+    public void applyFlagConclusion(Long flagId, Long hostId, List<Long> participantIds, double delta) {
         List<MutualInterestScoreUpdate> updates = createFlagUpdates(hostId, participantIds, delta);
 
         for (int attempt = 1; attempt <= FLAG_UPDATE_MAX_ATTEMPTS; attempt++) {
@@ -63,7 +45,7 @@ public class IntimacyScoreManager {
         }
     }
 
-    void applyDecay() {
+    public void applyDecay() {
         try {
             double rate = decayPolicy.getDecayRate();
             double minThreshold = decayPolicy.getMinThreshold();
@@ -102,18 +84,5 @@ public class IntimacyScoreManager {
             }
         }
         return false;
-    }
-
-    @PreDestroy
-    void shutdown() {
-        scoreMutationExecutor.shutdown();
-        try {
-            if (!scoreMutationExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
-                scoreMutationExecutor.shutdownNow();
-            }
-        } catch (InterruptedException exception) {
-            scoreMutationExecutor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
     }
 }
