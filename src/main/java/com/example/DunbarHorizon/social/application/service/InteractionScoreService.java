@@ -1,6 +1,8 @@
 package com.example.DunbarHorizon.social.application.service;
 
+import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
 import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,13 +17,30 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class IntimacyScoreManager {
+public class InteractionScoreService {
 
     private static final int FLAG_UPDATE_MAX_ATTEMPTS = 3;
 
     private final FriendshipRepository friendshipRepository;
 
-    public void applyFlagConclusion(Long flagId, Long hostId, List<Long> participantIds, double delta) {
+    public void applyInteraction(Long userAId, Long userBId, InteractionType type) {
+        try {
+            String friendshipId = Friendship.generateCompositeId(userAId, userBId);
+            double delta = InteractionScorePolicy.scoreOf(type);
+
+            if (type.isMutual()) {
+                friendshipRepository.incrementMutualInterestScore(friendshipId, userAId, userBId, delta);
+            } else {
+                friendshipRepository.incrementInterestScore(friendshipId, userAId, userBId, delta);
+            }
+            log.debug("Interaction score updated: {} <-> {}, type={}", userAId, userBId, type);
+        } catch (Exception exception) {
+            log.error("Failed to update interaction score: {} <-> {}", userAId, userBId, exception);
+        }
+    }
+
+    public void applyFlagConclusion(Long flagId, Long hostId, List<Long> participantIds, InteractionType type) {
+        double delta = InteractionScorePolicy.scoreOf(type);
         List<MutualInterestScoreUpdate> updates = createFlagUpdates(hostId, participantIds, delta);
 
         for (int attempt = 1; attempt <= FLAG_UPDATE_MAX_ATTEMPTS; attempt++) {

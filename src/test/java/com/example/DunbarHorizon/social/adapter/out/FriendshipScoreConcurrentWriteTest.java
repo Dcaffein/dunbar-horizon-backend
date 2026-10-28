@@ -3,11 +3,13 @@ package com.example.DunbarHorizon.social.adapter.out;
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.FriendshipRepositoryAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.SocialUserNeo4jRepository;
 import com.example.DunbarHorizon.social.application.service.FriendshipDecayService;
-import com.example.DunbarHorizon.social.application.service.IntimacyScoreManager;
+import com.example.DunbarHorizon.social.application.service.InteractionScoreService;
+import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
+import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
 import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.support.Neo4jRepositoryTest;
@@ -50,13 +52,15 @@ import static org.assertj.core.api.Assertions.within;
  */
 @Neo4jRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipRepositoryAdapter.class, IntimacyScoreManager.class,
+@Import({FriendshipRepositoryAdapter.class, InteractionScoreService.class,
         FriendshipDecayService.class, FriendshipDecayPolicy.class})
 class FriendshipScoreConcurrentWriteTest {
 
     private static final long FIRST_USER_ID = 1L;
     private static final long LAST_USER_ID = 4L;
     private static final double DELTA = 1.0;
+    private static final InteractionType FLAG_TYPE = InteractionType.FLAG_ENDED;
+    private static final double FLAG_DELTA = InteractionScorePolicy.scoreOf(FLAG_TYPE);
     private static final long LOCK_HOLD_MILLIS = 500L;
     private static final int DEADLOCK_ROUNDS = 3;
 
@@ -64,7 +68,7 @@ class FriendshipScoreConcurrentWriteTest {
     private FriendshipRepositoryAdapter friendshipRepository;
 
     @Autowired
-    private IntimacyScoreManager intimacyScoreManager;
+    private InteractionScoreService interactionScoreService;
 
     @Autowired
     private FriendshipDecayService friendshipDecayService;
@@ -254,14 +258,14 @@ class FriendshipScoreConcurrentWriteTest {
         List<Long> participantIds = List.of(2L, 3L, 4L);
 
         // when
-        intimacyScoreManager.applyFlagConclusion(77L, FIRST_USER_ID, participantIds, DELTA);
+        interactionScoreService.applyFlagConclusion(77L, FIRST_USER_ID, participantIds, FLAG_TYPE);
 
         // then
         for (String friendshipId : friendshipIds) {
             assertThat(interestScoresOf(friendshipId))
                     .as("%s의 양쪽 점수가 반영되어 있어야 한다", friendshipId)
                     .allSatisfy(score -> assertThat(score)
-                            .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + DELTA, within(0.0001)));
+                            .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + FLAG_DELTA, within(0.0001)));
         }
     }
 
@@ -279,7 +283,7 @@ class FriendshipScoreConcurrentWriteTest {
         for (long flagId = 1; flagId <= 3; flagId++) {
             long currentFlagId = flagId;
             tasks.add(() -> {
-                intimacyScoreManager.applyFlagConclusion(currentFlagId, FIRST_USER_ID, participantIds, DELTA);
+                interactionScoreService.applyFlagConclusion(currentFlagId, FIRST_USER_ID, participantIds, FLAG_TYPE);
                 return null;
             });
         }

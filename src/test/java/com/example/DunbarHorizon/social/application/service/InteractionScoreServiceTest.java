@@ -1,6 +1,8 @@
 package com.example.DunbarHorizon.social.application.service;
 
+import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
 import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -23,28 +25,30 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class IntimacyScoreManagerTest {
+class InteractionScoreServiceTest {
 
     private static final Long FLAG_ID = 100L;
     private static final Long HOST_ID = 10L;
     private static final List<Long> PARTICIPANT_IDS = List.of(21L, 22L);
+    private static final InteractionType FLAG_TYPE = InteractionType.FLAG_ENDED;
+    private static final double FLAG_DELTA = InteractionScorePolicy.scoreOf(FLAG_TYPE);
 
-    @InjectMocks private IntimacyScoreManager intimacyScoreManager;
+    @InjectMocks private InteractionScoreService interactionScoreService;
     @Mock private FriendshipRepository friendshipRepository;
 
     @Test
     @DisplayName("Flag 결론은 host-참가자와 참가자 쌍 전체를 하나의 batch로 갱신한다")
     void applyFlagConclusion_updatesAllPairsInOneBatch() {
         // when
-        intimacyScoreManager.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, 10.0);
+        interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE);
 
         // then
         ArgumentCaptor<List<MutualInterestScoreUpdate>> captor = ArgumentCaptor.forClass(List.class);
         verify(friendshipRepository).incrementMutualInterestScoresBatch(captor.capture());
         assertThat(captor.getValue()).containsExactlyInAnyOrder(
-                new MutualInterestScoreUpdate(Friendship.generateCompositeId(HOST_ID, 21L), HOST_ID, 21L, 10.0),
-                new MutualInterestScoreUpdate(Friendship.generateCompositeId(HOST_ID, 22L), HOST_ID, 22L, 10.0),
-                new MutualInterestScoreUpdate(Friendship.generateCompositeId(21L, 22L), 21L, 22L, 10.0)
+                new MutualInterestScoreUpdate(Friendship.generateCompositeId(HOST_ID, 21L), HOST_ID, 21L, FLAG_DELTA),
+                new MutualInterestScoreUpdate(Friendship.generateCompositeId(HOST_ID, 22L), HOST_ID, 22L, FLAG_DELTA),
+                new MutualInterestScoreUpdate(Friendship.generateCompositeId(21L, 22L), 21L, 22L, FLAG_DELTA)
         );
     }
 
@@ -57,7 +61,7 @@ class IntimacyScoreManagerTest {
                 .when(friendshipRepository).incrementMutualInterestScoresBatch(any());
 
         // when
-        intimacyScoreManager.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, 10.0);
+        interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE);
 
         // then
         verify(friendshipRepository, times(2)).incrementMutualInterestScoresBatch(any());
@@ -71,7 +75,7 @@ class IntimacyScoreManagerTest {
                 .when(friendshipRepository).incrementMutualInterestScoresBatch(any());
 
         // when & then
-        assertThatThrownBy(() -> intimacyScoreManager.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, 10.0))
+        assertThatThrownBy(() -> interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE))
                 .isInstanceOf(TransientDataAccessResourceException.class);
         verify(friendshipRepository, times(3)).incrementMutualInterestScoresBatch(any());
     }
@@ -84,8 +88,36 @@ class IntimacyScoreManagerTest {
                 .when(friendshipRepository).incrementMutualInterestScoresBatch(any());
 
         // when & then
-        assertThatThrownBy(() -> intimacyScoreManager.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, 10.0))
+        assertThatThrownBy(() -> interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE))
                 .isInstanceOf(IllegalStateException.class);
         verify(friendshipRepository, times(1)).incrementMutualInterestScoresBatch(any());
+    }
+
+    @Test
+    @DisplayName("mutual 타입은 양방향 커맨드를 타입에 맞는 델타로 부른다")
+    void applyInteraction_mutualTypeCallsBidirectionalCommand() {
+        // given
+        InteractionType type = InteractionType.FLAG_ENDED_ENCORE;
+
+        // when
+        interactionScoreService.applyInteraction(1L, 2L, type);
+
+        // then
+        verify(friendshipRepository).incrementMutualInterestScore(
+                Friendship.generateCompositeId(1L, 2L), 1L, 2L, InteractionScorePolicy.scoreOf(type));
+    }
+
+    @Test
+    @DisplayName("단방향 타입은 한쪽 커맨드를 타입에 맞는 델타로 부른다")
+    void applyInteraction_unilateralTypeCallsOneSidedCommand() {
+        // given
+        InteractionType type = InteractionType.VISIT;
+
+        // when
+        interactionScoreService.applyInteraction(1L, 2L, type);
+
+        // then
+        verify(friendshipRepository).incrementInterestScore(
+                Friendship.generateCompositeId(1L, 2L), 1L, 2L, InteractionScorePolicy.scoreOf(type));
     }
 }
