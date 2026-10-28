@@ -5,12 +5,12 @@
 ## 1. 패키지 및 계층 분리 원칙 (Layered Architecture)
 모든 도메인 패키지(예: `account`, `social`, `flag`, `buzz`)는 아래의 내부 구조를 가져야 한다.
 
-- **domain**: 핵심 비즈니스 로직, Entity, Value Object, Domain Event, 자체 Exception, Repository Interface(Port)가 위치한다. Spring 의존성을 최소화한 POJO로 작성한다.
+- **domain**: 핵심 비즈니스 로직, Entity, Value Object, Domain Event, 자체 Exception, Repository Interface(Port)가 위치한다.
 - **application**:
     - `port/in`: UseCase 인터페이스 (Command와 Query를 분리).
     - `port/out`: 외부 시스템 호출이나 데이터 저장을 위한 인터페이스.
-    - `service`: UseCase의 구현체. 도메인 객체를 지휘한다. 트랜잭션(`@Transactional`) 관리가 포함된다. 반드시 `CommandService`와 `QueryService` 클래스로 책임을 분리하라.
-    - `eventHandler`: Spring `@EventListener` 또는 `@TransactionalEventListener`를 이용한 도메인 이벤트 처리기.
+    - `service`: UseCase의 구현체. 도메인 객체를 지휘한다. 트랜잭션(`@Transactional`) 관리가 포함된다. 조회 전용 유스케이스는 `QueryService`로 분리한다. 명령 쪽도 따로 둘 만큼 커지면 `CommandService`를 짝으로 만든다.
+    - `eventListener`: Spring `@EventListener` 또는 `@TransactionalEventListener`를 이용한 도메인 이벤트 처리기.
     - `dto`: UseCase 내부 계층에서 사용하는 DTO 또는 Result 객체.
 - **adapter**:
     - `in/web`: REST Controller, API Request/Response DTO.
@@ -20,9 +20,9 @@
 
 ## 2. 데이터베이스 사용 전략 (Polyglot Persistence)
 기능의 특성에 따라 알맞은 저장소를 선택하여 사용한다.
-- **JPA (MariaDB)**: `account`, `flag`, `trace` 등 트랜잭션과 정형화된 관계형 데이터가 중요한 도메인.
+- **JPA (MySQL)**: `account`, `flag`, `trace` 등 트랜잭션과 정형화된 관계형 데이터가 중요한 도메인.
 - **Neo4j**: `social` 도메인. 친구 관계(Friendship), 친구 요청, 그래프 탐색(n-hop) 등 관계 중심 데이터.
-- **MongoDB**: `buzz`(피드), `notification` 등 읽기/쓰기가 빈번하고 스키마 유연성이 필요한 도메인.
+- **MongoDB**: `buzz`, `notification` 등 수명이 생성 시점에 정해져 TTL로 관리되고, 수신자 명단 같은 값 목록을 도큐먼트 안에 함께 두는 도메인.
 
 ## 3. 통신 및 결합도 규칙
 - **의존성 방향**: 모든 의존성은 어댑터(Adapter)에서 애플리케이션(Application)을 거쳐 도메인(Domain)을 향해야 한다. 반대 방향의 참조는 절대 금지한다.
