@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.doAnswer;
@@ -73,6 +74,44 @@ class IntimacyScoreManagerTest {
 
         // then
         verify(friendshipRepository, times(2)).incrementMutualInterestScoresBatch(any());
+    }
+
+    @Test
+    @DisplayName("재시도를 소진한 Flag batch 실패는 삼키지 않고 호출자에게 올린다")
+    void applyFlagConclusion_rethrowsAfterExhaustingRetries() {
+        // given
+        doThrow(new TransientDataAccessResourceException("deadlock"))
+                .when(friendshipRepository).incrementMutualInterestScoresBatch(any());
+
+        // when & then
+        assertThatThrownBy(() -> intimacyScoreManager.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, 10.0))
+                .isInstanceOf(TransientDataAccessResourceException.class);
+        verify(friendshipRepository, times(3)).incrementMutualInterestScoresBatch(any());
+    }
+
+    @Test
+    @DisplayName("비일시적 Flag batch 실패는 재시도하지 않고 바로 올린다")
+    void applyFlagConclusion_rethrowsNonTransientFailureImmediately() {
+        // given
+        doThrow(new IllegalStateException("not transient"))
+                .when(friendshipRepository).incrementMutualInterestScoresBatch(any());
+
+        // when & then
+        assertThatThrownBy(() -> intimacyScoreManager.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, 10.0))
+                .isInstanceOf(IllegalStateException.class);
+        verify(friendshipRepository, times(1)).incrementMutualInterestScoresBatch(any());
+    }
+
+    @Test
+    @DisplayName("decay 실패도 삼키지 않고 호출자에게 올린다")
+    void applyDecay_rethrowsFailure() {
+        // given
+        doThrow(new TransientDataAccessResourceException("deadlock"))
+                .when(friendshipRepository).applyDecay(anyDouble(), anyDouble(), any());
+
+        // when & then
+        assertThatThrownBy(() -> intimacyScoreManager.applyDecay())
+                .isInstanceOf(TransientDataAccessResourceException.class);
     }
 
     @Test

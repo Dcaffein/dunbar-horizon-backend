@@ -55,7 +55,7 @@ public class IntimacyScoreManager {
                 if (!isTransientFailure(exception) || attempt == FLAG_UPDATE_MAX_ATTEMPTS) {
                     log.error("Flag intimacy score update failed: flagId={}, participants={}, pairs={}, attempts={}",
                             flagId, participantIds.size(), updates.size(), attempt, exception);
-                    return;
+                    throw exception;
                 }
                 log.warn("Retrying transient flag intimacy score update: flagId={}, participants={}, pairs={}, attempt={}",
                         flagId, participantIds.size(), updates.size(), attempt, exception);
@@ -71,6 +71,7 @@ public class IntimacyScoreManager {
             friendshipRepository.applyDecay(rate, minThreshold, thresholdTime);
         } catch (RuntimeException exception) {
             log.error("Failed to apply intimacy score decay", exception);
+            throw exception;
         }
     }
 
