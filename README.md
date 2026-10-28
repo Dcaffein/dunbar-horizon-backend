@@ -229,5 +229,5 @@ Windows에서는 `.\gradlew.bat bootRun`을 사용합니다. 기본 HTTP 포트�
 ## 설계 배경과 작업 기록
 
 - [기술 문서](https://valiant-vest-6c8.notion.site/DunbarHorizon-3776b857043480998e6fdebaba6ba662): 관계망 모델, 쿼리 실행 계획과 캐시 성능 실험, 대안 비교. 성능 실험은 k6 합성 부하이며 조건과 측정 근거를 함께 기록했습니다.
-- 연결 중개인 조회의 범위·응답 결정: [task-105](harness/tasks/task-105-connection-path-scope.md) → [구현 커밋](https://github.com/Dcaffein/dunbar-horizon-backend/commit/a2f869c2f31f29675f1db03b0ea88de863b7ba65) → [상한·정렬·노출 정책 통합 테스트](src/test/java/com/example/DunbarHorizon/social/adapter/out/SocialConnectionPathRepositoryAdapterTest.java).
+- 연결 중개인 조회의 범위·응답 결정: [task-105](harness/done/task-105-connection-path-scope.md) → [구현 커밋](https://github.com/Dcaffein/dunbar-horizon-backend/commit/a2f869c2f31f29675f1db03b0ea88de863b7ba65) → [상한·정렬·노출 정책 통합 테스트](src/test/java/com/example/DunbarHorizon/social/adapter/out/SocialConnectionPathRepositoryAdapterTest.java).
 - AI 에이전트와의 작업 규칙: [작업 절차](harness/WORKFLOW.md), [아키텍처 규칙](harness/ARCHITECTURE.md), [테스트 규칙](harness/TESTING-GUIDE.md), [발주 문서 규칙](harness/TASK-SPEC-GUIDE.md). 제품 목적·제약을 태스크에 남기고, 코드 탐색을 거친 계획을 검토하는 방식입니다.
