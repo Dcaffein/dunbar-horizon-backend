@@ -34,6 +34,5 @@
 
 ## 작업 착수 시
 
-- Domain Change: [x]
-- `harness/WORKFLOW.md`에 따라 코드 탐색 후 루트 `PLAN.md`에 도메인 수정 승인 요청과 구현 계획을 작성한다.
+- `harness/WORKFLOW.md`에 따라 코드 탐색 후 루트 `PLAN.md`에 구현 계획을 작성한다.
 - 이 문서는 후속 작업 의뢰를 위한 기록이며, 구현은 PLAN 승인 후 진행한다.
