@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.social.application;
 import com.example.DunbarHorizon.social.application.service.LabelService;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
-import com.example.DunbarHorizon.social.domain.label.event.LabelMemberChangedEvent;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
@@ -19,7 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 import java.util.Optional;
@@ -52,9 +50,6 @@ class LabelServiceTest {
 
     @Mock
     private LabelFactory labelFactory;
-
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
 
     private final Long currentUserId = 1L;
     private final Long nonOwnerId = 99L;
@@ -105,7 +100,6 @@ class LabelServiceTest {
 
         // then
         verify(labelRepository).delete(labelId);
-        verify(eventPublisher).publishEvent(any(LabelMemberChangedEvent.class));
     }
 
     @Test
@@ -119,7 +113,6 @@ class LabelServiceTest {
 
         // then
         verify(labelRepository, never()).delete(anyString());
-        verifyNoInteractions(eventPublisher);
     }
 
     @Test
@@ -134,7 +127,6 @@ class LabelServiceTest {
 
         // then
         verify(labelMemberEnroller).addNewMember(labelId, currentUserId, newMemberId);
-        verify(eventPublisher).publishEvent(any(LabelMemberChangedEvent.class));
     }
 
     @Test
@@ -150,7 +142,6 @@ class LabelServiceTest {
         // then
         verify(labelRepository).removeMember(labelId, memberId);
         verifyNoInteractions(socialUserRepository);
-        verify(eventPublisher).publishEvent(any(LabelMemberChangedEvent.class));
     }
 
     @Test
@@ -165,7 +156,6 @@ class LabelServiceTest {
 
         // then
         verify(labelMemberEnroller).updateMembers(labelId, currentUserId, memberIds);
-        verify(eventPublisher).publishEvent(any(LabelMemberChangedEvent.class));
     }
 
     @Test

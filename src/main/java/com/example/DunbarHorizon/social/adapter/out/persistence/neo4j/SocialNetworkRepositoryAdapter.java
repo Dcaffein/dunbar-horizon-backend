@@ -167,7 +167,6 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
                 .all().stream().toList();
     }
 
-    @Cacheable(cacheNames = "dunbar:network:label", key = "#userId + ':' + #labelId")
     @Neo4jTransactional(readOnly = true)
     @Override
     public List<NodeGraphResult> getLabelCustomNetwork(Long userId, String labelId, DunbarCircle circleSize, int pruningMin, int pruningRange) {

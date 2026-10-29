@@ -17,6 +17,7 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.neo4j.core.Neo4jClient;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -24,6 +25,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -74,6 +76,9 @@ class SocialNetworkCacheSerdeTest {
     @Autowired
     private CacheManager cacheManager;
 
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
     /**
      * 테스트 그래프 (SocialNetworkRepositoryAdapterTest와 동일):
      *   me(1) ↔ A(10)[0.9], B(20)[0.8], C(30)[0.7], D(40)[0.6], E(50)[0.5], F(60)[0.1]
@@ -110,13 +115,11 @@ class SocialNetworkCacheSerdeTest {
                 """).run();
 
         cacheManager.getCache("dunbar:network:default").clear();
-        cacheManager.getCache("dunbar:network:label").clear();
     }
 
     @AfterEach
     void tearDown() {
         cacheManager.getCache("dunbar:network:default").clear();
-        cacheManager.getCache("dunbar:network:label").clear();
     }
 
     // ── getDefaultNetworkGraph ────────────────────────────────────────────────
@@ -178,30 +181,15 @@ class SocialNetworkCacheSerdeTest {
     // ── getLabelCustomNetwork ─────────────────────────────────────────────────
 
     @Test
-    @DisplayName("두 번째 호출 시 Redis에서 역직렬화해도 ClassCastException 없이 List<NodeGraphResult>를 반환한다")
-    void getLabelCustomNetwork_두번째_호출은_Redis_역직렬화가_정상_동작한다() {
-        List<NodeGraphResult> first = networkRepository.getLabelCustomNetwork(1L, "test-label-id", DunbarCircle.DUNBAR, 5, 10);
+    @DisplayName("라벨 관계망은 Redis 캐시에 저장되지 않는다")
+    void getLabelCustomNetwork_Redis에_저장되지_않는다() {
+        Set<String> stale = redisTemplate.keys("dunbar:network:label:*");
+        if (stale != null && !stale.isEmpty()) {
+            redisTemplate.delete(stale);
+        }
 
-        assertThatNoException().isThrownBy(() -> {
-            List<NodeGraphResult> second = networkRepository.getLabelCustomNetwork(1L, "test-label-id", DunbarCircle.DUNBAR, 5, 10);
-            assertThat(second).isEqualTo(first);
-        });
-    }
+        networkRepository.getLabelCustomNetwork(1L, "test-label-id", DunbarCircle.KINSHIP, 5, 10);
 
-    @Test
-    @DisplayName("Redis에서 복원된 라벨 네트워크는 2개 노드와 총 2개 엣지를 정확히 보존한다")
-    void getLabelCustomNetwork_역직렬화된_중첩_구조가_정확히_복원된다() {
-        networkRepository.getLabelCustomNetwork(1L, "test-label-id", DunbarCircle.DUNBAR, 5, 10);
-
-        List<NodeGraphResult> fromCache = networkRepository.getLabelCustomNetwork(1L, "test-label-id", DunbarCircle.DUNBAR, 5, 10);
-
-        // label에는 A(10), B(20)만 포함
-        assertThat(fromCache).hasSize(2);
-        assertThat(fromCache).extracting(NodeGraphResult::nodeId)
-                .containsExactlyInAnyOrder(10L, 20L);
-
-        // A-B 양방향 엣지
-        long totalEdges = fromCache.stream().mapToLong(n -> n.edges().size()).sum();
-        assertThat(totalEdges).isEqualTo(2);
+        assertThat(redisTemplate.keys("dunbar:network:label:*")).isEmpty();
     }
 }
