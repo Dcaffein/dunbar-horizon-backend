@@ -153,7 +153,8 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
             .replace("#{ID}", PROP_ID)
             .replace("#{INTIMACY}", PROP_INTIMACY);
 
-    @Cacheable(cacheNames = "dunbar:network:default", key = "#userId + ':' + #circleSize.name()")
+    @Cacheable(cacheNames = "dunbar:network:default", key = "#userId + ':' + #circleSize.name()",
+            condition = "#circleSize == T(com.example.DunbarHorizon.social.domain.friend.DunbarCircle).DUNBAR")
     @Neo4jTransactional(readOnly = true)
     @Override
     public List<NodeGraphResult> getDefaultNetworkGraph(Long userId, DunbarCircle circleSize, int pruningMin, int pruningRange) {

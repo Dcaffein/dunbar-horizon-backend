@@ -17,9 +17,7 @@ public class SocialNetworkCacheAdapter implements SocialNetworkCacheManager {
     @Override
     public void evictDefaultNetwork(Long userId) {
         try {
-            for (DunbarCircle circle : DunbarCircle.values()) {
-                redisTemplate.delete("dunbar:network:default:" + userId + ":" + circle.name());
-            }
+            redisTemplate.delete("dunbar:network:default:" + userId + ":" + DunbarCircle.DUNBAR.name());
         } catch (Exception e) {
             log.warn("Redis 캐시 무효화 실패 (default network, userId={}): {}", userId, e.getMessage());
         }

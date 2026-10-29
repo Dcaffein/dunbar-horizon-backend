@@ -178,6 +178,19 @@ class SocialNetworkCacheSerdeTest {
         assertThat(nodeA.interestScore()).isCloseTo(FriendRecognition.normalize(21.4), within(1e-9));
     }
 
+    @Test
+    @DisplayName("DUNBAR 외 서클의 기본 관계망은 Redis 캐시에 저장되지 않는다")
+    void getDefaultNetworkGraph_DUNBAR_외_서클은_Redis에_저장되지_않는다() {
+        networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.SUPPORT, 5, 10);
+        networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.SYMPATHY, 5, 10);
+        networkRepository.getDefaultNetworkGraph(1L, DunbarCircle.KINSHIP, 5, 10);
+
+        Cache defaultCache = cacheManager.getCache("dunbar:network:default");
+        assertThat(defaultCache.get("1:SUPPORT")).isNull();
+        assertThat(defaultCache.get("1:SYMPATHY")).isNull();
+        assertThat(defaultCache.get("1:KINSHIP")).isNull();
+    }
+
     // ── getLabelCustomNetwork ─────────────────────────────────────────────────
 
     @Test
