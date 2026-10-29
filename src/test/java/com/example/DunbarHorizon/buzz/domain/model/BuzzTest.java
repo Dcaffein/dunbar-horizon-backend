@@ -24,8 +24,6 @@ class BuzzTest {
     private final String creatorProfile = "boss.png";
 
     private final Long recipientId = 2L;
-    private final String recipientNickname = "수신자";
-    private final String recipientProfile = "user.png";
 
     private final Long strangerId = 99L;
 
@@ -129,7 +127,7 @@ class BuzzTest {
     }
 
     @Nested
-    @DisplayName("댓글(Comment) 생성 비즈니스 로직 테스트")
+    @DisplayName("댓글 작성 자격 검증 테스트")
     class CommentCreationTest {
         private Buzz buzz;
 
@@ -145,54 +143,43 @@ class BuzzTest {
         }
 
         @Test
-        @DisplayName("수신자가 댓글을 남기면 readRecipientIds에 추가된다")
-        void createComment_Success_WithProfile() {
-            // when
-            BuzzComment comment = buzz.createComment(
-                    recipientId, recipientNickname, recipientProfile, "Good Comment", null, true);
-
-            // then
-            assertThat(comment.getCommenterNickname()).isEqualTo(recipientNickname);
-            assertThat(comment.getCommenterProfileImageUrl()).isEqualTo(recipientProfile);
-            assertThat(buzz.getReadRecipientIds()).contains(recipientId);
+        @DisplayName("수신자는 댓글을 작성할 수 있다")
+        void validateCommentCreation_Success_ByRecipient() {
+            // when & then
+            buzz.validateCommentCreation(recipientId);
         }
 
         @Test
-        @DisplayName("작성자 본인이 댓글을 남길 수 있다")
-        void createComment_Success_ByCreator() {
-            // when
-            BuzzComment comment = buzz.createComment(
-                    creatorId, creatorNickname, creatorProfile, "Creator Comment", null, true);
-
-            // then
-            assertThat(comment.getCommenterId()).isEqualTo(creatorId);
-        }
-
-        @Test
-        @DisplayName("작성자가 댓글을 남겨도 readRecipientIds에 추가되지 않는다")
-        void createComment_Creator_NotMarkedAsRead() {
-            // when
-            buzz.createComment(creatorId, creatorNickname, creatorProfile, "Creator Comment", null, true);
-
-            // then
-            assertThat(buzz.getReadRecipientIds()).doesNotContain(creatorId);
+        @DisplayName("버즈 작성자 본인도 댓글을 작성할 수 있다")
+        void validateCommentCreation_Success_ByCreator() {
+            // when & then
+            buzz.validateCommentCreation(creatorId);
         }
 
         @Test
         @DisplayName("수신자도 작성자도 아닌 제3자가 댓글을 시도하면 예외가 발생한다")
-        void createComment_Fail_ByStranger() {
+        void validateCommentCreation_Fail_ByStranger() {
             // when & then
-            assertThatThrownBy(() -> buzz.createComment(
-                    strangerId, "낯선자", "stranger.png", "Stranger Comment", null, true))
+            assertThatThrownBy(() -> buzz.validateCommentCreation(strangerId))
                     .isInstanceOf(BuzzAccessDeniedException.class);
+        }
+
+        @Test
+        @DisplayName("만료된 버즈에 댓글을 시도하면 예외가 발생한다")
+        void validateCommentCreation_Fail_Expired() {
+            // given
+            ReflectionTestUtils.setField(buzz, "expiresAt", buzz.getCreatedAt().minusMinutes(1));
+
+            // when & then
+            assertThatThrownBy(() -> buzz.validateCommentCreation(recipientId))
+                    .isInstanceOf(BuzzInvalidStateException.class);
         }
     }
 
     @Nested
-    @DisplayName("수정 및 삭제 권한 테스트")
-    class AuthorityTest {
+    @DisplayName("만료 검증 테스트")
+    class ExpiryValidationTest {
         private Buzz buzz;
-        private BuzzComment comment;
 
         @BeforeEach
         void setUp() {
@@ -203,47 +190,23 @@ class BuzzTest {
                     .text("Original Text")
                     .recipientIds(List.of(recipientId))
                     .build();
-
-            comment = buzz.createComment(recipientId, recipientNickname, recipientProfile, "Original Comment", null, true);
-
-            List<BuzzComment> comments = new ArrayList<>();
-            comments.add(comment);
-
-            ReflectionTestUtils.setField(buzz, "comments", comments);
         }
 
         @Test
-        @DisplayName("댓글 작성자가 아닌 사람이 수정을 시도하면 예외가 발생한다")
-        void updateComment_Fail_NotAuthor() {
-            assertThatThrownBy(() -> buzz.updateComment(creatorId, comment.getCommentId(), "New Text", null))
-                    .isInstanceOf(BuzzAccessDeniedException.class);
+        @DisplayName("만료되지 않은 버즈는 통과한다")
+        void validateNotExpired_Success() {
+            // when & then
+            buzz.validateNotExpired();
         }
 
         @Test
-        @DisplayName("댓글 삭제는 작성자 본인이 할 수 있다")
-        void validateCommentDeletion_Success_ByAuthor() {
-            buzz.validateCommentDeletion(recipientId, comment.getCommentId());
-        }
-
-        @Test
-        @DisplayName("댓글 삭제는 버즈 생성자도 할 수 있다")
-        void validateCommentDeletion_Success_ByCreator() {
-            buzz.validateCommentDeletion(creatorId, comment.getCommentId());
-        }
-
-        @Test
-        @DisplayName("제3자가 댓글 삭제를 시도하면 예외가 발생한다")
-        void validateCommentDeletion_Fail_ByStranger() {
-            assertThatThrownBy(() -> buzz.validateCommentDeletion(strangerId, comment.getCommentId()))
-                    .isInstanceOf(BuzzAccessDeniedException.class);
-        }
-
-        @Test
-        @DisplayName("만료된 버즈의 댓글을 삭제하려 하면 예외가 발생한다")
-        void validateCommentDeletion_Fail_Expired() {
+        @DisplayName("만료된 버즈는 예외가 발생한다")
+        void validateNotExpired_Fail_Expired() {
+            // given
             ReflectionTestUtils.setField(buzz, "expiresAt", buzz.getCreatedAt().minusMinutes(1));
 
-            assertThatThrownBy(() -> buzz.validateCommentDeletion(recipientId, comment.getCommentId()))
+            // when & then
+            assertThatThrownBy(() -> buzz.validateNotExpired())
                     .isInstanceOf(BuzzInvalidStateException.class);
         }
     }

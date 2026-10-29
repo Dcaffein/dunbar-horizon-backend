@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Component
@@ -18,11 +19,12 @@ public class BuzzMongoTemplateRepository {
 
     private final MongoTemplate mongoTemplate;
 
-    public void addComment(String buzzId, BuzzComment comment) {
+    public void addComment(String buzzId, BuzzComment comment, boolean markCommenterAsRead) {
         Query query = new Query(Criteria.where("id").is(buzzId));
-        Update update = new Update()
-                .push(BuzzField.RESPONSES, comment)
-                .addToSet(BuzzField.READ_RECIPIENTS, comment.getCommenterId());
+        Update update = new Update().push(BuzzField.RESPONSES, comment);
+        if (markCommenterAsRead) {
+            update.addToSet(BuzzField.READ_RECIPIENTS, comment.getCommenterId());
+        }
 
         mongoTemplate.updateFirst(query, update, Buzz.class);
     }
@@ -64,5 +66,22 @@ public class BuzzMongoTemplateRepository {
         Query query = new Query(Criteria.where("_id").is(buzzId));
         query.fields().slice(BuzzField.RESPONSES, -20);
         return mongoTemplate.findOne(query, Buzz.class);
+    }
+
+    public Buzz findByIdWithoutComments(String buzzId) {
+        Query query = new Query(Criteria.where("_id").is(buzzId));
+        query.fields().exclude(BuzzField.RESPONSES);
+        return mongoTemplate.findOne(query, Buzz.class);
+    }
+
+    public Optional<BuzzComment> findCommentById(String buzzId, String commentId) {
+        Query query = new Query(Criteria.where("_id").is(buzzId));
+        query.fields().elemMatch(BuzzField.RESPONSES, Criteria.where(BuzzField.RESPONSE_ID).is(commentId));
+
+        Buzz buzz = mongoTemplate.findOne(query, Buzz.class);
+        if (buzz == null || buzz.getComments().isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(buzz.getComments().get(0));
     }
 }

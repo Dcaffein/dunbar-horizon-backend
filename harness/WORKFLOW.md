@@ -41,6 +41,7 @@
 - 브랜치 네이밍: `ai/[작업 카테고리]-[기능명]` (작업 카테고리는 feat, fix, refactor 등)
   - 기능명은 태스크 파일명을 기준으로 한다.
   - 예: `ai/feat-buzz-recipient-limit`
+  - 워크트리에서 시작한 세션은 브랜치가 `claude/...`로 이미 만들어져 있다. 그 경우 새로 분기하지 말고 `git branch -m`으로 이름만 규칙에 맞춘다.
 
 ## 5. 구현 (Implementation)
 

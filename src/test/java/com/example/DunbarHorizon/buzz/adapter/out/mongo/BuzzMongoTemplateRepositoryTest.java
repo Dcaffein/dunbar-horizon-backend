@@ -17,6 +17,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
 
@@ -62,12 +63,27 @@ class BuzzMongoTemplateRepositoryTest {
             BuzzComment comment = BuzzComment.of("com-1", recipientId, "댓글자", "p.png", "댓글 내용", null, true);
 
             // when
-            templateRepository.addComment(savedBuzzId, comment);
+            templateRepository.addComment(savedBuzzId, comment, true);
 
             // then
             Buzz updated = mongoTemplate.findById(savedBuzzId, Buzz.class);
             assertThat(updated.getComments()).hasSize(1);
             assertThat(updated.getReadRecipientIds()).contains(recipientId);
+        }
+
+        @Test
+        @DisplayName("읽음 처리 대상이 아니면 readRecipientIds는 그대로 둔다")
+        void addComment_WithoutReadMark_KeepsReadRecipients() {
+            // given
+            BuzzComment comment = BuzzComment.of("com-1", creatorId, "작성자", "p.png", "댓글 내용", null, true);
+
+            // when
+            templateRepository.addComment(savedBuzzId, comment, false);
+
+            // then
+            Buzz updated = mongoTemplate.findById(savedBuzzId, Buzz.class);
+            assertThat(updated.getComments()).hasSize(1);
+            assertThat(updated.getReadRecipientIds()).doesNotContain(creatorId);
         }
     }
 
@@ -80,8 +96,8 @@ class BuzzMongoTemplateRepositoryTest {
             // given
             BuzzComment comment1 = BuzzComment.of("com-1", recipientId, "닉1", "p1", "원본1", null, true);
             BuzzComment comment2 = BuzzComment.of("com-2", recipientId, "닉2", "p2", "원본2", null, true);
-            templateRepository.addComment(savedBuzzId, comment1);
-            templateRepository.addComment(savedBuzzId, comment2);
+            templateRepository.addComment(savedBuzzId, comment1, true);
+            templateRepository.addComment(savedBuzzId, comment2, true);
 
             // when
             String newText = "수정된 내용";
@@ -110,7 +126,7 @@ class BuzzMongoTemplateRepositoryTest {
         @DisplayName("배열에서 특정 commentId를 가진 요소가 삭제되어야 한다")
         void removeComment_Success() {
             // given
-            templateRepository.addComment(savedBuzzId, BuzzComment.of("com-1", recipientId, "닉", "p", "내용", null, true));
+            templateRepository.addComment(savedBuzzId, BuzzComment.of("com-1", recipientId, "닉", "p", "내용", null, true), true);
 
             // when
             templateRepository.removeComment(savedBuzzId, "com-1");
@@ -131,7 +147,7 @@ class BuzzMongoTemplateRepositoryTest {
             // given
             IntStream.rangeClosed(1, 25).forEach(i ->
                     templateRepository.addComment(savedBuzzId,
-                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
+                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true), true));
 
             // when
             Buzz result = templateRepository.findByIdWithCommentSlice(savedBuzzId);
@@ -146,13 +162,66 @@ class BuzzMongoTemplateRepositoryTest {
             // given
             IntStream.rangeClosed(1, 10).forEach(i ->
                     templateRepository.addComment(savedBuzzId,
-                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
+                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true), true));
 
             // when
             Buzz result = templateRepository.findByIdWithCommentSlice(savedBuzzId);
 
             // then
             assertThat(result.getComments()).hasSize(10);
+        }
+    }
+
+    @Nested
+    @DisplayName("명령 경로 조회 테스트")
+    class CommandQueryTest {
+
+        @Test
+        @DisplayName("findByIdWithoutComments는 댓글을 빼고 나머지 필드를 채워 반환한다")
+        void findByIdWithoutComments_ExcludesComments() {
+            // given
+            IntStream.rangeClosed(1, 25).forEach(i ->
+                    templateRepository.addComment(savedBuzzId,
+                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true), true));
+
+            // when
+            Buzz result = templateRepository.findByIdWithoutComments(savedBuzzId);
+
+            // then
+            assertThat(result.getComments()).isEmpty();
+            assertThat(result.getCreatorId()).isEqualTo(creatorId);
+            assertThat(result.getRecipientIds()).containsExactlyInAnyOrder(recipientId, 3L);
+            assertThat(result.getExpiresAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("findCommentById는 slice 범위 밖의 가장 오래된 댓글도 찾는다")
+        void findCommentById_FindsOldestBeyondSlice() {
+            // given
+            IntStream.rangeClosed(1, 25).forEach(i ->
+                    templateRepository.addComment(savedBuzzId,
+                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true), true));
+
+            // when
+            Optional<BuzzComment> result = templateRepository.findCommentById(savedBuzzId, "com-1");
+
+            // then
+            assertThat(result).isPresent();
+            assertThat(result.get().getText()).isEqualTo("내용1");
+        }
+
+        @Test
+        @DisplayName("findCommentById는 없는 댓글이면 비어 있다")
+        void findCommentById_Missing_ReturnsEmpty() {
+            // given
+            templateRepository.addComment(savedBuzzId,
+                    BuzzComment.of("com-1", recipientId, "닉", "p", "내용", null, true), true);
+
+            // when
+            Optional<BuzzComment> result = templateRepository.findCommentById(savedBuzzId, "com-999");
+
+            // then
+            assertThat(result).isEmpty();
         }
     }
 

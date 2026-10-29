@@ -11,6 +11,7 @@ import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzCommentNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +28,7 @@ import org.springframework.data.domain.SliceImpl;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
@@ -35,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -120,7 +123,7 @@ class BuzzServiceTest {
                     .recipientIds(List.of(recipientId))
                     .build();
             ReflectionTestUtils.setField(buzz, "id", "buzz-id");
-            given(buzzRepository.findById("buzz-id")).willReturn(buzz);
+            given(buzzRepository.findByIdWithRecentComments("buzz-id")).willReturn(buzz);
             given(buzzSocialPort.getCreatorProfiles(List.of(recipientId)))
                     .willReturn(List.of(new BuzzCreatorInfo(recipientId, "수신자", "p.png")));
         }
@@ -225,6 +228,120 @@ class BuzzServiceTest {
                     .isInstanceOf(BuzzInvalidStateException.class);
 
             verify(imageStoragePort, never()).resolveUrls(anyList());
+        }
+    }
+
+    @Nested
+    @DisplayName("댓글 수정·삭제는 대상 댓글을 저장소에서 직접 읽는다")
+    class CommentCommandLookup {
+
+        private Buzz buzz;
+
+        @BeforeEach
+        void setUp() {
+            buzz = Buzz.builder()
+                    .creatorId(creatorId)
+                    .creatorNickname("작성자")
+                    .creatorProfileImageUrl("p.png")
+                    .text("Buzz")
+                    .recipientIds(List.of(recipientId))
+                    .build();
+            ReflectionTestUtils.setField(buzz, "id", "buzz-id");
+            given(buzzRepository.findById("buzz-id")).willReturn(buzz);
+        }
+
+        @Test
+        @DisplayName("댓글 목록이 없는 Buzz로도 수정이 저장소까지 이어진다")
+        void updateComment_WithoutCommentList_Succeeds() {
+            // given
+            BuzzComment comment = BuzzComment.of("c1", recipientId, "수신자", "p.png", "원본", List.of(), true);
+            given(buzzRepository.findComment("buzz-id", "c1")).willReturn(Optional.of(comment));
+            given(imageStoragePort.resolveUrls(anyList())).willReturn(List.of());
+
+            // when
+            buzzService.updateComment(recipientId, "buzz-id", "c1", "수정됨", List.of());
+
+            // then
+            assertThat(buzz.getComments()).isEmpty();
+            verify(buzzRepository).updateComment("buzz-id", "c1", "수정됨", List.of());
+        }
+
+        @Test
+        @DisplayName("대상 댓글이 없으면 resolveUrls 호출 없이 예외가 발생한다")
+        void updateComment_MissingComment_Throws() {
+            // given
+            given(buzzRepository.findComment("buzz-id", "c1")).willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() ->
+                    buzzService.updateComment(recipientId, "buzz-id", "c1", "수정됨", List.of()))
+                    .isInstanceOf(BuzzCommentNotFoundException.class);
+
+            verify(imageStoragePort, never()).resolveUrls(anyList());
+        }
+
+        @Test
+        @DisplayName("버즈 생성자는 다른 사람의 댓글도 삭제할 수 있다")
+        void deleteComment_ByBuzzCreator_Succeeds() {
+            // given
+            BuzzComment comment = BuzzComment.of("c1", recipientId, "수신자", "p.png", "원본", List.of(), true);
+            given(buzzRepository.findComment("buzz-id", "c1")).willReturn(Optional.of(comment));
+
+            // when
+            buzzService.deleteComment(creatorId, "buzz-id", "c1");
+
+            // then
+            verify(buzzRepository).removeComment("buzz-id", "c1");
+        }
+    }
+
+    @Nested
+    @DisplayName("댓글 작성 시 읽음 처리 판정")
+    class CommentReadMarking {
+
+        private Buzz buzz;
+
+        @BeforeEach
+        void setUp() {
+            buzz = Buzz.builder()
+                    .creatorId(creatorId)
+                    .creatorNickname("작성자")
+                    .creatorProfileImageUrl("p.png")
+                    .text("Buzz")
+                    .recipientIds(List.of(recipientId))
+                    .build();
+            ReflectionTestUtils.setField(buzz, "id", "buzz-id");
+
+            given(buzzRepository.findById("buzz-id")).willReturn(buzz);
+            given(imageStoragePort.resolveUrls(anyList())).willReturn(List.of());
+        }
+
+        @Test
+        @DisplayName("수신자가 댓글을 달면 읽음 처리 대상으로 넘긴다")
+        void commentOnBuzz_ByRecipient_MarksAsRead() {
+            // given
+            given(buzzSocialPort.getCreatorProfiles(List.of(recipientId)))
+                    .willReturn(List.of(new BuzzCreatorInfo(recipientId, "수신자", "p.png")));
+
+            // when
+            buzzService.commentOnBuzz(recipientId, "buzz-id", "댓글", List.of(), true);
+
+            // then
+            verify(buzzRepository).addComment(eq("buzz-id"), any(BuzzComment.class), eq(true));
+        }
+
+        @Test
+        @DisplayName("버즈 작성자가 댓글을 달면 읽음 처리 대상이 아니다")
+        void commentOnBuzz_ByCreator_DoesNotMarkAsRead() {
+            // given
+            given(buzzSocialPort.getCreatorProfiles(List.of(creatorId)))
+                    .willReturn(List.of(new BuzzCreatorInfo(creatorId, "작성자", "p.png")));
+
+            // when
+            buzzService.commentOnBuzz(creatorId, "buzz-id", "댓글", List.of(), true);
+
+            // then
+            verify(buzzRepository).addComment(eq("buzz-id"), any(BuzzComment.class), eq(false));
         }
     }
 }
