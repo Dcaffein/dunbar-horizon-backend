@@ -329,6 +329,55 @@ class FlagParticipationLockConcurrencyIntegrationTest {
     }
 
     @Test
+    @DisplayName("일반 참여는 락을 기다리는 동안 커밋된 참여를 세어 정원을 지킨다")
+    void participate_afterParticipationCommittedBeforeLock_countsCommittedParticipant() throws InterruptedException {
+        // given
+        Long flagId = hostRecruitingFlag(1);
+        given(flagUserAdapter.areFriends(HOST_ID, PARTICIPANT_A_ID)).willReturn(true);
+        given(flagUserAdapter.areFriends(HOST_ID, PARTICIPANT_B_ID)).willReturn(true);
+        CountDownLatch lockRequested = new CountDownLatch(1);
+        CountDownLatch continueToLock = new CountDownLatch(1);
+        CountDownLatch completed = new CountDownLatch(1);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        AtomicBoolean blockOnce = new AtomicBoolean(true);
+
+        doAnswer(invocation -> {
+            if (blockOnce.compareAndSet(true, false)) {
+                lockRequested.countDown();
+                await(continueToLock, "일반 참여 락 조회 재개");
+            }
+            return invocation.callRealMethod();
+        }).when(flagRepository).findByIdForUpdate(flagId);
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.submit(() -> {
+            try {
+                flagParticipationUseCase.participateInFlag(flagId, PARTICIPANT_A_ID);
+            } catch (Throwable throwable) {
+                failure.set(throwable);
+            } finally {
+                completed.countDown();
+            }
+        });
+
+        try {
+            // when
+            assertThat(lockRequested.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            // 트랜잭션 B: A가 Flag 락을 얻기 전 마지막 자리에 참여하고 커밋한다.
+            flagParticipationUseCase.participateInFlag(flagId, PARTICIPANT_B_ID);
+            continueToLock.countDown();
+            assertThat(completed.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+            // then
+            assertThat(failure.get()).isInstanceOf(FlagFullCapacityException.class);
+            assertThat(participantJpaRepository.countByFlagId(flagId)).isEqualTo(1);
+        } finally {
+            continueToLock.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
     @DisplayName("일반 참여는 친구 확인 동안 MySQL 트랜잭션을 열어두지 않는다")
     void participate_checksFriendshipOutsideJpaTransaction() {
         // given
