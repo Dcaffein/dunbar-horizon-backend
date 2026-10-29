@@ -5,7 +5,9 @@ public enum InteractionType {
     BUZZ_SEND(false),
     BUZZ_REPLY(false),
     FLAG_ENDED(true),
-    FLAG_ENDED_ENCORE(true);
+    FLAG_ENDED_ENCORE(true),
+    FLAG_PRESERVED(true),
+    FLAG_PRESERVED_ENCORE(true);
 
     private final boolean mutual;
 

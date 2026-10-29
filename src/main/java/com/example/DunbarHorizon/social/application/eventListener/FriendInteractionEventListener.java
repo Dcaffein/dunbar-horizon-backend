@@ -24,6 +24,6 @@ public class FriendInteractionEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleBatchMutualInteraction(BatchMutualInteractionEvent event) {
         interactionScoreService.applyFlagConclusion(
-                event.flagId(), event.hostId(), event.participantIds(), event.type());
+                event.flagId(), event.hostId(), event.participantIds(), event.type(), event.direction());
     }
 }

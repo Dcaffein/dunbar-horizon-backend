@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.social.application;
 
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
+import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import com.example.DunbarHorizon.social.application.eventListener.FriendInteractionEventListener;
 import com.example.DunbarHorizon.social.application.service.InteractionScoreService;
@@ -40,15 +41,30 @@ class FriendInteractionEventListenerTest {
     }
 
     @Test
-    @DisplayName("배치 이벤트는 참가자 전체와 타입을 그대로 서비스에 넘긴다")
+    @DisplayName("배치 이벤트는 참가자 전체와 타입, 방향을 그대로 서비스에 넘긴다")
     void handleBatchMutualInteraction_delegatesAllParticipantsAndTypeToService() {
         List<Long> participants = List.of(USER_A, USER_B);
         Long flagId = 91L;
-        BatchMutualInteractionEvent event =
-                new BatchMutualInteractionEvent(flagId, participants, HOST, InteractionType.FLAG_ENDED);
+        BatchMutualInteractionEvent event = new BatchMutualInteractionEvent(
+                flagId, participants, HOST, InteractionType.FLAG_ENDED, ScoreDirection.GRANT);
 
         listener.handleBatchMutualInteraction(event);
 
-        verify(interactionScoreService).applyFlagConclusion(flagId, HOST, participants, InteractionType.FLAG_ENDED);
+        verify(interactionScoreService).applyFlagConclusion(
+                flagId, HOST, participants, InteractionType.FLAG_ENDED, ScoreDirection.GRANT);
+    }
+
+    @Test
+    @DisplayName("회수 방향도 서비스로 그대로 넘어간다")
+    void handleBatchMutualInteraction_delegatesRevokeDirection() {
+        List<Long> participants = List.of(USER_A, USER_B);
+        Long flagId = 92L;
+        BatchMutualInteractionEvent event = new BatchMutualInteractionEvent(
+                flagId, participants, HOST, InteractionType.FLAG_PRESERVED, ScoreDirection.REVOKE);
+
+        listener.handleBatchMutualInteraction(event);
+
+        verify(interactionScoreService).applyFlagConclusion(
+                flagId, HOST, participants, InteractionType.FLAG_PRESERVED, ScoreDirection.REVOKE);
     }
 }

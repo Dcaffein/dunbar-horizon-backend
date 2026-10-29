@@ -6,5 +6,6 @@ public record BatchMutualInteractionEvent(
         Long flagId,
         List<Long> participantIds,
         Long hostId,
-        InteractionType type
+        InteractionType type,
+        ScoreDirection direction
 ) {}

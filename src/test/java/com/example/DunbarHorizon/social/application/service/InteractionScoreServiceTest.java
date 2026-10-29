@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
+import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
 import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
@@ -41,7 +42,7 @@ class InteractionScoreServiceTest {
     @DisplayName("Flag 결론은 host-참가자와 참가자 쌍 전체를 하나의 batch로 갱신한다")
     void applyFlagConclusion_updatesAllPairsInOneBatch() {
         // when
-        interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE);
+        interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT);
 
         // then
         ArgumentCaptor<List<MutualInterestScoreUpdate>> captor = ArgumentCaptor.forClass(List.class);
@@ -54,6 +55,27 @@ class InteractionScoreServiceTest {
     }
 
     @Test
+    @DisplayName("REVOKE는 같은 쌍에 같은 크기의 음수 델타를 넣는다")
+    void applyFlagConclusion_revokeMirrorsGrantWithNegativeDelta() {
+        // given
+        InteractionType type = InteractionType.FLAG_PRESERVED;
+
+        // when
+        interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, type, ScoreDirection.REVOKE);
+
+        // then
+        ArgumentCaptor<List<MutualInterestScoreUpdate>> captor = ArgumentCaptor.forClass(List.class);
+        verify(friendshipRepository).incrementMutualInterestScoresBatch(captor.capture());
+        double revoked = -InteractionScorePolicy.scoreOf(type);
+        assertThat(captor.getValue()).containsExactlyInAnyOrder(
+                new MutualInterestScoreUpdate(Friendship.generateCompositeId(HOST_ID, 21L), HOST_ID, 21L, revoked),
+                new MutualInterestScoreUpdate(Friendship.generateCompositeId(HOST_ID, 22L), HOST_ID, 22L, revoked),
+                new MutualInterestScoreUpdate(Friendship.generateCompositeId(21L, 22L), 21L, 22L, revoked)
+        );
+        assertThat(captor.getValue()).allSatisfy(update -> assertThat(update.delta()).isNegative());
+    }
+
+    @Test
     @DisplayName("rollback이 확인된 transient Flag batch 실패만 제한적으로 재시도한다")
     void applyFlagConclusion_retriesTransientFailure() {
         // given
@@ -62,7 +84,7 @@ class InteractionScoreServiceTest {
                 .when(friendshipRepository).incrementMutualInterestScoresBatch(any());
 
         // when
-        interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE);
+        interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT);
 
         // then
         verify(friendshipRepository, times(2)).incrementMutualInterestScoresBatch(any());
@@ -76,7 +98,7 @@ class InteractionScoreServiceTest {
                 .when(friendshipRepository).incrementMutualInterestScoresBatch(any());
 
         // when & then
-        assertThatThrownBy(() -> interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE))
+        assertThatThrownBy(() -> interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT))
                 .isInstanceOf(TransientDataAccessResourceException.class);
         verify(friendshipRepository, times(3)).incrementMutualInterestScoresBatch(any());
     }
@@ -89,7 +111,7 @@ class InteractionScoreServiceTest {
                 .when(friendshipRepository).incrementMutualInterestScoresBatch(any());
 
         // when & then
-        assertThatThrownBy(() -> interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE))
+        assertThatThrownBy(() -> interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT))
                 .isInstanceOf(IllegalStateException.class);
         verify(friendshipRepository, times(1)).incrementMutualInterestScoresBatch(any());
     }
