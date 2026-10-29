@@ -14,13 +14,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FlagParticipationManager {
     private final FlagRepository flagRepository;
-    private final FriendshipChecker friendshipChecker;
 
-    public FlagParticipant participate(Long flagId, Long userId) {
-        Long hostId = flagRepository.findHostIdById(flagId)
-                .orElseThrow(() -> new FlagNotFoundException(flagId));
-
-        if (!friendshipChecker.areFriends(hostId, userId)) {
+    public FlagParticipant participate(Long flagId, Long userId, boolean isHostFriend) {
+        if (!isHostFriend) {
             throw new FlagAuthorizationException(FlagErrorCode.FLAG_FRIENDS_ONLY, ErrorContext.of("flagId", flagId).and("userId", userId));
         }
 

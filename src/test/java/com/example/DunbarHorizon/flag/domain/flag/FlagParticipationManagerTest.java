@@ -18,7 +18,10 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class FlagParticipationManagerTest {
@@ -26,7 +29,6 @@ class FlagParticipationManagerTest {
     @InjectMocks private FlagParticipationManager policy;
 
     @Mock private FlagRepository flagRepository;
-    @Mock private FriendshipChecker friendshipChecker;
 
     private static final Long FLAG_ID = 1L;
     private static final Long HOST_ID = 1L;
@@ -45,14 +47,12 @@ class FlagParticipationManagerTest {
     void participate_Success() {
         // given
         Flag flag = recruitingFlag();
-        given(flagRepository.findHostIdById(FLAG_ID)).willReturn(Optional.of(HOST_ID));
-        given(friendshipChecker.areFriends(HOST_ID, USER_ID)).willReturn(true);
         given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(flagRepository.isParticipating(FLAG_ID, USER_ID)).willReturn(false);
         given(flagRepository.countParticipants(FLAG_ID)).willReturn(0);
 
         // when
-        FlagParticipant result = policy.participate(FLAG_ID, USER_ID);
+        FlagParticipant result = policy.participate(FLAG_ID, USER_ID, true);
 
         // then
         assertThat(result).isNotNull();
@@ -60,26 +60,23 @@ class FlagParticipationManagerTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 플래그에 참여하면 FlagNotFoundException이 발생한다")
+    @DisplayName("잠금 조회에서 플래그가 없으면 FlagNotFoundException이 발생한다")
     void participate_FlagNotFound_ThrowsException() {
         // given
-        given(flagRepository.findHostIdById(999L)).willReturn(Optional.empty());
+        given(flagRepository.findByIdForUpdate(999L)).willReturn(Optional.empty());
 
         // when / then
-        assertThatThrownBy(() -> policy.participate(999L, USER_ID))
+        assertThatThrownBy(() -> policy.participate(999L, USER_ID, true))
                 .isInstanceOf(FlagNotFoundException.class);
     }
 
     @Test
-    @DisplayName("호스트와 친구가 아닌 사용자가 참여하면 FlagAuthorizationException이 발생한다")
-    void participate_NotFriend_ThrowsException() {
-        // given
-        given(flagRepository.findHostIdById(FLAG_ID)).willReturn(Optional.of(HOST_ID));
-        given(friendshipChecker.areFriends(HOST_ID, USER_ID)).willReturn(false);
-
+    @DisplayName("호스트와 친구가 아닌 사용자는 Flag를 잠그기 전에 FlagAuthorizationException으로 거절된다")
+    void participate_NotFriend_ThrowsExceptionBeforeLock() {
         // when / then
-        assertThatThrownBy(() -> policy.participate(FLAG_ID, USER_ID))
+        assertThatThrownBy(() -> policy.participate(FLAG_ID, USER_ID, false))
                 .isInstanceOf(FlagAuthorizationException.class);
+        verify(flagRepository, never()).findByIdForUpdate(anyLong());
     }
 
     @Test
@@ -87,13 +84,11 @@ class FlagParticipationManagerTest {
     void participate_Duplicate_ThrowsException() {
         // given
         Flag flag = recruitingFlag();
-        given(flagRepository.findHostIdById(FLAG_ID)).willReturn(Optional.of(HOST_ID));
-        given(friendshipChecker.areFriends(HOST_ID, USER_ID)).willReturn(true);
         given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(flagRepository.isParticipating(FLAG_ID, USER_ID)).willReturn(true);
 
         // when / then
-        assertThatThrownBy(() -> policy.participate(FLAG_ID, USER_ID))
+        assertThatThrownBy(() -> policy.participate(FLAG_ID, USER_ID, true))
                 .isInstanceOf(FlagParticipationDuplicateException.class);
     }
 
