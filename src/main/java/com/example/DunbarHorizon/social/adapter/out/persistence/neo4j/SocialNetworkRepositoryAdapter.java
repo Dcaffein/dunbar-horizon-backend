@@ -29,11 +29,11 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
 
     // GET_DEFAULT_NETWORK_GRAPH, GET_LABEL_CUSTOM_NETWORK 공통 suffix
     private static final String NETWORK_PRUNING_SUFFIX = ("""
-            // [1] 친구 목록 수집 + interestScore lookup map 구성
+            // [1] 친구 목록 수집 + boundary 멤버십 / interestScore lookup map 구성
             WITH me,
                  collect({member: member, friendship: myFriendship, interestScore: interestScore}) AS friendData
             WITH me, friendData,
-                 apoc.coll.union([x IN friendData | x.member], [me]) AS boundary,
+                 apoc.map.fromPairs([x IN friendData | [elementId(x.member), true]]) AS boundary,
                  apoc.map.fromPairs([x IN friendData | [toString(x.member.#{ID}), x.interestScore]]) AS interestMap
 
             // [2] 친구별 동적 엣지 한도 산출 (me→friend 친밀도가 높을수록 더 많은 내부 엣지 허용)
@@ -46,7 +46,7 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
             // OPTIONAL MATCH: 연결이 없는 고립 노드도 1 row(null)로 통과시켜 [4]에서 빈 리스트로 반환
             CALL (me, member, boundary, dynamicLimit) {
               OPTIONAL MATCH (member)-[:#{HF}]->(innerFriendship:#{F})<-[:#{HF}]-(targetMember:#{UR})
-              WHERE targetMember IN boundary AND member <> targetMember AND targetMember <> me
+              WHERE boundary[elementId(targetMember)] = true AND member <> targetMember AND targetMember <> me
               WITH innerFriendship, targetMember, dynamicLimit
               ORDER BY innerFriendship.#{INTIMACY} DESC
               WITH collect(

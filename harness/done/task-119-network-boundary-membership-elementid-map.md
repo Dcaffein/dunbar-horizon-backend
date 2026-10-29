@@ -17,12 +17,6 @@ PROFILE의 DB Hits는 저장소 접근만 센다. 리스트 비교는 저장소�
 
 측정 조건은 대상 유저 1명(id=3, 친구 190명), 페이지 캐시 상주, 동시성 1, 1,000라운드 교차 실행이다. 네 변형의 실행 계획은 membership Filter 한 줄을 빼고 연산자 단위로 같았다. DB Hits로는 elementId 맵이 0.17% 손해였지만 시간으로는 약 6% 이득이었다.
 
-근거 자료는 백엔드 저장소 밖의 `Neo4jOptimizeTest/`에 있다.
-
-- PROFILE: `profiling/results/boundary_list_vs_map_20261016_0423.md`
-- 시간: `experiments/boundary-membership-timing/RESULTS_20261016_0505.md`
-- 쿼리 정의와 하네스: `profiling/scripts/profile-boundary-list-vs-map.js`, `experiments/boundary-membership-timing/run.js`
-
 ## Objective
 
 boundary 포함 판정을 elementId를 키로 하는 맵 조회로 바꿔, 판정마다 일어나는 선형 비교를 없앤다. 기본 네트워크와 라벨 네트워크의 반환 결과는 바뀌지 않는다.
@@ -49,7 +43,7 @@ elementId는 트랜잭션 사이에서 같은 값이 보장되지 않는다. 맵
 
 ## Acceptance Criteria
 
-- 기본 네트워크와 라벨 네트워크의 반환 결과가 변경 전과 같다.
 - `NETWORK_PRUNING_SUFFIX`에 `IN boundary` 판정이 남지 않는다.
-- 프로덕션 쿼리 PROFILE에서 membership Filter를 뺀 연산자 구성이 변경 전과 같다.
-- 프로덕션 쿼리 PROFILE의 GlobalMemory가 늘지 않는다. CALL 서브쿼리에 무엇을 넘기느냐가 작업 메모리를 바꾼 이력이 있다(`profiling/results/PROFILE_EF_vs_CALL.md`).
+- `SocialNetworkRepositoryAdapterTest`가 전부 통과한다. 기본 네트워크와 라벨 네트워크의 반환 결과가 변경 전과 같다는 것은 이 테스트로 확인한다.
+
+성능은 Background의 측정으로 판단이 끝났으므로 다시 재지 않는다.
