@@ -6,11 +6,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public interface BuzzRepository {
     Buzz save(Buzz buzz);
     Buzz findById(String id);
+    Buzz findByIdWithRecentComments(String id);
+    Optional<BuzzComment> findComment(String buzzId, String commentId);
     void addComment(String buzzId, BuzzComment comment);
     void updateComment(String buzzId, String commentId, String text, List<String> imageUrls);
     void removeComment(String buzzId, String commentId);

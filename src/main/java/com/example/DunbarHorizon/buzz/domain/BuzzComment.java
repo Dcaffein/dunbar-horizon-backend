@@ -1,7 +1,10 @@
 package com.example.DunbarHorizon.buzz.domain;
 
 
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzErrorCode;import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzErrorCode;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
+import com.example.DunbarHorizon.global.exception.ErrorContext;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -52,10 +55,25 @@ public class BuzzComment {
         return commenterId.equals(userId);
     }
 
-    public void update(String text, List<String> imageUrls) {
+    public void update(Long requesterId, String text, List<String> imageUrls) {
+        validateCommenter(requesterId);
         validateContent(text);
         this.text = text;
         this.imageUrls = imageUrls != null ? imageUrls : new ArrayList<>();
+    }
+
+    public void validateDeletionAuthority(Long requesterId, Long buzzCreatorId) {
+        if (!isCommenter(requesterId) && !buzzCreatorId.equals(requesterId)) {
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_COMMENT_AUTHOR_ONLY,
+                    ErrorContext.of("commentId", commentId).and("userId", requesterId));
+        }
+    }
+
+    private void validateCommenter(Long requesterId) {
+        if (!isCommenter(requesterId)) {
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_COMMENT_AUTHOR_ONLY,
+                    ErrorContext.of("commentId", commentId).and("userId", requesterId));
+        }
     }
 
     private static void validateContent(String text) {

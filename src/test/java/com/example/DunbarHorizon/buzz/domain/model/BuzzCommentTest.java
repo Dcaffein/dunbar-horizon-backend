@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.buzz.domain.model;
 
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ class BuzzCommentTest {
     void update_Fail_EmptyText() {
         BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "Old", null, true);
 
-        assertThatThrownBy(() -> comment.update("", null))
+        assertThatThrownBy(() -> comment.update(1L, "", null))
                 .isInstanceOf(BuzzInvalidStateException.class);
     }
 
@@ -44,7 +45,7 @@ class BuzzCommentTest {
         BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "Old", null, true);
         String tooLong = "가".repeat(BuzzComment.TEXT_MAX_LENGTH + 1);
 
-        assertThatThrownBy(() -> comment.update(tooLong, null))
+        assertThatThrownBy(() -> comment.update(1L, tooLong, null))
                 .isInstanceOf(BuzzInvalidStateException.class);
     }
 
@@ -62,5 +63,48 @@ class BuzzCommentTest {
         BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "내용", null, true);
 
         assertThat(comment.isCommenter(99L)).isFalse();
+    }
+
+    @Test
+    @DisplayName("작성자가 아닌 사람이 수정하면 예외가 발생한다")
+    void update_Fail_NotCommenter() {
+        // given
+        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "Old", null, true);
+
+        // when & then
+        assertThatThrownBy(() -> comment.update(99L, "New", null))
+                .isInstanceOf(BuzzAccessDeniedException.class);
+        assertThat(comment.getText()).isEqualTo("Old");
+    }
+
+    @Test
+    @DisplayName("댓글 삭제는 작성자 본인이 할 수 있다")
+    void validateDeletionAuthority_Success_ByCommenter() {
+        // given
+        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "내용", null, true);
+
+        // when & then
+        comment.validateDeletionAuthority(1L, 50L);
+    }
+
+    @Test
+    @DisplayName("댓글 삭제는 버즈 생성자도 할 수 있다")
+    void validateDeletionAuthority_Success_ByBuzzCreator() {
+        // given
+        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "내용", null, true);
+
+        // when & then
+        comment.validateDeletionAuthority(50L, 50L);
+    }
+
+    @Test
+    @DisplayName("작성자도 버즈 생성자도 아니면 댓글 삭제 시 예외가 발생한다")
+    void validateDeletionAuthority_Fail_ByStranger() {
+        // given
+        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "내용", null, true);
+
+        // when & then
+        assertThatThrownBy(() -> comment.validateDeletionAuthority(99L, 50L))
+                .isInstanceOf(BuzzAccessDeniedException.class);
     }
 }

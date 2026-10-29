@@ -189,10 +189,9 @@ class BuzzTest {
     }
 
     @Nested
-    @DisplayName("수정 및 삭제 권한 테스트")
-    class AuthorityTest {
+    @DisplayName("만료 검증 테스트")
+    class ExpiryValidationTest {
         private Buzz buzz;
-        private BuzzComment comment;
 
         @BeforeEach
         void setUp() {
@@ -203,47 +202,23 @@ class BuzzTest {
                     .text("Original Text")
                     .recipientIds(List.of(recipientId))
                     .build();
-
-            comment = buzz.createComment(recipientId, recipientNickname, recipientProfile, "Original Comment", null, true);
-
-            List<BuzzComment> comments = new ArrayList<>();
-            comments.add(comment);
-
-            ReflectionTestUtils.setField(buzz, "comments", comments);
         }
 
         @Test
-        @DisplayName("댓글 작성자가 아닌 사람이 수정을 시도하면 예외가 발생한다")
-        void updateComment_Fail_NotAuthor() {
-            assertThatThrownBy(() -> buzz.updateComment(creatorId, comment.getCommentId(), "New Text", null))
-                    .isInstanceOf(BuzzAccessDeniedException.class);
+        @DisplayName("만료되지 않은 버즈는 통과한다")
+        void validateNotExpired_Success() {
+            // when & then
+            buzz.validateNotExpired();
         }
 
         @Test
-        @DisplayName("댓글 삭제는 작성자 본인이 할 수 있다")
-        void validateCommentDeletion_Success_ByAuthor() {
-            buzz.validateCommentDeletion(recipientId, comment.getCommentId());
-        }
-
-        @Test
-        @DisplayName("댓글 삭제는 버즈 생성자도 할 수 있다")
-        void validateCommentDeletion_Success_ByCreator() {
-            buzz.validateCommentDeletion(creatorId, comment.getCommentId());
-        }
-
-        @Test
-        @DisplayName("제3자가 댓글 삭제를 시도하면 예외가 발생한다")
-        void validateCommentDeletion_Fail_ByStranger() {
-            assertThatThrownBy(() -> buzz.validateCommentDeletion(strangerId, comment.getCommentId()))
-                    .isInstanceOf(BuzzAccessDeniedException.class);
-        }
-
-        @Test
-        @DisplayName("만료된 버즈의 댓글을 삭제하려 하면 예외가 발생한다")
-        void validateCommentDeletion_Fail_Expired() {
+        @DisplayName("만료된 버즈는 예외가 발생한다")
+        void validateNotExpired_Fail_Expired() {
+            // given
             ReflectionTestUtils.setField(buzz, "expiresAt", buzz.getCreatedAt().minusMinutes(1));
 
-            assertThatThrownBy(() -> buzz.validateCommentDeletion(recipientId, comment.getCommentId()))
+            // when & then
+            assertThatThrownBy(() -> buzz.validateNotExpired())
                     .isInstanceOf(BuzzInvalidStateException.class);
         }
     }

@@ -17,6 +17,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
 
@@ -153,6 +154,59 @@ class BuzzMongoTemplateRepositoryTest {
 
             // then
             assertThat(result.getComments()).hasSize(10);
+        }
+    }
+
+    @Nested
+    @DisplayName("명령 경로 조회 테스트")
+    class CommandQueryTest {
+
+        @Test
+        @DisplayName("findByIdWithoutComments는 댓글을 빼고 나머지 필드를 채워 반환한다")
+        void findByIdWithoutComments_ExcludesComments() {
+            // given
+            IntStream.rangeClosed(1, 25).forEach(i ->
+                    templateRepository.addComment(savedBuzzId,
+                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
+
+            // when
+            Buzz result = templateRepository.findByIdWithoutComments(savedBuzzId);
+
+            // then
+            assertThat(result.getComments()).isEmpty();
+            assertThat(result.getCreatorId()).isEqualTo(creatorId);
+            assertThat(result.getRecipientIds()).containsExactlyInAnyOrder(recipientId, 3L);
+            assertThat(result.getExpiresAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("findCommentById는 slice 범위 밖의 가장 오래된 댓글도 찾는다")
+        void findCommentById_FindsOldestBeyondSlice() {
+            // given
+            IntStream.rangeClosed(1, 25).forEach(i ->
+                    templateRepository.addComment(savedBuzzId,
+                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
+
+            // when
+            Optional<BuzzComment> result = templateRepository.findCommentById(savedBuzzId, "com-1");
+
+            // then
+            assertThat(result).isPresent();
+            assertThat(result.get().getText()).isEqualTo("내용1");
+        }
+
+        @Test
+        @DisplayName("findCommentById는 없는 댓글이면 비어 있다")
+        void findCommentById_Missing_ReturnsEmpty() {
+            // given
+            templateRepository.addComment(savedBuzzId,
+                    BuzzComment.of("com-1", recipientId, "닉", "p", "내용", null, true));
+
+            // when
+            Optional<BuzzComment> result = templateRepository.findCommentById(savedBuzzId, "com-999");
+
+            // then
+            assertThat(result).isEmpty();
         }
     }
 

@@ -13,6 +13,7 @@ import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzCommentNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
@@ -87,16 +88,21 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     @Override
     public void updateComment(Long requesterId, String buzzId, String commentId, String commentText, List<String> imageKeys) {
         Buzz buzz = getBuzzOrThrow(buzzId);
-        buzz.validateCommentUpdate(requesterId, commentId);
+        buzz.validateNotExpired();
+        BuzzComment comment = getCommentOrThrow(buzzId, commentId);
+
         List<String> imageUrls = imageStoragePort.resolveUrls(imageKeys);
-        buzz.updateComment(requesterId, commentId, commentText, imageUrls);
-        buzzRepository.updateComment(buzzId, commentId, commentText, imageUrls);
+        comment.update(requesterId, commentText, imageUrls);
+        buzzRepository.updateComment(buzzId, commentId, comment.getText(), comment.getImageUrls());
     }
 
     @Override
     public void deleteComment(Long requesterId, String buzzId, String commentId) {
         Buzz buzz = getBuzzOrThrow(buzzId);
-        buzz.validateCommentDeletion(requesterId, commentId);
+        buzz.validateNotExpired();
+        BuzzComment comment = getCommentOrThrow(buzzId, commentId);
+
+        comment.validateDeletionAuthority(requesterId, buzz.getCreatorId());
         buzzRepository.removeComment(buzzId, commentId);
     }
 
@@ -122,7 +128,7 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
 
     @Override
     public BuzzDetailResult getBuzzDetail(Long userId, String buzzId) {
-        Buzz buzz = getBuzzOrThrow(buzzId);
+        Buzz buzz = getBuzzWithCommentsOrThrow(buzzId);
         buzz.validateAccess(userId);
         buzzRepository.addReadRecipient(buzzId, userId);
         List<BuzzProfileResult> recipients = buzzSocialPort.getCreatorProfiles(buzz.getRecipientIds()).stream()
@@ -138,10 +144,22 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     }
 
     private Buzz getBuzzOrThrow(String buzzId) {
-        Buzz buzz = buzzRepository.findById(buzzId);
+        return requireBuzz(buzzRepository.findById(buzzId), buzzId);
+    }
+
+    private Buzz getBuzzWithCommentsOrThrow(String buzzId) {
+        return requireBuzz(buzzRepository.findByIdWithRecentComments(buzzId), buzzId);
+    }
+
+    private Buzz requireBuzz(Buzz buzz, String buzzId) {
         if (buzz == null) {
             throw new BuzzNotFoundException(buzzId);
         }
         return buzz;
+    }
+
+    private BuzzComment getCommentOrThrow(String buzzId, String commentId) {
+        return buzzRepository.findComment(buzzId, commentId)
+                .orElseThrow(() -> new BuzzCommentNotFoundException(buzzId, commentId));
     }
 }

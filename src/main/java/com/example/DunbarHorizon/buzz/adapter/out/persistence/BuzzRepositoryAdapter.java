@@ -11,6 +11,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Component
@@ -27,7 +28,17 @@ public class BuzzRepositoryAdapter implements BuzzRepository {
 
     @Override
     public Buzz findById(String id) {
+        return buzzTemplateRepository.findByIdWithoutComments(id);
+    }
+
+    @Override
+    public Buzz findByIdWithRecentComments(String id) {
         return buzzTemplateRepository.findByIdWithCommentSlice(id);
+    }
+
+    @Override
+    public Optional<BuzzComment> findComment(String buzzId, String commentId) {
+        return buzzTemplateRepository.findCommentById(buzzId, commentId);
     }
 
     @Override

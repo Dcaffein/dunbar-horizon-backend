@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.buzz.domain;
 
 
 import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.buzz.domain.exception.BuzzErrorCode;import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzCommentNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import lombok.*;
 import org.springframework.data.annotation.Id;
@@ -113,28 +112,9 @@ public class Buzz {
         );
     }
 
-    public void updateComment(Long requesterId, String commentId, String newText, List<String> newImageUrls) {
+    public void validateNotExpired() {
         if (isExpired()) {
             throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", id));
-        }
-
-        BuzzComment target = findComments(commentId);
-
-        if (!target.getCommenterId().equals(requesterId)) {
-            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_COMMENT_AUTHOR_ONLY, ErrorContext.of("buzzId", id).and("userId", requesterId));
-        }
-
-        target.update(newText, newImageUrls);
-    }
-
-    public void validateCommentDeletion(Long requesterId, String commentId) {
-        if (isExpired()) {
-            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", id));
-        }
-        BuzzComment target = findComments(commentId);
-
-        if (!target.getCommenterId().equals(requesterId) && !isCreator(requesterId)) {
-            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_COMMENT_AUTHOR_ONLY, ErrorContext.of("buzzId", id).and("userId", requesterId));
         }
     }
 
@@ -151,21 +131,9 @@ public class Buzz {
     }
 
     public void validateCommentCreation(Long commenterId) {
-        if (isExpired()) {
-            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", id));
-        }
+        validateNotExpired();
         if (!isRecipient(commenterId) && !isCreator(commenterId)) {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_NOT_RECIPIENT, ErrorContext.of("buzzId", id).and("userId", commenterId));
-        }
-    }
-
-    public void validateCommentUpdate(Long requesterId, String commentId) {
-        if (isExpired()) {
-            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", id));
-        }
-        BuzzComment target = findComments(commentId);
-        if (!target.getCommenterId().equals(requesterId)) {
-            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_COMMENT_AUTHOR_ONLY, ErrorContext.of("buzzId", id).and("userId", requesterId));
         }
     }
 
@@ -173,13 +141,6 @@ public class Buzz {
         return comments.stream()
                 .filter(c -> c.isPublic() || isCreator(viewerId) || c.getCommenterId().equals(viewerId))
                 .toList();
-    }
-
-    private BuzzComment findComments(String commentId) {
-        return comments.stream()
-                .filter(c -> c.getCommentId().equals(commentId))
-                .findFirst()
-                .orElseThrow(() -> new BuzzCommentNotFoundException(this.id, commentId));
     }
 
     private void validateRecipientIds(List<Long> recipientIds) {
