@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.port.in.FriendRequestReceiverActionUseCase;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
-import com.example.DunbarHorizon.social.domain.friend.event.FriendshipCreatedEvent;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
@@ -43,10 +42,6 @@ public class FriendRequestReceiverActionService implements FriendRequestReceiver
         friendshipRepository.create(friendship);
         friendRequestRepository.deleteById(requestId);
 
-        eventPublisher.publishEvent(new FriendshipCreatedEvent(
-                request.getRequester().getId(),
-                request.getReceiver().getId()
-        ));
         eventPublisher.publishEvent(new FriendRequestAcceptedEvent(
                 request.getRequester().getId(),
                 request.getReceiver().getId(),

@@ -88,7 +88,6 @@ public class RedisConfig implements CachingConfigurer {
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)
                 .withCacheConfiguration("dunbar:network:default", networkGraphConfig)
-                .withCacheConfiguration("dunbar:network:label", networkGraphConfig)
                 .build();
     }
 

@@ -32,7 +32,7 @@ public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
 
     @Override
     public List<NodeGraphResult> getLabelNetwork(Long userId, String labelId) {
-        return socialNetworkRepository.getLabelCustomNetwork(userId, labelId, DunbarCircle.DUNBAR, PRUNING_EDGE_MIN, PRUNING_EDGE_RANGE);
+        return socialNetworkRepository.getLabelCustomNetwork(userId, labelId, DunbarCircle.KINSHIP,PRUNING_EDGE_MIN, PRUNING_EDGE_RANGE);
     }
 
     @Neo4jTransactional(readOnly = true)

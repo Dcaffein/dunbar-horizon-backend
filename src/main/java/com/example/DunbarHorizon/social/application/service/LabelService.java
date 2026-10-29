@@ -5,7 +5,6 @@ import com.example.DunbarHorizon.social.application.port.in.LabelCommandUseCase;
 import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
-import com.example.DunbarHorizon.social.domain.label.event.LabelMemberChangedEvent;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelNotFoundException;
 import com.example.DunbarHorizon.social.domain.label.Label;
@@ -17,7 +16,6 @@ import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserR
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -32,7 +30,6 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     private final LabelNamePolicy labelNamePolicy;
     private final LabelMemberEnroller labelMemberEnroller;
     private final LabelFactory labelFactory;
-    private final ApplicationEventPublisher eventPublisher;
 
     @Neo4jTransactional
     public Label createLabel(Long currentUserId, String labelName) {
@@ -49,7 +46,6 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
         Label label = getLabel(labelId);
         if (label.getOwner().getId().equals(currentUserId)) {
             labelRepository.delete(labelId);
-            eventPublisher.publishEvent(new LabelMemberChangedEvent(currentUserId, labelId));
         }
     }
 
@@ -58,7 +54,6 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
         Label label = getLabel(labelId);
         validateOwner(label, currentUserId);
         labelMemberEnroller.addNewMember(labelId, currentUserId, newMemberId);
-        eventPublisher.publishEvent(new LabelMemberChangedEvent(currentUserId, labelId));
     }
 
     @Neo4jTransactional
@@ -66,7 +61,6 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
         Label label = getLabel(labelId);
         validateOwner(label, currentUserId);
         labelRepository.removeMember(labelId, memberIdToRemove);
-        eventPublisher.publishEvent(new LabelMemberChangedEvent(currentUserId, labelId));
     }
 
     @Neo4jTransactional
@@ -74,7 +68,6 @@ public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
         Label label = getLabel(labelId);
         validateOwner(label, currentUserId);
         labelMemberEnroller.updateMembers(labelId, currentUserId, potentialMemberIds);
-        eventPublisher.publishEvent(new LabelMemberChangedEvent(currentUserId, labelId));
     }
 
     @Neo4jTransactional

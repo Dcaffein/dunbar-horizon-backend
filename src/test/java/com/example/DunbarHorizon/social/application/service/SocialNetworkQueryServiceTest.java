@@ -57,14 +57,14 @@ class SocialNetworkQueryServiceTest {
     }
 
     @Test
-    @DisplayName("getLabelNetwork: 라벨 네트워크는 DUNBAR 크기로 조회한다")
+    @DisplayName("getLabelNetwork: 라벨 네트워크는 KINSHIP 크기로 조회한다")
     void getLabelNetwork_결과를_반환한다() {
-        given(socialNetworkRepository.getLabelCustomNetwork(1L, "label-1", DunbarCircle.DUNBAR, 5, 10))
+        given(socialNetworkRepository.getLabelCustomNetwork(1L, "label-1", DunbarCircle.KINSHIP, 5, 10))
                 .willReturn(List.of());
 
         List<NodeGraphResult> result = service.getLabelNetwork(1L, "label-1");
 
-        verify(socialNetworkRepository).getLabelCustomNetwork(1L, "label-1", DunbarCircle.DUNBAR, 5, 10);
+        verify(socialNetworkRepository).getLabelCustomNetwork(1L, "label-1", DunbarCircle.KINSHIP, 5, 10);
         assertThat(result).isEmpty();
     }
 

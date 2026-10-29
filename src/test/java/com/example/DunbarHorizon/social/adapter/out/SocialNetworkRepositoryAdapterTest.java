@@ -170,6 +170,34 @@ class SocialNetworkRepositoryAdapterTest {
         assertThat(result).isEmpty();
     }
 
+    @Test
+    @DisplayName("라벨에 붙어 있어도 내 친구가 아닌 유저는 노드로 반환하지 않는다")
+    void getLabelCustomNetwork_친구가_아닌_라벨_멤버는_제외된다() {
+        neo4jClient.query("""
+                MATCH (lbl:Label {id: 'test-label-id'}), (tx:UserReference {id: 100})
+                CREATE (lbl)-[:ATTACHED_TO]->(tx)
+                """).run();
+
+        List<NodeGraphResult> result = repository.getLabelCustomNetwork(1L, "test-label-id", DunbarCircle.DUNBAR, 5, 10);
+
+        assertThat(result).extracting(NodeGraphResult::nodeId)
+                .containsExactlyInAnyOrder(10L, 20L);
+    }
+
+    @Test
+    @DisplayName("다른 유저가 소유한 라벨 ID로 조회하면 빈 nodes를 반환한다")
+    void getLabelCustomNetwork_다른_유저의_라벨은_빈_결과를_반환한다() {
+        neo4jClient.query("""
+                MATCH (fa:UserReference {id: 10}), (fb:UserReference {id: 20})
+                CREATE (fa)-[:OWNS_LABEL]->(lbl:Label {id: 'others-label-id'})
+                CREATE (lbl)-[:ATTACHED_TO]->(fb)
+                """).run();
+
+        List<NodeGraphResult> result = repository.getLabelCustomNetwork(1L, "others-label-id", DunbarCircle.DUNBAR, 5, 10);
+
+        assertThat(result).isEmpty();
+    }
+
     // ───────── Two-Hop Edges ─────────
 
     @Test

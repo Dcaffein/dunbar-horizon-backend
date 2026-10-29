@@ -89,11 +89,10 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
 
     private static final String GET_LABEL_CUSTOM_NETWORK =
             ("""
-            // [0] 지정 라벨에 속한 친구만 네트워크 풀로 제한
-            MATCH (me:#{UR} {#{ID}: $meId})
-            MATCH (me)-[:#{OL}]->(label:#{LBL})-[:#{AT}]->(member:#{UR})
-            WHERE label.#{ID} = $labelId
-            MATCH (me)-[r_me:#{HF}]->(myFriendship:#{F})<-[:#{HF}]-(member)
+            // [0] me의 친구 중 지정 라벨에 속한 친구만 네트워크 풀로 제한
+            MATCH (me:#{UR} {#{ID}: $meId})-[:#{OL}]->(label:#{LBL} {#{ID}: $labelId})
+            MATCH (me)-[r_me:#{HF}]->(myFriendship:#{F})<-[:#{HF}]-(member:#{UR})
+            WHERE (label)-[:#{AT}]->(member)
             WITH me, member, myFriendship, coalesce(r_me.#{INTEREST}, 0.0) AS interestScore
             ORDER BY myFriendship.#{INTIMACY} DESC
             LIMIT $limitSize
@@ -154,7 +153,8 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
             .replace("#{ID}", PROP_ID)
             .replace("#{INTIMACY}", PROP_INTIMACY);
 
-    @Cacheable(cacheNames = "dunbar:network:default", key = "#userId + ':' + #circleSize.name()")
+    @Cacheable(cacheNames = "dunbar:network:default", key = "#userId + ':' + #circleSize.name()",
+            condition = "#circleSize == T(com.example.DunbarHorizon.social.domain.friend.DunbarCircle).DUNBAR")
     @Neo4jTransactional(readOnly = true)
     @Override
     public List<NodeGraphResult> getDefaultNetworkGraph(Long userId, DunbarCircle circleSize, int pruningMin, int pruningRange) {
@@ -168,7 +168,6 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
                 .all().stream().toList();
     }
 
-    @Cacheable(cacheNames = "dunbar:network:label", key = "#userId + ':' + #labelId")
     @Neo4jTransactional(readOnly = true)
     @Override
     public List<NodeGraphResult> getLabelCustomNetwork(Long userId, String labelId, DunbarCircle circleSize, int pruningMin, int pruningRange) {
