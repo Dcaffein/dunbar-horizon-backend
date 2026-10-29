@@ -1,4 +1,4 @@
-# Task-123: buzz가 도큐먼트에 저장한 presigned URL을 키로 되돌린다
+# Task-126: buzz가 도큐먼트에 저장한 presigned URL을 키로 되돌린다
 
 ## Background
 
