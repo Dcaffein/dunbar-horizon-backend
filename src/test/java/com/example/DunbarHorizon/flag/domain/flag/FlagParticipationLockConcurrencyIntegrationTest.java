@@ -28,6 +28,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
@@ -325,6 +326,25 @@ class FlagParticipationLockConcurrencyIntegrationTest {
             continueToLock.countDown();
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    @DisplayName("일반 참여는 친구 확인 동안 MySQL 트랜잭션을 열어두지 않는다")
+    void participate_checksFriendshipOutsideJpaTransaction() {
+        // given
+        Long flagId = hostRecruitingFlag(2);
+        AtomicReference<Boolean> transactionActiveAtFriendCheck = new AtomicReference<>();
+        doAnswer(invocation -> {
+            transactionActiveAtFriendCheck.set(TransactionSynchronizationManager.isActualTransactionActive());
+            return true;
+        }).when(flagUserAdapter).areFriends(HOST_ID, PARTICIPANT_A_ID);
+
+        // when
+        flagParticipationUseCase.participateInFlag(flagId, PARTICIPANT_A_ID);
+
+        // then
+        assertThat(transactionActiveAtFriendCheck).hasValue(false);
+        assertThat(participantJpaRepository.countByFlagId(flagId)).isEqualTo(1);
     }
 
     @Test

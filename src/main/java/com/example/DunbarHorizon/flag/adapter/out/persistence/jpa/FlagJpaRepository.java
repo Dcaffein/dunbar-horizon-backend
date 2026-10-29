@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -30,6 +31,7 @@ public interface FlagJpaRepository extends JpaRepository<Flag, Long> {
            "WHERE f.id IN (SELECT fp.flagId FROM FlagParticipant fp WHERE fp.participantId = :participantId)")
     Slice<Flag> findByParticipantId(@Param("participantId") Long participantId, Pageable pageable);
 
+    @Transactional(readOnly = true)
     @Query("SELECT f.hostId FROM Flag f WHERE f.id = :id")
     Optional<Long> findHostIdById(@Param("id") Long id);
 
