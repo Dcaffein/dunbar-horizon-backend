@@ -1,6 +1,6 @@
 # Backend Architecture & Coding Conventions
 
-이 프로젝트는 Domain-Driven Design(DDD) 기반의 Hexagonal Architecture(Ports and Adapters)와 CQRS 패턴을 엄격하게 준수한다.
+이 프로젝트는 Domain-Driven Design(DDD) 기반의 Hexagonal Architecture(Ports and Adapters)를 따르고, 유스케이스를 Command와 Query로 나눈다. 분리 기준은 §1의 service 항목에 있다.
 
 ## 1. 패키지 및 계층 분리 원칙 (Layered Architecture)
 모든 도메인 패키지(예: `account`, `social`, `flag`, `buzz`)는 아래의 내부 구조를 가져야 한다.
@@ -15,8 +15,8 @@
 - **adapter**:
     - `in/web`: REST Controller, API Request/Response DTO.
     - `in/scheduler`: Spring Scheduler (@Scheduled).
-    - `out/persistence`: 데이터베이스(JPA, Neo4j, Mongo) 어댑터 구현체 및 Spring Data Repository.
-    - `out/client`: 외부 API 연동 어댑터.
+    - `out/persistence`: 데이터베이스 어댑터 구현체 및 Spring Data Repository. 저장소가 둘 이상이면 그 아래를 `jpa`, `neo4j`, `mongo`로 나눈다.
+    - 그 밖의 out 어댑터는 역할 이름을 그대로 쓴다. 외부 서비스는 `email`, `jwt`, `encrypt`, `imageStorage`, `redis`, `infrastructure`처럼, 다른 도메인 호출은 그 도메인 이름으로 둔다(`buzz/adapter/out/social`, `social/adapter/out/account`, `flag/adapter/out/user`).
 
 ## 2. 데이터베이스 사용 전략 (Polyglot Persistence)
 기능의 특성에 따라 알맞은 저장소를 선택하여 사용한다.
@@ -30,7 +30,7 @@
 
 ## 4. 보안 및 컨벤션
 - 사용자 식별: Controller에서 현재 로그인한 사용자를 참조할 때는 커스텀 어노테이션 `@CurrentUserId`를 사용하라.
-- Base Entity: JPA 엔티티는 `BaseTimeEntity` 또는 `BaseTimeAggregateRoot`를 상속받아 생성/수정 시간을 자동 관리하라. 논리적 삭제가 필요하면 `SoftDeletable`을 구현하라.
+- Base Entity: 생성/수정 시간을 추적하는 JPA 엔티티는 `BaseTimeEntity` 또는 `BaseTimeAggregateRoot`를 상속한다. 아웃박스나 아카이브처럼 자체 시각 필드를 갖는 엔티티는 예외다. 논리적 삭제가 필요하면 `SoftDeletable`을 구현한다.
 
 ## 5. Restful API
 - adapter/in/web의 controller의 API 주소는 Restful 하게 작성
