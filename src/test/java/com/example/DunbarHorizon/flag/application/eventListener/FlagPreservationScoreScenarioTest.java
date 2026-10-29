@@ -97,7 +97,7 @@ class FlagPreservationScoreScenarioTest {
         willAnswer(invocation -> flag.isAutoExpiryExempt()
                 ? List.of()
                 : List.<FlagExpiryTarget>of(new Target(FLAG_ID, HOST_ID, null)))
-                .given(flagRepository).findExpiryTargets(any(LocalDateTime.class), anyInt());
+                .given(flagRepository).findExpiryTargets(any(LocalDateTime.class));
         given(flagRepository.findAllParticipantIdsByFlagIds(any(Collection.class)))
                 .willReturn(Map.of(FLAG_ID, PARTICIPANT_IDS));
         given(flagRepository.expireByIds(any(Collection.class), any(LocalDateTime.class))).willReturn(1);
