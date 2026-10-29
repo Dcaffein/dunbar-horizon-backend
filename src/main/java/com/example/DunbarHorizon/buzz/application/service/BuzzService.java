@@ -73,7 +73,7 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
         buzz.validateCommentCreation(commenterId);
         List<String> imageUrls = imageStoragePort.resolveUrls(imageKeys);
 
-        BuzzComment comment = buzz.createComment(
+        BuzzComment comment = BuzzComment.create(
                 commenterId,
                 commenterProfile.nickname(),
                 commenterProfile.profileImageUrl(),
@@ -81,7 +81,7 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
                 imageUrls,
                 isPublic
         );
-        buzzRepository.addComment(buzzId, comment);
+        buzzRepository.addComment(buzzId, comment, buzz.isRecipient(commenterId));
         eventPublisher.publishEvent(new BuzzCommentedEvent(buzzId, buzz.getCreatorId(), commenterId));
     }
 

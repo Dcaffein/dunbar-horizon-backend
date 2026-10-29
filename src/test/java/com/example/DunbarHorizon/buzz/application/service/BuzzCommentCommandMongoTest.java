@@ -76,7 +76,7 @@ class BuzzCommentCommandMongoTest {
 
         IntStream.rangeClosed(1, COMMENT_COUNT).forEach(i ->
                 templateRepository.addComment(buzzId,
-                        BuzzComment.of("com-" + i, commenterId, "댓글자", "p.png", "내용" + i, List.of(), true)));
+                        BuzzComment.of("com-" + i, commenterId, "댓글자", "p.png", "내용" + i, List.of(), true), true));
     }
 
     @Test

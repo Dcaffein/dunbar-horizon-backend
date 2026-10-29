@@ -63,12 +63,27 @@ class BuzzMongoTemplateRepositoryTest {
             BuzzComment comment = BuzzComment.of("com-1", recipientId, "댓글자", "p.png", "댓글 내용", null, true);
 
             // when
-            templateRepository.addComment(savedBuzzId, comment);
+            templateRepository.addComment(savedBuzzId, comment, true);
 
             // then
             Buzz updated = mongoTemplate.findById(savedBuzzId, Buzz.class);
             assertThat(updated.getComments()).hasSize(1);
             assertThat(updated.getReadRecipientIds()).contains(recipientId);
+        }
+
+        @Test
+        @DisplayName("읽음 처리 대상이 아니면 readRecipientIds는 그대로 둔다")
+        void addComment_WithoutReadMark_KeepsReadRecipients() {
+            // given
+            BuzzComment comment = BuzzComment.of("com-1", creatorId, "작성자", "p.png", "댓글 내용", null, true);
+
+            // when
+            templateRepository.addComment(savedBuzzId, comment, false);
+
+            // then
+            Buzz updated = mongoTemplate.findById(savedBuzzId, Buzz.class);
+            assertThat(updated.getComments()).hasSize(1);
+            assertThat(updated.getReadRecipientIds()).doesNotContain(creatorId);
         }
     }
 
@@ -81,8 +96,8 @@ class BuzzMongoTemplateRepositoryTest {
             // given
             BuzzComment comment1 = BuzzComment.of("com-1", recipientId, "닉1", "p1", "원본1", null, true);
             BuzzComment comment2 = BuzzComment.of("com-2", recipientId, "닉2", "p2", "원본2", null, true);
-            templateRepository.addComment(savedBuzzId, comment1);
-            templateRepository.addComment(savedBuzzId, comment2);
+            templateRepository.addComment(savedBuzzId, comment1, true);
+            templateRepository.addComment(savedBuzzId, comment2, true);
 
             // when
             String newText = "수정된 내용";
@@ -111,7 +126,7 @@ class BuzzMongoTemplateRepositoryTest {
         @DisplayName("배열에서 특정 commentId를 가진 요소가 삭제되어야 한다")
         void removeComment_Success() {
             // given
-            templateRepository.addComment(savedBuzzId, BuzzComment.of("com-1", recipientId, "닉", "p", "내용", null, true));
+            templateRepository.addComment(savedBuzzId, BuzzComment.of("com-1", recipientId, "닉", "p", "내용", null, true), true);
 
             // when
             templateRepository.removeComment(savedBuzzId, "com-1");
@@ -132,7 +147,7 @@ class BuzzMongoTemplateRepositoryTest {
             // given
             IntStream.rangeClosed(1, 25).forEach(i ->
                     templateRepository.addComment(savedBuzzId,
-                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
+                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true), true));
 
             // when
             Buzz result = templateRepository.findByIdWithCommentSlice(savedBuzzId);
@@ -147,7 +162,7 @@ class BuzzMongoTemplateRepositoryTest {
             // given
             IntStream.rangeClosed(1, 10).forEach(i ->
                     templateRepository.addComment(savedBuzzId,
-                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
+                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true), true));
 
             // when
             Buzz result = templateRepository.findByIdWithCommentSlice(savedBuzzId);
@@ -167,7 +182,7 @@ class BuzzMongoTemplateRepositoryTest {
             // given
             IntStream.rangeClosed(1, 25).forEach(i ->
                     templateRepository.addComment(savedBuzzId,
-                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
+                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true), true));
 
             // when
             Buzz result = templateRepository.findByIdWithoutComments(savedBuzzId);
@@ -185,7 +200,7 @@ class BuzzMongoTemplateRepositoryTest {
             // given
             IntStream.rangeClosed(1, 25).forEach(i ->
                     templateRepository.addComment(savedBuzzId,
-                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true)));
+                            BuzzComment.of("com-" + i, recipientId, "닉", "p", "내용" + i, null, true), true));
 
             // when
             Optional<BuzzComment> result = templateRepository.findCommentById(savedBuzzId, "com-1");
@@ -200,7 +215,7 @@ class BuzzMongoTemplateRepositoryTest {
         void findCommentById_Missing_ReturnsEmpty() {
             // given
             templateRepository.addComment(savedBuzzId,
-                    BuzzComment.of("com-1", recipientId, "닉", "p", "내용", null, true));
+                    BuzzComment.of("com-1", recipientId, "닉", "p", "내용", null, true), true);
 
             // when
             Optional<BuzzComment> result = templateRepository.findCommentById(savedBuzzId, "com-999");

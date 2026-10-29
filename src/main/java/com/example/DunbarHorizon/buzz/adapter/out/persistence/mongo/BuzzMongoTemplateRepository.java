@@ -19,11 +19,12 @@ public class BuzzMongoTemplateRepository {
 
     private final MongoTemplate mongoTemplate;
 
-    public void addComment(String buzzId, BuzzComment comment) {
+    public void addComment(String buzzId, BuzzComment comment, boolean markCommenterAsRead) {
         Query query = new Query(Criteria.where("id").is(buzzId));
-        Update update = new Update()
-                .push(BuzzField.RESPONSES, comment)
-                .addToSet(BuzzField.READ_RECIPIENTS, comment.getCommenterId());
+        Update update = new Update().push(BuzzField.RESPONSES, comment);
+        if (markCommenterAsRead) {
+            update.addToSet(BuzzField.READ_RECIPIENTS, comment.getCommenterId());
+        }
 
         mongoTemplate.updateFirst(query, update, Buzz.class);
     }

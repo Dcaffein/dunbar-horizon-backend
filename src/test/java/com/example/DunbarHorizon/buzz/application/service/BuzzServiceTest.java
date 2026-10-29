@@ -37,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -291,6 +292,56 @@ class BuzzServiceTest {
 
             // then
             verify(buzzRepository).removeComment("buzz-id", "c1");
+        }
+    }
+
+    @Nested
+    @DisplayName("댓글 작성 시 읽음 처리 판정")
+    class CommentReadMarking {
+
+        private Buzz buzz;
+
+        @BeforeEach
+        void setUp() {
+            buzz = Buzz.builder()
+                    .creatorId(creatorId)
+                    .creatorNickname("작성자")
+                    .creatorProfileImageUrl("p.png")
+                    .text("Buzz")
+                    .recipientIds(List.of(recipientId))
+                    .build();
+            ReflectionTestUtils.setField(buzz, "id", "buzz-id");
+
+            given(buzzRepository.findById("buzz-id")).willReturn(buzz);
+            given(imageStoragePort.resolveUrls(anyList())).willReturn(List.of());
+        }
+
+        @Test
+        @DisplayName("수신자가 댓글을 달면 읽음 처리 대상으로 넘긴다")
+        void commentOnBuzz_ByRecipient_MarksAsRead() {
+            // given
+            given(buzzSocialPort.getCreatorProfiles(List.of(recipientId)))
+                    .willReturn(List.of(new BuzzCreatorInfo(recipientId, "수신자", "p.png")));
+
+            // when
+            buzzService.commentOnBuzz(recipientId, "buzz-id", "댓글", List.of(), true);
+
+            // then
+            verify(buzzRepository).addComment(eq("buzz-id"), any(BuzzComment.class), eq(true));
+        }
+
+        @Test
+        @DisplayName("버즈 작성자가 댓글을 달면 읽음 처리 대상이 아니다")
+        void commentOnBuzz_ByCreator_DoesNotMarkAsRead() {
+            // given
+            given(buzzSocialPort.getCreatorProfiles(List.of(creatorId)))
+                    .willReturn(List.of(new BuzzCreatorInfo(creatorId, "작성자", "p.png")));
+
+            // when
+            buzzService.commentOnBuzz(creatorId, "buzz-id", "댓글", List.of(), true);
+
+            // then
+            verify(buzzRepository).addComment(eq("buzz-id"), any(BuzzComment.class), eq(false));
         }
     }
 }

@@ -42,8 +42,8 @@ public class BuzzRepositoryAdapter implements BuzzRepository {
     }
 
     @Override
-    public void addComment(String buzzId, BuzzComment comment) {
-        buzzTemplateRepository.addComment(buzzId, comment);
+    public void addComment(String buzzId, BuzzComment comment, boolean markCommenterAsRead) {
+        buzzTemplateRepository.addComment(buzzId, comment, markCommenterAsRead);
     }
 
     @Override

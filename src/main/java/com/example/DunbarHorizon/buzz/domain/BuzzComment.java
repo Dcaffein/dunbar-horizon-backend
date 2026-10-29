@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzErrorCode;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import com.example.DunbarHorizon.global.exception.ErrorContext;
+import com.example.DunbarHorizon.global.util.UuidUtil;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,6 +36,11 @@ public class BuzzComment {
 
     @Builder.Default
     private boolean isPublic = true;
+
+    public static BuzzComment create(Long commenterId, String nickname, String profileImageUrl,
+                                     String text, List<String> imageUrls, boolean isPublic) {
+        return of(UuidUtil.createV7().toString(), commenterId, nickname, profileImageUrl, text, imageUrls, isPublic);
+    }
 
     public static BuzzComment of(String commentId, Long commenterId, String nickname, String profileImageUrl,
                                  String text, List<String> imageUrls, boolean isPublic) {

@@ -9,7 +9,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
-import com.example.DunbarHorizon.global.util.UuidUtil;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -77,39 +76,6 @@ public class Buzz {
 
     public boolean isUnreadBy(Long userId) {
         return isRecipient(userId) && !readRecipientIds.contains(userId);
-    }
-
-    public void markAsRead(Long userId) {
-        if (!isRecipient(userId)) {
-            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_NOT_RECIPIENT, ErrorContext.of("buzzId", id).and("userId", userId));
-        }
-        if (!readRecipientIds.contains(userId)) {
-            this.readRecipientIds.add(userId);
-        }
-    }
-
-    public BuzzComment createComment(Long commenterId, String nickname, String profileImageUrl,
-                                     String text, List<String> imageUrls, boolean isPublic) {
-        if (isExpired()) {
-            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", id));
-        }
-        if (!isRecipient(commenterId) && !isCreator(commenterId)) {
-            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_NOT_RECIPIENT, ErrorContext.of("buzzId", id).and("userId", commenterId));
-        }
-
-        if (isRecipient(commenterId)) {
-            markAsRead(commenterId);
-        }
-
-        return BuzzComment.of(
-                UuidUtil.createV7().toString(),
-                commenterId,
-                nickname,
-                profileImageUrl,
-                text,
-                imageUrls,
-                isPublic
-        );
     }
 
     public void validateNotExpired() {

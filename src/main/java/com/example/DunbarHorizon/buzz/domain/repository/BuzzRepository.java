@@ -14,7 +14,7 @@ public interface BuzzRepository {
     Buzz findById(String id);
     Buzz findByIdWithRecentComments(String id);
     Optional<BuzzComment> findComment(String buzzId, String commentId);
-    void addComment(String buzzId, BuzzComment comment);
+    void addComment(String buzzId, BuzzComment comment, boolean markCommenterAsRead);
     void updateComment(String buzzId, String commentId, String text, List<String> imageUrls);
     void removeComment(String buzzId, String commentId);
     void deleteById(String buzzId);
