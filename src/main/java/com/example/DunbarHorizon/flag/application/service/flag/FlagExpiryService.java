@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.flag.application.service.flag;
 import com.example.DunbarHorizon.flag.application.port.out.FlagMaintenancePort;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagConcludedEvent;
+import com.example.DunbarHorizon.flag.domain.flag.event.FlagConclusionKind;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagExpiryTarget;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import lombok.RequiredArgsConstructor;
@@ -66,7 +67,8 @@ public class FlagExpiryService {
         if (participantIds == null || participantIds.isEmpty()) return;
 
         eventPublisher.publishEvent(new FlagConcludedEvent(
-                target.getId(), target.getHostId(), target.getParentId(), participantIds));
+                target.getId(), target.getHostId(), target.getParentId(), participantIds,
+                FlagConclusionKind.ENDED));
     }
 
 }

@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.flag.application.eventListener;
 
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagConcludedEvent;
+import com.example.DunbarHorizon.flag.domain.flag.event.FlagConclusionKind;
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
@@ -27,11 +28,20 @@ public class FlagConclusionEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleFlagConclusion(FlagConcludedEvent event) {
-        InteractionType type = event.isEncore()
-                ? InteractionType.FLAG_ENDED_ENCORE
-                : InteractionType.FLAG_ENDED;
+        InteractionType type = switch (event.kind()) {
+            case ENDED -> event.isEncore()
+                    ? InteractionType.FLAG_ENDED_ENCORE
+                    : InteractionType.FLAG_ENDED;
+            case PRESERVED, PRESERVATION_RELEASED -> event.isEncore()
+                    ? InteractionType.FLAG_PRESERVED_ENCORE
+                    : InteractionType.FLAG_PRESERVED;
+        };
+
+        ScoreDirection direction = event.kind() == FlagConclusionKind.PRESERVATION_RELEASED
+                ? ScoreDirection.REVOKE
+                : ScoreDirection.GRANT;
 
         eventPublisher.publishEvent(new BatchMutualInteractionEvent(
-                event.flagId(), event.participantIds(), event.hostId(), type, ScoreDirection.GRANT));
+                event.flagId(), event.participantIds(), event.hostId(), type, direction));
     }
 }

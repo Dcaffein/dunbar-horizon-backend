@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.flag.application.service.flag;
 import com.example.DunbarHorizon.flag.application.port.out.FlagMaintenancePort;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagConcludedEvent;
+import com.example.DunbarHorizon.flag.domain.flag.event.FlagConclusionKind;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagExpiryTarget;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -111,6 +112,8 @@ class FlagExpiryServiceTest {
         assertThat(published.get(0).isEncore()).isFalse();
         assertThat(published.get(1).participantIds()).containsExactly(23L);
         assertThat(published.get(1).isEncore()).isTrue();
+        assertThat(published).allSatisfy(event ->
+                assertThat(event.kind()).isEqualTo(FlagConclusionKind.ENDED));
     }
 
     @Test

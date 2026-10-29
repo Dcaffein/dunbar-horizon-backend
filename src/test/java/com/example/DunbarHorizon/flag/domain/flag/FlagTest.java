@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.flag.domain.flag;
 
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
+import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptionChangedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagDeadlinePassedException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagFullCapacityException;
@@ -210,6 +211,45 @@ class FlagTest {
                 .findFirst().orElseThrow();
         assertThat(event.hostId()).isEqualTo(HOST_ID);
         assertThat(event.flagId()).isEqualTo(flag.getId());
+    }
+
+    @Test
+    @DisplayName("보존된 플래그를 삭제하면 면제가 꺼지고 해제 이벤트가 등록된다")
+    @SuppressWarnings("unchecked")
+    void delete_PreservedFlag_RegistersExemptionRelease() {
+        // given
+        Flag flag = endedFlag();
+        ReflectionTestUtils.setField(flag, "autoExpiryExempt", true);
+
+        // when
+        flag.delete(HOST_ID);
+
+        // then
+        assertThat(flag.isAutoExpiryExempt()).isFalse();
+        java.util.Collection<Object> events = (java.util.Collection<Object>)
+                ReflectionTestUtils.invokeMethod(flag, "domainEvents");
+        FlagExpiryExemptionChangedEvent released = (FlagExpiryExemptionChangedEvent) events.stream()
+                .filter(e -> e instanceof FlagExpiryExemptionChangedEvent)
+                .findFirst().orElseThrow();
+        assertThat(released.exempt()).isFalse();
+        assertThat(released.flagId()).isEqualTo(flag.getId());
+        assertThat(released.hostId()).isEqualTo(HOST_ID);
+    }
+
+    @Test
+    @DisplayName("보존 상태가 아닌 플래그를 삭제하면 해제 이벤트가 등록되지 않는다")
+    @SuppressWarnings("unchecked")
+    void delete_NotPreservedFlag_RegistersNoExemptionRelease() {
+        // given
+        Flag flag = endedFlag();
+
+        // when
+        flag.delete(HOST_ID);
+
+        // then
+        java.util.Collection<Object> events = (java.util.Collection<Object>)
+                ReflectionTestUtils.invokeMethod(flag, "domainEvents");
+        assertThat(events).noneMatch(e -> e instanceof FlagExpiryExemptionChangedEvent);
     }
 
     @Test
