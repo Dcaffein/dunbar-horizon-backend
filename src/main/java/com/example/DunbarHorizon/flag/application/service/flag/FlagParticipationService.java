@@ -8,7 +8,6 @@ import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundExceptio
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -26,9 +25,7 @@ public class FlagParticipationService implements FlagParticipationUseCase {
         this.flagRepository = flagRepository;
         this.flagParticipationManager = flagParticipationManager;
         this.friendshipChecker = friendshipChecker;
-
         this.participationTransaction = new TransactionTemplate(transactionManager);
-        this.participationTransaction.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
 
     @Override
