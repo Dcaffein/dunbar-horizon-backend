@@ -41,10 +41,6 @@ elementId는 트랜잭션 사이에서 같은 값이 보장되지 않는다. 맵
 
 두 네트워크 쿼리가 함께 바뀐다.
 
-### 프로덕션 쿼리에서 느리면 전환하지 않는다
-
-측정은 정렬, CALL 서브쿼리, `dynamicLimit` 슬라이싱이 없는 단순화한 쿼리에서 했다. 프로덕션 쿼리에서 list보다 느리면 전환하지 않고 결과만 기록한다.
-
 ## Out of Scope
 
 - 관심도 전달용 `interestMap`(`toString(id)` 키 맵)의 정리. 별건으로 다룬다.
@@ -57,4 +53,3 @@ elementId는 트랜잭션 사이에서 같은 값이 보장되지 않는다. 맵
 - `NETWORK_PRUNING_SUFFIX`에 `IN boundary` 판정이 남지 않는다.
 - 프로덕션 쿼리 PROFILE에서 membership Filter를 뺀 연산자 구성이 변경 전과 같다.
 - 프로덕션 쿼리 PROFILE의 GlobalMemory가 늘지 않는다. CALL 서브쿼리에 무엇을 넘기느냐가 작업 메모리를 바꾼 이력이 있다(`profiling/results/PROFILE_EF_vs_CALL.md`).
-- 프로덕션 쿼리로 변경 전후를 위 측정과 같은 방식(교차 실행, 같은 라운드 짝 비교)으로 재고, 결과를 커밋 메시지에 남긴다.
