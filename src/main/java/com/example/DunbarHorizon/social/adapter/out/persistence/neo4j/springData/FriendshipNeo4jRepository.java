@@ -66,18 +66,23 @@ public interface FriendshipNeo4jRepository extends Neo4jRepository<Friendship, S
                                       @Param("isMuted") boolean isMuted,
                                       @Param("isRoutable") boolean isRoutable);
 
+    // 아래 세 쿼리가 저장 점수를 0에서 끊는다(FriendRecognition.adjustInterestScore와 같은 동작).
+    // 그래서 읽기만 하는 쪽은 따로 막지 않는다.
     @Transactional(transactionManager = "neo4jTransactionManager")
     @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[recognition:" + HAS_FRIENDSHIP + "]->" +
             "(friendship:" + FRIENDSHIP + " {id: $friendshipId})<-[otherRecognition:" + HAS_FRIENDSHIP + "]-" +
             "(:" + USER_REFERENCE + " {id: $friendId}) " +
             "SET friendship._interactionScoreLock = true " +
             "REMOVE friendship._interactionScoreLock " +
-            "SET recognition.interestScore = coalesce(recognition.interestScore, 0.0) + $delta, " +
-            "recognition.lastInteractedAt = localdatetime() " +
-            "WITH friendship, recognition, otherRecognition " +
-            "SET friendship.intimacy = sqrt(" +
-            "(coalesce(recognition.interestScore, 0.0) / (coalesce(recognition.interestScore, 0.0) + 50.0)) * " +
-            "(coalesce(otherRecognition.interestScore, 0.0) / (coalesce(otherRecognition.interestScore, 0.0) + 50.0))" +
+            "WITH friendship, recognition, otherRecognition, " +
+            "coalesce(recognition.interestScore, 0.0) + $delta AS raw " +
+            "WITH friendship, recognition, " +
+            "CASE WHEN raw < 0.0 THEN 0.0 ELSE raw END AS score, " +
+            "coalesce(otherRecognition.interestScore, 0.0) AS otherScore " +
+            "SET recognition.interestScore = score, " +
+            "recognition.lastInteractedAt = localdatetime(), " +
+            "friendship.intimacy = sqrt(" +
+            "(score / (score + 50.0)) * (otherScore / (otherScore + 50.0))" +
             ")")
     void incrementInterestScore(@Param("friendshipId") String friendshipId,
                                 @Param("userId") Long userId,
@@ -90,14 +95,18 @@ public interface FriendshipNeo4jRepository extends Neo4jRepository<Friendship, S
             "(:" + USER_REFERENCE + " {id: $userBId}) " +
             "SET friendship._interactionScoreLock = true " +
             "REMOVE friendship._interactionScoreLock " +
-            "SET recognitionA.interestScore = coalesce(recognitionA.interestScore, 0.0) + $delta, " +
+            "WITH friendship, recognitionA, recognitionB, " +
+            "coalesce(recognitionA.interestScore, 0.0) + $delta AS rawA, " +
+            "coalesce(recognitionB.interestScore, 0.0) + $delta AS rawB " +
+            "WITH friendship, recognitionA, recognitionB, " +
+            "CASE WHEN rawA < 0.0 THEN 0.0 ELSE rawA END AS scoreA, " +
+            "CASE WHEN rawB < 0.0 THEN 0.0 ELSE rawB END AS scoreB " +
+            "SET recognitionA.interestScore = scoreA, " +
             "recognitionA.lastInteractedAt = localdatetime(), " +
-            "recognitionB.interestScore = coalesce(recognitionB.interestScore, 0.0) + $delta, " +
-            "recognitionB.lastInteractedAt = localdatetime() " +
-            "WITH friendship, recognitionA, recognitionB " +
-            "SET friendship.intimacy = sqrt(" +
-            "(coalesce(recognitionA.interestScore, 0.0) / (coalesce(recognitionA.interestScore, 0.0) + 50.0)) * " +
-            "(coalesce(recognitionB.interestScore, 0.0) / (coalesce(recognitionB.interestScore, 0.0) + 50.0))" +
+            "recognitionB.interestScore = scoreB, " +
+            "recognitionB.lastInteractedAt = localdatetime(), " +
+            "friendship.intimacy = sqrt(" +
+            "(scoreA / (scoreA + 50.0)) * (scoreB / (scoreB + 50.0))" +
             ")")
     void incrementMutualInterestScore(@Param("friendshipId") String friendshipId,
                                       @Param("userAId") Long userAId,
@@ -112,14 +121,18 @@ public interface FriendshipNeo4jRepository extends Neo4jRepository<Friendship, S
             "(:" + USER_REFERENCE + " {id: update.userBId}) " +
             "SET friendship._interactionScoreLock = true " +
             "REMOVE friendship._interactionScoreLock " +
-            "SET recognitionA.interestScore = coalesce(recognitionA.interestScore, 0.0) + update.delta, " +
+            "WITH friendship, recognitionA, recognitionB, " +
+            "coalesce(recognitionA.interestScore, 0.0) + update.delta AS rawA, " +
+            "coalesce(recognitionB.interestScore, 0.0) + update.delta AS rawB " +
+            "WITH friendship, recognitionA, recognitionB, " +
+            "CASE WHEN rawA < 0.0 THEN 0.0 ELSE rawA END AS scoreA, " +
+            "CASE WHEN rawB < 0.0 THEN 0.0 ELSE rawB END AS scoreB " +
+            "SET recognitionA.interestScore = scoreA, " +
             "recognitionA.lastInteractedAt = localdatetime(), " +
-            "recognitionB.interestScore = coalesce(recognitionB.interestScore, 0.0) + update.delta, " +
-            "recognitionB.lastInteractedAt = localdatetime() " +
-            "WITH friendship, recognitionA, recognitionB " +
-            "SET friendship.intimacy = sqrt(" +
-            "(coalesce(recognitionA.interestScore, 0.0) / (coalesce(recognitionA.interestScore, 0.0) + 50.0)) * " +
-            "(coalesce(recognitionB.interestScore, 0.0) / (coalesce(recognitionB.interestScore, 0.0) + 50.0))" +
+            "recognitionB.interestScore = scoreB, " +
+            "recognitionB.lastInteractedAt = localdatetime(), " +
+            "friendship.intimacy = sqrt(" +
+            "(scoreA / (scoreA + 50.0)) * (scoreB / (scoreB + 50.0))" +
             ")")
     void incrementMutualInterestScoresBatch(@Param("updates") List<Map<String, Object>> updates);
 }
