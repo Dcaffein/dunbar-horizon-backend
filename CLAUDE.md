@@ -122,7 +122,7 @@ GET /api/v1/network?circleSize=DUNBAR
     → List<NodeGraphResult>          # default intimacy network (Soft Morphing)
 
 GET /api/v1/network/labels/{labelId}
-    → List<NodeGraphResult>          # label-filtered network (최대 150명)
+    → List<NodeGraphResult>          # label-filtered network (최대 50명)
 
 GET /api/v1/network/edges?targetId=..&baseNetworkFriendIds=..
     → List<MutualFriendEdgeResult>   # direct friend / 2-hop edges
