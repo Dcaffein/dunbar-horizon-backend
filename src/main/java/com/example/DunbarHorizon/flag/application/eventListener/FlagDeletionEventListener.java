@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.flag.application.eventListener;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagExpiryExemptionUpdater;
 import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
-import com.example.DunbarHorizon.flag.domain.flag.event.FlagConcludedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
@@ -39,13 +38,8 @@ public class FlagDeletionEventListener {
         // 참여자 행은 퍼지 배치가 나중에 지우므로 이 시점에는 남아 있다.
         List<Long> participantIds = flagRepository.findAllParticipantIds(event.flagId());
 
-        if (!participantIds.isEmpty()) {
-            if (event.statusAtDeletion() == FlagStatus.ENDED) {
-                eventPublisher.publishEvent(new FlagConcludedEvent(
-                        event.flagId(), event.hostId(), event.parentId(), participantIds));
-            } else {
-                notifyFlagCancel(participantIds, event.flagTitle());
-            }
+        if (!participantIds.isEmpty() && event.statusAtDeletion() != FlagStatus.ENDED) {
+            notifyFlagCancel(participantIds, event.flagTitle());
         }
 
         if (event.parentId() != null) {

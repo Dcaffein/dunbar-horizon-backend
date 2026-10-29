@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.flag.application.service.flag;
 import com.example.DunbarHorizon.flag.application.port.out.FlagMaintenancePort;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagConcludedEvent;
+import com.example.DunbarHorizon.flag.domain.flag.event.FlagConclusionKind;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagExpiryTarget;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +20,6 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class FlagExpiryService {
-
-    private static final int BATCH_SIZE = 100;
 
     private final FlagRepository flagRepository;
     private final FlagMaintenancePort maintenancePort;
@@ -43,7 +42,7 @@ public class FlagExpiryService {
 
         // 지우기 전에 조회한다. 벌크 UPDATE는 건수만 돌려주는데 플래그마다 이벤트를 발행해야 하고,
         // 소프트 삭제 후에는 @SQLRestriction 때문에 hostId·parentId를 다시 읽을 수 없다.
-        List<FlagExpiryTarget> targets = flagRepository.findExpiryTargets(threshold, BATCH_SIZE);
+        List<FlagExpiryTarget> targets = flagRepository.findExpiryTargets(threshold);
         List<Long> targetIds = targets.stream().map(FlagExpiryTarget::getId).toList();
 
         Map<Long, List<Long>> participantsByFlagId =
@@ -66,7 +65,8 @@ public class FlagExpiryService {
         if (participantIds == null || participantIds.isEmpty()) return;
 
         eventPublisher.publishEvent(new FlagConcludedEvent(
-                target.getId(), target.getHostId(), target.getParentId(), participantIds));
+                target.getId(), target.getHostId(), target.getParentId(), participantIds,
+                FlagConclusionKind.ENDED));
     }
 
 }

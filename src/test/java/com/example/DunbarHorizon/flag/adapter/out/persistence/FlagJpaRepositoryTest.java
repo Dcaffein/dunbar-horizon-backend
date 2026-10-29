@@ -239,7 +239,7 @@ class FlagJpaRepositoryTest {
         em.clear();
 
         // when
-        List<FlagExpiryTarget> results = repository.findExpiryTargets(asOf, PageRequest.of(0, 100));
+        List<FlagExpiryTarget> results = repository.findExpiryTargets(asOf);
 
         // then — 통합 테스트가 같은 컨테이너에 커밋해둔 행이 섞일 수 있어 포함 여부로만 본다
         assertThat(results).extracting(FlagExpiryTarget::getId).contains(target.getId());
@@ -261,7 +261,7 @@ class FlagJpaRepositoryTest {
         em.clear();
 
         // when
-        List<FlagExpiryTarget> results = repository.findExpiryTargets(asOf, PageRequest.of(0, 100));
+        List<FlagExpiryTarget> results = repository.findExpiryTargets(asOf);
 
         // then
         FlagExpiryTarget found = results.stream()
@@ -274,20 +274,21 @@ class FlagJpaRepositoryTest {
     }
 
     @Test
-    @DisplayName("만료 대상 조회에 상한이 걸린다")
-    void findExpiryTargets_HonorsLimit() {
+    @DisplayName("만료 대상 조회에 상한이 없다")
+    void findExpiryTargets_HasNoLimit() {
         // given
-        persistEndedFlag(HOST_ID, asOf.minusHours(1));
-        persistEndedFlag(HOST_ID, asOf.minusHours(2));
-        persistEndedFlag(HOST_ID, asOf.minusHours(3));
+        List<Long> ids = List.of(
+                persistEndedFlag(HOST_ID, asOf.minusHours(1)).getId(),
+                persistEndedFlag(HOST_ID, asOf.minusHours(2)).getId(),
+                persistEndedFlag(HOST_ID, asOf.minusHours(3)).getId());
         em.flush();
         em.clear();
 
         // when
-        List<FlagExpiryTarget> results = repository.findExpiryTargets(asOf, PageRequest.of(0, 2));
+        List<FlagExpiryTarget> results = repository.findExpiryTargets(asOf);
 
         // then
-        assertThat(results).hasSize(2);
+        assertThat(results).extracting(FlagExpiryTarget::getId).containsAll(ids);
     }
 
     @Test

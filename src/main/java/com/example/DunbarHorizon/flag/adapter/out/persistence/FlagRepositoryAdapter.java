@@ -56,8 +56,8 @@ public class FlagRepositoryAdapter implements FlagRepository {
     }
 
     @Override
-    public List<FlagExpiryTarget> findExpiryTargets(LocalDateTime threshold, int limit) {
-        return flagJpaRepository.findExpiryTargets(threshold, PageRequest.of(0, limit));
+    public List<FlagExpiryTarget> findExpiryTargets(LocalDateTime threshold) {
+        return flagJpaRepository.findExpiryTargets(threshold);
     }
 
     @Override

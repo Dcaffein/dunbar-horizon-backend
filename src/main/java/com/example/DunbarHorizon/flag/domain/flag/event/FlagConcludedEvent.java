@@ -6,7 +6,8 @@ public record FlagConcludedEvent(
         Long flagId,
         Long hostId,
         Long parentId,
-        List<Long> participantIds
+        List<Long> participantIds,
+        FlagConclusionKind kind
 ) {
     public FlagConcludedEvent {
         if (participantIds == null || participantIds.isEmpty()) {

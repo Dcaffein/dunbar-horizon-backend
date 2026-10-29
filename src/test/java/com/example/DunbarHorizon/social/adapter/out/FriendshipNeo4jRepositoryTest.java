@@ -261,6 +261,110 @@ class FriendshipNeo4jRepositoryTest {
         );
     }
 
+    // 양쪽이 같이 음수가 되면 하한이 없어도 NaN이 나오지 않는다. 한쪽만 음수로 내려가는 설정이어야 한다.
+    private static final double ASYMMETRIC_BOOST = 50.0;
+    private static final double OVERSHOOTING_REVOKE = -30.0;
+
+    @Test
+    @DisplayName("단방향 회수로 한쪽이 0 아래로 내려가면 0에서 멈추고 intimacy가 NaN이 되지 않는다")
+    void incrementInterestScore_negativeDelta_floorsAtZero() {
+        // given
+        Friendship actual = FriendTestFactory.createFriendship(userA, userB);
+        Friendship expected = FriendTestFactory.createFriendship(userA, userB);
+        actual.adjustInterestScore(userB.getId(), ASYMMETRIC_BOOST);
+        expected.adjustInterestScore(userB.getId(), ASYMMETRIC_BOOST);
+        friendshipRepository.save(actual);
+        expected.adjustInterestScore(userA.getId(), OVERSHOOTING_REVOKE);
+
+        // when
+        friendshipRepository.incrementInterestScore(
+                actual.getId(), userA.getId(), userB.getId(), OVERSHOOTING_REVOKE);
+
+        // then
+        Friendship updated = friendshipRepository.findById(actual.getId()).orElseThrow();
+        assertThat(updated.getIntimacy()).isNotNaN().isFinite();
+        assertThat(updated.getIntimacy()).isCloseTo(expected.getIntimacy(), within(0.0001));
+        assertThat(updated.getMyInterestScore(userA.getId())).isCloseTo(0.0, within(0.0001));
+        assertThat(updated.getMyInterestScore(userB.getId()))
+                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + ASYMMETRIC_BOOST, within(0.0001));
+    }
+
+    @Test
+    @DisplayName("상호 회수로 한쪽이 0 아래로 내려가면 0에서 멈추고 intimacy가 NaN이 되지 않는다")
+    void incrementMutualInterestScore_negativeDelta_floorsAtZero() {
+        // given
+        Friendship actual = FriendTestFactory.createFriendship(userA, userB);
+        Friendship expected = FriendTestFactory.createFriendship(userA, userB);
+        actual.adjustInterestScore(userB.getId(), ASYMMETRIC_BOOST);
+        expected.adjustInterestScore(userB.getId(), ASYMMETRIC_BOOST);
+        friendshipRepository.save(actual);
+        expected.adjustMutualInterestScore(OVERSHOOTING_REVOKE);
+
+        // when
+        friendshipRepository.incrementMutualInterestScore(
+                actual.getId(), userA.getId(), userB.getId(), OVERSHOOTING_REVOKE);
+
+        // then
+        Friendship updated = friendshipRepository.findById(actual.getId()).orElseThrow();
+        assertThat(updated.getIntimacy()).isNotNaN().isFinite();
+        assertThat(updated.getIntimacy()).isCloseTo(expected.getIntimacy(), within(0.0001));
+        assertThat(updated.getMyInterestScore(userA.getId())).isCloseTo(0.0, within(0.0001));
+        assertThat(updated.getMyInterestScore(userB.getId())).isCloseTo(
+                FriendRecognition.INITIAL_RAW_SCORE + ASYMMETRIC_BOOST + OVERSHOOTING_REVOKE, within(0.0001));
+    }
+
+    @Test
+    @DisplayName("배치 회수도 0에서 멈추고, 같은 배치의 다른 쌍은 영향받지 않는다")
+    void incrementMutualInterestScoresBatch_negativeDelta_floorsAtZero() {
+        // given
+        Friendship friendshipAB = FriendTestFactory.createFriendship(userA, userB);
+        Friendship friendshipAC = FriendTestFactory.createFriendship(userA, userC);
+        friendshipAB.adjustInterestScore(userB.getId(), ASYMMETRIC_BOOST);
+        friendshipRepository.save(friendshipAB);
+        friendshipRepository.save(friendshipAC);
+
+        // when
+        friendshipRepository.incrementMutualInterestScoresBatch(List.of(
+                Map.of("friendshipId", friendshipAB.getId(), "userAId", userA.getId(), "userBId", userB.getId(), "delta", OVERSHOOTING_REVOKE),
+                Map.of("friendshipId", friendshipAC.getId(), "userAId", userA.getId(), "userBId", userC.getId(), "delta", 10.0)
+        ));
+
+        // then
+        Friendship updatedAB = friendshipRepository.findById(friendshipAB.getId()).orElseThrow();
+        Friendship updatedAC = friendshipRepository.findById(friendshipAC.getId()).orElseThrow();
+        assertThat(updatedAB.getIntimacy()).isNotNaN().isFinite();
+        assertThat(updatedAB.getIntimacy()).isCloseTo(0.0, within(0.0001));
+        assertThat(updatedAB.getMyInterestScore(userA.getId())).isCloseTo(0.0, within(0.0001));
+        assertThat(updatedAB.getMyInterestScore(userB.getId())).isCloseTo(
+                FriendRecognition.INITIAL_RAW_SCORE + ASYMMETRIC_BOOST + OVERSHOOTING_REVOKE, within(0.0001));
+        assertThat(updatedAC.getMyInterestScore(userA.getId()))
+                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + 10.0, within(0.0001));
+        assertThat(updatedAC.getIntimacy()).isCloseTo(
+                FriendRecognition.normalize(FriendRecognition.INITIAL_RAW_SCORE + 10.0), within(0.0001)
+        );
+    }
+
+    @Test
+    @DisplayName("회수 폭이 점수보다 작으면 남은 만큼만 줄어든다")
+    void incrementMutualInterestScore_negativeDelta_withinScore_subtractsExactly() {
+        // given
+        Friendship actual = FriendTestFactory.createFriendship(userA, userB);
+        Friendship expected = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.save(actual);
+        expected.adjustMutualInterestScore(-15.0);
+
+        // when
+        friendshipRepository.incrementMutualInterestScore(actual.getId(), userA.getId(), userB.getId(), -15.0);
+
+        // then
+        Friendship updated = friendshipRepository.findById(actual.getId()).orElseThrow();
+        assertThat(updated.getMyInterestScore(userA.getId()))
+                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE - 15.0, within(0.0001));
+        assertThat(updated.getMyInterestScore(userB.getId()))
+                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE - 15.0, within(0.0001));
+        assertThat(updated.getIntimacy()).isCloseTo(expected.getIntimacy(), within(0.0001));
+    }
+
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @DisplayName("동일 Friendship의 병렬 갱신은 이벤트 수만큼 누적되고 최종 intimacy를 재계산한다")

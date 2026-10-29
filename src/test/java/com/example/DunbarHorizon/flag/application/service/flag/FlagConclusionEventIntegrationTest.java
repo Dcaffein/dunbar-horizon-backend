@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.flag.application.service.flag;
 import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
 import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialCommandUseCase;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
-import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptedEvent;
+import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptionChangedEvent;
 import com.example.DunbarHorizon.support.TestContainerConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,14 +36,14 @@ class FlagConclusionEventIntegrationTest {
     }
 
     static class ExemptionRecorder {
-        private final List<FlagExpiryExemptedEvent> received = new CopyOnWriteArrayList<>();
+        private final List<FlagExpiryExemptionChangedEvent> received = new CopyOnWriteArrayList<>();
 
         @EventListener
-        void on(FlagExpiryExemptedEvent event) {
+        void on(FlagExpiryExemptionChangedEvent event) {
             received.add(event);
         }
 
-        List<FlagExpiryExemptedEvent> received() {
+        List<FlagExpiryExemptionChangedEvent> received() {
             return received;
         }
 
@@ -80,6 +80,7 @@ class FlagConclusionEventIntegrationTest {
         assertThat(recorder.received().get(0).flagId()).isEqualTo(endedFlagId);
         assertThat(recorder.received().get(0).hostId()).isEqualTo(HOST_ID);
         assertThat(recorder.received().get(0).parentId()).isNull();
+        assertThat(recorder.received().get(0).exempt()).isTrue();
     }
 
     @Test
@@ -94,5 +95,21 @@ class FlagConclusionEventIntegrationTest {
 
         // then
         assertThat(recorder.received()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("후기를 지워 만료 면제가 떨어지면 해제 이벤트가 발행된다")
+    void memorialRemoved_publishesRelease() {
+        // given
+        Long memorialId = memorialCommandUseCase.createMemorial(endedFlagId, HOST_ID, "후기");
+        recorder.clear();
+
+        // when
+        memorialCommandUseCase.deleteMemorial(endedFlagId, memorialId, HOST_ID);
+
+        // then
+        assertThat(recorder.received()).hasSize(1);
+        assertThat(recorder.received().get(0).flagId()).isEqualTo(endedFlagId);
+        assertThat(recorder.received().get(0).exempt()).isFalse();
     }
 }

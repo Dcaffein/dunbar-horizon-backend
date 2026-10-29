@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.flag.domain.flag;
 
-import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptedEvent;
+import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptionChangedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
@@ -102,10 +102,12 @@ class FlagExpiryExemptionUpdaterTest {
 
         // then
         assertThat(flag.getDomainEvents()).hasSize(1);
-        FlagExpiryExemptedEvent event = (FlagExpiryExemptedEvent) flag.getDomainEvents().get(0);
+        FlagExpiryExemptionChangedEvent event =
+                (FlagExpiryExemptionChangedEvent) flag.getDomainEvents().get(0);
         assertThat(event.flagId()).isEqualTo(FLAG_ID);
         assertThat(event.hostId()).isEqualTo(flag.getHostId());
         assertThat(event.parentId()).isEqualTo(99L);
+        assertThat(event.exempt()).isTrue();
     }
 
     @Test
@@ -125,11 +127,31 @@ class FlagExpiryExemptionUpdaterTest {
     }
 
     @Test
-    @DisplayName("면제가 해제될 때는 등록하지 않는다")
-    void refresh_exemptionTurnedOff_registersNothing() {
+    @DisplayName("면제가 해제되면 해제 이벤트를 등록한다")
+    void refresh_exemptionTurnedOff_registersReleaseEvent() {
         // given
         Flag flag = createFlag();
         ReflectionTestUtils.setField(flag, "autoExpiryExempt", true);
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
+        given(flagRepository.existsByParentId(FLAG_ID)).willReturn(false);
+
+        // when
+        flagExpiryExemptionUpdater.refresh(FLAG_ID);
+
+        // then
+        assertThat(flag.getDomainEvents()).hasSize(1);
+        FlagExpiryExemptionChangedEvent event =
+                (FlagExpiryExemptionChangedEvent) flag.getDomainEvents().get(0);
+        assertThat(event.exempt()).isFalse();
+        assertThat(event.flagId()).isEqualTo(FLAG_ID);
+    }
+
+    @Test
+    @DisplayName("이미 해제 상태면 다시 등록하지 않는다")
+    void refresh_alreadyReleased_registersNothing() {
+        // given
+        Flag flag = createFlag();
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
         given(flagRepository.existsByParentId(FLAG_ID)).willReturn(false);

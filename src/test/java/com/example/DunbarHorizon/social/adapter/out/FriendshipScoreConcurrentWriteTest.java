@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData
 import com.example.DunbarHorizon.social.application.service.FriendshipDecayService;
 import com.example.DunbarHorizon.social.application.service.InteractionScoreService;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
+import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
@@ -258,7 +259,7 @@ class FriendshipScoreConcurrentWriteTest {
         List<Long> participantIds = List.of(2L, 3L, 4L);
 
         // when
-        interactionScoreService.applyFlagConclusion(77L, FIRST_USER_ID, participantIds, FLAG_TYPE);
+        interactionScoreService.applyFlagConclusion(77L, FIRST_USER_ID, participantIds, FLAG_TYPE, ScoreDirection.GRANT);
 
         // then
         for (String friendshipId : friendshipIds) {
@@ -283,7 +284,7 @@ class FriendshipScoreConcurrentWriteTest {
         for (long flagId = 1; flagId <= 3; flagId++) {
             long currentFlagId = flagId;
             tasks.add(() -> {
-                interactionScoreService.applyFlagConclusion(currentFlagId, FIRST_USER_ID, participantIds, FLAG_TYPE);
+                interactionScoreService.applyFlagConclusion(currentFlagId, FIRST_USER_ID, participantIds, FLAG_TYPE, ScoreDirection.GRANT);
                 return null;
             });
         }

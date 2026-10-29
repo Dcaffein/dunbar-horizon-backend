@@ -63,12 +63,6 @@ class FlagDeletionEventListenerTest {
         given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(participantIds);
     }
 
-    private FlagConcludedEvent capturedConclusion() {
-        ArgumentCaptor<FlagConcludedEvent> captor = ArgumentCaptor.forClass(FlagConcludedEvent.class);
-        verify(eventPublisher).publishEvent(captor.capture());
-        return captor.getValue();
-    }
-
     private NotificationEvent capturedNotification() {
         ArgumentCaptor<NotificationEvent> captor = ArgumentCaptor.forClass(NotificationEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
@@ -139,8 +133,8 @@ class FlagDeletionEventListenerTest {
     }
 
     @Test
-    @DisplayName("종료된 Flag를 삭제하면 취소 알림 대신 종료 사실을 발행한다")
-    void handleFlagDeletion_concludes_whenEnded() {
+    @DisplayName("종료된 Flag를 삭제하면 취소 알림도 점수도 나가지 않는다")
+    void handleFlagDeletion_publishesNothing_whenEnded() {
         // given
         givenParticipants(PARTICIPANT_IDS);
 
@@ -149,28 +143,20 @@ class FlagDeletionEventListenerTest {
 
         // then
         verify(eventPublisher, never()).publishEvent(any(NotificationEvent.class));
-
-        FlagConcludedEvent concluded = capturedConclusion();
-        assertThat(concluded.flagId()).isEqualTo(FLAG_ID);
-        assertThat(concluded.hostId()).isEqualTo(HOST_ID);
-        assertThat(concluded.participantIds()).containsExactlyElementsOf(PARTICIPANT_IDS);
-        assertThat(concluded.isEncore()).isFalse();
+        verify(eventPublisher, never()).publishEvent(any(FlagConcludedEvent.class));
     }
 
     @Test
-    @DisplayName("앵콜 Flag가 종료 후 삭제되면 parentId를 실어 발행한다")
-    void handleFlagDeletion_concludes_carriesParentId() {
+    @DisplayName("앵콜 Flag가 종료 후 삭제되어도 점수는 나가지 않는다")
+    void handleFlagDeletion_publishesNothing_whenEndedEncore() {
         // given
-        Long parentId = 99L;
         givenParticipants(PARTICIPANT_IDS);
 
         // when
-        listener.handleFlagDeletion(endedEventWithParent(parentId));
+        listener.handleFlagDeletion(endedEventWithParent(99L));
 
         // then
-        FlagConcludedEvent concluded = capturedConclusion();
-        assertThat(concluded.parentId()).isEqualTo(parentId);
-        assertThat(concluded.isEncore()).isTrue();
+        verify(eventPublisher, never()).publishEvent(any(FlagConcludedEvent.class));
     }
 
     @ParameterizedTest

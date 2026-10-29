@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
+import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
 import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
@@ -40,13 +41,15 @@ public class InteractionScoreService {
         );
     }
 
-    public void applyFlagConclusion(Long flagId, Long hostId, List<Long> participantIds, InteractionType type) {
-        double delta = InteractionScorePolicy.scoreOf(type);
+    public void applyFlagConclusion(Long flagId, Long hostId, List<Long> participantIds,
+                                    InteractionType type, ScoreDirection direction) {
+        double delta = direction.signed(InteractionScorePolicy.scoreOf(type));
         List<MutualInterestScoreUpdate> updates = createFlagUpdates(hostId, participantIds, delta);
 
         write(
                 () -> friendshipRepository.incrementMutualInterestScoresBatch(updates),
-                () -> "flagId=%d, participants=%d, pairs=%d".formatted(flagId, participantIds.size(), updates.size())
+                () -> "flagId=%d, participants=%d, pairs=%d, direction=%s"
+                        .formatted(flagId, participantIds.size(), updates.size(), direction)
         );
     }
 
