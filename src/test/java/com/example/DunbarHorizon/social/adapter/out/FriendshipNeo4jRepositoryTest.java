@@ -229,6 +229,38 @@ class FriendshipNeo4jRepositoryTest {
     }
 
     @Test
+    @DisplayName("단방향 관심도 갱신은 행위자 쪽 마지막 교류 시각만 바꾼다")
+    void incrementInterestScore_updatesOnlyActorLastInteractedAt() {
+        // given
+        Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.create(friendship);
+        LocalDateTime past = ageLastInteractions(friendship.getId());
+
+        // when
+        friendshipRepository.incrementInterestScore(friendship.getId(), userB.getId(), userA.getId(), 1.0);
+
+        // then
+        assertThat(lastInteractedAtOf(friendship.getId(), userA.getId())).isEqualTo(past);
+        assertThat(lastInteractedAtOf(friendship.getId(), userB.getId())).isAfter(past);
+    }
+
+    @Test
+    @DisplayName("상호 관심도 갱신은 양쪽 마지막 교류 시각을 모두 바꾼다")
+    void incrementMutualInterestScore_updatesBothLastInteractedAt() {
+        // given
+        Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.create(friendship);
+        LocalDateTime past = ageLastInteractions(friendship.getId());
+
+        // when
+        friendshipRepository.incrementMutualInterestScore(friendship.getId(), userA.getId(), userB.getId(), 1.0);
+
+        // then
+        assertThat(lastInteractedAtOf(friendship.getId(), userA.getId())).isAfter(past);
+        assertThat(lastInteractedAtOf(friendship.getId(), userB.getId())).isAfter(past);
+    }
+
+    @Test
     @DisplayName("상호 관심도 Cypher 갱신은 aggregate 정책과 동일하게 양쪽 score와 intimacy를 갱신한다")
     void incrementMutualInterestScore_matchesAggregatePolicy() {
         // given
@@ -686,5 +718,24 @@ class FriendshipNeo4jRepositoryTest {
         assertThat(updated.getMyInterestScore(userA.getId())).isCloseTo(expectedScore, within(0.0001));
         assertThat(updated.getMyInterestScore(userB.getId())).isCloseTo(expectedScore, within(0.0001));
         assertThat(updated.getIntimacy()).isCloseTo(FriendRecognition.normalize(expectedScore), within(0.0001));
+    }
+
+    private LocalDateTime ageLastInteractions(String friendshipId) {
+        LocalDateTime past = LocalDateTime.now().minusDays(60);
+        neo4jClient.query(
+                "MATCH ()-[r:FRIENDS_WITH {id: $fid}]->() " +
+                "SET r.lowLastInteractedAt = $past, r.highLastInteractedAt = $past"
+        ).bind(friendshipId).to("fid")
+         .bind(past).to("past")
+         .run();
+        return past;
+    }
+
+    private LocalDateTime lastInteractedAtOf(String friendshipId, Long userId) {
+        return friendshipRepository.findById(friendshipId).orElseThrow().getRecognitions().stream()
+                .filter(recognition -> recognition.getUser().getId().equals(userId))
+                .findFirst()
+                .orElseThrow()
+                .getLastInteractedAt();
     }
 }

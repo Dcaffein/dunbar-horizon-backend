@@ -14,13 +14,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-import static com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.schema.SocialGraphSchema.*;
-import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.*;
-import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.ATTACHED_TO;
-import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.LABEL;
-import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.OWNS_LABEL;
-import static com.example.DunbarHorizon.social.domain.socialUser.constant.SocialUserConstants.USER_REFERENCE;
-
 @Repository
 @RequiredArgsConstructor
 public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
@@ -28,130 +21,106 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
     private final Neo4jClient neo4jClient;
 
     // GET_DEFAULT_NETWORK_GRAPH, GET_LABEL_CUSTOM_NETWORK 공통 suffix
-    private static final String NETWORK_PRUNING_SUFFIX = ("""
+    private static final String NETWORK_PRUNING_SUFFIX = """
             // [1] 친구 목록 수집 + boundary 멤버십 / interestScore lookup map 구성
             WITH me,
                  collect({member: member, friendship: myFriendship, interestScore: interestScore}) AS friendData
             WITH me, friendData,
                  apoc.map.fromPairs([x IN friendData | [elementId(x.member), true]]) AS boundary,
-                 apoc.map.fromPairs([x IN friendData | [toString(x.member.#{ID}), x.interestScore]]) AS interestMap
+                 apoc.map.fromPairs([x IN friendData | [toString(x.member.id), x.interestScore]]) AS interestMap
 
             // [2] 친구별 동적 엣지 한도 산출 (me→friend 친밀도가 높을수록 더 많은 내부 엣지 허용)
             UNWIND friendData AS item
-            WITH me, boundary, interestMap,
+            WITH boundary, interestMap,
                  item.member AS member,
-                 toInteger($pruningMin + coalesce(item.friendship.#{INTIMACY}, 0.0) * $pruningRange) AS dynamicLimit
+                 toInteger($pruningMin + coalesce(item.friendship.intimacy, 0.0) * $pruningRange) AS dynamicLimit
 
             // [3] boundary 내에서 각 친구의 내부 엣지를 dynamicLimit만큼 슬라이싱 (ID만 수집)
             // OPTIONAL MATCH: 연결이 없는 고립 노드도 1 row(null)로 통과시켜 [4]에서 빈 리스트로 반환
-            CALL (me, member, boundary, dynamicLimit) {
-              OPTIONAL MATCH (member)-[:#{HF}]->(innerFriendship:#{F})<-[:#{HF}]-(targetMember:#{UR})
-              WHERE boundary[elementId(targetMember)] = true AND member <> targetMember AND targetMember <> me
+            CALL (member, boundary, dynamicLimit) {
+              OPTIONAL MATCH (member)-[innerFriendship:FRIENDS_WITH]-(targetMember)
+              WHERE boundary[elementId(targetMember)] = true
               WITH innerFriendship, targetMember, dynamicLimit
-              ORDER BY innerFriendship.#{INTIMACY} DESC
+              ORDER BY innerFriendship.intimacy DESC
               WITH collect(
                 CASE WHEN targetMember IS NOT NULL
-                THEN {intimacy: innerFriendship.#{INTIMACY}, targetMemberId: targetMember.#{ID}}
+                THEN {intimacy: innerFriendship.intimacy, targetMemberId: targetMember.id}
                 ELSE null END
               ) AS allEdges, dynamicLimit
               RETURN allEdges[0..dynamicLimit] AS topEdges
             }
 
             // [4] 친구별 nodeId + 엣지 목록 반환 (고립 노드도 빈 리스트로 포함)
-            RETURN member.#{ID} AS nodeId,
-                   interestMap[toString(member.#{ID})] AS nodeInterest,
+            RETURN member.id AS nodeId,
+                   interestMap[toString(member.id)] AS nodeInterest,
                    [e IN topEdges | {
                      friendId:       e.targetMemberId,
                      intimacy:       e.intimacy
                    }] AS memberEdges
-            """)
-            .replace("#{UR}", USER_REFERENCE)
-            .replace("#{F}", FRIENDSHIP)
-            .replace("#{HF}", HAS_FRIENDSHIP)
-            .replace("#{ID}", PROP_ID)
-            .replace("#{INTIMACY}", PROP_INTIMACY);
+            """;
 
     private static final String GET_DEFAULT_NETWORK_GRAPH =
-            ("""
+            """
             // [0] me의 친구를 친밀도 내림차순으로 circleSize만큼 선정
-            MATCH (me:#{UR} {#{ID}: $meId})-[r_me:#{HF}]->(myFriendship:#{F})<-[:#{HF}]-(member:#{UR})
-            WITH me, member, myFriendship, coalesce(r_me.#{INTEREST}, 0.0) AS interestScore
-            ORDER BY myFriendship.#{INTIMACY} DESC
+            MATCH (me:UserReference {id: $meId})-[myFriendship:FRIENDS_WITH]-(member:UserReference)
+            WITH me, member, myFriendship,
+                 coalesce(CASE WHEN startNode(myFriendship) = me
+                               THEN myFriendship.lowInterestScore
+                               ELSE myFriendship.highInterestScore END, 0.0) AS interestScore
+            ORDER BY myFriendship.intimacy DESC
             LIMIT $limitSize
-            """)
-            .replace("#{UR}", USER_REFERENCE)
-            .replace("#{F}", FRIENDSHIP)
-            .replace("#{HF}", HAS_FRIENDSHIP)
-            .replace("#{ID}", PROP_ID)
-            .replace("#{INTIMACY}", PROP_INTIMACY)
-            .replace("#{INTEREST}", PROP_INTEREST_SCORE)
+            """
             + NETWORK_PRUNING_SUFFIX;
 
     private static final String GET_LABEL_CUSTOM_NETWORK =
-            ("""
+            """
             // [0] me의 친구 중 지정 라벨에 속한 친구만 네트워크 풀로 제한
-            MATCH (me:#{UR} {#{ID}: $meId})-[:#{OL}]->(label:#{LBL} {#{ID}: $labelId})
-            MATCH (me)-[r_me:#{HF}]->(myFriendship:#{F})<-[:#{HF}]-(member:#{UR})
-            WHERE (label)-[:#{AT}]->(member)
-            WITH me, member, myFriendship, coalesce(r_me.#{INTEREST}, 0.0) AS interestScore
-            ORDER BY myFriendship.#{INTIMACY} DESC
+            MATCH (me:UserReference {id: $meId})-[:OWNS_LABEL]->(label:Label {id: $labelId})
+            MATCH (me)-[myFriendship:FRIENDS_WITH]-(member:UserReference)
+            WHERE (label)-[:ATTACHED_TO]->(member)
+            WITH me, member, myFriendship,
+                 coalesce(CASE WHEN startNode(myFriendship) = me
+                               THEN myFriendship.lowInterestScore
+                               ELSE myFriendship.highInterestScore END, 0.0) AS interestScore
+            ORDER BY myFriendship.intimacy DESC
             LIMIT $limitSize
-            """)
-            .replace("#{UR}", USER_REFERENCE)
-            .replace("#{LBL}", LABEL)
-            .replace("#{OL}", OWNS_LABEL)
-            .replace("#{AT}", ATTACHED_TO)
-            .replace("#{F}", FRIENDSHIP)
-            .replace("#{HF}", HAS_FRIENDSHIP)
-            .replace("#{ID}", PROP_ID)
-            .replace("#{INTIMACY}", PROP_INTIMACY)
-            .replace("#{INTEREST}", PROP_INTEREST_SCORE)
+            """
             + NETWORK_PRUNING_SUFFIX;
 
-    private static final String GET_TWO_HOP_CONTACT_EDGES_FOR_TARGET = ("""
+    private static final String GET_TWO_HOP_CONTACT_EDGES_FOR_TARGET = """
             // 2-hop target의 공통 친구 중 클라이언트 응답에 포함할 연결을 친밀도 순으로 반환
             // baseNetworkFriendIds: 클라이언트가 전달한 기준 네트워크의 친구 ID 목록 (보안 검증 겸용)
-            MATCH (me:#{UR} {#{ID}: $meId})
+            MATCH (me:UserReference {id: $meId})
             WITH me
-            MATCH (target:#{UR} {#{ID}: $targetId})
+            MATCH (target:UserReference {id: $targetId})
             CALL (me, target) {
-              MATCH (me)-[:#{HF}]->(:#{F})<-[:#{HF}]-(mutual:#{UR})
-              WHERE mutual.#{ID} IN $baseNetworkFriendIds
-              MATCH (target)-[:#{HF}]->(tf:#{F})<-[:#{HF}]-(mutual)
-              ORDER BY tf.#{INTIMACY} DESC
+              MATCH (me)-[:FRIENDS_WITH]-(mutual:UserReference)
+              WHERE mutual.id IN $baseNetworkFriendIds
+              MATCH (target)-[tf:FRIENDS_WITH]-(mutual)
+              ORDER BY tf.intimacy DESC
               LIMIT $strangerQuota
               RETURN mutual, tf
             }
-            RETURN target.#{ID} AS friendAId, mutual.#{ID} AS friendBId
-            """)
-            .replace("#{UR}", USER_REFERENCE)
-            .replace("#{F}", FRIENDSHIP)
-            .replace("#{HF}", HAS_FRIENDSHIP)
-            .replace("#{ID}", PROP_ID)
-            .replace("#{INTIMACY}", PROP_INTIMACY);
+            RETURN target.id AS friendAId, mutual.id AS friendBId
+            """;
 
-    private static final String GET_DIRECT_FRIEND_EDGES_FOR_TARGET = ("""
+    private static final String GET_DIRECT_FRIEND_EDGES_FOR_TARGET = """
             // 클라이언트 응답에 포함할 새 노드와 기존 네트워크의 연결 엣지를 반환
             // dynamicLimit: me→target 친밀도 기반으로 노출 정책이 결정
             // baseNetworkFriendIds: 기준 네트워크의 친구 ID (내 친구인지 검증 + 공통 친구 필터)
-            MATCH (me:#{UR} {#{ID}: $meId})
+            MATCH (me:UserReference {id: $meId})
             WITH me
-            MATCH (target:#{UR} {#{ID}: $targetId})
+            MATCH (target:UserReference {id: $targetId})
             CALL (me, target) {
-              MATCH (me)-[:#{HF}]->(:#{F})<-[:#{HF}]-(mutual:#{UR})
-              WHERE mutual.#{ID} IN $baseNetworkFriendIds
-              MATCH (target)-[:#{HF}]->(tf:#{F})<-[:#{HF}]-(mutual)
-              ORDER BY tf.#{INTIMACY} DESC
+              MATCH (me)-[:FRIENDS_WITH]-(mutual:UserReference)
+              WHERE mutual.id IN $baseNetworkFriendIds
+              MATCH (target)-[tf:FRIENDS_WITH]-(mutual)
+              ORDER BY tf.intimacy DESC
               LIMIT $dynamicLimit
               RETURN mutual, tf
             }
-            RETURN target.#{ID} AS friendAId, mutual.#{ID} AS friendBId, tf.#{INTIMACY} AS intimacy
-            """)
-            .replace("#{UR}", USER_REFERENCE)
-            .replace("#{F}", FRIENDSHIP)
-            .replace("#{HF}", HAS_FRIENDSHIP)
-            .replace("#{ID}", PROP_ID)
-            .replace("#{INTIMACY}", PROP_INTIMACY);
+            RETURN target.id AS friendAId, mutual.id AS friendBId, tf.intimacy AS intimacy
+            """;
 
     @Cacheable(cacheNames = "dunbar:network:default", key = "#userId + ':' + #circleSize.name()",
             condition = "#circleSize == T(com.example.DunbarHorizon.social.domain.friend.DunbarCircle).DUNBAR")

@@ -98,15 +98,15 @@ class SocialNetworkCacheSerdeTest {
                 CREATE (fe:UserReference {id: 50})
                 CREATE (ff:UserReference {id: 60})
 
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 21.4}]->(:Friendship {intimacy: 0.9})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fa)
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 150.0}]->(:Friendship {intimacy: 0.8})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fb)
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.7})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fc)
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.6})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fd)
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.5})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fe)
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.1})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(ff)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.9, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 21.4, highInterestScore: 0.0}]->(fa)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.8, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 150.0, highInterestScore: 0.0}]->(fb)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.7, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(fc)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.6, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(fd)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.5, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(fe)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.1, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(ff)
 
-                CREATE (fa)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.85})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fb)
-                CREATE (fa)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.4})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(ff)
+                CREATE (fa)-[:FRIENDS_WITH {intimacy: 0.85, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(fb)
+                CREATE (fa)-[:FRIENDS_WITH {intimacy: 0.4, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(ff)
 
                 CREATE (lbl:Label {id: 'test-label-id'})
                 CREATE (me)-[:OWNS_LABEL]->(lbl)

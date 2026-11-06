@@ -31,7 +31,7 @@ class SocialConnectionPathRepositoryAdapterTest {
         /*
          * 나(1)와 세 타겟
          * - 타겟99: 중개인 5명(2~6, score 0.9→0.5) + 노출 차단 2명(7, 8)
-         *   7은 r4(타겟 쪽) 차단, 8은 r2(중개인 쪽) 차단. 둘 다 intimacy 1.0이라
+         *   7은 타겟 쪽 차단, 8은 중개인 쪽 차단. 둘 다 intimacy 1.0이라
          *   필터가 없으면 상위 두 자리를 차지한다
          * - 타겟98: 중개인 2명(2, 3) — 상한 이하 케이스
          * - 타겟97: 중개인 없음
@@ -50,28 +50,52 @@ class SocialConnectionPathRepositoryAdapterTest {
             CREATE (m7:UserReference {id: 7, nickname: '타겟차단'})
             CREATE (m8:UserReference {id: 8, nickname: '중개인차단'})
 
-            // 나와 중개인들의 Friendship (r2: 중개인 쪽 isRoutable)
-            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.9})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(m2)
-            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.8})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(m3)
-            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.7})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(m4)
-            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.6})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(m5)
-            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.5})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(m6)
-            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 1.0})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(m7)
-            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 1.0})<-[:HAS_FRIENDSHIP {isRoutable: false}]-(m8)
+            // 나와 중개인들의 친구 관계
+            CREATE (me)-[:FRIENDS_WITH {intimacy: 0.9, lowIsRoutable: true, highIsRoutable: true}]->(m2)
+            CREATE (me)-[:FRIENDS_WITH {intimacy: 0.8, lowIsRoutable: true, highIsRoutable: true}]->(m3)
+            CREATE (me)-[:FRIENDS_WITH {intimacy: 0.7, lowIsRoutable: true, highIsRoutable: true}]->(m4)
+            CREATE (me)-[:FRIENDS_WITH {intimacy: 0.6, lowIsRoutable: true, highIsRoutable: true}]->(m5)
+            CREATE (me)-[:FRIENDS_WITH {intimacy: 0.5, lowIsRoutable: true, highIsRoutable: true}]->(m6)
+            CREATE (me)-[:FRIENDS_WITH {intimacy: 1.0, lowIsRoutable: true, highIsRoutable: true}]->(m7)
+            CREATE (me)-[:FRIENDS_WITH {intimacy: 1.0, lowIsRoutable: true, highIsRoutable: false}]->(m8)
 
-            // 중개인들과 타겟99의 Friendship (r4: 타겟 쪽 isRoutable)
-            CREATE (m2)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.9})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(t99)
-            CREATE (m3)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.8})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(t99)
-            CREATE (m4)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.7})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(t99)
-            CREATE (m5)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.6})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(t99)
-            CREATE (m6)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.5})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(t99)
-            CREATE (m7)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 1.0})<-[:HAS_FRIENDSHIP {isRoutable: false}]-(t99)
-            CREATE (m8)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 1.0})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(t99)
+            // 중개인들과 타겟99의 친구 관계
+            CREATE (m2)-[:FRIENDS_WITH {intimacy: 0.9, lowIsRoutable: true, highIsRoutable: true}]->(t99)
+            CREATE (m3)-[:FRIENDS_WITH {intimacy: 0.8, lowIsRoutable: true, highIsRoutable: true}]->(t99)
+            CREATE (m4)-[:FRIENDS_WITH {intimacy: 0.7, lowIsRoutable: true, highIsRoutable: true}]->(t99)
+            CREATE (m5)-[:FRIENDS_WITH {intimacy: 0.6, lowIsRoutable: true, highIsRoutable: true}]->(t99)
+            CREATE (m6)-[:FRIENDS_WITH {intimacy: 0.5, lowIsRoutable: true, highIsRoutable: true}]->(t99)
+            CREATE (m7)-[:FRIENDS_WITH {intimacy: 1.0, lowIsRoutable: true, highIsRoutable: false}]->(t99)
+            CREATE (m8)-[:FRIENDS_WITH {intimacy: 1.0, lowIsRoutable: true, highIsRoutable: true}]->(t99)
 
             // 중개인 2명뿐인 타겟98
-            CREATE (m2)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.4})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(t98)
-            CREATE (m3)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.3})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(t98)
+            CREATE (m2)-[:FRIENDS_WITH {intimacy: 0.4, lowIsRoutable: true, highIsRoutable: true}]->(t98)
+            CREATE (m3)-[:FRIENDS_WITH {intimacy: 0.3, lowIsRoutable: true, highIsRoutable: true}]->(t98)
         """).run();
+    }
+
+    @Test
+    @DisplayName("중개인과 타겟이 낮은 id 쪽이어도 그 사용자의 isRoutable로 거른다")
+    void findIntermediaries_낮은_id_쪽_차단() {
+        // given: 나(1000)가 가장 높은 id라 중개인이 관계의 시작 노드, 타겟(500)이 중개인보다 낮은 id
+        neo4jClient.query("""
+            CREATE (me:UserReference {id: 1000, nickname: '높은나'})
+            CREATE (target:UserReference {id: 500, nickname: '낮은타겟'})
+            CREATE (open:UserReference {id: 600, nickname: '공개중개인'})
+            CREATE (closed:UserReference {id: 700, nickname: '차단중개인'})
+            CREATE (open)-[:FRIENDS_WITH {intimacy: 0.9, lowIsRoutable: true, highIsRoutable: false}]->(me)
+            CREATE (closed)-[:FRIENDS_WITH {intimacy: 0.9, lowIsRoutable: false, highIsRoutable: true}]->(me)
+            CREATE (target)-[:FRIENDS_WITH {intimacy: 0.9, lowIsRoutable: true, highIsRoutable: false}]->(open)
+            CREATE (target)-[:FRIENDS_WITH {intimacy: 0.9, lowIsRoutable: true, highIsRoutable: true}]->(closed)
+        """).run();
+
+        // when
+        ConnectionPathResult.Intermediaries result = connectionPathRepository.findIntermediaries(1000L, 500L, LIMIT);
+
+        // then
+        assertThat(result.items())
+                .extracting(ConnectionPathResult.IntermediaryResult::userId)
+                .containsExactly(600L);
     }
 
     @Test

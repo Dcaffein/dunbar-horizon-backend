@@ -26,7 +26,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.schema.SocialGraphSchema.*;
-import static com.example.DunbarHorizon.social.domain.socialUser.constant.SocialUserConstants.USER_REFERENCE;
 
 @Repository
 @RequiredArgsConstructor
@@ -35,30 +34,33 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
     private final FriendshipNeo4jRepository friendshipNeo4jRepository;
     private final Neo4jClient neo4jClient;
 
-    private static final String CREATE_FRIENDSHIP =
-            "OPTIONAL MATCH (a:" + USER_REFERENCE + " {id: $userAId}) " +
-            "OPTIONAL MATCH (b:" + USER_REFERENCE + " {id: $userBId}) " +
-            "CALL { " +
-            "  WITH a, b " +
-            "  WITH a, b WHERE a IS NOT NULL AND b IS NOT NULL " +
-            "  MERGE (a)-[r:" + FRIENDS_WITH + " {id: $friendshipId}]->(b) ON CREATE SET r += $properties " +
-            "  RETURN count(r) AS created " +
-            "} " +
-            "RETURN a IS NULL AS missingA, b IS NULL AS missingB";
+    private static final String CREATE_FRIENDSHIP = """
+            OPTIONAL MATCH (a:UserReference {id: $userAId})
+            OPTIONAL MATCH (b:UserReference {id: $userBId})
+            CALL {
+              WITH a, b
+              WITH a, b WHERE a IS NOT NULL AND b IS NOT NULL
+              MERGE (a)-[r:FRIENDS_WITH {id: $friendshipId}]->(b) ON CREATE SET r += $properties
+              RETURN count(r) AS created
+            }
+            RETURN a IS NULL AS missingA, b IS NULL AS missingB
+            """;
 
-    private static final String FIND_BY_ID =
-            "MATCH (low:" + USER_REFERENCE + ")-[r:" + FRIENDS_WITH + " {id: $friendshipId}]->(high:" + USER_REFERENCE + ") " +
-            "RETURN r, low, high";
+    private static final String FIND_BY_ID = """
+            MATCH (low:UserReference)-[r:FRIENDS_WITH {id: $friendshipId}]->(high:UserReference)
+            RETURN r, low, high
+            """;
 
-    private static final String FIND_BY_USER_ID =
-            "MATCH (:" + USER_REFERENCE + " {id: $userId})-[r:" + FRIENDS_WITH + "]-(:" + USER_REFERENCE + ") " +
-            "RETURN r, startNode(r) AS low, endNode(r) AS high";
+    private static final String FIND_BY_USER_ID = """
+            MATCH (:UserReference {id: $userId})-[r:FRIENDS_WITH]-(:UserReference)
+            RETURN r, startNode(r) AS low, endNode(r) AS high
+            """;
 
-    private static final String FIND_ARCHIVE_CANDIDATES =
-            "MATCH (u:" + USER_REFERENCE + ")-[r:" + FRIENDS_WITH + "]->(v:" + USER_REFERENCE + ") " +
-            "WHERE r." + PROP_INTIMACY + " <= $threshold " +
-            "RETURN r." + PROP_ID + " AS id, u." + PROP_ID + " AS userAId, v." + PROP_ID + " AS userBId, " +
-            "r." + PROP_CREATED_AT + " AS friendedAt";
+    private static final String FIND_ARCHIVE_CANDIDATES = """
+            MATCH (u:UserReference)-[r:FRIENDS_WITH]->(v:UserReference)
+            WHERE r.intimacy <= $threshold
+            RETURN r.id AS id, u.id AS userAId, v.id AS userBId, r.createdAt AS friendedAt
+            """;
 
     @Override
     public void create(Friendship friendship) {

@@ -37,9 +37,9 @@ class SocialNetworkRepositoryAdapterCacheTest {
                 CREATE (me:UserReference {id: 1})
                 CREATE (fa:UserReference {id: 10})
                 CREATE (fb:UserReference {id: 20})
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.9})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fa)
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.8})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fb)
-                CREATE (fa)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.75})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fb)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.9, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(fa)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.8, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(fb)
+                CREATE (fa)-[:FRIENDS_WITH {intimacy: 0.75, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(fb)
                 """).run();
     }
 
