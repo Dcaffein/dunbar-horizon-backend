@@ -1,10 +1,9 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData;
 
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import org.springframework.data.neo4j.repository.Neo4jRepository;
+import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import org.springframework.data.neo4j.repository.query.Query;
+import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -12,127 +11,105 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.*;
+import static com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.schema.SocialGraphSchema.FRIENDS_WITH;
 import static com.example.DunbarHorizon.social.domain.socialUser.constant.SocialUserConstants.USER_REFERENCE;
 
-public interface FriendshipNeo4jRepository extends Neo4jRepository<Friendship, String> {
+public interface FriendshipNeo4jRepository extends Repository<SocialUser, Long> {
 
-    default boolean existsFriendshipBetween(Long requesterId, Long receiverId) {
-        return existsById(Friendship.generateCompositeId(requesterId, receiverId));
-    }
+    String LOCK_FRIENDSHIP =
+            "SET r._interactionScoreLock = true " +
+            "REMOVE r._interactionScoreLock ";
 
-    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->(f:" + FRIENDSHIP + ")" +
-            "<-[:" + HAS_FRIENDSHIP + "]-(:" + USER_REFERENCE + ") " +
-            "MATCH (f)<-[all_r:" + HAS_FRIENDSHIP + "]-(all_u) " +
-            "RETURN f, collect(all_r), collect(all_u)")
-    List<Friendship> findByUserId(@Param("userId") Long userId);
+    String APPLY_MUTUAL_DELTA =
+            "WITH r, delta, " +
+            "coalesce(r.lowInterestScore, 0.0) + delta AS rawLow, " +
+            "coalesce(r.highInterestScore, 0.0) + delta AS rawHigh " +
+            "WITH r, " +
+            "CASE WHEN rawLow < 0.0 THEN 0.0 ELSE rawLow END AS scoreLow, " +
+            "CASE WHEN rawHigh < 0.0 THEN 0.0 ELSE rawHigh END AS scoreHigh " +
+            "SET r.lowInterestScore = scoreLow, " +
+            "r.lowLastInteractedAt = localdatetime(), " +
+            "r.highInterestScore = scoreHigh, " +
+            "r.highLastInteractedAt = localdatetime(), " +
+            "r.intimacy = sqrt((scoreLow / (scoreLow + 50.0)) * (scoreHigh / (scoreHigh + 50.0)))";
 
-    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[r:" + HAS_FRIENDSHIP + "]->(:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
-            "WHERE r.isMuted = $isMuted " +
+    @Query("MATCH ()-[r:" + FRIENDS_WITH + " {id: $friendshipId}]->() RETURN count(r) > 0")
+    boolean existsFriendship(@Param("friendshipId") String friendshipId);
+
+    @Query("MATCH ()-[r:" + FRIENDS_WITH + " {id: $friendshipId}]->() DELETE r")
+    void deleteFriendship(@Param("friendshipId") String friendshipId);
+
+    @Query("UNWIND $friendshipIds AS friendshipId " +
+            "WITH friendshipId ORDER BY friendshipId " +
+            "MATCH ()-[r:" + FRIENDS_WITH + " {id: friendshipId}]->() " +
+            "DELETE r")
+    void deleteFriendships(@Param("friendshipIds") Collection<String> friendshipIds);
+
+    @Query("MATCH (me:" + USER_REFERENCE + " {id: $userId})-[r:" + FRIENDS_WITH + "]-(friend:" + USER_REFERENCE + ") " +
+            "WHERE CASE WHEN startNode(r) = me THEN r.lowIsMuted ELSE r.highIsMuted END = $isMuted " +
             "RETURN friend.id")
     Set<Long> findFriendIdsByMuteStatus(@Param("userId") Long userId, @Param("isMuted") boolean isMuted);
 
-    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[:" + HAS_FRIENDSHIP + "]->" +
-            "(:" + FRIENDSHIP + ")<-[:" + HAS_FRIENDSHIP + "]-(friend:" + USER_REFERENCE + ") " +
+    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[:" + FRIENDS_WITH + "]-(friend:" + USER_REFERENCE + ") " +
             "WHERE friend.id IN $candidateIds " +
             "RETURN friend.id")
     Set<Long> filterFriendIdsAmong(@Param("userId") Long userId, @Param("candidateIds") Collection<Long> candidateIds);
 
-    @Transactional(transactionManager = "neo4jTransactionManager")
-    @Query("MATCH (:" + USER_REFERENCE + ")-[candidate:" + HAS_FRIENDSHIP + "]->(friendship:" + FRIENDSHIP + ") " +
-            "WHERE candidate.lastInteractedAt <= $decayTime " +
-            "WITH DISTINCT friendship ORDER BY friendship.id " +
-            "SET friendship._interactionScoreLock = true " +
-            "REMOVE friendship._interactionScoreLock " +
-            "WITH friendship " +
-            "MATCH (:" + USER_REFERENCE + ")-[recognition:" + HAS_FRIENDSHIP + "]->(friendship) " +
-            "WHERE recognition.interestScore > $threshold " +
-            "AND recognition.lastInteractedAt <= $decayTime " +
-            "SET recognition.interestScore = CASE " +
-            "WHEN recognition.interestScore * $rate < $threshold THEN $threshold " +
-            "ELSE recognition.interestScore * $rate " +
-            "END " +
-            "WITH DISTINCT friendship " +
-            "MATCH (:" + USER_REFERENCE + ")-[allRecognition:" + HAS_FRIENDSHIP + "]->(friendship) " +
-            "WITH friendship, collect(allRecognition.interestScore) AS scores " +
-            "SET friendship.intimacy = sqrt((scores[0] / (scores[0] + 50.0)) * (scores[1] / (scores[1] + 50.0)))")
+    @Query("MATCH (:" + USER_REFERENCE + ")-[r:" + FRIENDS_WITH + "]->(:" + USER_REFERENCE + ") " +
+            "WHERE r.lowLastInteractedAt <= $decayTime OR r.highLastInteractedAt <= $decayTime " +
+            "WITH r ORDER BY r.id " +
+            LOCK_FRIENDSHIP +
+            "WITH r, " +
+            "coalesce(r.lowInterestScore, 0.0) AS low, " +
+            "coalesce(r.highInterestScore, 0.0) AS high " +
+            "WITH r, " +
+            "CASE WHEN low > $threshold AND r.lowLastInteractedAt <= $decayTime " +
+            "THEN CASE WHEN low * $rate < $threshold THEN $threshold ELSE low * $rate END " +
+            "ELSE low END AS scoreLow, " +
+            "CASE WHEN high > $threshold AND r.highLastInteractedAt <= $decayTime " +
+            "THEN CASE WHEN high * $rate < $threshold THEN $threshold ELSE high * $rate END " +
+            "ELSE high END AS scoreHigh " +
+            "SET r.lowInterestScore = scoreLow, " +
+            "r.highInterestScore = scoreHigh, " +
+            "r.intimacy = sqrt((scoreLow / (scoreLow + 50.0)) * (scoreHigh / (scoreHigh + 50.0)))")
     void applyDecay(@Param("rate") double rate, @Param("threshold") double threshold, @Param("decayTime") LocalDateTime decayTime);
 
-    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[r:" + HAS_FRIENDSHIP + "]->(:" + FRIENDSHIP + " {id: $friendshipId}) " +
-            "SET r.friendAlias = $alias, r.isMuted = $isMuted, r.isRoutable = $isRoutable")
+    @Query("MATCH (:" + USER_REFERENCE + ")-[r:" + FRIENDS_WITH + " {id: $friendshipId}]->(:" + USER_REFERENCE + ") " +
+            "SET r += $properties")
     void updateUserRelationshipFields(@Param("friendshipId") String friendshipId,
-                                      @Param("userId") Long userId,
-                                      @Param("alias") String alias,
-                                      @Param("isMuted") boolean isMuted,
-                                      @Param("isRoutable") boolean isRoutable);
+                                      @Param("properties") Map<String, Object> properties);
 
     // 아래 세 쿼리가 저장 점수를 0에서 끊는다(FriendRecognition.adjustInterestScore와 같은 동작).
     // 그래서 읽기만 하는 쪽은 따로 막지 않는다.
-    @Transactional(transactionManager = "neo4jTransactionManager")
-    @Query("MATCH (:" + USER_REFERENCE + " {id: $userId})-[recognition:" + HAS_FRIENDSHIP + "]->" +
-            "(friendship:" + FRIENDSHIP + " {id: $friendshipId})<-[otherRecognition:" + HAS_FRIENDSHIP + "]-" +
-            "(:" + USER_REFERENCE + " {id: $friendId}) " +
-            "SET friendship._interactionScoreLock = true " +
-            "REMOVE friendship._interactionScoreLock " +
-            "WITH friendship, recognition, otherRecognition, " +
-            "coalesce(recognition.interestScore, 0.0) + $delta AS raw " +
-            "WITH friendship, recognition, " +
-            "CASE WHEN raw < 0.0 THEN 0.0 ELSE raw END AS score, " +
-            "coalesce(otherRecognition.interestScore, 0.0) AS otherScore " +
-            "SET recognition.interestScore = score, " +
-            "recognition.lastInteractedAt = localdatetime(), " +
-            "friendship.intimacy = sqrt(" +
-            "(score / (score + 50.0)) * (otherScore / (otherScore + 50.0))" +
-            ")")
+    @Query("MATCH (low:" + USER_REFERENCE + ")-[r:" + FRIENDS_WITH + " {id: $friendshipId}]->(:" + USER_REFERENCE + ") " +
+            LOCK_FRIENDSHIP +
+            "WITH r, low.id = $userId AS isLow " +
+            "WITH r, isLow, " +
+            "coalesce(r.lowInterestScore, 0.0) + CASE WHEN isLow THEN $delta ELSE 0.0 END AS rawLow, " +
+            "coalesce(r.highInterestScore, 0.0) + CASE WHEN isLow THEN 0.0 ELSE $delta END AS rawHigh " +
+            "WITH r, isLow, " +
+            "CASE WHEN rawLow < 0.0 THEN 0.0 ELSE rawLow END AS scoreLow, " +
+            "CASE WHEN rawHigh < 0.0 THEN 0.0 ELSE rawHigh END AS scoreHigh " +
+            "SET r.lowInterestScore = scoreLow, " +
+            "r.highInterestScore = scoreHigh, " +
+            "r.lowLastInteractedAt = CASE WHEN isLow THEN localdatetime() ELSE r.lowLastInteractedAt END, " +
+            "r.highLastInteractedAt = CASE WHEN isLow THEN r.highLastInteractedAt ELSE localdatetime() END, " +
+            "r.intimacy = sqrt((scoreLow / (scoreLow + 50.0)) * (scoreHigh / (scoreHigh + 50.0)))")
     void incrementInterestScore(@Param("friendshipId") String friendshipId,
                                 @Param("userId") Long userId,
-                                @Param("friendId") Long friendId,
                                 @Param("delta") double delta);
 
-    @Transactional(transactionManager = "neo4jTransactionManager")
-    @Query("MATCH (:" + USER_REFERENCE + " {id: $userAId})-[recognitionA:" + HAS_FRIENDSHIP + "]->" +
-            "(friendship:" + FRIENDSHIP + " {id: $friendshipId})<-[recognitionB:" + HAS_FRIENDSHIP + "]-" +
-            "(:" + USER_REFERENCE + " {id: $userBId}) " +
-            "SET friendship._interactionScoreLock = true " +
-            "REMOVE friendship._interactionScoreLock " +
-            "WITH friendship, recognitionA, recognitionB, " +
-            "coalesce(recognitionA.interestScore, 0.0) + $delta AS rawA, " +
-            "coalesce(recognitionB.interestScore, 0.0) + $delta AS rawB " +
-            "WITH friendship, recognitionA, recognitionB, " +
-            "CASE WHEN rawA < 0.0 THEN 0.0 ELSE rawA END AS scoreA, " +
-            "CASE WHEN rawB < 0.0 THEN 0.0 ELSE rawB END AS scoreB " +
-            "SET recognitionA.interestScore = scoreA, " +
-            "recognitionA.lastInteractedAt = localdatetime(), " +
-            "recognitionB.interestScore = scoreB, " +
-            "recognitionB.lastInteractedAt = localdatetime(), " +
-            "friendship.intimacy = sqrt(" +
-            "(scoreA / (scoreA + 50.0)) * (scoreB / (scoreB + 50.0))" +
-            ")")
-    void incrementMutualInterestScore(@Param("friendshipId") String friendshipId,
-                                      @Param("userAId") Long userAId,
-                                      @Param("userBId") Long userBId,
-                                      @Param("delta") double delta);
+    @Query("MATCH (:" + USER_REFERENCE + ")-[r:" + FRIENDS_WITH + " {id: $friendshipId}]->(:" + USER_REFERENCE + ") " +
+            LOCK_FRIENDSHIP +
+            "WITH r, $delta AS delta " +
+            APPLY_MUTUAL_DELTA)
+    void incrementMutualInterestScore(@Param("friendshipId") String friendshipId, @Param("delta") double delta);
 
-    @Transactional(transactionManager = "neo4jTransactionManager")
     @Query("UNWIND $updates AS update " +
             "WITH update ORDER BY update.friendshipId " +
-            "MATCH (:" + USER_REFERENCE + " {id: update.userAId})-[recognitionA:" + HAS_FRIENDSHIP + "]->" +
-            "(friendship:" + FRIENDSHIP + " {id: update.friendshipId})<-[recognitionB:" + HAS_FRIENDSHIP + "]-" +
-            "(:" + USER_REFERENCE + " {id: update.userBId}) " +
-            "SET friendship._interactionScoreLock = true " +
-            "REMOVE friendship._interactionScoreLock " +
-            "WITH friendship, recognitionA, recognitionB, " +
-            "coalesce(recognitionA.interestScore, 0.0) + update.delta AS rawA, " +
-            "coalesce(recognitionB.interestScore, 0.0) + update.delta AS rawB " +
-            "WITH friendship, recognitionA, recognitionB, " +
-            "CASE WHEN rawA < 0.0 THEN 0.0 ELSE rawA END AS scoreA, " +
-            "CASE WHEN rawB < 0.0 THEN 0.0 ELSE rawB END AS scoreB " +
-            "SET recognitionA.interestScore = scoreA, " +
-            "recognitionA.lastInteractedAt = localdatetime(), " +
-            "recognitionB.interestScore = scoreB, " +
-            "recognitionB.lastInteractedAt = localdatetime(), " +
-            "friendship.intimacy = sqrt(" +
-            "(scoreA / (scoreA + 50.0)) * (scoreB / (scoreB + 50.0))" +
-            ")")
+            "MATCH (:" + USER_REFERENCE + ")-[r:" + FRIENDS_WITH + " {id: update.friendshipId}]->(:" + USER_REFERENCE + ") " +
+            LOCK_FRIENDSHIP +
+            "WITH r, update.delta AS delta " +
+            APPLY_MUTUAL_DELTA)
     void incrementMutualInterestScoresBatch(@Param("updates") List<Map<String, Object>> updates);
 }

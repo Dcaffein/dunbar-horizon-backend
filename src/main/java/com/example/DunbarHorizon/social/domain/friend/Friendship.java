@@ -3,13 +3,7 @@ package com.example.DunbarHorizon.social.domain.friend;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipAuthorizationException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipInvalidException;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.PersistenceCreator;
-import org.springframework.data.neo4j.core.schema.Id;
-import org.springframework.data.neo4j.core.schema.Node;
-import org.springframework.data.neo4j.core.schema.Relationship;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -17,49 +11,46 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.FRIENDSHIP;
-import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.HAS_FRIENDSHIP;
-
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Node(FRIENDSHIP)
 public class Friendship {
 
     public static final int ALIAS_MAX_LENGTH = 20;
     public static final String ALIAS_LENGTH_MESSAGE = "별명은 20자 이하로 입력해주세요.";
 
     @Getter
-    @Id
-    private String id;
+    private final String id;
 
     @Getter
-    private LocalDate createdAt;
+    private final LocalDate createdAt;
 
     @Getter
     private double intimacy;
 
-    @Relationship(type = HAS_FRIENDSHIP, direction = Relationship.Direction.INCOMING)
-    private List<FriendRecognition> recognitions = new ArrayList<>();
+    private final List<FriendRecognition> recognitions;
 
     Friendship(UserReference userA, UserReference userB) {
         FriendRecognition recognitionA = new FriendRecognition(userA);
         FriendRecognition recognitionB = new FriendRecognition(userB);
 
-        this.recognitions.add(recognitionA);
-        this.recognitions.add(recognitionB);
+        this.recognitions = new ArrayList<>(List.of(recognitionA, recognitionB));
         this.id = generateCompositeId(userA.getId(), userB.getId());
         this.createdAt = LocalDate.now();
 
         this.intimacy = Math.sqrt(recognitionA.getNormalizedScore() * recognitionB.getNormalizedScore());
     }
 
-    @PersistenceCreator
-    public Friendship(String id, LocalDate createdAt, List<FriendRecognition> recognitions) {
+    private Friendship(String id, LocalDate createdAt, double intimacy, List<FriendRecognition> recognitions) {
+        this.id = id;
+        this.createdAt = createdAt;
+        this.intimacy = intimacy;
+        this.recognitions = new ArrayList<>(recognitions);
+    }
+
+    public static Friendship restore(String id, LocalDate createdAt, double intimacy,
+                                     List<FriendRecognition> recognitions) {
         if (recognitions == null || recognitions.size() != 2) {
             throw new FriendshipInvalidException("Friendship은 반드시 2명의 구성원을 가져야 합니다. ID: " + id);
         }
-        this.id = id;
-        this.createdAt = createdAt;
-        this.recognitions.addAll(recognitions);
+        return new Friendship(id, createdAt, intimacy, recognitions);
     }
 
     private FriendRecognition getSelfRecognition(Long userId) {

@@ -2,15 +2,10 @@ package com.example.DunbarHorizon.social.domain.friend;
 
 import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.springframework.data.neo4j.core.schema.*;
 
 import java.time.LocalDateTime;
 
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@RelationshipProperties
 @Getter
 public class FriendRecognition {
 
@@ -18,11 +13,7 @@ public class FriendRecognition {
 
     public static final double INITIAL_RAW_SCORE = 21.4;
 
-    @Id @GeneratedValue()
-    private Long id;
-
-    @TargetNode
-    private UserReference user;
+    private final UserReference user;
 
     private String friendAlias;
 
@@ -39,6 +30,21 @@ public class FriendRecognition {
         this.friendAlias = null;
         this.interestScore = INITIAL_RAW_SCORE;
         this.lastInteractedAt = LocalDateTime.now();
+    }
+
+    private FriendRecognition(UserReference user, String friendAlias, Double interestScore,
+                              LocalDateTime lastInteractedAt, boolean isMuted, boolean isRoutable) {
+        this.user = user;
+        this.friendAlias = friendAlias;
+        this.interestScore = interestScore;
+        this.lastInteractedAt = lastInteractedAt;
+        this.isMuted = isMuted;
+        this.isRoutable = isRoutable;
+    }
+
+    public static FriendRecognition restore(UserReference user, String friendAlias, Double interestScore,
+                                            LocalDateTime lastInteractedAt, boolean isMuted, boolean isRoutable) {
+        return new FriendRecognition(user, friendAlias, interestScore, lastInteractedAt, isMuted, isRoutable);
     }
 
     public static double normalize(Double raw) {
