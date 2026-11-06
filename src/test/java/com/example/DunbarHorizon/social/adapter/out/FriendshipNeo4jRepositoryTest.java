@@ -1,16 +1,18 @@
 package com.example.DunbarHorizon.social.adapter.out;
 
-import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.FriendshipNeo4jRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.FriendshipRepositoryAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.SocialUserNeo4jRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
+import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.support.Neo4jRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -30,10 +31,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 @Neo4jRepositoryTest
+@Import(FriendshipRepositoryAdapter.class)
 class FriendshipNeo4jRepositoryTest {
 
     @Autowired
-    private FriendshipNeo4jRepository friendshipRepository;
+    private FriendshipRepositoryAdapter friendshipRepository;
 
     @Autowired
     private SocialUserNeo4jRepository socialUserNeo4jRepository;
@@ -57,7 +59,7 @@ class FriendshipNeo4jRepositoryTest {
     @DisplayName("복합 ID를 사용하여 친구 관계를 저장하고 조회한다")
     void saveAndFindById_Success() {
         Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
-        friendshipRepository.save(friendship);
+        friendshipRepository.create(friendship);
 
         // when
         Optional<Friendship> found = friendshipRepository.findById("1_2");
@@ -68,36 +70,58 @@ class FriendshipNeo4jRepositoryTest {
     }
 
     @Test
-    @DisplayName("기존 Friendship을 수정 후 다시 저장해도 두 HAS_FRIENDSHIP 관계를 유지한다")
-    void saveExistingFriendshipAfterRelationshipUpdate_preservesRelationships() {
+    @DisplayName("사용자별 필드를 수정해도 FRIENDS_WITH 관계가 하나로 유지되고 상대 쪽 값은 바뀌지 않는다")
+    void updateUserFields_lowSide_preservesSingleRelationship() {
         // given
-        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
+        friendshipRepository.create(FriendTestFactory.createFriendship(userA, userB));
         Friendship existing = friendshipRepository.findById("1_2").orElseThrow();
         existing.updateUserFields(userA.getId(), "수정 별명", true, false);
 
         // when
-        friendshipRepository.save(existing);
+        friendshipRepository.updateUserFields(existing, userA.getId());
 
         // then
         Friendship reloaded = friendshipRepository.findById("1_2").orElseThrow();
-        Long relationshipCount = neo4jClient.query(
-                "MATCH (:UserReference)-[:HAS_FRIENDSHIP]->(f:Friendship {id: $friendshipId}) RETURN count(*)"
-        ).bind("1_2").to("friendshipId")
+        Long relationshipCount = neo4jClient.query("MATCH ()-[r:FRIENDS_WITH]->() RETURN count(r)")
                 .fetchAs(Long.class)
                 .one()
                 .orElseThrow();
 
-        assertThat(relationshipCount).isEqualTo(2L);
+        assertThat(relationshipCount).isEqualTo(1L);
         assertThat(reloaded.getFriendAlias(userA.getId())).isEqualTo("수정 별명");
         assertThat(reloaded.isMuted(userA.getId())).isTrue();
         assertThat(reloaded.isRoutable(userA.getId())).isFalse();
+        assertThat(reloaded.getFriendAlias(userB.getId())).isEmpty();
+        assertThat(reloaded.isMuted(userB.getId())).isFalse();
+        assertThat(reloaded.isRoutable(userB.getId())).isTrue();
+    }
+
+    @Test
+    @DisplayName("높은 id 사용자의 필드 수정은 그 사용자 쪽 값만 바꾼다")
+    void updateUserFields_highSide_updatesOnlyHighSide() {
+        // given
+        friendshipRepository.create(FriendTestFactory.createFriendship(userA, userB));
+        Friendship existing = friendshipRepository.findById("1_2").orElseThrow();
+        existing.updateUserFields(userB.getId(), "B의 별명", true, false);
+
+        // when
+        friendshipRepository.updateUserFields(existing, userB.getId());
+
+        // then
+        Friendship reloaded = friendshipRepository.findById("1_2").orElseThrow();
+        assertThat(reloaded.getFriendAlias(userB.getId())).isEqualTo("B의 별명");
+        assertThat(reloaded.isMuted(userB.getId())).isTrue();
+        assertThat(reloaded.isRoutable(userB.getId())).isFalse();
+        assertThat(reloaded.getFriendAlias(userA.getId())).isEmpty();
+        assertThat(reloaded.isMuted(userA.getId())).isFalse();
+        assertThat(reloaded.isRoutable(userA.getId())).isTrue();
     }
 
     @Test
     @DisplayName("existsFriendshipBetween은 방향에 관계없이 친구 여부를 확인한다")
     void existsFriendshipBetween_Success() {
         // given
-        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
+        friendshipRepository.create(FriendTestFactory.createFriendship(userA, userB));
 
         // when & then
         assertThat(friendshipRepository.existsFriendshipBetween(1L, 2L)).isTrue();
@@ -109,7 +133,7 @@ class FriendshipNeo4jRepositoryTest {
     @DisplayName("특정 ID 목록 중 친구인 ID들만 필터링하여 반환한다")
     void filterFriendIdsAmong_Success() {
         // given
-        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
+        friendshipRepository.create(FriendTestFactory.createFriendship(userA, userB));
 
         // when
         Set<Long> friendIds = friendshipRepository.filterFriendIdsAmong(1L, Set.of(2L, 3L));
@@ -124,8 +148,8 @@ class FriendshipNeo4jRepositoryTest {
     void findFriendIdsByMuteStatus_Success() {
         // given
         Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
-        friendship.updateMuteStatus(userA.getId(), true);
-        friendshipRepository.save(friendship);
+        friendship.updateUserFields(userA.getId(), null, true, null);
+        friendshipRepository.create(friendship);
 
         // when
         Set<Long> mutedIds = friendshipRepository.findFriendIdsByMuteStatus(userA.getId(), true);
@@ -143,7 +167,7 @@ class FriendshipNeo4jRepositoryTest {
         Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
         friendship.adjustInterestScore(userA.getId(), 100.0);
         friendship.adjustInterestScore(userB.getId(), 100.0);
-        friendshipRepository.save(friendship);
+        friendshipRepository.create(friendship);
 
         double rate = 0.5;
         double threshold = 1.0;
@@ -165,15 +189,13 @@ class FriendshipNeo4jRepositoryTest {
     void applyDecay_asymmetric_doesNotZeroIntimacy() {
         // given
         Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
-        friendshipRepository.save(friendship);
+        friendshipRepository.create(friendship);
 
-        // userA의 엣지만 60일 전으로 설정 → decayTime(30일 전) 조건 충족
-        // userB의 엣지는 생성 직후 → decayTime 조건 미충족 (최신)
+        // userA 쪽만 60일 전으로 설정 → decayTime(30일 전) 조건 충족
+        // userB 쪽은 생성 직후 → decayTime 조건 미충족 (최신)
         neo4jClient.query(
-                "MATCH (:UserReference {id: $userId})-[r:HAS_FRIENDSHIP]->(f:Friendship {id: $fid}) " +
-                "SET r.lastInteractedAt = $past"
-        ).bind(userA.getId()).to("userId")
-         .bind("1_2").to("fid")
+                "MATCH ()-[r:FRIENDS_WITH {id: $fid}]->() SET r.lowLastInteractedAt = $past"
+        ).bind("1_2").to("fid")
          .bind(LocalDateTime.now().minusDays(60)).to("past")
          .run();
 
@@ -191,7 +213,7 @@ class FriendshipNeo4jRepositoryTest {
         // given
         Friendship actual = FriendTestFactory.createFriendship(userA, userB);
         Friendship expected = FriendTestFactory.createFriendship(userA, userB);
-        friendshipRepository.save(actual);
+        friendshipRepository.create(actual);
         expected.adjustInterestScore(userA.getId(), 10.0);
 
         // when
@@ -207,12 +229,44 @@ class FriendshipNeo4jRepositoryTest {
     }
 
     @Test
+    @DisplayName("단방향 관심도 갱신은 행위자 쪽 마지막 교류 시각만 바꾼다")
+    void incrementInterestScore_updatesOnlyActorLastInteractedAt() {
+        // given
+        Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.create(friendship);
+        LocalDateTime past = ageLastInteractions(friendship.getId());
+
+        // when
+        friendshipRepository.incrementInterestScore(friendship.getId(), userB.getId(), userA.getId(), 1.0);
+
+        // then
+        assertThat(lastInteractedAtOf(friendship.getId(), userA.getId())).isEqualTo(past);
+        assertThat(lastInteractedAtOf(friendship.getId(), userB.getId())).isAfter(past);
+    }
+
+    @Test
+    @DisplayName("상호 관심도 갱신은 양쪽 마지막 교류 시각을 모두 바꾼다")
+    void incrementMutualInterestScore_updatesBothLastInteractedAt() {
+        // given
+        Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.create(friendship);
+        LocalDateTime past = ageLastInteractions(friendship.getId());
+
+        // when
+        friendshipRepository.incrementMutualInterestScore(friendship.getId(), userA.getId(), userB.getId(), 1.0);
+
+        // then
+        assertThat(lastInteractedAtOf(friendship.getId(), userA.getId())).isAfter(past);
+        assertThat(lastInteractedAtOf(friendship.getId(), userB.getId())).isAfter(past);
+    }
+
+    @Test
     @DisplayName("상호 관심도 Cypher 갱신은 aggregate 정책과 동일하게 양쪽 score와 intimacy를 갱신한다")
     void incrementMutualInterestScore_matchesAggregatePolicy() {
         // given
         Friendship actual = FriendTestFactory.createFriendship(userA, userB);
         Friendship expected = FriendTestFactory.createFriendship(userA, userB);
-        friendshipRepository.save(actual);
+        friendshipRepository.create(actual);
         expected.adjustMutualInterestScore(10.0);
 
         // when
@@ -233,13 +287,13 @@ class FriendshipNeo4jRepositoryTest {
         // given
         Friendship friendshipAB = FriendTestFactory.createFriendship(userA, userB);
         Friendship friendshipAC = FriendTestFactory.createFriendship(userA, userC);
-        friendshipRepository.save(friendshipAB);
-        friendshipRepository.save(friendshipAC);
+        friendshipRepository.create(friendshipAB);
+        friendshipRepository.create(friendshipAC);
 
         // when
         friendshipRepository.incrementMutualInterestScoresBatch(List.of(
-                Map.of("friendshipId", friendshipAC.getId(), "userAId", userA.getId(), "userBId", userC.getId(), "delta", 10.0),
-                Map.of("friendshipId", friendshipAB.getId(), "userAId", userA.getId(), "userBId", userB.getId(), "delta", 20.0)
+                new MutualInterestScoreUpdate(friendshipAC.getId(), userA.getId(), userC.getId(), 10.0),
+                new MutualInterestScoreUpdate(friendshipAB.getId(), userA.getId(), userB.getId(), 20.0)
         ));
 
         // then
@@ -273,7 +327,7 @@ class FriendshipNeo4jRepositoryTest {
         Friendship expected = FriendTestFactory.createFriendship(userA, userB);
         actual.adjustInterestScore(userB.getId(), ASYMMETRIC_BOOST);
         expected.adjustInterestScore(userB.getId(), ASYMMETRIC_BOOST);
-        friendshipRepository.save(actual);
+        friendshipRepository.create(actual);
         expected.adjustInterestScore(userA.getId(), OVERSHOOTING_REVOKE);
 
         // when
@@ -297,7 +351,7 @@ class FriendshipNeo4jRepositoryTest {
         Friendship expected = FriendTestFactory.createFriendship(userA, userB);
         actual.adjustInterestScore(userB.getId(), ASYMMETRIC_BOOST);
         expected.adjustInterestScore(userB.getId(), ASYMMETRIC_BOOST);
-        friendshipRepository.save(actual);
+        friendshipRepository.create(actual);
         expected.adjustMutualInterestScore(OVERSHOOTING_REVOKE);
 
         // when
@@ -320,13 +374,13 @@ class FriendshipNeo4jRepositoryTest {
         Friendship friendshipAB = FriendTestFactory.createFriendship(userA, userB);
         Friendship friendshipAC = FriendTestFactory.createFriendship(userA, userC);
         friendshipAB.adjustInterestScore(userB.getId(), ASYMMETRIC_BOOST);
-        friendshipRepository.save(friendshipAB);
-        friendshipRepository.save(friendshipAC);
+        friendshipRepository.create(friendshipAB);
+        friendshipRepository.create(friendshipAC);
 
         // when
         friendshipRepository.incrementMutualInterestScoresBatch(List.of(
-                Map.of("friendshipId", friendshipAB.getId(), "userAId", userA.getId(), "userBId", userB.getId(), "delta", OVERSHOOTING_REVOKE),
-                Map.of("friendshipId", friendshipAC.getId(), "userAId", userA.getId(), "userBId", userC.getId(), "delta", 10.0)
+                new MutualInterestScoreUpdate(friendshipAB.getId(), userA.getId(), userB.getId(), OVERSHOOTING_REVOKE),
+                new MutualInterestScoreUpdate(friendshipAC.getId(), userA.getId(), userC.getId(), 10.0)
         ));
 
         // then
@@ -350,7 +404,7 @@ class FriendshipNeo4jRepositoryTest {
         // given
         Friendship actual = FriendTestFactory.createFriendship(userA, userB);
         Friendship expected = FriendTestFactory.createFriendship(userA, userB);
-        friendshipRepository.save(actual);
+        friendshipRepository.create(actual);
         expected.adjustMutualInterestScore(-15.0);
 
         // when
@@ -370,7 +424,8 @@ class FriendshipNeo4jRepositoryTest {
     @DisplayName("동일 Friendship의 병렬 갱신은 이벤트 수만큼 누적되고 최종 intimacy를 재계산한다")
     void incrementInterestScore_concurrently_accumulatesEveryEvent() throws Exception {
         // given
-        Friendship friendship = friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
+        Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.create(friendship);
         int eventCount = 16;
         ExecutorService executor = Executors.newFixedThreadPool(eventCount);
         CountDownLatch ready = new CountDownLatch(eventCount);
@@ -416,11 +471,11 @@ class FriendshipNeo4jRepositoryTest {
     void deleteById_Success() {
         // given
         Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
-        friendshipRepository.save(friendship);
+        friendshipRepository.create(friendship);
         assertThat(friendshipRepository.findById("1_2")).isPresent();
 
         // when
-        friendshipRepository.deleteById("1_2");
+        friendshipRepository.delete("1_2");
 
         // then
         assertThat(friendshipRepository.findById("1_2")).isEmpty();
@@ -430,11 +485,11 @@ class FriendshipNeo4jRepositoryTest {
     @DisplayName("친구 관계 삭제 후 existsFriendshipBetween은 false를 반환한다")
     void deleteById_ExistenceCheck() {
         // given
-        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
+        friendshipRepository.create(FriendTestFactory.createFriendship(userA, userB));
         assertThat(friendshipRepository.existsFriendshipBetween(1L, 2L)).isTrue();
 
         // when
-        friendshipRepository.deleteById("1_2");
+        friendshipRepository.delete("1_2");
 
         // then
         assertThat(friendshipRepository.existsFriendshipBetween(1L, 2L)).isFalse();
@@ -444,8 +499,8 @@ class FriendshipNeo4jRepositoryTest {
     @DisplayName("특정 사용자의 모든 Friendship 엔티티를 통째로 조회한다")
     void findByUserId_Success() {
         // given
-        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
-        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userC));
+        friendshipRepository.create(FriendTestFactory.createFriendship(userA, userB));
+        friendshipRepository.create(FriendTestFactory.createFriendship(userA, userC));
 
         // when
         List<Friendship> friendships = friendshipRepository.findByUserId(userA.getId());
@@ -458,10 +513,10 @@ class FriendshipNeo4jRepositoryTest {
     @DisplayName("findByUserId — 비활성 친구가 있는 friendship은 결과에서 제외된다")
     void findByUserId_excludesInactiveFriend() {
         // given
-        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
+        friendshipRepository.create(FriendTestFactory.createFriendship(userA, userB));
+        friendshipRepository.create(FriendTestFactory.createFriendship(userA, userC));
         userC.switchUserStatus(false);
         socialUserNeo4jRepository.save(userC);
-        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userC));
 
         // when
         List<Friendship> friendships = friendshipRepository.findByUserId(userA.getId());
@@ -475,10 +530,10 @@ class FriendshipNeo4jRepositoryTest {
     @DisplayName("filterFriendIdsAmong — 비활성 친구는 친구로 인식되지 않는다")
     void filterFriendIdsAmong_excludesInactiveFriend() {
         // given
-        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userB));
+        friendshipRepository.create(FriendTestFactory.createFriendship(userA, userB));
+        friendshipRepository.create(FriendTestFactory.createFriendship(userA, userC));
         userC.switchUserStatus(false);
         socialUserNeo4jRepository.save(userC);
-        friendshipRepository.save(FriendTestFactory.createFriendship(userA, userC));
 
         // when
         Set<Long> friendIds = friendshipRepository.filterFriendIdsAmong(userA.getId(), Set.of(userB.getId(), userC.getId()));
@@ -492,14 +547,14 @@ class FriendshipNeo4jRepositoryTest {
     void findFriendIdsByMuteStatus_excludesInactiveFriend() {
         // given — userB(활성) 묵음, userC(비활성) 묵음
         Friendship friendshipAB = FriendTestFactory.createFriendship(userA, userB);
-        friendshipAB.updateMuteStatus(userA.getId(), true);
-        friendshipRepository.save(friendshipAB);
+        friendshipAB.updateUserFields(userA.getId(), null, true, null);
+        friendshipRepository.create(friendshipAB);
 
+        Friendship friendshipAC = FriendTestFactory.createFriendship(userA, userC);
+        friendshipAC.updateUserFields(userA.getId(), null, true, null);
+        friendshipRepository.create(friendshipAC);
         userC.switchUserStatus(false);
         socialUserNeo4jRepository.save(userC);
-        Friendship friendshipAC = FriendTestFactory.createFriendship(userA, userC);
-        friendshipAC.updateMuteStatus(userA.getId(), true);
-        friendshipRepository.save(friendshipAC);
 
         // when
         Set<Long> mutedIds = friendshipRepository.findFriendIdsByMuteStatus(userA.getId(), true);
@@ -509,26 +564,178 @@ class FriendshipNeo4jRepositoryTest {
     }
 
     @Test
-    @DisplayName("updateUserRelationshipFields — 비활성 유저 본인의 관계 필드는 수정되지 않는다")
-    void updateUserRelationshipFields_doesNotUpdateInactiveUser() {
+    @DisplayName("updateUserFields — 비활성 유저 본인의 관계 필드는 수정되지 않는다")
+    void updateUserFields_doesNotUpdateInactiveUser() {
         // given
         Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
-        friendshipRepository.save(friendship);
+        friendshipRepository.create(friendship);
+        friendship.updateUserFields(userA.getId(), "별명", false, false);
 
         userA.switchUserStatus(false);
         socialUserNeo4jRepository.save(userA);
 
         // when — 비활성 userA의 필드 수정 시도
-        friendshipRepository.updateUserRelationshipFields(friendship.getId(), userA.getId(), "별명", false, false);
+        friendshipRepository.updateUserFields(friendship, userA.getId());
 
         // then — UserReference 레이블이 없는 비활성 유저는 쿼리 MATCH에서 제외되어 SET이 무시됨
-        // findById도 동일한 레이블 제약으로 실패하므로 Neo4jClient로 직접 검증
         Optional<String> alias = neo4jClient.query(
-                "MATCH (:SocialUser {id: $userId})-[r:HAS_FRIENDSHIP]->(f:Friendship {id: $fid}) RETURN r.friendAlias"
-        ).bind(userA.getId()).to("userId")
-         .bind(friendship.getId()).to("fid")
+                "MATCH ()-[r:FRIENDS_WITH {id: $fid}]->() RETURN r.lowFriendAlias"
+        ).bind(friendship.getId()).to("fid")
          .fetchAs(String.class)
          .one();
         assertThat(alias).isEmpty();
+    }
+
+    @Test
+    @DisplayName("친구가 비활성이면 findById는 비어 있고 친구 관계 존재 여부는 유지된다")
+    void findById_inactiveFriend_emptyButExists() {
+        // given
+        friendshipRepository.create(FriendTestFactory.createFriendship(userA, userB));
+        userB.switchUserStatus(false);
+        socialUserNeo4jRepository.save(userB);
+
+        // when & then
+        assertThat(friendshipRepository.findById("1_2")).isEmpty();
+        assertThat(friendshipRepository.existsFriendshipBetween(1L, 2L)).isTrue();
+    }
+
+    @Test
+    @DisplayName("친구가 비활성이어도 친구 관계를 삭제할 수 있다")
+    void delete_inactiveFriend_Success() {
+        // given
+        friendshipRepository.create(FriendTestFactory.createFriendship(userA, userB));
+        userB.switchUserStatus(false);
+        socialUserNeo4jRepository.save(userB);
+
+        // when
+        friendshipRepository.delete("1_2");
+
+        // then
+        assertThat(friendshipRepository.existsFriendshipBetween(1L, 2L)).isFalse();
+    }
+
+    @Test
+    @DisplayName("비활성화했다가 재활성화하면 사용자별 필드가 그대로 복구된다")
+    void reactivation_restoresFriendship() {
+        // given
+        Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
+        friendship.updateUserFields(userA.getId(), "별명", true, false);
+        friendshipRepository.create(friendship);
+        userB.switchUserStatus(false);
+        socialUserNeo4jRepository.save(userB);
+
+        // when
+        userB.switchUserStatus(true);
+        socialUserNeo4jRepository.save(userB);
+
+        // then
+        Friendship restored = friendshipRepository.findById("1_2").orElseThrow();
+        assertThat(restored.getFriendAlias(userA.getId())).isEqualTo("별명");
+        assertThat(restored.isMuted(userA.getId())).isTrue();
+        assertThat(restored.isRoutable(userA.getId())).isFalse();
+    }
+
+    @Test
+    @DisplayName("친구가 비활성이면 감쇄가 그 친구 관계를 건드리지 않는다")
+    void applyDecay_inactiveFriend_leavesFriendshipUntouched() {
+        // given
+        Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.create(friendship);
+        userB.switchUserStatus(false);
+        socialUserNeo4jRepository.save(userB);
+
+        // when
+        friendshipRepository.applyDecay(0.5, 1.0, LocalDateTime.now().plusSeconds(1));
+
+        // then
+        userB.switchUserStatus(true);
+        socialUserNeo4jRepository.save(userB);
+        Friendship restored = friendshipRepository.findById("1_2").orElseThrow();
+        assertThat(restored.getIntimacy()).isCloseTo(friendship.getIntimacy(), within(0.0001));
+        assertThat(restored.getMyInterestScore(userA.getId()))
+                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE, within(0.0001));
+    }
+
+    @Test
+    @DisplayName("높은 id 사용자의 단방향 관심도 갱신은 그 사용자 쪽 점수만 바꾼다")
+    void incrementInterestScore_highSide_updatesOnlyHighSide() {
+        // given
+        Friendship actual = FriendTestFactory.createFriendship(userA, userB);
+        Friendship expected = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.create(actual);
+        expected.adjustInterestScore(userB.getId(), 10.0);
+
+        // when
+        friendshipRepository.incrementInterestScore(actual.getId(), userB.getId(), userA.getId(), 10.0);
+
+        // then
+        Friendship updated = friendshipRepository.findById(actual.getId()).orElseThrow();
+        assertThat(updated.getMyInterestScore(userB.getId()))
+                .isCloseTo(expected.getMyInterestScore(userB.getId()), within(0.0001));
+        assertThat(updated.getMyInterestScore(userA.getId()))
+                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE, within(0.0001));
+        assertThat(updated.getIntimacy()).isCloseTo(expected.getIntimacy(), within(0.0001));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("같은 친구 쌍을 양쪽에서 동시에 갱신해도 점수가 유실되지 않는다")
+    void incrementInterestScore_concurrentlyFromBothSides_accumulatesEveryEvent() throws Exception {
+        // given
+        Friendship friendship = FriendTestFactory.createFriendship(userA, userB);
+        friendshipRepository.create(friendship);
+        int eventsPerSide = 8;
+        ExecutorService executor = Executors.newFixedThreadPool(eventsPerSide * 2);
+        CountDownLatch ready = new CountDownLatch(eventsPerSide * 2);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<?>> futures = new ArrayList<>();
+
+        try {
+            for (int i = 0; i < eventsPerSide * 2; i++) {
+                Long actorId = i % 2 == 0 ? userA.getId() : userB.getId();
+                Long friendId = i % 2 == 0 ? userB.getId() : userA.getId();
+                futures.add(executor.submit(() -> {
+                    ready.countDown();
+                    start.await();
+                    friendshipRepository.incrementInterestScore(friendship.getId(), actorId, friendId, 1.0);
+                    return null;
+                }));
+            }
+            ready.await();
+
+            // when
+            start.countDown();
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+
+        // then
+        Friendship updated = friendshipRepository.findById(friendship.getId()).orElseThrow();
+        double expectedScore = FriendRecognition.INITIAL_RAW_SCORE + eventsPerSide;
+        assertThat(updated.getMyInterestScore(userA.getId())).isCloseTo(expectedScore, within(0.0001));
+        assertThat(updated.getMyInterestScore(userB.getId())).isCloseTo(expectedScore, within(0.0001));
+        assertThat(updated.getIntimacy()).isCloseTo(FriendRecognition.normalize(expectedScore), within(0.0001));
+    }
+
+    private LocalDateTime ageLastInteractions(String friendshipId) {
+        LocalDateTime past = LocalDateTime.now().minusDays(60);
+        neo4jClient.query(
+                "MATCH ()-[r:FRIENDS_WITH {id: $fid}]->() " +
+                "SET r.lowLastInteractedAt = $past, r.highLastInteractedAt = $past"
+        ).bind(friendshipId).to("fid")
+         .bind(past).to("past")
+         .run();
+        return past;
+    }
+
+    private LocalDateTime lastInteractedAtOf(String friendshipId, Long userId) {
+        return friendshipRepository.findById(friendshipId).orElseThrow().getRecognitions().stream()
+                .filter(recognition -> recognition.getUser().getId().equals(userId))
+                .findFirst()
+                .orElseThrow()
+                .getLastInteractedAt();
     }
 }

@@ -49,20 +49,20 @@ class SocialExpansionRepositoryAdapterTest {
             
             CREATE (label1:Label {name: '공통관심사'})
             
-            // 1. 1촌 관계 형성: (User)-[:HAS_FRIENDSHIP]->(Friendship)<-[:HAS_FRIENDSHIP]-(User)
-            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.9})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(anchor)
-            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.8})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(fa)
-            CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.7})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(t1)
+            // 1. 1촌 관계 형성
+            CREATE (me)-[:FRIENDS_WITH {intimacy: 0.9, lowIsRoutable: true, highIsRoutable: true}]->(anchor)
+            CREATE (me)-[:FRIENDS_WITH {intimacy: 0.8, lowIsRoutable: true, highIsRoutable: true}]->(fa)
+            CREATE (me)-[:FRIENDS_WITH {intimacy: 0.7, lowIsRoutable: true, highIsRoutable: true}]->(t1)
             
             // 2. 앵커(Anchor)의 2-Hop 타겟 관계 설정 
-            CREATE (anchor)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.9})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(t1)
-            CREATE (anchor)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.8})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(t2)
-            CREATE (anchor)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.7})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(t3)
-            // 타겟4에서 출발하는 엣지에 isRoutable: false 설정
-            CREATE (anchor)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.6})<-[:HAS_FRIENDSHIP {isRoutable: false}]-(t4)
+            CREATE (anchor)-[:FRIENDS_WITH {intimacy: 0.9, lowIsRoutable: true, highIsRoutable: true}]->(t1)
+            CREATE (anchor)-[:FRIENDS_WITH {intimacy: 0.8, lowIsRoutable: true, highIsRoutable: true}]->(t2)
+            CREATE (anchor)-[:FRIENDS_WITH {intimacy: 0.7, lowIsRoutable: true, highIsRoutable: true}]->(t3)
+            // 타겟4 쪽 isRoutable: false
+            CREATE (anchor)-[:FRIENDS_WITH {intimacy: 0.6, lowIsRoutable: true, highIsRoutable: false}]->(t4)
             
             // 3. 공통 친구 형성 (타겟2와 내친구A가 서로 친구) -> 이로써 타겟2는 공통친구 1명 확보
-            CREATE (t2)-[:HAS_FRIENDSHIP {isRoutable: true}]->(:Friendship {intimacy: 0.5})<-[:HAS_FRIENDSHIP {isRoutable: true}]-(fa)
+            CREATE (fa)-[:FRIENDS_WITH {intimacy: 0.5, lowIsRoutable: true, highIsRoutable: true}]->(t2)
             
             // 4. 공유 라벨 형성
             // 쿼리 패턴: ownsLabel(anchor, label).relationshipTo(target, ATTACHED_TO)
@@ -111,6 +111,27 @@ class SocialExpansionRepositoryAdapterTest {
         // threshold가 3점일 때 (아무도 통과 못함)
         List<AnchorExpansionResult> result3 = expansionRepository.getRecommendedNetworkByAnchor(1L, 10L, 3, 10);
         assertThat(result3).isEmpty();
+    }
+
+    @Test
+    @DisplayName("타겟이 앵커보다 낮은 id여도 타겟 쪽 isRoutable로 거른다")
+    void executeAnchorExpansionQuery_LowIdTargetPrivacy() {
+        // given
+        neo4jClient.query("""
+            MATCH (anchor:UserReference {id: 10})
+            CREATE (open:UserReference {id: 5, nickname: '낮은공개타겟'})
+            CREATE (closed:UserReference {id: 6, nickname: '낮은차단타겟'})
+            CREATE (open)-[:FRIENDS_WITH {intimacy: 0.9, lowIsRoutable: true, highIsRoutable: false}]->(anchor)
+            CREATE (closed)-[:FRIENDS_WITH {intimacy: 0.9, lowIsRoutable: false, highIsRoutable: true}]->(anchor)
+        """).run();
+
+        // when
+        List<AnchorExpansionResult> result = expansionRepository.getRecommendedNetworkByAnchor(1L, 10L, 0, 10);
+
+        // then
+        assertThat(result).extracting(AnchorExpansionResult::id)
+                .contains(5L)
+                .doesNotContain(6L);
     }
 
     @Test

@@ -42,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 /**
- * 점수 쓰기 네 커맨드가 같은 락 순서 규약(Friendship 노드 선점 + friendshipId 오름차순)을 쓰므로
+ * 점수 쓰기 네 커맨드가 같은 락 순서 규약(FRIENDS_WITH 관계 선점 + friendshipId 오름차순)을 쓰므로
  * 동시에 돌려도 교착이 성립하지 않는다는 것을 반증하려는 테스트다.
  * <p>
  * 교착은 타이밍에 의존하므로 통과가 부재의 증명은 아니다. 그래서 먼저 규약을 어긴 쿼리로
@@ -85,13 +85,13 @@ class FriendshipScoreConcurrentWriteTest {
      * 전역 순서가 없으므로 반대 순서로 들어온 둘 사이에 보유-대기 사이클이 성립한다.
      */
     private static final String LOCK_TWO_FRIENDSHIPS_IN_GIVEN_ORDER =
-            "MATCH (first:Friendship {id: $firstId}) " +
+            "MATCH ()-[first:FRIENDS_WITH {id: $firstId}]->() " +
             "SET first._interactionScoreLock = true " +
             "REMOVE first._interactionScoreLock " +
             "WITH first " +
             "CALL apoc.util.sleep($holdMillis) " +
             "WITH first " +
-            "MATCH (second:Friendship {id: $secondId}) " +
+            "MATCH ()-[second:FRIENDS_WITH {id: $secondId}]->() " +
             "SET second._interactionScoreLock = true " +
             "REMOVE second._interactionScoreLock";
 
@@ -313,8 +313,9 @@ class FriendshipScoreConcurrentWriteTest {
      */
     private void ageAllInteractions(int days) {
         neo4jClient.query(
-                        "MATCH (:UserReference)-[r:HAS_FRIENDSHIP]->(:Friendship) " +
-                        "SET r.lastInteractedAt = localdatetime() - duration({days: $days})")
+                        "MATCH ()-[r:FRIENDS_WITH]->() " +
+                        "SET r.lowLastInteractedAt = localdatetime() - duration({days: $days}), " +
+                        "r.highLastInteractedAt = localdatetime() - duration({days: $days})")
                 .bind(days).to("days")
                 .run();
     }
@@ -380,8 +381,9 @@ class FriendshipScoreConcurrentWriteTest {
 
     private List<Double> interestScoresOf(String friendshipId) {
         return neo4jClient.query(
-                        "MATCH (:UserReference)-[r:HAS_FRIENDSHIP]->(:Friendship {id: $friendshipId}) " +
-                        "RETURN r.interestScore AS score")
+                        "MATCH ()-[r:FRIENDS_WITH {id: $friendshipId}]->() " +
+                        "UNWIND [r.lowInterestScore, r.highInterestScore] AS score " +
+                        "RETURN score")
                 .bind(friendshipId).to("friendshipId")
                 .fetchAs(Double.class)
                 .mappedBy((typeSystem, record) -> record.get("score").asDouble())
@@ -392,8 +394,8 @@ class FriendshipScoreConcurrentWriteTest {
 
     private double interestScoreOf(String friendshipId, Long userId) {
         return neo4jClient.query(
-                        "MATCH (:UserReference {id: $userId})-[r:HAS_FRIENDSHIP]->(:Friendship {id: $friendshipId}) " +
-                        "RETURN r.interestScore AS score")
+                        "MATCH (low)-[r:FRIENDS_WITH {id: $friendshipId}]->() " +
+                        "RETURN CASE WHEN low.id = $userId THEN r.lowInterestScore ELSE r.highInterestScore END AS score")
                 .bind(friendshipId).to("friendshipId")
                 .bind(userId).to("userId")
                 .fetchAs(Double.class)

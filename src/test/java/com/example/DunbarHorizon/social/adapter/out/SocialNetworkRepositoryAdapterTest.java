@@ -50,18 +50,18 @@ class SocialNetworkRepositoryAdapterTest {
                 CREATE (ff:UserReference {id: 60})
                 CREATE (tx:UserReference {id: 100})
 
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 21.4}]->(:Friendship {intimacy: 0.9})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fa)
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 150.0}]->(:Friendship {intimacy: 0.8})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fb)
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.7})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fc)
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.6})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fd)
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.5})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fe)
-                CREATE (me)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.1})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(ff)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.9, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 21.4, highInterestScore: 0.0}]->(fa)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.8, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 150.0, highInterestScore: 0.0}]->(fb)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.7, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(fc)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.6, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(fd)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.5, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(fe)
+                CREATE (me)-[:FRIENDS_WITH {intimacy: 0.1, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(ff)
 
-                CREATE (fa)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.85})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(fb)
-                CREATE (fa)-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]->(:Friendship {intimacy: 0.4})<-[:HAS_FRIENDSHIP {isRoutable: true, interestScore: 0.0}]-(ff)
+                CREATE (fa)-[:FRIENDS_WITH {intimacy: 0.85, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(fb)
+                CREATE (fa)-[:FRIENDS_WITH {intimacy: 0.4, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(ff)
 
-                CREATE (tx)-[:HAS_FRIENDSHIP {isRoutable: true,  interestScore: 0.0}]->(:Friendship {intimacy: 0.6})<-[:HAS_FRIENDSHIP {isRoutable: true,  interestScore: 0.0}]-(fb)
-                CREATE (tx)-[:HAS_FRIENDSHIP {isRoutable: false, interestScore: 0.0}]->(:Friendship {intimacy: 0.4})<-[:HAS_FRIENDSHIP {isRoutable: true,  interestScore: 0.0}]-(fc)
+                CREATE (fb)-[:FRIENDS_WITH {intimacy: 0.6, lowIsRoutable: true, highIsRoutable: true, lowInterestScore: 0.0, highInterestScore: 0.0}]->(tx)
+                CREATE (fc)-[:FRIENDS_WITH {intimacy: 0.4, lowIsRoutable: true, highIsRoutable: false, lowInterestScore: 0.0, highInterestScore: 0.0}]->(tx)
 
                 CREATE (lbl:Label {id: 'test-label-id'})
                 CREATE (me)-[:OWNS_LABEL]->(lbl)
@@ -104,6 +104,23 @@ class SocialNetworkRepositoryAdapterTest {
 
         long totalEdges = result.stream().mapToLong(n -> n.edges().size()).sum();
         assertThat(totalEdges).isEqualTo(2); // A→B, B→A
+    }
+
+    @Test
+    @DisplayName("조회자가 관계의 높은 id 쪽이면 그 쪽 관심도로 노드 값을 낸다")
+    void getDefaultNetworkGraph_높은_id_조회자의_관심도를_쓴다() {
+        // given
+        neo4jClient.query("""
+                MATCH (:UserReference {id: 1})-[r:FRIENDS_WITH]->(:UserReference {id: 10})
+                SET r.lowInterestScore = 0.0, r.highInterestScore = 150.0
+                """).run();
+
+        // when
+        List<NodeGraphResult> result = repository.getDefaultNetworkGraph(10L, DunbarCircle.DUNBAR, 5, 10);
+
+        // then
+        NodeGraphResult nodeMe = result.stream().filter(n -> n.nodeId().equals(1L)).findFirst().orElseThrow();
+        assertThat(nodeMe.interestScore()).isEqualTo(0.75);
     }
 
     @Test
@@ -226,7 +243,7 @@ class SocialNetworkRepositoryAdapterTest {
     }
 
     @Test
-    @DisplayName("2-Hop 접점 조회 시 실제 내 친구가 아닌 ID는 HAS_FRIENDSHIP 검증에서 제외된다")
+    @DisplayName("2-Hop 접점 조회 시 실제 내 친구가 아닌 ID는 친구 관계 검증에서 제외된다")
     void getTwoHopContactEdgesForTarget_비친구_ID는_보안_검증에서_제외된다() {
         // 999, 998은 me의 친구가 아님
         List<MutualFriendEdgeResult> result =
@@ -262,7 +279,7 @@ class SocialNetworkRepositoryAdapterTest {
     }
 
     @Test
-    @DisplayName("1-Hop 엣지 조회 시 실제 내 친구가 아닌 ID는 HAS_FRIENDSHIP 검증에서 제외된다")
+    @DisplayName("1-Hop 엣지 조회 시 실제 내 친구가 아닌 ID는 친구 관계 검증에서 제외된다")
     void getDirectFriendEdgesForTarget_비친구_ID는_보안_검증에서_제외된다() {
         List<MutualFriendEdgeResult> result =
                 repository.getDirectFriendEdgesForTarget(1L, 100L, List.of(999L, 998L), 10);

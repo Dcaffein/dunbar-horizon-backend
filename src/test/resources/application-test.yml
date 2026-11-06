@@ -25,6 +25,11 @@ spring:
         host: localhost
         port: 3025
 
+org:
+    neo4j:
+        migrations:
+            enabled: false
+
 jwt:
     secret: thisIsAVeryLongAndSecureSecretKeyForJWTAuthUsingHS512Algorithm1234567890abcdefghijklmn
     access-expiration-seconds: 3600

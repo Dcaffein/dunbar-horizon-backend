@@ -63,7 +63,7 @@ spring:
       password: ${NEO4J_PASSWORD}
   data:
     neo4j:
-      database: ${NEO4J_USERNAME:neo4j}
+      database: ${NEO4J_USERNAME:dev}
     mongodb:
       uri: ${MONGO_URI:mongodb://localhost:27017/dunbar_horizon_notification}
       auto-index-creation: true
@@ -91,6 +91,11 @@ jwt:
   secret: ${JWT_SECRET_KEY}
   access-expiration-seconds: ${JWT_ACCESS_EXPIRATION}
   refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION:604800}
+
+org:
+  neo4j:
+    migrations:
+      database: ${spring.data.neo4j.database}
 
 logging:
   level:

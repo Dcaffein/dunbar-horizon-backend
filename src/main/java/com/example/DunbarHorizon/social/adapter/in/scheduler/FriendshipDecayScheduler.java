@@ -11,7 +11,7 @@ public class FriendshipDecayScheduler {
 
     private final FriendshipDecayService friendshipDecayService;
 
-    @Scheduled(cron = "0 0 3 * * *")
+    @Scheduled(cron = "${friendship.decay.cron:-}")
     public void runDecay() {
         friendshipDecayService.processDecay();
     }
