@@ -6,7 +6,6 @@ public final class SocialGraphSchema {
     public static final String PROP_PROFILE_IMAGE_URL = "profileImageUrl";
     public static final String PROP_CREATED_AT = "createdAt";
     public static final String PROP_INTIMACY = "intimacy";
-    public static final String PROP_EXPOSURE = "exposure";
 
     public static final String SIDE_LOW = "low";
     public static final String SIDE_HIGH = "high";
