@@ -53,9 +53,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Neo4j | `global/config/database/Neo4jConfig.java` | `social` |
 | MongoDB | `global/config/database/MongoConfig.java` | `notification.adapter.out.persistence.mongo`, `buzz.adapter.out.persistence.mongo` |
 
+Neo4j 스키마와 데이터 변경은 `src/main/resources/neo4j/migrations/`의 Cypher 파일이 앱 기동 때 실행된다(Neo4j-Migrations).
+
 로컬 기본값:
 - MySQL: `localhost:3306/dunbar_horizon`
-- Neo4j: `bolt://localhost:7687`, database: `neo4j`
+- Neo4j: `bolt://localhost:7687`, database: `dev` (Neo4j Desktop)
 - MongoDB: `localhost:27017/dunbar_horizon_notification`
 
 ## Authentication
@@ -89,13 +91,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **노드:**
 - `SocialUser` (label: `USER_REFERENCE`) — account 도메인에서 동기화된다
-- `Friendship` — 두 사용자를 잇는 중간 노드 (HEX 패턴)
-  - 속성: `intimacy`, `interestScore`, `isRoutable`, `createdAt`, `updatedAt`
 - `Label` — 사용자가 만든 친구 그룹
   - 속성: `name`, `exposure`
 
 **관계:**
-- `(user)-[:HAS_FRIENDSHIP]->(friendship)<-[:HAS_FRIENDSHIP]-(friend)`
+- `(low)-[:FRIENDS_WITH]->(high)` — 친구 쌍마다 하나. 낮은 id의 사용자가 시작 노드다
+  - 공통 속성: `id`, `createdAt`, `intimacy`
+  - 사용자별 속성: `low`, `high` 접두사 + `FriendAlias`, `InterestScore`, `LastInteractedAt`, `IsMuted`, `IsRoutable`
 - `(user)-[:OWNS_LABEL]->(label)`
 - `(user)-[:ATTACHED_TO]->(label)`
 
@@ -110,7 +112,7 @@ SUPPORT(5), SYMPATHY(15), KINSHIP(50), DUNBAR(150)
 - Stranger Quota: 노출되는 공통 친구는 최대 5명 (프라이버시)
 - `isRoutable = false` 친구는 다른 사람의 관계망 뷰에서 숨는다
 
-Neo4j 접근은 두 층이다. Cypher는 `neo4j/springData/`의 Spring Data 리포지터리에서 `@Query`로 쓰는 것이 기본이고, SDN이 매핑하지 못하는 경우에만 `neo4j/`의 어댑터가 `Neo4jClient`로 직접 실행한다. `SocialNetworkRepositoryAdapter`가 `apoc.path.expandConfig`를 쓰므로 Neo4j에 APOC 플러그인이 필요하다.
+Neo4j 접근은 두 층이다. Cypher는 `neo4j/springData/`의 Spring Data 리포지터리에서 `@Query`로 쓰는 것이 기본이고, SDN이 매핑하지 못하는 경우에만 `neo4j/`의 어댑터가 `Neo4jClient`로 직접 실행한다. `Friendship`은 관계라서 SDN 엔티티가 아니고, 어댑터가 관계와 양 끝 노드로 조립한다. `SocialNetworkRepositoryAdapter`가 `apoc.path.expandConfig`를 쓰므로 Neo4j에 APOC 플러그인이 필요하다.
 
 ### Buzz Recipients
 
