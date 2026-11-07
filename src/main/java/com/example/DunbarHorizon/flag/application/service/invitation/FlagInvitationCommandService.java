@@ -8,10 +8,12 @@ import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitation;
 import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationManager;
 import com.example.DunbarHorizon.flag.domain.invitation.event.FlagInvitationSentEvent;
+import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationDuplicateException;
 import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationNotFoundException;
 import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +38,7 @@ public class FlagInvitationCommandService implements FlagInvitationUseCase {
     @Override
     public Long invite(Long flagId, Long inviterId, Long inviteeId) {
         FlagInvitation invitation = invitationManager.invite(flagId, inviterId, inviteeId);
-        FlagInvitation saved = invitationRepository.save(invitation);
+        FlagInvitation saved = saveInvitation(invitation);
 
         // invitationManager가 이미 Flag 존재를 검증했다. 같은 트랜잭션이라 1차 캐시 히트다.
         String flagTitle = flagRepository.findById(flagId)
@@ -66,5 +68,13 @@ public class FlagInvitationCommandService implements FlagInvitationUseCase {
 
         invitation.delete(requesterId);
         invitationRepository.deleteById(invitationId);
+    }
+
+    private FlagInvitation saveInvitation(FlagInvitation invitation) {
+        try {
+            return invitationRepository.save(invitation);
+        } catch (DataIntegrityViolationException e) {
+            throw new FlagInvitationDuplicateException(invitation.getFlagId(), invitation.getInviteeId());
+        }
     }
 }
