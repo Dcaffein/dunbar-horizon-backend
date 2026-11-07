@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.application.eventListener;
 
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagExpiryExemptionUpdater;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagConcludedEvent;
@@ -36,7 +35,6 @@ class FlagDeletionEventListenerTest {
     private FlagDeletionEventListener listener;
 
     @Mock private FlagRepository flagRepository;
-    @Mock private FlagExpiryExemptionUpdater flagExpiryExemptionUpdater;
     @Mock private ApplicationEventPublisher eventPublisher;
 
     private static final Long FLAG_ID = 1L;
@@ -185,22 +183,5 @@ class FlagDeletionEventListenerTest {
 
         // then
         verify(eventPublisher, never()).publishEvent(any(NotificationEvent.class));
-    }
-
-    @Test
-    @DisplayName("parentId가 있으면 부모 Flag의 만료 면제 재계산을 시도한다")
-    void handleFlagDeletion_refreshesParentExemption() {
-        // given
-        Long parentId = 99L;
-        FlagDeletedEvent event = endedEventWithParent(parentId);
-
-        given(flagRepository.findByParentId(FLAG_ID)).willReturn(Optional.empty());
-        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(List.of());
-
-        // when
-        listener.handleFlagDeletion(event);
-
-        // then
-        verify(flagExpiryExemptionUpdater).refresh(parentId);
     }
 }
