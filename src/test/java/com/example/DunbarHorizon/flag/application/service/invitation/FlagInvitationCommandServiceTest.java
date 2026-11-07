@@ -8,6 +8,7 @@ import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitation;
 import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitationManager;
 import com.example.DunbarHorizon.flag.domain.invitation.event.FlagInvitationSentEvent;
+import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationDuplicateException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.mockito.Mockito.mock;
@@ -26,6 +28,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class FlagInvitationServiceTest {
@@ -72,6 +75,20 @@ class FlagInvitationServiceTest {
         FlagInvitationSentEvent publishedEvent = eventCaptor.getValue();
         assertThat(publishedEvent.invitationId()).isEqualTo(10L);
         assertThat(publishedEvent.inviteeId()).isEqualTo(INVITEE_ID);
+    }
+
+    @Test
+    @DisplayName("초대 저장이 유니크 제약에 걸리면 중복 초대 예외로 변환하고 이벤트를 발행하지 않는다")
+    void invite_Fail_ConstraintViolationBecomesDuplicate() {
+        // given
+        FlagInvitation invitation = FlagInvitation.create(FLAG_ID, INVITER_ID, INVITEE_ID);
+        given(invitationManager.invite(FLAG_ID, INVITER_ID, INVITEE_ID)).willReturn(invitation);
+        given(invitationRepository.save(invitation)).willThrow(new DataIntegrityViolationException("duplicate"));
+
+        // when & then
+        assertThatThrownBy(() -> flagInvitationService.invite(FLAG_ID, INVITER_ID, INVITEE_ID))
+                .isInstanceOf(FlagInvitationDuplicateException.class);
+        verifyNoInteractions(eventPublisher);
     }
 
     @Test

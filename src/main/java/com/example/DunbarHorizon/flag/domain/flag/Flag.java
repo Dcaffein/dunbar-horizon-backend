@@ -26,9 +26,7 @@ import java.util.UUID;
 
 @Entity
 @DynamicUpdate
-@Table(name = "flags", uniqueConstraints = {
-        @UniqueConstraint(name = "uq_flags_parent_id", columnNames = "parent_id")
-})
+@Table(name = "flags")
 @SQLRestriction("deleted_at IS NULL")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {

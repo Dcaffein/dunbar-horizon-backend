@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagParticipan
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagParticipantJpaRepository.FlagParticipantIdProjection;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
+import jakarta.persistence.PersistenceException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
 class FlagParticipantJpaRepositoryTest {
@@ -41,6 +43,17 @@ class FlagParticipantJpaRepositoryTest {
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("FlagParticipant 생성 실패", e);
         }
+    }
+
+    @Test
+    @DisplayName("같은 플래그에 같은 참여자를 두 번 저장하면 유니크 제약이 거부한다")
+    void persist_Fail_DuplicateParticipant() {
+        // given
+        persist(FLAG_ID, MEMBER_ID);
+
+        // when & then
+        assertThatThrownBy(() -> persist(FLAG_ID, MEMBER_ID))
+                .isInstanceOf(PersistenceException.class);
     }
 
     @Test
