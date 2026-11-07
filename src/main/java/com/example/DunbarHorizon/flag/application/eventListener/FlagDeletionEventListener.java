@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.application.eventListener;
 
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagExpiryExemptionUpdater;
 import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
@@ -24,7 +23,6 @@ import java.util.Optional;
 public class FlagDeletionEventListener {
 
     private final FlagRepository flagRepository;
-    private final FlagExpiryExemptionUpdater flagExpiryExemptionUpdater;
     private final ApplicationEventPublisher eventPublisher;
 
     @Async
@@ -40,10 +38,6 @@ public class FlagDeletionEventListener {
 
         if (!participantIds.isEmpty() && event.statusAtDeletion() != FlagStatus.ENDED) {
             notifyFlagCancel(participantIds, event.flagTitle());
-        }
-
-        if (event.parentId() != null) {
-            flagRepository.save(flagExpiryExemptionUpdater.refresh(event.parentId()));
         }
     }
 
