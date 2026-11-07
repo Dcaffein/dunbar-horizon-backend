@@ -1,4 +1,4 @@
-# Task-121: 중복 초대 금지를 DB 제약으로 옮기고 FlagInvitation 선언을 맞춘다
+# Task-121: 중복 초대 금지를 DB 제약으로 옮긴다
 
 ## Background
 
@@ -14,11 +14,9 @@
 
 `flag_participants`에도 `(flag_id, participant_id)` 유니크가 없다. 이쪽은 참여 경로가 Flag 행을 잠그고 들어가므로 현재는 안전하지만 백스톱이 없다.
 
-선언도 어긋나 있다. 같은 판정을 받은 `FlagComment`와 `FlagMemorial`은 `BaseTimeAggregateRoot`인데 `FlagInvitation`만 `BaseTimeEntity`다. 자기 리포지토리와 컨트롤러와 URL을 갖고 독립적으로 조회되는데도 자식 엔티티로 선언돼 있다.
-
 ## Objective
 
-중복 초대 금지를 DB 제약으로 옮겨 동시 요청에서도 깨지지 않게 한다. `FlagInvitation`의 선언을 실제 쓰임인 독립 애그리거트 루트에 맞춘다.
+중복 초대 금지를 DB 제약으로 옮겨 동시 요청에서도 깨지지 않게 한다.
 
 ## Decision
 
@@ -32,7 +30,7 @@
 
 ### 기존 중복 행을 먼저 정리한다
 
-제약을 걸기 전에 운영 데이터의 중복 여부를 확인하고, 있으면 가장 먼저 만들어진 행만 남긴다. 정리와 제약 추가는 같은 마이그레이션 파일에 둔다. 중복이 있는 상태에서 제약만 추가하면 마이그레이션이 실패한다.
+제약을 걸기 전에 운영 데이터의 중복 여부를 확인하고, 있으면 가장 먼저 만들어진 행만 남긴다. `flag_invitations`와 `flag_participants` 모두 같다. 정리와 제약 추가는 같은 마이그레이션 파일에 둔다. 중복이 있는 상태에서 제약만 추가하면 마이그레이션이 실패한다.
 
 ### `flag_participants`에도 같은 제약을 건다
 
@@ -40,11 +38,9 @@
 
 이것이 "Flag와 FlagParticipant는 같은 애그리거트"라는 판정을 바꾸지는 않는다. 정원 규칙은 여전히 제약으로 표현할 수 없어 락이 필요하고, 유니크 제약이 막는 것은 중복 참여뿐이다.
 
-### 상속 변경은 이벤트 발행 위치를 확인한 뒤 결정한다
+### `FlagInvitation`의 상속은 바꾸지 않는다
 
-상속만 올리면 얻는 것이 없다. `BaseTimeAggregateRoot`의 값은 도메인이 이벤트를 발행할 수 있다는 데 있다.
-
-`FlagInvitationSentEvent`는 현재 `FlagInvitationCommandService`와 `FlagEncoreInvitationListener` 두 곳에서 발행한다. 두 경로 모두 도메인 발행으로 옮길 수 있으면 상속과 함께 바꾼다. 앙코르 일괄 초대처럼 도메인이 발행하기 어려운 경로가 있으면 상속 변경을 이 태스크에서 빼고 그 이유를 Result에 남긴다.
+`BaseTimeAggregateRoot`의 값은 도메인이 이벤트를 발행할 수 있다는 데 있다. `FlagInvitationSentEvent`는 `invitationId`를 담는데 이 값은 저장 뒤에야 생기므로 도메인이 발행할 수 없다. 상속만 올리면 얻는 것이 없어 `BaseTimeEntity`를 유지한다.
 
 ## Out of Scope
 
