@@ -94,6 +94,21 @@ class FlagEncoreDeletionIntegrationTest {
         assertThat(parent().isAutoExpiryExempt()).isTrue();
     }
 
+    @Test
+    @DisplayName("앙코르를 삭제한 뒤 같은 부모로 앙코르를 다시 만들 수 있다")
+    void encore_Succeeds_AfterPreviousEncoreDeleted() {
+        // given
+        Long deletedEncoreId = encore();
+        flagModificationUseCase.closeFlag(deletedEncoreId, HOST_ID);
+
+        // when
+        Long recreatedEncoreId = encore();
+
+        // then
+        assertThat(flagJpaRepository.findById(recreatedEncoreId).orElseThrow().getParentId()).isEqualTo(parentId);
+        assertThat(parent().isAutoExpiryExempt()).isTrue();
+    }
+
     private Long encore() {
         LocalDateTime base = LocalDateTime.now().withNano(0);
         Long encoreId = flagHostUseCase.encoreFlag(new FlagEncoreCommand(

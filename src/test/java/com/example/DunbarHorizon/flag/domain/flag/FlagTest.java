@@ -253,6 +253,33 @@ class FlagTest {
     }
 
     @Test
+    @DisplayName("앙코르를 삭제하면 parentId를 비우고 이벤트에는 원래 parentId를 남긴다")
+    @SuppressWarnings("unchecked")
+    void delete_Encore_ClearsParentIdAndKeepsItInEvents() {
+        // given
+        Long parentId = 99L;
+        Flag encore = endedFlag();
+        ReflectionTestUtils.setField(encore, "parentId", parentId);
+        ReflectionTestUtils.setField(encore, "autoExpiryExempt", true);
+
+        // when
+        encore.delete(HOST_ID);
+
+        // then
+        assertThat(encore.getParentId()).isNull();
+        java.util.Collection<Object> events = (java.util.Collection<Object>)
+                ReflectionTestUtils.invokeMethod(encore, "domainEvents");
+        FlagDeletedEvent deleted = (FlagDeletedEvent) events.stream()
+                .filter(e -> e instanceof FlagDeletedEvent)
+                .findFirst().orElseThrow();
+        FlagExpiryExemptionChangedEvent released = (FlagExpiryExemptionChangedEvent) events.stream()
+                .filter(e -> e instanceof FlagExpiryExemptionChangedEvent)
+                .findFirst().orElseThrow();
+        assertThat(deleted.parentId()).isEqualTo(parentId);
+        assertThat(released.parentId()).isEqualTo(parentId);
+    }
+
+    @Test
     @DisplayName("호스트가 아닌 사용자가 플래그 삭제를 시도하면 FlagAuthorizationException이 발생한다")
     void delete_ByNonHost_ThrowsException() {
         // given

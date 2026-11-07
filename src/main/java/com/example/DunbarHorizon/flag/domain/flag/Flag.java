@@ -142,6 +142,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
                 this.title,
                 calculateCurrentStatus()
         ));
+        severParentLink();
     }
 
     public void updateBasicInfo(Long requesterId, String title, String description) {
