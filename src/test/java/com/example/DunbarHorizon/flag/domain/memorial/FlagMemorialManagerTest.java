@@ -2,11 +2,13 @@ package com.example.DunbarHorizon.flag.domain.memorial;
 
 import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.FlagExpiryExemptionUpdater;
+import com.example.DunbarHorizon.flag.domain.memorial.exception.FlagMemorialAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.memorial.exception.FlagMemorialNotFoundException;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -39,20 +41,23 @@ class FlagMemorialManagerTest {
 
     @Mock private FlagRepository flagRepository;
     @Mock private FlagMemorialRepository memorialRepository;
-    @Mock private FlagMemorialFactory memorialFactory;
     @Mock private FlagExpiryExemptionUpdater exemptionUpdater;
 
     private static final Long FLAG_ID = 1L;
+    private static final Long HOST_ID = 1L;
     private static final Long MEMORIAL_ID = 10L;
     private static final Long WRITER_ID = 2L;
     private static final Long OTHER_ID = 99L;
     private static final LocalDateTime NOW = LocalDateTime.now();
 
-    private Flag createEndedFlag() {
-        Flag flag = Flag.create(1L, "종료된 플래그", "설명", 10,
-                FlagSchedule.of(NOW.minusHours(3), NOW.minusHours(2), NOW.minusHours(1)));
+    private Flag flagWith(FlagSchedule schedule) {
+        Flag flag = Flag.create(HOST_ID, "플래그", "설명", 10, schedule);
         ReflectionTestUtils.setField(flag, "id", FLAG_ID);
         return flag;
+    }
+
+    private Flag createEndedFlag() {
+        return flagWith(FlagSchedule.of(NOW.minusHours(3), NOW.minusHours(2), NOW.minusHours(1)));
     }
 
     @Test
@@ -60,22 +65,74 @@ class FlagMemorialManagerTest {
     void writeMemorial_LocksSavesThenRefreshesExemption() {
         // given
         Flag flag = createEndedFlag();
-        FlagMemorial memorial = mock(FlagMemorial.class);
         given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
-        given(memorialFactory.create(flag, WRITER_ID, "내용")).willReturn(memorial);
-        given(memorialRepository.save(memorial)).willReturn(memorial);
+        given(memorialRepository.save(any(FlagMemorial.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        FlagMemorial result = memorialManager.writeMemorial(FLAG_ID, HOST_ID, "내용");
+
+        // then
+        assertThat(result.getFlagId()).isEqualTo(FLAG_ID);
+        assertThat(result.getWriterId()).isEqualTo(HOST_ID);
+        InOrder inOrder = inOrder(flagRepository, memorialRepository, exemptionUpdater);
+        inOrder.verify(flagRepository).findByIdForUpdate(FLAG_ID);
+        inOrder.verify(memorialRepository).save(result);
+        inOrder.verify(exemptionUpdater).refresh(flag);
+        inOrder.verify(flagRepository).save(flag);
+    }
+
+    @Test
+    @DisplayName("참여자는 Memorial을 작성할 수 있다")
+    void writeMemorial_ByParticipant_Success() {
+        // given
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(createEndedFlag()));
+        given(flagRepository.isParticipating(FLAG_ID, WRITER_ID)).willReturn(true);
+        given(memorialRepository.save(any(FlagMemorial.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // when
         FlagMemorial result = memorialManager.writeMemorial(FLAG_ID, WRITER_ID, "내용");
 
         // then
-        assertThat(result).isSameAs(memorial);
-        InOrder inOrder = inOrder(flagRepository, memorialFactory, memorialRepository, exemptionUpdater);
-        inOrder.verify(flagRepository).findByIdForUpdate(FLAG_ID);
-        inOrder.verify(memorialFactory).create(flag, WRITER_ID, "내용");
-        inOrder.verify(memorialRepository).save(memorial);
-        inOrder.verify(exemptionUpdater).refresh(flag);
-        inOrder.verify(flagRepository).save(flag);
+        assertThat(result.getWriterId()).isEqualTo(WRITER_ID);
+    }
+
+    @Test
+    @DisplayName("참여하지 않은 사용자는 Memorial을 작성할 수 없다")
+    void writeMemorial_ByStranger_ThrowsException() {
+        // given
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(createEndedFlag()));
+        given(flagRepository.isParticipating(FLAG_ID, OTHER_ID)).willReturn(false);
+
+        // when / then
+        assertThatThrownBy(() -> memorialManager.writeMemorial(FLAG_ID, OTHER_ID, "내용"))
+                .isInstanceOf(FlagMemorialAuthorizationException.class);
+        verifyNoInteractions(memorialRepository, exemptionUpdater);
+    }
+
+    @Test
+    @DisplayName("모집 중인 Flag에는 Memorial을 작성할 수 없다")
+    void writeMemorial_OnRecruitingFlag_ThrowsException() {
+        // given
+        Flag recruiting = flagWith(FlagSchedule.of(NOW.plusHours(1), NOW.plusHours(2), NOW.plusHours(3)));
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(recruiting));
+
+        // when / then
+        assertThatThrownBy(() -> memorialManager.writeMemorial(FLAG_ID, HOST_ID, "내용"))
+                .isInstanceOf(FlagInvalidStatusException.class);
+        verifyNoInteractions(memorialRepository, exemptionUpdater);
+    }
+
+    @Test
+    @DisplayName("진행 중인 Flag에는 Memorial을 작성할 수 없다")
+    void writeMemorial_OnInActivityFlag_ThrowsException() {
+        // given
+        Flag inActivity = flagWith(FlagSchedule.of(NOW.minusHours(2), NOW.minusHours(1), NOW.plusHours(1)));
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(inActivity));
+
+        // when / then
+        assertThatThrownBy(() -> memorialManager.writeMemorial(FLAG_ID, HOST_ID, "내용"))
+                .isInstanceOf(FlagInvalidStatusException.class);
+        verifyNoInteractions(memorialRepository, exemptionUpdater);
     }
 
     @Test
@@ -87,7 +144,7 @@ class FlagMemorialManagerTest {
         // when / then
         assertThatThrownBy(() -> memorialManager.writeMemorial(FLAG_ID, WRITER_ID, "내용"))
                 .isInstanceOf(FlagNotFoundException.class);
-        verifyNoInteractions(memorialFactory, memorialRepository, exemptionUpdater);
+        verifyNoInteractions(memorialRepository, exemptionUpdater);
     }
 
     @Test
