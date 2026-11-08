@@ -45,7 +45,7 @@ class FlagExpiryExemptionUpdaterTest {
     void refresh_memorialExists_setTrue() {
         // given
         Flag flag = createFlag();
-        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(true);
 
         // when
@@ -60,7 +60,7 @@ class FlagExpiryExemptionUpdaterTest {
     void refresh_encoreExists_setTrue() {
         // given
         Flag flag = createFlag();
-        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
         given(flagRepository.existsByParentId(FLAG_ID)).willReturn(true);
 
@@ -77,7 +77,7 @@ class FlagExpiryExemptionUpdaterTest {
         // given
         Flag flag = createFlag();
         ReflectionTestUtils.setField(flag, "autoExpiryExempt", true);
-        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
         given(flagRepository.existsByParentId(FLAG_ID)).willReturn(false);
 
@@ -94,7 +94,7 @@ class FlagExpiryExemptionUpdaterTest {
         // given
         Flag flag = createFlag();
         ReflectionTestUtils.setField(flag, "parentId", 99L);
-        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(true);
 
         // when
@@ -116,7 +116,7 @@ class FlagExpiryExemptionUpdaterTest {
         // given
         Flag flag = createFlag();
         ReflectionTestUtils.setField(flag, "autoExpiryExempt", true);
-        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(true);
 
         // when
@@ -132,7 +132,7 @@ class FlagExpiryExemptionUpdaterTest {
         // given
         Flag flag = createFlag();
         ReflectionTestUtils.setField(flag, "autoExpiryExempt", true);
-        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
         given(flagRepository.existsByParentId(FLAG_ID)).willReturn(false);
 
@@ -152,7 +152,7 @@ class FlagExpiryExemptionUpdaterTest {
     void refresh_alreadyReleased_registersNothing() {
         // given
         Flag flag = createFlag();
-        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
         given(flagRepository.existsByParentId(FLAG_ID)).willReturn(false);
 
@@ -167,7 +167,7 @@ class FlagExpiryExemptionUpdaterTest {
     @DisplayName("존재하지 않는 flagId로 refresh 호출 시 예외가 발생한다")
     void refresh_flagNotFound_throwsException() {
         // given
-        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.empty());
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> flagExpiryExemptionUpdater.refresh(FLAG_ID))

@@ -89,7 +89,7 @@ class FlagPreservationScoreScenarioTest {
                 FlagSchedule.of(now.minusHours(30), now.minusHours(29), now.minusHours(26)));
         ReflectionTestUtils.setField(flag, "id", FLAG_ID);
 
-        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(PARTICIPANT_IDS);
         given(flagRepository.existsByParentId(FLAG_ID)).willReturn(false);
 
