@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.flag.domain.flag;
 
-import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,13 +11,6 @@ public class FlagExpiryExemptionUpdater {
 
     private final FlagRepository flagRepository;
     private final FlagMemorialRepository memorialRepository;
-
-    public Flag refresh(Long flagId) {
-        Flag flag = flagRepository.findByIdForUpdate(flagId)
-                .orElseThrow(() -> new FlagNotFoundException(flagId));
-        refresh(flag);
-        return flag;
-    }
 
     public void refresh(Flag flag) {
         boolean exempt = memorialRepository.existsByFlagId(flag.getId())

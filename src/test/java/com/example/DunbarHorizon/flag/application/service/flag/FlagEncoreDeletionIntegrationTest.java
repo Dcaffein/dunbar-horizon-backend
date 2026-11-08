@@ -26,6 +26,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
 
 /**
@@ -85,7 +86,8 @@ class FlagEncoreDeletionIntegrationTest {
     void closeEncore_RollsBack_WhenParentRefreshFails() {
         // given
         Long encoreId = encore();
-        doThrow(new IllegalStateException("갱신 실패")).when(flagExpiryExemptionUpdater).refresh(parentId);
+        doThrow(new IllegalStateException("갱신 실패")).when(flagExpiryExemptionUpdater)
+                .refresh(argThat(flag -> parentId.equals(flag.getId())));
 
         // when & then
         assertThatThrownBy(() -> flagModificationUseCase.closeFlag(encoreId, HOST_ID))

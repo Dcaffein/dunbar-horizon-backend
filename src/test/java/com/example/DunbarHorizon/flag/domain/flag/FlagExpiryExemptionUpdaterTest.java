@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.domain.flag;
 
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptionChangedEvent;
-import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -13,7 +12,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
@@ -45,11 +43,10 @@ class FlagExpiryExemptionUpdaterTest {
     void refresh_memorialExists_setTrue() {
         // given
         Flag flag = createFlag();
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(true);
 
         // when
-        flagExpiryExemptionUpdater.refresh(FLAG_ID);
+        flagExpiryExemptionUpdater.refresh(flag);
 
         // then
         assertThat(flag.isAutoExpiryExempt()).isTrue();
@@ -60,12 +57,11 @@ class FlagExpiryExemptionUpdaterTest {
     void refresh_encoreExists_setTrue() {
         // given
         Flag flag = createFlag();
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
         given(flagRepository.existsByParentId(FLAG_ID)).willReturn(true);
 
         // when
-        flagExpiryExemptionUpdater.refresh(FLAG_ID);
+        flagExpiryExemptionUpdater.refresh(flag);
 
         // then
         assertThat(flag.isAutoExpiryExempt()).isTrue();
@@ -77,12 +73,11 @@ class FlagExpiryExemptionUpdaterTest {
         // given
         Flag flag = createFlag();
         ReflectionTestUtils.setField(flag, "autoExpiryExempt", true);
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
         given(flagRepository.existsByParentId(FLAG_ID)).willReturn(false);
 
         // when
-        flagExpiryExemptionUpdater.refresh(FLAG_ID);
+        flagExpiryExemptionUpdater.refresh(flag);
 
         // then
         assertThat(flag.isAutoExpiryExempt()).isFalse();
@@ -94,11 +89,10 @@ class FlagExpiryExemptionUpdaterTest {
         // given
         Flag flag = createFlag();
         ReflectionTestUtils.setField(flag, "parentId", 99L);
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(true);
 
         // when
-        flagExpiryExemptionUpdater.refresh(FLAG_ID);
+        flagExpiryExemptionUpdater.refresh(flag);
 
         // then
         assertThat(flag.getDomainEvents()).hasSize(1);
@@ -116,11 +110,10 @@ class FlagExpiryExemptionUpdaterTest {
         // given
         Flag flag = createFlag();
         ReflectionTestUtils.setField(flag, "autoExpiryExempt", true);
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(true);
 
         // when
-        flagExpiryExemptionUpdater.refresh(FLAG_ID);
+        flagExpiryExemptionUpdater.refresh(flag);
 
         // then
         assertThat(flag.getDomainEvents()).isEmpty();
@@ -132,12 +125,11 @@ class FlagExpiryExemptionUpdaterTest {
         // given
         Flag flag = createFlag();
         ReflectionTestUtils.setField(flag, "autoExpiryExempt", true);
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
         given(flagRepository.existsByParentId(FLAG_ID)).willReturn(false);
 
         // when
-        flagExpiryExemptionUpdater.refresh(FLAG_ID);
+        flagExpiryExemptionUpdater.refresh(flag);
 
         // then
         assertThat(flag.getDomainEvents()).hasSize(1);
@@ -152,25 +144,13 @@ class FlagExpiryExemptionUpdaterTest {
     void refresh_alreadyReleased_registersNothing() {
         // given
         Flag flag = createFlag();
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
         given(flagRepository.existsByParentId(FLAG_ID)).willReturn(false);
 
         // when
-        flagExpiryExemptionUpdater.refresh(FLAG_ID);
+        flagExpiryExemptionUpdater.refresh(flag);
 
         // then
         assertThat(flag.getDomainEvents()).isEmpty();
-    }
-
-    @Test
-    @DisplayName("존재하지 않는 flagId로 refresh 호출 시 예외가 발생한다")
-    void refresh_flagNotFound_throwsException() {
-        // given
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.empty());
-
-        // when & then
-        assertThatThrownBy(() -> flagExpiryExemptionUpdater.refresh(FLAG_ID))
-                .isInstanceOf(FlagNotFoundException.class);
     }
 }

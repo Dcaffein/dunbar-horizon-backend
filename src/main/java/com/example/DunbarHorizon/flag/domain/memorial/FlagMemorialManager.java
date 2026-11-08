@@ -9,10 +9,6 @@ import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRep
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * 각 메서드는 트랜잭션의 첫 호출이어야 한다. REPEATABLE READ는 첫 일반 조회 시점에 읽기 뷰를 고정하므로,
- * 호출 전에 일반 조회가 끼면 잠금을 기다리는 동안 커밋된 후기가 면제 판단에서 빠진다.
- */
 @Component
 @RequiredArgsConstructor
 public class FlagMemorialManager {

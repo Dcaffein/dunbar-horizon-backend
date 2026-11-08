@@ -4,13 +4,17 @@ import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagJpaReposit
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagMemorialJpaRepository;
 import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
 import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialCommandUseCase;
+import com.example.DunbarHorizon.flag.application.port.in.FlagModificationUseCase;
+import com.example.DunbarHorizon.flag.application.port.in.command.FlagEncoreCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
+import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorial;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
 import com.example.DunbarHorizon.support.TestContainerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -44,12 +48,14 @@ class FlagExpiryExemptionLockConcurrencyIntegrationTest {
 
     @Autowired private FlagHostUseCase flagHostUseCase;
     @Autowired private FlagMemorialCommandUseCase memorialCommandUseCase;
+    @Autowired private FlagModificationUseCase flagModificationUseCase;
     @Autowired private FlagJpaRepository flagJpaRepository;
     @Autowired private FlagMemorialJpaRepository memorialJpaRepository;
     @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private JdbcTemplate jdbcTemplate;
 
     @MockitoSpyBean private FlagMemorialRepository memorialRepository;
+    @MockitoSpyBean private FlagRepository flagRepository;
 
     private final List<Long> createdFlagIds = new ArrayList<>();
 
@@ -127,6 +133,175 @@ class FlagExpiryExemptionLockConcurrencyIntegrationTest {
             continueCreate.countDown();
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    @DisplayName("호스트 삭제가 Flag를 읽은 뒤 첫 Memorial이 끼어들어도 삭제는 최신 면제를 보고 끈다")
+    void hostDeletion_withFirstMemorialInBetween_turnsOffLatestExemption() throws InterruptedException {
+        // given
+        Long flagId = hostEndedFlag();
+        CountDownLatch hostRead = new CountDownLatch(1);
+        CountDownLatch continueHost = new CountDownLatch(1);
+        CountDownLatch hostFinished = new CountDownLatch(1);
+        CountDownLatch memorialFinished = new CountDownLatch(1);
+        AtomicBoolean blockOnce = new AtomicBoolean(true);
+        AtomicReference<Throwable> hostFailure = new AtomicReference<>();
+        AtomicReference<Throwable> memorialFailure = new AtomicReference<>();
+
+        Answer<Object> pauseAfterFirstRead = invocation -> {
+            Object result = invocation.callRealMethod();
+            if (blockOnce.compareAndSet(true, false)) {
+                hostRead.countDown();
+                await(continueHost, "호스트 삭제 재개");
+            }
+            return result;
+        };
+        doAnswer(pauseAfterFirstRead).when(flagRepository).findById(flagId);
+        doAnswer(pauseAfterFirstRead).when(flagRepository).findByIdForUpdate(flagId);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        submit(executor, () -> flagModificationUseCase.closeFlag(flagId, HOST_ID), hostFailure, hostFinished);
+
+        try {
+            // when
+            assertThat(hostRead.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            submit(executor, () -> memorialCommandUseCase.createMemorial(flagId, HOST_ID, "첫 후기"),
+                    memorialFailure, memorialFinished);
+            awaitFinishedOrLockWait(memorialFinished, "Memorial 작성");
+            continueHost.countDown();
+            assertThat(hostFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            assertThat(memorialFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+            // then
+            assertThat(hostFailure.get()).isNull();
+            assertThat(flagJpaRepository.findById(flagId)).isEmpty();
+            assertThat(exemptOfIncludingDeleted(flagId)).isFalse();
+        } finally {
+            continueHost.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("Encore 생성과 부모의 Memorial 삭제가 겹쳐도 Encore가 있으면 부모 면제가 켜져 있다")
+    void encoreCreationAndParentMemorialDeletion_overlapping_keepsParentExemption() throws InterruptedException {
+        // given
+        Long parentId = hostEndedFlag();
+        Long memorialId = memorialCommandUseCase.createMemorial(parentId, HOST_ID, "부모 후기");
+        CountDownLatch encoreSaved = new CountDownLatch(1);
+        CountDownLatch continueEncore = new CountDownLatch(1);
+        CountDownLatch encoreFinished = new CountDownLatch(1);
+        CountDownLatch deleteFinished = new CountDownLatch(1);
+        AtomicBoolean blockOnce = new AtomicBoolean(true);
+        AtomicReference<Throwable> encoreFailure = new AtomicReference<>();
+        AtomicReference<Throwable> deleteFailure = new AtomicReference<>();
+        AtomicReference<Long> encoreId = new AtomicReference<>();
+
+        doAnswer(invocation -> {
+            Flag saved = (Flag) invocation.callRealMethod();
+            if (saved.getParentId() != null && blockOnce.compareAndSet(true, false)) {
+                encoreSaved.countDown();
+                await(continueEncore, "Encore 생성 재개");
+            }
+            return saved;
+        }).when(flagRepository).save(any(Flag.class));
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        submit(executor, () -> encoreId.set(encore(parentId)), encoreFailure, encoreFinished);
+
+        try {
+            // when
+            assertThat(encoreSaved.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            submit(executor, () -> memorialCommandUseCase.deleteMemorial(parentId, memorialId, HOST_ID),
+                    deleteFailure, deleteFinished);
+            awaitFinishedOrLockWait(deleteFinished, "부모 Memorial 삭제");
+            continueEncore.countDown();
+            assertThat(encoreFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            assertThat(deleteFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+            // then
+            assertThat(encoreFailure.get()).isNull();
+            assertThat(deleteFailure.get()).isNull();
+            assertThat(flagJpaRepository.findById(encoreId.get())).isPresent();
+            assertThat(flagJpaRepository.findById(parentId).orElseThrow().isAutoExpiryExempt()).isTrue();
+        } finally {
+            continueEncore.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("Encore 삭제가 Encore를 잠근 사이 부모에 Memorial이 달려도 교착 없이 둘 다 끝난다")
+    void encoreDeletionAndParentMemorialCreation_overlapping_finishWithoutDeadlock() throws InterruptedException {
+        // given
+        Long parentId = hostEndedFlag();
+        Long encoreId = encore(parentId);
+        CountDownLatch encoreLocked = new CountDownLatch(1);
+        CountDownLatch continueDeletion = new CountDownLatch(1);
+        CountDownLatch deletionFinished = new CountDownLatch(1);
+        CountDownLatch memorialFinished = new CountDownLatch(1);
+        AtomicBoolean blockOnce = new AtomicBoolean(true);
+        AtomicReference<Throwable> deletionFailure = new AtomicReference<>();
+        AtomicReference<Throwable> memorialFailure = new AtomicReference<>();
+
+        doAnswer(invocation -> {
+            Object locked = invocation.callRealMethod();
+            if (blockOnce.compareAndSet(true, false)) {
+                encoreLocked.countDown();
+                await(continueDeletion, "Encore 삭제 재개");
+            }
+            return locked;
+        }).when(flagRepository).findByIdForUpdate(encoreId);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        submit(executor, () -> flagModificationUseCase.closeFlag(encoreId, HOST_ID), deletionFailure, deletionFinished);
+
+        try {
+            // when
+            assertThat(encoreLocked.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            submit(executor, () -> memorialCommandUseCase.createMemorial(parentId, HOST_ID, "부모 후기"),
+                    memorialFailure, memorialFinished);
+            awaitFinishedOrLockWait(memorialFinished, "부모 Memorial 작성");
+            continueDeletion.countDown();
+            assertThat(deletionFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            assertThat(memorialFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+            // then
+            assertThat(deletionFailure.get()).isNull();
+            assertThat(memorialFailure.get()).isNull();
+            assertThat(flagJpaRepository.findById(encoreId)).isEmpty();
+            assertThat(flagJpaRepository.findById(parentId).orElseThrow().isAutoExpiryExempt()).isTrue();
+        } finally {
+            continueDeletion.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    private Long encore(Long parentId) {
+        LocalDateTime base = LocalDateTime.now().withNano(0);
+        Long encoreId = flagHostUseCase.encoreFlag(new FlagEncoreCommand(
+                parentId, HOST_ID, base.plusHours(1), base.plusHours(2), base.plusHours(3)));
+        createdFlagIds.add(encoreId);
+        return encoreId;
+    }
+
+    private boolean exemptOfIncludingDeleted(Long flagId) {
+        Boolean exempt = jdbcTemplate.queryForObject(
+                "SELECT auto_expiry_exempt FROM flags WHERE id = ?", Boolean.class, flagId);
+        return Boolean.TRUE.equals(exempt);
+    }
+
+    private void submit(ExecutorService executor, Runnable action,
+                        AtomicReference<Throwable> failure, CountDownLatch finished) {
+        executor.submit(() -> {
+            try {
+                action.run();
+            } catch (Throwable throwable) {
+                failure.set(throwable);
+            } finally {
+                finished.countDown();
+            }
+        });
     }
 
     private Long hostEndedFlag() {

@@ -47,7 +47,7 @@ class FlagExpiryExemptionPersistenceTest {
         assertThat(parent.isAutoExpiryExempt()).isFalse();
 
         // when
-        policy.refresh(parent.getId());
+        policy.refresh(parent);
         em.flush();
         em.clear();
 
@@ -66,7 +66,7 @@ class FlagExpiryExemptionPersistenceTest {
         em.clear();
 
         // when
-        policy.refresh(flag.getId());
+        policy.refresh(em.find(Flag.class, flag.getId()));
         em.flush();
         em.clear();
 

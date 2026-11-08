@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.flag.application.port.in.command.FlagCapacityUp
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagDetailsUpdateCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagScheduleUpdateCommand;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
+import com.example.DunbarHorizon.flag.domain.flag.FlagDeletionManager;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class FlagModificationService implements FlagModificationUseCase {
     private final FlagRepository flagRepository;
+    private final FlagDeletionManager deletionManager;
 
     @Override
     public void modifyFlagDetails(FlagDetailsUpdateCommand command) {
@@ -58,9 +60,7 @@ public class FlagModificationService implements FlagModificationUseCase {
 
     @Override
     public void closeFlag(Long flagId, Long userId) {
-        Flag flag = getFlagOrThrow(flagId);
-        flag.delete(userId);
-        flagRepository.save(flag);
+        deletionManager.delete(flagId, userId);
     }
 
     private Flag getFlagOrThrow(Long id) {
