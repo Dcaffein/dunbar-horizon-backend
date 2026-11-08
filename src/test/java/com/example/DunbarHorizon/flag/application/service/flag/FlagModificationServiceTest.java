@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.flag.application.port.in.command.FlagCapacityUp
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagDetailsUpdateCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagScheduleUpdateCommand;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
+import com.example.DunbarHorizon.flag.domain.flag.FlagDeletionManager;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
@@ -35,6 +36,7 @@ class FlagModificationServiceTest {
     @InjectMocks private FlagModificationService flagModificationService;
 
     @Mock private FlagRepository flagRepository;
+    @Mock private FlagDeletionManager deletionManager;
 
     private static final Long HOST_ID = 1L;
     private static final Long OTHER_ID = 99L;
@@ -192,30 +194,12 @@ class FlagModificationServiceTest {
     }
 
     @Test
-    @DisplayName("호스트가 플래그를 삭제(closeFlag)하면 softDelete된다")
-    void closeFlag_ByHost_Success() {
-        // given
-        Flag flag = recruitingFlag();
-        given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
-        given(flagRepository.save(any(Flag.class))).willReturn(flag);
-
+    @DisplayName("플래그 삭제는 FlagDeletionManager에 위임한다")
+    void closeFlag_DelegatesToDeletionManager() {
         // when
         flagModificationService.closeFlag(1L, HOST_ID);
 
         // then
-        assertThat(flag.isDeleted()).isTrue();
-        verify(flagRepository).save(flag);
-    }
-
-    @Test
-    @DisplayName("호스트가 아닌 사용자가 플래그를 삭제하면 FlagAuthorizationException이 발생한다")
-    void closeFlag_ByNonHost_ThrowsException() {
-        // given
-        Flag flag = recruitingFlag();
-        given(flagRepository.findById(1L)).willReturn(Optional.of(flag));
-
-        // when / then
-        assertThatThrownBy(() -> flagModificationService.closeFlag(1L, OTHER_ID))
-                .isInstanceOf(FlagAuthorizationException.class);
+        verify(deletionManager).delete(1L, HOST_ID);
     }
 }

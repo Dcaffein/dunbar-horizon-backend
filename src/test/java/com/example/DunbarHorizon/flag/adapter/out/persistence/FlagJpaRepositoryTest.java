@@ -309,4 +309,24 @@ class FlagJpaRepositoryTest {
         assertThat(repository.findById(target.getId())).isEmpty();
         assertThat(repository.findById(untouched.getId())).isPresent();
     }
+
+    @Test
+    @DisplayName("expireByIds는 넘긴 id라도 만료 면제인 플래그는 지우지 않는다")
+    void expireByIds_SkipsExemptFlags() {
+        // given
+        Flag target = persistEndedFlag(HOST_ID, asOf.minusHours(1));
+        Flag exempt = persistEndedFlag(HOST_ID, asOf.minusHours(2));
+        ReflectionTestUtils.setField(exempt, "autoExpiryExempt", true);
+        em.flush();
+        em.clear();
+
+        // when
+        int affected = repository.expireByIds(List.of(target.getId(), exempt.getId()), asOf);
+        em.clear();
+
+        // then
+        assertThat(affected).isEqualTo(1);
+        assertThat(repository.findById(target.getId())).isEmpty();
+        assertThat(repository.findById(exempt.getId())).isPresent();
+    }
 }
