@@ -47,7 +47,8 @@ public interface FlagJpaRepository extends JpaRepository<Flag, Long> {
     List<FlagExpiryTarget> findExpiryTargets(@Param("threshold") LocalDateTime threshold);
 
     @Modifying(clearAutomatically = true)
-    @Query("UPDATE Flag f SET f.deletedAt = :now WHERE f.id IN :ids AND f.deletedAt IS NULL")
+    @Query("UPDATE Flag f SET f.deletedAt = :now " +
+           "WHERE f.id IN :ids AND f.deletedAt IS NULL AND f.autoExpiryExempt = false")
     int expireByIds(@Param("ids") Collection<Long> ids, @Param("now") LocalDateTime now);
 
     @Query("SELECT f FROM Flag f WHERE f.hostId IN :hostIds AND f.schedule.deadline > :asOf")

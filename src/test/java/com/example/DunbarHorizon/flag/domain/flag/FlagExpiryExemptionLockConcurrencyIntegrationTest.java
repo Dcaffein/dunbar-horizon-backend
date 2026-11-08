@@ -7,6 +7,7 @@ import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialCommandUse
 import com.example.DunbarHorizon.flag.application.port.in.FlagModificationUseCase;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagEncoreCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagExpiryService;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.memorial.FlagMemorial;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
@@ -49,6 +50,7 @@ class FlagExpiryExemptionLockConcurrencyIntegrationTest {
     @Autowired private FlagHostUseCase flagHostUseCase;
     @Autowired private FlagMemorialCommandUseCase memorialCommandUseCase;
     @Autowired private FlagModificationUseCase flagModificationUseCase;
+    @Autowired private FlagExpiryService expiryService;
     @Autowired private FlagJpaRepository flagJpaRepository;
     @Autowired private FlagMemorialJpaRepository memorialJpaRepository;
     @Autowired private PlatformTransactionManager transactionManager;
@@ -275,6 +277,61 @@ class FlagExpiryExemptionLockConcurrencyIntegrationTest {
             continueDeletion.countDown();
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    @DisplayName("자동 만료가 대상을 고른 뒤 첫 Memorial이 끼어들어도 Memorial이 달린 Flag는 지워지지 않는다")
+    void expiry_withFirstMemorialAfterTargetSelection_neverDeletesFlagWithMemorial() throws InterruptedException {
+        // given
+        Long flagId = hostFlagEndedHoursAgo(26);
+        CountDownLatch targetsSelected = new CountDownLatch(1);
+        CountDownLatch continueExpiry = new CountDownLatch(1);
+        CountDownLatch expiryFinished = new CountDownLatch(1);
+        CountDownLatch memorialFinished = new CountDownLatch(1);
+        AtomicBoolean blockOnce = new AtomicBoolean(true);
+        AtomicReference<Throwable> expiryFailure = new AtomicReference<>();
+        AtomicReference<Throwable> memorialFailure = new AtomicReference<>();
+
+        doAnswer(invocation -> {
+            Object targets = invocation.callRealMethod();
+            if (blockOnce.compareAndSet(true, false)) {
+                targetsSelected.countDown();
+                await(continueExpiry, "자동 만료 재개");
+            }
+            return targets;
+        }).when(flagRepository).findExpiryTargets(any(LocalDateTime.class));
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        submit(executor, expiryService::expireEndedFlags, expiryFailure, expiryFinished);
+
+        try {
+            // when
+            assertThat(targetsSelected.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            submit(executor, () -> memorialCommandUseCase.createMemorial(flagId, HOST_ID, "첫 후기"),
+                    memorialFailure, memorialFinished);
+            awaitFinishedOrLockWait(memorialFinished, "Memorial 작성");
+            continueExpiry.countDown();
+            assertThat(expiryFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            assertThat(memorialFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+            // then
+            assertThat(expiryFailure.get()).isNull();
+            boolean memorialRemains = memorialJpaRepository.countByFlagId(flagId) > 0;
+            boolean flagAlive = flagJpaRepository.findById(flagId).isPresent();
+            assertThat(memorialRemains).isEqualTo(flagAlive);
+        } finally {
+            continueExpiry.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    private Long hostFlagEndedHoursAgo(int hours) {
+        LocalDateTime base = LocalDateTime.now().withNano(0);
+        Long flagId = flagHostUseCase.hostFlag(new FlagHostCommand(
+                HOST_ID, "자동 만료 테스트", "설명", 5,
+                base.minusHours(hours + 3), base.minusHours(hours + 2), base.minusHours(hours)));
+        createdFlagIds.add(flagId);
+        return flagId;
     }
 
     private Long encore(Long parentId) {

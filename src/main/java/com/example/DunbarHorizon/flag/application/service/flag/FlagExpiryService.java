@@ -48,8 +48,6 @@ public class FlagExpiryService {
         Map<Long, List<Long>> participantsByFlagId =
                 flagRepository.findAllParticipantIdsByFlagIds(targetIds);
 
-        // 조건을 다시 쓰지 않고 id로 찍는다. 두 번 실행하면 그사이 면제가 붙은 플래그가 생겨
-        // 발행한 집합과 삭제한 집합이 어긋날 수 있다.
         int expiredFlags = flagRepository.expireByIds(targetIds, now);
 
         targets.forEach(target -> publishConclusion(target, participantsByFlagId));
