@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.flag.application.port.in.command.FlagCapacityUp
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagDetailsUpdateCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagScheduleUpdateCommand;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagDeletionManager;
+import com.example.DunbarHorizon.flag.domain.flag.FlagExpiryExemptionUpdater;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
@@ -29,6 +29,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class FlagModificationServiceTest {
@@ -36,7 +38,7 @@ class FlagModificationServiceTest {
     @InjectMocks private FlagModificationService flagModificationService;
 
     @Mock private FlagRepository flagRepository;
-    @Mock private FlagDeletionManager deletionManager;
+    @Mock private FlagExpiryExemptionUpdater exemptionUpdater;
 
     private static final Long HOST_ID = 1L;
     private static final Long OTHER_ID = 99L;
@@ -193,13 +195,93 @@ class FlagModificationServiceTest {
         verify(flagRepository).findByIdForUpdate(1L);
     }
 
+    private static final Long FLAG_ID = 2L;
+    private static final Long PARENT_ID = 1L;
+    private Flag createEndedFlag(Long id, Long parentId) {
+        Flag flag = Flag.create(HOST_ID, "종료된 플래그", "설명", 10,
+                FlagSchedule.of(NOW.minusHours(3), NOW.minusHours(2), NOW.minusHours(1)));
+        ReflectionTestUtils.setField(flag, "id", id);
+        ReflectionTestUtils.setField(flag, "parentId", parentId);
+        return flag;
+    }
+
     @Test
-    @DisplayName("플래그 삭제는 FlagDeletionManager에 위임한다")
-    void closeFlag_DelegatesToDeletionManager() {
+    @DisplayName("부모가 없는 플래그를 삭제하면 그 플래그만 잠그고 지운다")
+    void delete_FlagWithoutParent_LocksAndDeletesOnlyIt() {
+        // given
+        Flag flag = createEndedFlag(FLAG_ID, null);
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
+
         // when
-        flagModificationService.closeFlag(1L, HOST_ID);
+        flagModificationService.closeFlag(FLAG_ID, HOST_ID);
 
         // then
-        verify(deletionManager).delete(1L, HOST_ID);
+        assertThat(flag.isDeleted()).isTrue();
+        verify(flagRepository).save(flag);
+        verifyNoInteractions(exemptionUpdater);
+    }
+
+    @Test
+    @DisplayName("앵코르를 삭제하면 앵코르를 먼저 잠그고 지운 뒤 부모를 잠가 면제를 다시 계산한다")
+    void delete_Encore_LocksEncoreThenParentAndRefreshesParent() {
+        // given
+        Flag encore = createEndedFlag(FLAG_ID, PARENT_ID);
+        Flag parent = createEndedFlag(PARENT_ID, null);
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(encore));
+        given(flagRepository.findByIdForUpdate(PARENT_ID)).willReturn(Optional.of(parent));
+
+        // when
+        flagModificationService.closeFlag(FLAG_ID, HOST_ID);
+
+        // then
+        assertThat(encore.isDeleted()).isTrue();
+        InOrder inOrder = inOrder(flagRepository, exemptionUpdater);
+        inOrder.verify(flagRepository).findByIdForUpdate(FLAG_ID);
+        inOrder.verify(flagRepository).save(encore);
+        inOrder.verify(flagRepository).findByIdForUpdate(PARENT_ID);
+        inOrder.verify(exemptionUpdater).refresh(parent);
+        inOrder.verify(flagRepository).save(parent);
+    }
+
+    @Test
+    @DisplayName("부모가 이미 삭제된 앵코르는 부모 갱신 없이 지운다")
+    void delete_EncoreWithDeletedParent_SkipsParentRefresh() {
+        // given
+        Flag encore = createEndedFlag(FLAG_ID, PARENT_ID);
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(encore));
+        given(flagRepository.findByIdForUpdate(PARENT_ID)).willReturn(Optional.empty());
+
+        // when
+        flagModificationService.closeFlag(FLAG_ID, HOST_ID);
+
+        // then
+        assertThat(encore.isDeleted()).isTrue();
+        verifyNoInteractions(exemptionUpdater);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 플래그를 삭제하면 FlagNotFoundException이 발생한다")
+    void delete_FlagNotFound_ThrowsException() {
+        // given
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.empty());
+
+        // when / then
+        assertThatThrownBy(() -> flagModificationService.closeFlag(FLAG_ID, HOST_ID))
+                .isInstanceOf(FlagNotFoundException.class);
+        verifyNoInteractions(exemptionUpdater);
+    }
+
+    @Test
+    @DisplayName("호스트가 아닌 사용자가 삭제하면 FlagAuthorizationException이 발생하고 저장하지 않는다")
+    void delete_ByNonHost_ThrowsException() {
+        // given
+        Flag flag = createEndedFlag(FLAG_ID, PARENT_ID);
+        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
+
+        // when / then
+        assertThatThrownBy(() -> flagModificationService.closeFlag(FLAG_ID, OTHER_ID))
+                .isInstanceOf(FlagAuthorizationException.class);
+        verify(flagRepository, never()).save(any());
+        verifyNoInteractions(exemptionUpdater);
     }
 }

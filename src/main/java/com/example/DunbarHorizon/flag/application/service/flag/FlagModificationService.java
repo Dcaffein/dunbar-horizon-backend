@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.flag.application.port.in.command.FlagCapacityUp
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagDetailsUpdateCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagScheduleUpdateCommand;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagDeletionManager;
+import com.example.DunbarHorizon.flag.domain.flag.FlagExpiryExemptionUpdater;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class FlagModificationService implements FlagModificationUseCase {
     private final FlagRepository flagRepository;
-    private final FlagDeletionManager deletionManager;
+    private final FlagExpiryExemptionUpdater exemptionUpdater;
 
     @Override
     public void modifyFlagDetails(FlagDetailsUpdateCommand command) {
@@ -29,11 +29,8 @@ public class FlagModificationService implements FlagModificationUseCase {
     }
 
     @Override
-    // Flag 행을 잠근 뒤 countParticipants가 먼저 커밋한 참여자를 읽어야 현재 인원보다 작은 정원을 막을 수 있다.
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void modifyFlagCapacity(FlagCapacityUpdateCommand command) {
-        // 참여 경로(FlagParticipationManager)와 같은 순서로 잠근 뒤 센다.
-        // 잠금 밖에서 센 값을 쓰면 그 사이 참여가 끼어들어 정원보다 참여자가 많아질 수 있다.
         Flag flag = flagRepository.findByIdForUpdate(command.flagId())
                 .orElseThrow(() -> new FlagNotFoundException(command.flagId()));
         int currentCount = flagRepository.countParticipants(command.flagId());
@@ -60,7 +57,17 @@ public class FlagModificationService implements FlagModificationUseCase {
 
     @Override
     public void closeFlag(Long flagId, Long userId) {
-        deletionManager.delete(flagId, userId);
+        Flag flag = flagRepository.findByIdForUpdate(flagId)
+                .orElseThrow(() -> new FlagNotFoundException(flagId));
+        Long parentId = flag.getParentId();
+        flag.delete(userId);
+        flagRepository.save(flag);
+
+        if (parentId == null) return;
+        flagRepository.findByIdForUpdate(parentId).ifPresent(parent -> {
+            exemptionUpdater.refresh(parent);
+            flagRepository.save(parent);
+        });
     }
 
     private Flag getFlagOrThrow(Long id) {

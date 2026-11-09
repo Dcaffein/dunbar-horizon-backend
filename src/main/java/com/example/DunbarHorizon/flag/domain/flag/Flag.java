@@ -89,7 +89,13 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
         return new Flag(hostId, title, description, capacity, schedule, null, newGroupId);
     }
 
-    Flag createEncore(Long hostId, LocalDateTime deadline, LocalDateTime start, LocalDateTime end) {
+    public Flag createEncore(Long requesterId, LocalDateTime deadline, LocalDateTime start,
+                             LocalDateTime end, boolean hasExistingEncore) {
+        validateHost(requesterId);
+        if (hasExistingEncore) {
+            throw new FlagInvalidStatusException(FlagErrorCode.FLAG_ENCORE_ALREADY_EXISTS,
+                    ErrorContext.of("flagId", id));
+        }
         if (!this.isEnded()) {
             throw new FlagInvalidStatusException(FlagErrorCode.FLAG_NOT_ENDED, ErrorContext.of("flagId", id).and("status", calculateCurrentStatus()));
         }
