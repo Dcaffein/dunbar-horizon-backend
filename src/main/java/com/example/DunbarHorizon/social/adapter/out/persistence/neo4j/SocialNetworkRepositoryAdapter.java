@@ -8,7 +8,6 @@ import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Repository;
 
@@ -122,8 +121,6 @@ public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
             RETURN target.id AS friendAId, mutual.id AS friendBId, tf.intimacy AS intimacy
             """;
 
-    @Cacheable(cacheNames = "dunbar:network:default", key = "#userId + ':' + #circleSize.name()",
-            condition = "#circleSize == T(com.example.DunbarHorizon.social.domain.friend.DunbarCircle).DUNBAR")
     @Neo4jTransactional(readOnly = true)
     @Override
     public List<NodeGraphResult> getDefaultNetworkGraph(Long userId, DunbarCircle circleSize, int pruningMin, int pruningRange) {
