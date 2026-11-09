@@ -10,6 +10,7 @@ public interface FlagCommentRepository {
     Optional<FlagComment> findById(Long id);
     List<FlagComment> findAllByFlagId(Long flagId);
     Optional<FlagComment> findByIdForUpdate(Long id);
+    Optional<FlagComment> findByIdForShare(Long id);
     void deleteWithReplies(Long commentId);
     long countByFlagId(Long flagId);
 }

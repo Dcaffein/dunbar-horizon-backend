@@ -84,7 +84,7 @@ class FlagCommentCommandServiceTest {
         FlagComment savedReply = parent.createReply(USER_ID, "답글 내용", false);
         ReflectionTestUtils.setField(savedReply, "id", 2L);
 
-        given(commentRepository.findById(1L)).willReturn(Optional.of(parent));
+        given(commentRepository.findByIdForShare(1L)).willReturn(Optional.of(parent));
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(createFlag()));
         given(commentRepository.save(any(FlagComment.class))).willReturn(savedReply);
 
@@ -99,7 +99,7 @@ class FlagCommentCommandServiceTest {
     @DisplayName("존재하지 않는 댓글에 답글을 달면 FlagCommentNotFoundException이 발생한다")
     void createReply_ParentNotFound_ThrowsException() {
         // given
-        given(commentRepository.findById(999L)).willReturn(Optional.empty());
+        given(commentRepository.findByIdForShare(999L)).willReturn(Optional.empty());
 
         // when / then
         assertThatThrownBy(() -> flagCommentCommandService.createReply(FLAG_ID, 999L, USER_ID, "내용", false))
@@ -115,7 +115,7 @@ class FlagCommentCommandServiceTest {
         FlagComment reply = root.createReply(HOST_ID, "1단 답글", false);
         ReflectionTestUtils.setField(reply, "id", 2L);
 
-        given(commentRepository.findById(2L)).willReturn(Optional.of(reply));
+        given(commentRepository.findByIdForShare(2L)).willReturn(Optional.of(reply));
         given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(createFlag()));
 
         // when / then
@@ -227,7 +227,7 @@ class FlagCommentCommandServiceTest {
         // given
         FlagComment parent = FlagComment.createRoot(FLAG_ID, HOST_ID, "루트", false);
         ReflectionTestUtils.setField(parent, "id", 1L);
-        given(commentRepository.findById(1L)).willReturn(Optional.of(parent));
+        given(commentRepository.findByIdForShare(1L)).willReturn(Optional.of(parent));
 
         // when / then
         assertThatThrownBy(() -> flagCommentCommandService.createReply(999L, 1L, USER_ID, "답글", false))
