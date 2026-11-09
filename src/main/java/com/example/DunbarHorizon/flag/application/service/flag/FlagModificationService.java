@@ -55,6 +55,9 @@ public class FlagModificationService implements FlagModificationUseCase {
         flagRepository.save(flag);
     }
 
+    // 대상을 먼저 잠그는 것은 믿을 수 있는 parentId가 잠근 대상에서만 나오기 때문이다. 두 Flag를
+    // 함께 잠그는 경로는 모두 대상 → 부모 순서를 따라야 교착이 없다. 두 잠금 사이에 일반 조회를
+    // 넣으면 REPEATABLE READ의 읽기 시점이 부모 잠금 전에 고정되어 부모 면제 재계산이 낡는다.
     @Override
     public void closeFlag(Long flagId, Long userId) {
         Flag flag = flagRepository.findByIdForUpdate(flagId)
