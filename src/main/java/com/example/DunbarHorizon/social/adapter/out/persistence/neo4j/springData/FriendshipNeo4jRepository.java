@@ -56,7 +56,12 @@ public interface FriendshipNeo4jRepository extends Repository<SocialUser, Long> 
             MATCH (:UserReference)-[r:FRIENDS_WITH]->(:UserReference)
             WHERE r.lowLastInteractedAt <= $decayTime OR r.highLastInteractedAt <= $decayTime
             WITH r ORDER BY r.id
-            """ + LOCK_FRIENDSHIP + """
+            """ + LOCK_FRIENDSHIP)
+    void lockDecayTargets(@Param("decayTime") LocalDateTime decayTime);
+
+    @Query("""
+            MATCH (:UserReference)-[r:FRIENDS_WITH]->(:UserReference)
+            WHERE r.lowLastInteractedAt <= $decayTime OR r.highLastInteractedAt <= $decayTime
             WITH r,
                  coalesce(r.lowInterestScore, 0.0) AS low,
                  coalesce(r.highInterestScore, 0.0) AS high

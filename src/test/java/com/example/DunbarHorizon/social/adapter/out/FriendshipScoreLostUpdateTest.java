@@ -56,6 +56,7 @@ class FriendshipScoreLostUpdateTest {
     private static final int THREADS = 16;
     private static final int CALLS_PER_FRIENDSHIP = 50;
     private static final int FLAG_CONCLUSIONS = 30;
+    private static final int CONCURRENT_DECAYS = 10;
     private static final double TOLERANCE = 0.000001;
 
     @Autowired
@@ -63,6 +64,12 @@ class FriendshipScoreLostUpdateTest {
 
     @Autowired
     private InteractionScoreService interactionScoreService;
+
+    @Autowired
+    private FriendshipDecayService friendshipDecayService;
+
+    @Autowired
+    private FriendshipDecayPolicy friendshipDecayPolicy;
 
     @Autowired
     private SocialUserNeo4jRepository socialUserNeo4jRepository;
@@ -206,6 +213,48 @@ class FriendshipScoreLostUpdateTest {
                     .as(friendship.getId() + " intimacy")
                     .isCloseTo(FriendRecognition.normalize(expected), within(TOLERANCE));
         }
+    }
+
+    @Test
+    @DisplayName("감쇄를 동시에 여러 번 돌려도 한 번도 잃지 않고 모두 곱해진다")
+    void processDecay_KeepsEveryDecay_Concurrent() {
+        // given
+        double initial = FriendRecognition.INITIAL_RAW_SCORE;
+        resetToStaleInteractions(initial);
+        List<Callable<Void>> tasks = new ArrayList<>();
+        for (int i = 0; i < CONCURRENT_DECAYS; i++) {
+            tasks.add(() -> {
+                friendshipDecayService.processDecay();
+                return null;
+            });
+        }
+
+        // when
+        List<Throwable> failures = runConcurrently(tasks);
+
+        // then
+        assertThat(failures).as("실패들=%s", failures).isEmpty();
+        double expected = initial * Math.pow(friendshipDecayPolicy.getDecayRate(), CONCURRENT_DECAYS);
+        for (Friendship friendship : friendships) {
+            Long[] pair = pairOf(friendship);
+            assertThat(interestScoreOf(friendship.getId(), pair[0])).as(friendship.getId() + " low")
+                    .isCloseTo(expected, within(TOLERANCE));
+            assertThat(interestScoreOf(friendship.getId(), pair[1])).as(friendship.getId() + " high")
+                    .isCloseTo(expected, within(TOLERANCE));
+        }
+    }
+
+    /**
+     * 감쇄는 유예 기간이 지난 쪽만 건드리므로 교류 시각을 과거로 밀고 점수를 처음으로 되돌린다.
+     */
+    private void resetToStaleInteractions(double score) {
+        neo4jClient.query(
+                        "MATCH ()-[r:FRIENDS_WITH]->() " +
+                        "SET r.lowInterestScore = $score, r.highInterestScore = $score, " +
+                        "r.lowLastInteractedAt = localdatetime() - duration({days: 60}), " +
+                        "r.highLastInteractedAt = localdatetime() - duration({days: 60})")
+                .bind(score).to("score")
+                .run();
     }
 
     private String storeFormat() {

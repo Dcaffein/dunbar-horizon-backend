@@ -188,6 +188,7 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
 
     @Override
     public void applyDecay(double rate, double threshold, LocalDateTime decayTime) {
+        friendshipNeo4jRepository.lockDecayTargets(decayTime);
         friendshipNeo4jRepository.applyDecay(rate, threshold, decayTime);
     }
 
