@@ -6,6 +6,7 @@ import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipInvali
 import lombok.Getter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -112,6 +113,15 @@ public class Friendship {
 
     public void adjustMutualInterestScore(double scoreDelta) {
         recognitions.forEach(r -> r.adjustInterestScore(scoreDelta));
+        recalculateIntimacy();
+    }
+
+    public void decay(double rate, double minThreshold, LocalDateTime thresholdTime) {
+        boolean isTarget = recognitions.stream().anyMatch(r -> r.isDecayTarget(thresholdTime));
+        if (!isTarget) {
+            return;
+        }
+        recognitions.forEach(r -> r.decay(rate, minThreshold, thresholdTime));
         recalculateIntimacy();
     }
 

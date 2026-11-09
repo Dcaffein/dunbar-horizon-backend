@@ -69,6 +69,18 @@ public class FriendRecognition {
         }
     }
 
+    boolean isDecayTarget(LocalDateTime thresholdTime) {
+        return lastInteractedAt != null && !lastInteractedAt.isAfter(thresholdTime);
+    }
+
+    void decay(double rate, double minThreshold, LocalDateTime thresholdTime) {
+        double score = getInterestScore();
+        if (isDecayTarget(thresholdTime) && score > minThreshold) {
+            score = Math.max(score * rate, minThreshold);
+        }
+        this.interestScore = score;
+    }
+
     public void updateFriendAlias(String newAlias) {
         if (newAlias != null && newAlias.length() > Friendship.ALIAS_MAX_LENGTH) {
             throw new InvalidFriendAliasException();
