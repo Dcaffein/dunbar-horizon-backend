@@ -18,20 +18,6 @@ public interface FriendshipNeo4jRepository extends Repository<SocialUser, Long> 
             REMOVE r._interactionScoreLock
             """;
 
-    String APPLY_MUTUAL_DELTA = """
-            WITH r, delta,
-                 coalesce(r.lowInterestScore, 0.0) + delta AS rawLow,
-                 coalesce(r.highInterestScore, 0.0) + delta AS rawHigh
-            WITH r,
-                 CASE WHEN rawLow < 0.0 THEN 0.0 ELSE rawLow END AS scoreLow,
-                 CASE WHEN rawHigh < 0.0 THEN 0.0 ELSE rawHigh END AS scoreHigh
-            SET r.lowInterestScore = scoreLow,
-                r.lowLastInteractedAt = localdatetime(),
-                r.highInterestScore = scoreHigh,
-                r.highLastInteractedAt = localdatetime(),
-                r.intimacy = sqrt((scoreLow / (scoreLow + 50.0)) * (scoreHigh / (scoreHigh + 50.0)))
-            """;
-
     @Query("""
             MATCH ()-[r:FRIENDS_WITH {id: $friendshipId}]->()
             RETURN count(r) > 0
@@ -94,41 +80,17 @@ public interface FriendshipNeo4jRepository extends Repository<SocialUser, Long> 
     void updateUserRelationshipFields(@Param("friendshipId") String friendshipId,
                                       @Param("properties") Map<String, Object> properties);
 
-    // 아래 세 쿼리가 저장 점수를 0에서 끊는다(FriendRecognition.adjustInterestScore와 같은 동작).
-    // 그래서 읽기만 하는 쪽은 따로 막지 않는다.
     @Query("""
-            MATCH (low:UserReference)-[r:FRIENDS_WITH {id: $friendshipId}]->(:UserReference)
-            """ + LOCK_FRIENDSHIP + """
-            WITH r, low.id = $userId AS isLow
-            WITH r, isLow,
-                 coalesce(r.lowInterestScore, 0.0) + CASE WHEN isLow THEN $delta ELSE 0.0 END AS rawLow,
-                 coalesce(r.highInterestScore, 0.0) + CASE WHEN isLow THEN 0.0 ELSE $delta END AS rawHigh
-            WITH r, isLow,
-                 CASE WHEN rawLow < 0.0 THEN 0.0 ELSE rawLow END AS scoreLow,
-                 CASE WHEN rawHigh < 0.0 THEN 0.0 ELSE rawHigh END AS scoreHigh
-            SET r.lowInterestScore = scoreLow,
-                r.highInterestScore = scoreHigh,
-                r.lowLastInteractedAt = CASE WHEN isLow THEN localdatetime() ELSE r.lowLastInteractedAt END,
-                r.highLastInteractedAt = CASE WHEN isLow THEN r.highLastInteractedAt ELSE localdatetime() END,
-                r.intimacy = sqrt((scoreLow / (scoreLow + 50.0)) * (scoreHigh / (scoreHigh + 50.0)))
+            UNWIND $friendshipIds AS friendshipId
+            WITH friendshipId ORDER BY friendshipId
+            MATCH (:UserReference)-[r:FRIENDS_WITH {id: friendshipId}]->(:UserReference)
+            """ + LOCK_FRIENDSHIP)
+    void lockFriendships(@Param("friendshipIds") Collection<String> friendshipIds);
+
+    @Query("""
+            UNWIND $rows AS row
+            MATCH (:UserReference)-[r:FRIENDS_WITH {id: row.friendshipId}]->(:UserReference)
+            SET r += row.properties
             """)
-    void incrementInterestScore(@Param("friendshipId") String friendshipId,
-                                @Param("userId") Long userId,
-                                @Param("delta") double delta);
-
-    @Query("""
-            MATCH (:UserReference)-[r:FRIENDS_WITH {id: $friendshipId}]->(:UserReference)
-            """ + LOCK_FRIENDSHIP + """
-            WITH r, $delta AS delta
-            """ + APPLY_MUTUAL_DELTA)
-    void incrementMutualInterestScore(@Param("friendshipId") String friendshipId, @Param("delta") double delta);
-
-    @Query("""
-            UNWIND $updates AS update
-            WITH update ORDER BY update.friendshipId
-            MATCH (:UserReference)-[r:FRIENDS_WITH {id: update.friendshipId}]->(:UserReference)
-            """ + LOCK_FRIENDSHIP + """
-            WITH r, update.delta AS delta
-            """ + APPLY_MUTUAL_DELTA)
-    void incrementMutualInterestScoresBatch(@Param("updates") List<Map<String, Object>> updates);
+    void saveInterestScores(@Param("rows") List<Map<String, Object>> rows);
 }

@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
-import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
@@ -51,6 +50,12 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
             RETURN r, low, high
             """;
 
+    private static final String FIND_ALL_BY_IDS = """
+            UNWIND $friendshipIds AS friendshipId
+            MATCH (low:UserReference)-[r:FRIENDS_WITH {id: friendshipId}]->(high:UserReference)
+            RETURN r, low, high
+            """;
+
     private static final String FIND_BY_USER_ID = """
             MATCH (:UserReference {id: $userId})-[r:FRIENDS_WITH]-(:UserReference)
             RETURN r, startNode(r) AS low, endNode(r) AS high
@@ -64,9 +69,7 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
 
     @Override
     public void create(Friendship friendship) {
-        List<FriendRecognition> recognitions = friendship.getRecognitions().stream()
-                .sorted(Comparator.comparing(recognition -> recognition.getUser().getId()))
-                .toList();
+        List<FriendRecognition> recognitions = lowThenHigh(friendship);
         FriendRecognition low = recognitions.get(0);
         FriendRecognition high = recognitions.get(1);
         Long userAId = low.getUser().getId();
@@ -91,6 +94,12 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
 
         if ((Boolean) result.get("missingA")) throw new UserReferenceNotFoundException(userAId);
         if ((Boolean) result.get("missingB")) throw new UserReferenceNotFoundException(userBId);
+    }
+
+    private static List<FriendRecognition> lowThenHigh(Friendship friendship) {
+        return friendship.getRecognitions().stream()
+                .sorted(Comparator.comparing(recognition -> recognition.getUser().getId()))
+                .toList();
     }
 
     private Map<String, Object> propertiesOf(String side, FriendRecognition recognition) {
@@ -196,26 +205,43 @@ public class FriendshipRepositoryAdapter implements FriendshipRepository {
     }
 
     @Override
-    public void incrementInterestScore(String friendshipId, Long userId, Long friendId, double delta) {
-        friendshipNeo4jRepository.incrementInterestScore(friendshipId, userId, delta);
+    public List<Friendship> findAllByIdsForUpdate(Collection<String> ids) {
+        if (ids.isEmpty()) return List.of();
+        friendshipNeo4jRepository.lockFriendships(ids);
+        return neo4jClient.query(FIND_ALL_BY_IDS)
+                .bind(ids).to("friendshipIds")
+                .fetchAs(Friendship.class)
+                .mappedBy((typeSystem, record) -> toFriendship(record))
+                .all()
+                .stream()
+                .toList();
     }
 
     @Override
-    public void incrementMutualInterestScore(String friendshipId, Long userAId, Long userBId, double delta) {
-        friendshipNeo4jRepository.incrementMutualInterestScore(friendshipId, delta);
-    }
-
-    @Override
-    public void incrementMutualInterestScoresBatch(List<MutualInterestScoreUpdate> updates) {
-        if (updates.isEmpty()) return;
-        friendshipNeo4jRepository.incrementMutualInterestScoresBatch(
-                updates.stream()
-                        .map(update -> Map.<String, Object>of(
-                                "friendshipId", update.friendshipId(),
-                                "delta", update.delta()
+    public void saveInterestScores(Collection<Friendship> friendships) {
+        if (friendships.isEmpty()) return;
+        friendshipNeo4jRepository.saveInterestScores(
+                friendships.stream()
+                        .map(friendship -> Map.<String, Object>of(
+                                "friendshipId", friendship.getId(),
+                                "properties", interestScorePropertiesOf(friendship)
                         ))
                         .toList()
         );
+    }
+
+    private Map<String, Object> interestScorePropertiesOf(Friendship friendship) {
+        List<FriendRecognition> recognitions = lowThenHigh(friendship);
+        FriendRecognition low = recognitions.get(0);
+        FriendRecognition high = recognitions.get(1);
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put(PROP_INTIMACY, friendship.getIntimacy());
+        properties.put(SIDE_LOW + SUFFIX_INTEREST_SCORE, low.getInterestScore());
+        properties.put(SIDE_LOW + SUFFIX_LAST_INTERACTED_AT, low.getLastInteractedAt());
+        properties.put(SIDE_HIGH + SUFFIX_INTEREST_SCORE, high.getInterestScore());
+        properties.put(SIDE_HIGH + SUFFIX_LAST_INTERACTED_AT, high.getLastInteractedAt());
+        return properties;
     }
 
     @Override
