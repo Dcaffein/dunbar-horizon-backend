@@ -1,5 +1,7 @@
 package com.example.DunbarHorizon.flag.adapter.out.persistence;
 
+import com.example.DunbarHorizon.support.FlagInvitationFixture;
+
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagCommentJpaRepository;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagInvitationJpaRepository;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagJpaRepository;
@@ -106,7 +108,7 @@ class FlagMaintenanceAdapterTest {
                 newInstance(FlagMemorial.class, new Class<?>[]{Long.class, Long.class, String.class},
                         flagId, MEMBER_ID, "후기 내용"));
         commentJpaRepository.save(FlagComment.createRoot(flagId, MEMBER_ID, "댓글 내용", false));
-        invitationJpaRepository.save(FlagInvitation.create(flagId, HOST_ID, MEMBER_ID));
+        invitationJpaRepository.save(FlagInvitationFixture.invitation(flagId, HOST_ID, MEMBER_ID));
     }
 
     @Test

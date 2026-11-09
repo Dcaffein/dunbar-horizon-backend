@@ -1,5 +1,7 @@
 package com.example.DunbarHorizon.flag.domain.flag;
 
+import com.example.DunbarHorizon.support.FlagInvitationFixture;
+
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagJpaRepository;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagInvitationJpaRepository;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagParticipantJpaRepository;
@@ -457,8 +459,8 @@ class FlagParticipationLockConcurrencyIntegrationTest {
     void concurrentInvitationAcceptance_withOneRemainingSeat_preservesCapacity() throws InterruptedException {
         // given
         Long flagId = hostRecruitingFlag(1);
-        Long invitationAId = invitationRepository.save(FlagInvitation.create(flagId, HOST_ID, PARTICIPANT_A_ID)).getId();
-        Long invitationBId = invitationRepository.save(FlagInvitation.create(flagId, HOST_ID, PARTICIPANT_B_ID)).getId();
+        Long invitationAId = invitationRepository.save(FlagInvitationFixture.invitation(flagId, HOST_ID, PARTICIPANT_A_ID)).getId();
+        Long invitationBId = invitationRepository.save(FlagInvitationFixture.invitation(flagId, HOST_ID, PARTICIPANT_B_ID)).getId();
         CountDownLatch invitationsRead = new CountDownLatch(2);
         CountDownLatch continueToParticipation = new CountDownLatch(1);
         CountDownLatch completed = new CountDownLatch(2);
