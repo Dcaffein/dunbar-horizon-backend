@@ -21,7 +21,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import com.example.DunbarHorizon.flag.application.eventListener.FlagExpiryExemptionEventListener;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
+import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -56,6 +63,9 @@ class FlagExpiryExemptionLockConcurrencyIntegrationTest {
     @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private JdbcTemplate jdbcTemplate;
 
+    // 면제가 바뀌면 비동기 리스너가 Flag 저장소를 부른다. 앞 테스트의 리스너가 다음 테스트의
+    // 스파이 스터빙과 겹치면 UnfinishedStubbingException이 나므로 이 클래스에서는 막는다.
+    @MockitoBean private FlagExpiryExemptionEventListener exemptionEventListener;
     @MockitoSpyBean private FlagMemorialRepository memorialRepository;
     @MockitoSpyBean private FlagRepository flagRepository;
 
@@ -325,6 +335,144 @@ class FlagExpiryExemptionLockConcurrencyIntegrationTest {
         }
     }
 
+    @Test
+    @DisplayName("Memorial 삭제가 원천을 지운 뒤 잠금 전에 멈춘 사이 다른 Memorial이 커밋되면 삭제 후에도 면제가 켜져 있다")
+    void memorialDeletion_pausedBeforeLock_seesMemorialCommittedMeanwhile() throws InterruptedException {
+        // given
+        Long flagId = hostEndedFlag();
+        Long firstMemorialId = memorialCommandUseCase.createMemorial(flagId, HOST_ID, "첫 후기");
+        CountDownLatch memorialDeleted = new CountDownLatch(1);
+        CountDownLatch continueDeletion = new CountDownLatch(1);
+        CountDownLatch deletionFinished = new CountDownLatch(1);
+        AtomicBoolean blockOnce = new AtomicBoolean(true);
+        AtomicReference<Throwable> deletionFailure = new AtomicReference<>();
+
+        doAnswer(invocation -> {
+            invocation.callRealMethod();
+            if (blockOnce.compareAndSet(true, false)) {
+                memorialDeleted.countDown();
+                await(continueDeletion, "Memorial 삭제 재개");
+            }
+            return null;
+        }).when(memorialRepository).delete(any(FlagMemorial.class));
+
+        ExecutorService executor = Executors.newFixedThreadPool(1);
+        submit(executor, () -> memorialCommandUseCase.deleteMemorial(flagId, firstMemorialId, HOST_ID),
+                deletionFailure, deletionFinished);
+
+        try {
+            // when
+            assertThat(memorialDeleted.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            memorialCommandUseCase.createMemorial(flagId, HOST_ID, "두 번째 후기");
+            continueDeletion.countDown();
+            assertThat(deletionFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+            // then
+            assertThat(deletionFailure.get()).isNull();
+            assertThat(memorialJpaRepository.countByFlagId(flagId)).isEqualTo(1);
+            assertThat(flagJpaRepository.findById(flagId).orElseThrow().isAutoExpiryExempt()).isTrue();
+        } finally {
+            continueDeletion.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("자동 만료가 삭제를 먼저 하면 그 Flag의 Memorial 작성은 실패하고 Memorial이 남지 않는다")
+    void expiry_deletingFirst_failsMemorialCreationWithoutLeavingMemorial() throws InterruptedException {
+        // given
+        Long flagId = hostFlagEndedHoursAgo(26);
+        CountDownLatch flagsExpired = new CountDownLatch(1);
+        CountDownLatch continueExpiry = new CountDownLatch(1);
+        CountDownLatch expiryFinished = new CountDownLatch(1);
+        CountDownLatch memorialFinished = new CountDownLatch(1);
+        AtomicBoolean blockOnce = new AtomicBoolean(true);
+        AtomicReference<Throwable> expiryFailure = new AtomicReference<>();
+        AtomicReference<Throwable> memorialFailure = new AtomicReference<>();
+
+        doAnswer(invocation -> {
+            Object expired = invocation.callRealMethod();
+            if (blockOnce.compareAndSet(true, false)) {
+                flagsExpired.countDown();
+                await(continueExpiry, "자동 만료 재개");
+            }
+            return expired;
+        }).when(flagRepository).expireByIds(any(), any(LocalDateTime.class));
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        submit(executor, expiryService::expireEndedFlags, expiryFailure, expiryFinished);
+
+        try {
+            // when
+            assertThat(flagsExpired.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            submit(executor, () -> memorialCommandUseCase.createMemorial(flagId, HOST_ID, "첫 후기"),
+                    memorialFailure, memorialFinished);
+            awaitFinishedOrLockWait(memorialFinished, "Memorial 작성");
+            continueExpiry.countDown();
+            assertThat(expiryFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            assertThat(memorialFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+            // then
+            assertThat(expiryFailure.get()).isNull();
+            assertThat(memorialFailure.get()).isInstanceOf(FlagNotFoundException.class);
+            assertThat(memorialJpaRepository.countByFlagId(flagId)).isZero();
+            assertThat(flagJpaRepository.findById(flagId)).isEmpty();
+        } finally {
+            continueExpiry.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("같은 부모로 Encore 둘이 존재 확인을 모두 통과해도 하나만 생성되고 다른 하나는 중복으로 거절된다")
+    void encoreCreation_concurrentAfterExistenceCheck_onlyOneSucceeds() throws InterruptedException {
+        // given
+        Long parentId = hostEndedFlag();
+        CyclicBarrier bothChecked = new CyclicBarrier(2);
+        AtomicInteger checks = new AtomicInteger();
+        CountDownLatch finished = new CountDownLatch(2);
+        AtomicReference<Throwable> firstFailure = new AtomicReference<>();
+        AtomicReference<Throwable> secondFailure = new AtomicReference<>();
+
+        doAnswer(invocation -> {
+            Object exists = invocation.callRealMethod();
+            if (checks.incrementAndGet() <= 2) {
+                bothChecked.await(WAIT_SECONDS, TimeUnit.SECONDS);
+            }
+            return exists;
+        }).when(flagRepository).existsByParentId(parentId);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        submit(executor, () -> encoreConcurrently(parentId), firstFailure, finished);
+        submit(executor, () -> encoreConcurrently(parentId), secondFailure, finished);
+
+        try {
+            // when
+            assertThat(finished.await(WAIT_SECONDS * 2, TimeUnit.SECONDS)).isTrue();
+
+            // then
+            List<Throwable> failures = new ArrayList<>();
+            if (firstFailure.get() != null) failures.add(firstFailure.get());
+            if (secondFailure.get() != null) failures.add(secondFailure.get());
+            assertThat(failures).singleElement()
+                    .isInstanceOfSatisfying(FlagInvalidStatusException.class,
+                            error -> assertThat(error.getCode()).isEqualTo(FlagErrorCode.FLAG_ENCORE_ALREADY_EXISTS.code()));
+            assertThat(flagJpaRepository.existsByParentId(parentId)).isTrue();
+            assertThat(flagJpaRepository.findById(parentId).orElseThrow().isAutoExpiryExempt()).isTrue();
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private void encoreConcurrently(Long parentId) {
+        LocalDateTime base = LocalDateTime.now().withNano(0);
+        Long encoreId = flagHostUseCase.encoreFlag(new FlagEncoreCommand(
+                parentId, HOST_ID, base.plusHours(1), base.plusHours(2), base.plusHours(3)));
+        synchronized (createdFlagIds) {
+            createdFlagIds.add(encoreId);
+        }
+    }
+
     private Long hostFlagEndedHoursAgo(int hours) {
         LocalDateTime base = LocalDateTime.now().withNano(0);
         Long flagId = flagHostUseCase.hostFlag(new FlagHostCommand(
@@ -380,11 +528,17 @@ class FlagExpiryExemptionLockConcurrencyIntegrationTest {
         throw new AssertionError(action + "이 " + WAIT_SECONDS + "초 안에 끝나지도 잠금 대기에 들어가지도 않았습니다.");
     }
 
+    // PK 등치 FOR UPDATE는 최적화 단계(statistics)에서 행을 읽으며 잠금을 기다리는데, 이때
+    // innodb_trx는 LOCK WAIT로 바로 드러나지 않는다. 실행 중인 잠금 조회도 대기로 본다.
     private boolean isAnyTransactionWaitingForLock() {
         Integer waiting = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.innodb_trx WHERE trx_state = 'LOCK WAIT'",
                 Integer.class);
-        return waiting != null && waiting > 0;
+        Integer lockingQueries = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.processlist "
+                        + "WHERE command = 'Query' AND id <> CONNECTION_ID() AND info LIKE '%for update%'",
+                Integer.class);
+        return (waiting != null && waiting > 0) || (lockingQueries != null && lockingQueries > 0);
     }
 
     private static void await(CountDownLatch latch, String action) {

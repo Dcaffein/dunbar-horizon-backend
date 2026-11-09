@@ -31,7 +31,7 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
     @Override
     @Transactional
     public Long createReply(Long flagId, Long parentId, Long userId, String content, boolean isPrivate) {
-        FlagComment parent = commentRepository.findById(parentId)
+        FlagComment parent = commentRepository.findByIdForShare(parentId)
                 .orElseThrow(() -> new FlagCommentNotFoundException(parentId));
         validateBelongsToFlag(parent, flagId);
 

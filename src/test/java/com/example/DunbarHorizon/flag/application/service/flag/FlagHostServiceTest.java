@@ -59,12 +59,13 @@ class FlagHostServiceTest {
     }
 
     @Test
-    @DisplayName("앵코르 생성은 부모를 잠그고 앵코르를 저장한 뒤 부모 면제를 다시 계산해 저장한다")
+    @DisplayName("앵코르 생성은 부모를 읽어 앵코르를 저장한 뒤 부모를 잠가 면제를 갱신한다")
     void encore_LocksParentSavesThenRefreshesParentExemption() {
         // given
         Flag parent = endedParent();
-        given(flagRepository.findByIdForUpdate(PARENT_ID)).willReturn(Optional.of(parent));
+        given(flagRepository.findById(PARENT_ID)).willReturn(Optional.of(parent));
         given(flagRepository.existsByParentId(PARENT_ID)).willReturn(false);
+        given(flagRepository.findLatestByIdForUpdate(PARENT_ID)).willReturn(Optional.of(parent));
         given(flagRepository.save(any(Flag.class))).willAnswer(invocation -> {
             Flag saved = invocation.getArgument(0);
             if (saved.getParentId() != null) ReflectionTestUtils.setField(saved, "id", 2L);
@@ -77,20 +78,22 @@ class FlagHostServiceTest {
         // then
         assertThat(encoreId).isEqualTo(2L);
         InOrder inOrder = inOrder(flagRepository, exemptionUpdater);
-        inOrder.verify(flagRepository).findByIdForUpdate(PARENT_ID);
+        inOrder.verify(flagRepository).findById(PARENT_ID);
         inOrder.verify(flagRepository).existsByParentId(PARENT_ID);
         ArgumentCaptor<Flag> captor = ArgumentCaptor.forClass(Flag.class);
         inOrder.verify(flagRepository).save(captor.capture());
         assertThat(captor.getValue().getParentId()).isEqualTo(PARENT_ID);
+        inOrder.verify(flagRepository).findLatestByIdForUpdate(PARENT_ID);
         inOrder.verify(exemptionUpdater).refresh(parent);
         inOrder.verify(flagRepository).save(parent);
+        verify(flagRepository, never()).findByIdForUpdate(any());
     }
 
     @Test
     @DisplayName("존재하지 않는 부모로 앵코르를 만들면 FlagNotFoundException이 발생한다")
     void encore_ParentNotFound_ThrowsException() {
         // given
-        given(flagRepository.findByIdForUpdate(PARENT_ID)).willReturn(Optional.empty());
+        given(flagRepository.findById(PARENT_ID)).willReturn(Optional.empty());
 
         // when / then
         assertThatThrownBy(() -> flagHostService.encoreFlag(new FlagEncoreCommand(PARENT_ID, HOST_ID, DEADLINE, START, END)))
@@ -102,7 +105,7 @@ class FlagHostServiceTest {
     @DisplayName("호스트가 아닌 사용자가 앵코르를 만들면 FlagAuthorizationException이 발생한다")
     void encore_ByNonHost_ThrowsException() {
         // given
-        given(flagRepository.findByIdForUpdate(PARENT_ID)).willReturn(Optional.of(endedParent()));
+        given(flagRepository.findById(PARENT_ID)).willReturn(Optional.of(endedParent()));
 
         // when / then
         assertThatThrownBy(() -> flagHostService.encoreFlag(new FlagEncoreCommand(PARENT_ID, OTHER_ID, DEADLINE, START, END)))
@@ -114,7 +117,7 @@ class FlagHostServiceTest {
     @DisplayName("이미 앵코르가 있는 부모에 앵코르를 만들면 FlagInvalidStatusException이 발생한다")
     void encore_AlreadyExists_ThrowsException() {
         // given
-        given(flagRepository.findByIdForUpdate(PARENT_ID)).willReturn(Optional.of(endedParent()));
+        given(flagRepository.findById(PARENT_ID)).willReturn(Optional.of(endedParent()));
         given(flagRepository.existsByParentId(PARENT_ID)).willReturn(true);
 
         // when / then
@@ -128,7 +131,7 @@ class FlagHostServiceTest {
     void encore_ParentNotEnded_ThrowsException() {
         // given
         Flag recruiting = flagWith(FlagSchedule.of(NOW.plusHours(1), NOW.plusHours(2), NOW.plusHours(3)));
-        given(flagRepository.findByIdForUpdate(PARENT_ID)).willReturn(Optional.of(recruiting));
+        given(flagRepository.findById(PARENT_ID)).willReturn(Optional.of(recruiting));
         given(flagRepository.existsByParentId(PARENT_ID)).willReturn(false);
 
         // when / then
@@ -169,7 +172,7 @@ class FlagHostServiceTest {
     @DisplayName("앵콜 저장의 유니크 제약 위반은 중복 앵콜 예외로 번역한다")
     void encoreFlag_Fail_UniqueConstraintViolation() {
         // given
-        given(flagRepository.findByIdForUpdate(PARENT_ID)).willReturn(Optional.of(endedParent()));
+        given(flagRepository.findById(PARENT_ID)).willReturn(Optional.of(endedParent()));
         given(flagRepository.save(any(Flag.class))).willThrow(new DataIntegrityViolationException("duplicate"));
         // when & then
         assertThatThrownBy(() -> flagHostService.encoreFlag(

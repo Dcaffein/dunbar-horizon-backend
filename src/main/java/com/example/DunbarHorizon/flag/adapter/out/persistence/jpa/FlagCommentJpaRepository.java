@@ -22,6 +22,10 @@ public interface FlagCommentJpaRepository extends JpaRepository<FlagComment, Lon
     @Query("SELECT c FROM FlagComment c WHERE c.id = :id")
     Optional<FlagComment> findByIdForUpdate(@Param("id") Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("SELECT c FROM FlagComment c WHERE c.id = :id")
+    Optional<FlagComment> findByIdForShare(@Param("id") Long id);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM FlagComment c WHERE c.id = :id OR c.parentId = :id")
     void deleteTargetAndReplies(@Param("id") Long id);

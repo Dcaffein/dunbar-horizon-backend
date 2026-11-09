@@ -36,6 +36,11 @@ public class FlagCommentRepositoryAdapter implements FlagCommentRepository {
     }
 
     @Override
+    public Optional<FlagComment> findByIdForShare(Long id) {
+        return jpaRepository.findByIdForShare(id);
+    }
+
+    @Override
     public void deleteWithReplies(Long commentId) {
         jpaRepository.deleteTargetAndReplies(commentId);
     }
