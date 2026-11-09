@@ -2,29 +2,31 @@ package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
+import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
+import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
-import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.TransientDataAccessResourceException;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyDouble;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
+import static org.assertj.core.api.Assertions.within;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class InteractionScoreServiceTest {
@@ -34,154 +36,108 @@ class InteractionScoreServiceTest {
     private static final List<Long> PARTICIPANT_IDS = List.of(21L, 22L);
     private static final InteractionType FLAG_TYPE = InteractionType.FLAG_ENDED;
     private static final double FLAG_DELTA = InteractionScorePolicy.scoreOf(FLAG_TYPE);
+    private static final SocialUser USER_1 = new SocialUser(1L, "사용자1", null);
+    private static final SocialUser USER_2 = new SocialUser(2L, "사용자2", null);
 
     @InjectMocks private InteractionScoreService interactionScoreService;
     @Mock private FriendshipRepository friendshipRepository;
 
     @Test
-    @DisplayName("Flag 결론은 host-참가자와 참가자 쌍 전체를 하나의 batch로 갱신한다")
-    void applyFlagConclusion_updatesAllPairsInOneBatch() {
-        // when
-        interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT);
-
-        // then
-        ArgumentCaptor<List<MutualInterestScoreUpdate>> captor = ArgumentCaptor.forClass(List.class);
-        verify(friendshipRepository).incrementMutualInterestScoresBatch(captor.capture());
-        assertThat(captor.getValue()).containsExactlyInAnyOrder(
-                new MutualInterestScoreUpdate(Friendship.generateCompositeId(HOST_ID, 21L), HOST_ID, 21L, FLAG_DELTA),
-                new MutualInterestScoreUpdate(Friendship.generateCompositeId(HOST_ID, 22L), HOST_ID, 22L, FLAG_DELTA),
-                new MutualInterestScoreUpdate(Friendship.generateCompositeId(21L, 22L), 21L, 22L, FLAG_DELTA)
-        );
-    }
-
-    @Test
-    @DisplayName("REVOKE는 같은 쌍에 같은 크기의 음수 델타를 넣는다")
-    void applyFlagConclusion_revokeMirrorsGrantWithNegativeDelta() {
+    @DisplayName("수정용으로 불러온 관계를 계산한 뒤 쓴다")
+    void applyInteraction_LoadsForUpdateThenSaves() {
         // given
-        InteractionType type = InteractionType.FLAG_PRESERVED;
+        Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
+        when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of(friendship));
 
         // when
-        interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, type, ScoreDirection.REVOKE);
+        interactionScoreService.applyInteraction(1L, 2L, InteractionType.FLAG_ENDED);
 
         // then
-        ArgumentCaptor<List<MutualInterestScoreUpdate>> captor = ArgumentCaptor.forClass(List.class);
-        verify(friendshipRepository).incrementMutualInterestScoresBatch(captor.capture());
-        double revoked = -InteractionScorePolicy.scoreOf(type);
-        assertThat(captor.getValue()).containsExactlyInAnyOrder(
-                new MutualInterestScoreUpdate(Friendship.generateCompositeId(HOST_ID, 21L), HOST_ID, 21L, revoked),
-                new MutualInterestScoreUpdate(Friendship.generateCompositeId(HOST_ID, 22L), HOST_ID, 22L, revoked),
-                new MutualInterestScoreUpdate(Friendship.generateCompositeId(21L, 22L), 21L, 22L, revoked)
-        );
-        assertThat(captor.getValue()).allSatisfy(update -> assertThat(update.delta()).isNegative());
+        InOrder order = inOrder(friendshipRepository);
+        order.verify(friendshipRepository).findAllByIdsForUpdate(Set.of("1_2"));
+        order.verify(friendshipRepository).saveInterestScores(List.of(friendship));
     }
 
     @Test
-    @DisplayName("rollback이 확인된 transient Flag batch 실패만 제한적으로 재시도한다")
-    void applyFlagConclusion_retriesTransientFailure() {
-        // given
-        doThrow(new TransientDataAccessResourceException("deadlock"))
-                .doNothing()
-                .when(friendshipRepository).incrementMutualInterestScoresBatch(any());
-
-        // when
-        interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT);
-
-        // then
-        verify(friendshipRepository, times(2)).incrementMutualInterestScoresBatch(any());
-    }
-
-    @Test
-    @DisplayName("재시도를 소진한 Flag batch 실패는 삼키지 않고 호출자에게 올린다")
-    void applyFlagConclusion_rethrowsAfterExhaustingRetries() {
-        // given
-        doThrow(new TransientDataAccessResourceException("deadlock"))
-                .when(friendshipRepository).incrementMutualInterestScoresBatch(any());
-
-        // when & then
-        assertThatThrownBy(() -> interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT))
-                .isInstanceOf(TransientDataAccessResourceException.class);
-        verify(friendshipRepository, times(3)).incrementMutualInterestScoresBatch(any());
-    }
-
-    @Test
-    @DisplayName("비일시적 Flag batch 실패는 재시도하지 않고 바로 올린다")
-    void applyFlagConclusion_rethrowsNonTransientFailureImmediately() {
-        // given
-        doThrow(new IllegalStateException("not transient"))
-                .when(friendshipRepository).incrementMutualInterestScoresBatch(any());
-
-        // when & then
-        assertThatThrownBy(() -> interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT))
-                .isInstanceOf(IllegalStateException.class);
-        verify(friendshipRepository, times(1)).incrementMutualInterestScoresBatch(any());
-    }
-
-    @Test
-    @DisplayName("mutual 타입은 양방향 커맨드를 타입에 맞는 델타로 부른다")
-    void applyInteraction_mutualTypeCallsBidirectionalCommand() {
+    @DisplayName("mutual 타입은 양쪽 점수를 타입에 맞는 델타로 올린다")
+    void applyInteraction_AdjustsBothSides_MutualType() {
         // given
         InteractionType type = InteractionType.FLAG_ENDED_ENCORE;
+        Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
+        when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of(friendship));
 
         // when
-        interactionScoreService.applyInteraction(1L, 2L, type);
+        interactionScoreService.applyInteraction(2L, 1L, type);
 
         // then
-        verify(friendshipRepository).incrementMutualInterestScore(
-                Friendship.generateCompositeId(1L, 2L), 1L, 2L, InteractionScorePolicy.scoreOf(type));
+        double expected = FriendRecognition.INITIAL_RAW_SCORE + InteractionScorePolicy.scoreOf(type);
+        assertThat(friendship.getMyInterestScore(1L)).isCloseTo(expected, within(0.0001));
+        assertThat(friendship.getMyInterestScore(2L)).isCloseTo(expected, within(0.0001));
+        assertThat(friendship.getIntimacy()).isCloseTo(FriendRecognition.normalize(expected), within(0.0001));
     }
 
     @Test
-    @DisplayName("단방향 타입은 한쪽 커맨드를 타입에 맞는 델타로 부른다")
-    void applyInteraction_unilateralTypeCallsOneSidedCommand() {
+    @DisplayName("단방향 타입은 행위자 쪽 점수만 올린다")
+    void applyInteraction_AdjustsOnlyActorSide_UnilateralType() {
         // given
         InteractionType type = InteractionType.VISIT;
+        Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
+        when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of(friendship));
 
         // when
-        interactionScoreService.applyInteraction(1L, 2L, type);
+        interactionScoreService.applyInteraction(2L, 1L, type);
 
         // then
-        verify(friendshipRepository).incrementInterestScore(
-                Friendship.generateCompositeId(1L, 2L), 1L, 2L, InteractionScorePolicy.scoreOf(type));
+        assertThat(friendship.getMyInterestScore(2L))
+                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + InteractionScorePolicy.scoreOf(type), within(0.0001));
+        assertThat(friendship.getMyInterestScore(1L)).isCloseTo(FriendRecognition.INITIAL_RAW_SCORE, within(0.0001));
     }
 
     @Test
-    @DisplayName("단건 증분도 rollback이 확인된 transient 실패를 재시도한다")
-    void applyInteraction_retriesTransientFailure() {
+    @DisplayName("Flag 결론은 호스트-참가자와 참가자끼리의 쌍 전체를 한 번에 불러온다")
+    void applyFlagConclusion_LoadsEveryPairOnce() {
         // given
-        doThrow(new TransientDataAccessResourceException("deadlock"))
-                .doNothing()
-                .when(friendshipRepository).incrementInterestScore(any(), any(), any(), anyDouble());
+        when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of());
 
         // when
-        interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT);
+        interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT);
 
         // then
-        verify(friendshipRepository, times(2)).incrementInterestScore(any(), any(), any(), anyDouble());
+        ArgumentCaptor<Collection<String>> captor = ArgumentCaptor.forClass(Collection.class);
+        verify(friendshipRepository).findAllByIdsForUpdate(captor.capture());
+        assertThat(captor.getValue()).containsExactlyInAnyOrder("10_21", "10_22", "21_22");
     }
 
     @Test
-    @DisplayName("단건 증분이 재시도를 소진하면 삼키지 않고 호출자에게 올린다")
-    void applyInteraction_rethrowsAfterExhaustingRetries() {
+    @DisplayName("친구가 아니어서 불러오지 못한 쌍은 건너뛰고 불러온 관계만 갱신한다")
+    void applyFlagConclusion_SkipsMissingPairs() {
         // given
-        doThrow(new TransientDataAccessResourceException("deadlock"))
-                .when(friendshipRepository).incrementInterestScore(any(), any(), any(), anyDouble());
+        Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
+        when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of(friendship));
 
-        // when & then
-        assertThatThrownBy(() -> interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT))
-                .isInstanceOf(TransientDataAccessResourceException.class);
-        verify(friendshipRepository, times(3)).incrementInterestScore(any(), any(), any(), anyDouble());
+        // when
+        interactionScoreService.applyFlagConclusion(FLAG_ID, 1L, List.of(2L, 3L), FLAG_TYPE, ScoreDirection.GRANT);
+
+        // then
+        verify(friendshipRepository).saveInterestScores(List.of(friendship));
+        assertThat(friendship.getMyInterestScore(1L))
+                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + FLAG_DELTA, within(0.0001));
     }
 
     @Test
-    @DisplayName("단건 증분의 비일시적 실패는 재시도하지 않고 바로 올린다")
-    void applyInteraction_rethrowsNonTransientFailureImmediately() {
+    @DisplayName("REVOKE는 같은 크기만큼 점수를 내린다")
+    void applyFlagConclusion_LowersScore_Revoke() {
         // given
-        doThrow(new IllegalStateException("not transient"))
-                .when(friendshipRepository).incrementInterestScore(any(), any(), any(), anyDouble());
+        InteractionType type = InteractionType.FLAG_PRESERVED;
+        Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
+        when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of(friendship));
 
-        // when & then
-        assertThatThrownBy(() -> interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT))
-                .isInstanceOf(IllegalStateException.class);
-        verify(friendshipRepository, times(1)).incrementInterestScore(any(), any(), any(), anyDouble());
+        // when
+        interactionScoreService.applyFlagConclusion(FLAG_ID, 1L, List.of(2L), type, ScoreDirection.REVOKE);
+
+        // then
+        double expected = Math.max(0.0, FriendRecognition.INITIAL_RAW_SCORE - InteractionScorePolicy.scoreOf(type));
+        assertThat(friendship.getMyInterestScore(1L)).isCloseTo(expected, within(0.0001));
+        assertThat(friendship.getMyInterestScore(2L)).isCloseTo(expected, within(0.0001));
     }
 }

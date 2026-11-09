@@ -11,7 +11,6 @@ import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
 import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
-import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.support.Neo4jRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
@@ -20,10 +19,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.neo4j.driver.exceptions.TransientException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.neo4j.core.Neo4jClient;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,14 +37,14 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
+import java.util.function.Consumer;
 import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 /**
- * 점수 쓰기 네 커맨드가 같은 락 순서 규약(FRIENDS_WITH 관계 선점 + friendshipId 오름차순)을 쓰므로
+ * 점수 쓰기 경로들이 같은 락 순서 규약(FRIENDS_WITH 관계 선점 + friendshipId 오름차순)을 쓰므로
  * 동시에 돌려도 교착이 성립하지 않는다는 것을 반증하려는 테스트다.
  * <p>
  * 교착은 타이밍에 의존하므로 통과가 부재의 증명은 아니다. 그래서 먼저 규약을 어긴 쿼리로
@@ -70,6 +72,10 @@ class FriendshipScoreConcurrentWriteTest {
 
     @Autowired
     private InteractionScoreService interactionScoreService;
+
+    @Autowired
+    @Qualifier("neo4jTransactionManager")
+    private PlatformTransactionManager transactionManager;
 
     @Autowired
     private FriendshipDecayService friendshipDecayService;
@@ -170,11 +176,8 @@ class FriendshipScoreConcurrentWriteTest {
         int writerCount = 4;
         List<Callable<Void>> writers = new ArrayList<>();
         for (int i = 0; i < writerCount; i++) {
-            List<MutualInterestScoreUpdate> updates = shuffledUpdates();
-            writers.add(() -> {
-                friendshipRepository.incrementMutualInterestScoresBatch(updates);
-                return null;
-            });
+            List<Long> members = shuffledMembers();
+            writers.add(() -> applyGroupWithoutRetry(members));
         }
 
         // when
@@ -205,11 +208,8 @@ class FriendshipScoreConcurrentWriteTest {
             return null;
         });
         for (int i = 0; i < 2; i++) {
-            List<MutualInterestScoreUpdate> updates = shuffledUpdates();
-            tasks.add(() -> {
-                friendshipRepository.incrementMutualInterestScoresBatch(updates);
-                return null;
-            });
+            List<Long> members = shuffledMembers();
+            tasks.add(() -> applyGroupWithoutRetry(members));
         }
 
         // when
@@ -224,21 +224,12 @@ class FriendshipScoreConcurrentWriteTest {
     void 단건_증분과_배치_증분을_동시에_실행해도_교착이_없다() {
         // given
         String friendshipAB = Friendship.generateCompositeId(1L, 2L);
-        List<MutualInterestScoreUpdate> updates = shuffledUpdates();
+        List<Long> members = shuffledMembers();
 
         List<Callable<Void>> tasks = List.of(
-                () -> {
-                    friendshipRepository.incrementMutualInterestScore(friendshipAB, 1L, 2L, DELTA);
-                    return null;
-                },
-                () -> {
-                    friendshipRepository.incrementInterestScore(friendshipAB, 1L, 2L, DELTA);
-                    return null;
-                },
-                () -> {
-                    friendshipRepository.incrementMutualInterestScoresBatch(updates);
-                    return null;
-                }
+                () -> applyWithoutRetry(List.of(friendshipAB), friendship -> friendship.adjustMutualInterestScore(DELTA)),
+                () -> applyWithoutRetry(List.of(friendshipAB), friendship -> friendship.adjustInterestScore(1L, DELTA)),
+                () -> applyGroupWithoutRetry(members)
         );
 
         // when
@@ -320,16 +311,35 @@ class FriendshipScoreConcurrentWriteTest {
                 .run();
     }
 
-    private List<MutualInterestScoreUpdate> shuffledUpdates() {
-        List<MutualInterestScoreUpdate> updates = friendshipIds.stream()
-                .map(friendshipId -> {
-                    String[] userIds = friendshipId.split("_");
-                    return new MutualInterestScoreUpdate(
-                            friendshipId, Long.parseLong(userIds[0]), Long.parseLong(userIds[1]), DELTA);
-                })
-                .collect(Collectors.toCollection(ArrayList::new));
-        Collections.shuffle(updates);
-        return updates;
+    /**
+     * 모든 사용자의 모든 쌍을 잠그게 한다. 순서를 섞어 호출자가 준 순서와 무관하게 잠그는지 본다.
+     */
+    private List<Long> shuffledMembers() {
+        List<Long> members = new ArrayList<>(LongStream.rangeClosed(FIRST_USER_ID, LAST_USER_ID).boxed().toList());
+        Collections.shuffle(members);
+        return members;
+    }
+
+    private Void applyGroupWithoutRetry(List<Long> members) {
+        List<String> ids = new ArrayList<>();
+        for (int i = 0; i < members.size(); i++) {
+            for (int j = i + 1; j < members.size(); j++) {
+                ids.add(Friendship.generateCompositeId(members.get(i), members.get(j)));
+            }
+        }
+        return applyWithoutRetry(ids, friendship -> friendship.adjustMutualInterestScore(DELTA));
+    }
+
+    /**
+     * 서비스의 재시도는 교착을 삼킬 수 있으므로, 교착 부재를 볼 때는 서비스와 같은 순서를 재시도 없이 트랜잭션 하나에서 돌린다.
+     */
+    private Void applyWithoutRetry(List<String> friendshipIds, Consumer<Friendship> adjustment) {
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            List<Friendship> friendships = friendshipRepository.findAllByIdsForUpdate(friendshipIds);
+            friendships.forEach(adjustment);
+            friendshipRepository.saveInterestScores(friendships);
+        });
+        return null;
     }
 
     /**

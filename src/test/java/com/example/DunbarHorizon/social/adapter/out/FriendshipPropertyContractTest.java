@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.Friendship
 import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.SocialUserNeo4jRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.MutualInterestScoreUpdate;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.support.Neo4jRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +16,7 @@ import org.springframework.data.neo4j.core.Neo4jClient;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -65,35 +65,33 @@ class FriendshipPropertyContractTest {
     }
 
     @Test
-    @DisplayName("낮은 id 사용자의 단방향 증분 뒤에도 속성 키가 계약과 같다")
-    void incrementInterestScore_lowSide_keepsContract() {
-        friendshipRepository.incrementInterestScore(friendship.getId(), userA.getId(), userB.getId(), 1.0);
+    @DisplayName("낮은 id 사용자의 단방향 점수 저장 뒤에도 속성 키가 계약과 같다")
+    void saveInterestScores_lowSide_keepsContract() {
+        saveAfter(loaded -> loaded.adjustInterestScore(userA.getId(), 1.0));
 
         assertThat(keys()).containsExactlyInAnyOrderElementsOf(FRIENDS_WITH_KEYS);
     }
 
     @Test
-    @DisplayName("높은 id 사용자의 단방향 증분 뒤에도 속성 키가 계약과 같다")
-    void incrementInterestScore_highSide_keepsContract() {
-        friendshipRepository.incrementInterestScore(friendship.getId(), userB.getId(), userA.getId(), 1.0);
+    @DisplayName("높은 id 사용자의 단방향 점수 저장 뒤에도 속성 키가 계약과 같다")
+    void saveInterestScores_highSide_keepsContract() {
+        saveAfter(loaded -> loaded.adjustInterestScore(userB.getId(), 1.0));
 
         assertThat(keys()).containsExactlyInAnyOrderElementsOf(FRIENDS_WITH_KEYS);
     }
 
     @Test
-    @DisplayName("상호 증분 뒤에도 속성 키가 계약과 같다")
-    void incrementMutualInterestScore_keepsContract() {
-        friendshipRepository.incrementMutualInterestScore(friendship.getId(), userA.getId(), userB.getId(), 1.0);
+    @DisplayName("상호 점수 저장 뒤에도 속성 키가 계약과 같다")
+    void saveInterestScores_mutual_keepsContract() {
+        saveAfter(loaded -> loaded.adjustMutualInterestScore(1.0));
 
         assertThat(keys()).containsExactlyInAnyOrderElementsOf(FRIENDS_WITH_KEYS);
     }
 
     @Test
-    @DisplayName("배치 증분 뒤에도 속성 키가 계약과 같다")
-    void incrementMutualInterestScoresBatch_keepsContract() {
-        friendshipRepository.incrementMutualInterestScoresBatch(List.of(
-                new MutualInterestScoreUpdate(friendship.getId(), userA.getId(), userB.getId(), 1.0)
-        ));
+    @DisplayName("수정용 로드 뒤에도 잠금용 속성이 남지 않는다")
+    void findAllByIdsForUpdate_keepsContract() {
+        friendshipRepository.findAllByIdsForUpdate(List.of(friendship.getId()));
 
         assertThat(keys()).containsExactlyInAnyOrderElementsOf(FRIENDS_WITH_KEYS);
     }
@@ -124,6 +122,12 @@ class FriendshipPropertyContractTest {
         friendshipRepository.applyDecay(0.5, 1.0, LocalDateTime.now().plusSeconds(1));
 
         assertThat(keys()).containsExactlyInAnyOrderElementsOf(FRIENDS_WITH_KEYS);
+    }
+
+    private void saveAfter(Consumer<Friendship> adjustment) {
+        List<Friendship> friendships = friendshipRepository.findAllByIdsForUpdate(List.of(friendship.getId()));
+        friendships.forEach(adjustment);
+        friendshipRepository.saveInterestScores(friendships);
     }
 
     @SuppressWarnings("unchecked")

@@ -7,6 +7,7 @@ import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.utility.LicenseAcceptance;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class TestContainerConfig {
@@ -17,7 +18,11 @@ public class TestContainerConfig {
             .withPassword("test")
             .withReuse(true);
 
-    private static final Neo4jContainer<?> NEO4J = new Neo4jContainer<>(DockerImageName.parse("neo4j:5.24"))
+    private static final String NEO4J_IMAGE = "neo4j:5.26-enterprise";
+
+    private static final Neo4jContainer<?> NEO4J = new Neo4jContainer<>(DockerImageName.parse(NEO4J_IMAGE))
+            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
+            .withNeo4jConfig("db.format", "block")
             .withAdminPassword("password")
             .withEnv("NEO4J_PLUGINS", "[\"apoc\"]")
             .withNeo4jConfig("dbms.security.procedures.unrestricted", "apoc.*")
@@ -28,6 +33,7 @@ public class TestContainerConfig {
             .withReuse(true);
 
     static {
+        LicenseAcceptance.assertLicenseAccepted(NEO4J_IMAGE);
         MYSQL.start();
         NEO4J.start();
         MONGO.start();
