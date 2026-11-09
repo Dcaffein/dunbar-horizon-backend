@@ -1,5 +1,7 @@
 package com.example.DunbarHorizon.flag.application.service.invitation;
 
+import com.example.DunbarHorizon.support.FlagInvitationFixture;
+
 
 import java.util.Map;import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 import com.example.DunbarHorizon.flag.application.dto.FlagInvitationDirection;
@@ -66,7 +68,7 @@ class FlagInvitationQueryServiceTest {
     }
 
     private FlagInvitation buildInvitation(Long id, Long flagId) {
-        FlagInvitation inv = FlagInvitation.create(flagId, INVITER_ID, INVITEE_ID);
+        FlagInvitation inv = FlagInvitationFixture.invitation(flagId, INVITER_ID, INVITEE_ID);
         ReflectionTestUtils.setField(inv, "id", id);
         ReflectionTestUtils.setField(inv, "createdAt", NOW);
         return inv;

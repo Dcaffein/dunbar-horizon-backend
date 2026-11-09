@@ -1,9 +1,16 @@
 package com.example.DunbarHorizon.flag.domain.invitation;
 
-
-
-import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationAccessException;
+import com.example.DunbarHorizon.global.exception.ErrorContext;
+import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;
+import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationAccessException;
 import com.example.DunbarHorizon.global.common.BaseTimeEntity;
+import com.example.DunbarHorizon.flag.domain.flag.Flag;
+import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipantNotFoundException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagParticipationDuplicateException;
+import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationDuplicateException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -28,7 +35,26 @@ public class FlagInvitation extends BaseTimeEntity {
         this.inviteeId = inviteeId;
     }
 
-    public static FlagInvitation create(Long flagId, Long inviterId, Long inviteeId) {
+    public static FlagInvitation create(Flag flag, Long inviterId, Long inviteeId,
+                                        FlagParticipant inviter, boolean inviteeParticipating,
+                                        boolean alreadyInvited) {
+        Long flagId = flag.getId();
+        if (!flag.isRecruiting()) {
+            throw new FlagInvalidStatusException(FlagErrorCode.FLAG_NOT_RECRUITING, ErrorContext.of("flagId", flagId));
+        }
+        if (flag.getHostId().equals(inviteeId)) {
+            throw new FlagAuthorizationException(FlagErrorCode.FLAG_HOST_NOT_ELIGIBLE,
+                    ErrorContext.of("flagId", flagId).and("userId", inviteeId));
+        }
+        if (!flag.getHostId().equals(inviterId)) {
+            if (inviter == null) throw new FlagParticipantNotFoundException(inviterId);
+            if (!inviter.isCanInvite()) {
+                throw new FlagAuthorizationException(FlagErrorCode.FLAG_INVITE_NOT_ALLOWED,
+                        ErrorContext.of("flagId", flagId).and("userId", inviterId));
+            }
+        }
+        if (inviteeParticipating) throw new FlagParticipationDuplicateException(flagId, inviteeId);
+        if (alreadyInvited) throw new FlagInvitationDuplicateException(flagId, inviteeId);
         return new FlagInvitation(flagId, inviterId, inviteeId);
     }
 

@@ -55,6 +55,27 @@ class FlagJpaRepositoryTest {
     }
 
     @Test
+    @DisplayName("앵콜 존재 조회는 parentId가 남은 소프트 삭제 행도 제외한다")
+    void existsByParentId_ExcludesSoftDeletedEncore() {
+        // given
+        Flag parent = persistFlag(HOST_ID, asOf.minusHours(4), asOf.minusHours(3), asOf.minusHours(2));
+        Flag encore = parent.createEncore(HOST_ID, asOf.plusHours(1),
+                asOf.plusHours(2), asOf.plusHours(3), false);
+        em.persistAndFlush(encore);
+        Long parentId = parent.getId();
+        assertThat(repository.existsByParentId(parentId)).isTrue();
+
+        // when — 자동 만료처럼 parentId를 남긴 채 소프트 삭제한다.
+        encore.softDelete();
+        assertThat(encore.getParentId()).isEqualTo(parentId);
+        em.flush();
+        em.clear();
+
+        // then — 새 INSERT에 대한 유니크 제약과 존재 조회는 별개다.
+        assertThat(repository.existsByParentId(parentId)).isFalse();
+    }
+
+    @Test
     @DisplayName("호스트의 플래그 중 마감이 기준 시각보다 뒤인 것만 조회한다")
     void findByHostIdsAndDeadlineAfter_ReturnsOnlyFlagsWithFutureDeadline() {
         // given

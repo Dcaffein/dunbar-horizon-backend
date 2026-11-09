@@ -1,5 +1,7 @@
 package com.example.DunbarHorizon.flag.adapter.out.persistence;
 
+import com.example.DunbarHorizon.support.FlagInvitationFixture;
+
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagInvitationJpaRepository;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
@@ -29,7 +31,7 @@ class FlagInvitationJpaRepositoryTest {
     private static final Long OTHER_USER_ID = 30L;
 
     private FlagInvitation save(Long flagId, Long inviterId, Long inviteeId) {
-        FlagInvitation inv = FlagInvitation.create(flagId, inviterId, inviteeId);
+        FlagInvitation inv = FlagInvitationFixture.invitation(flagId, inviterId, inviteeId);
         em.persist(inv);
         return inv;
     }

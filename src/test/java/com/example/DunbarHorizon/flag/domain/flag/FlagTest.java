@@ -41,6 +41,31 @@ class FlagTest {
     }
 
     @Test
+    @DisplayName("Flag를 직접 호출해도 비호스트는 앵콜을 생성할 수 없다")
+    void createEncore_Fail_NonHost() {
+        // given
+        Flag parent = endedFlag();
+        // when & then
+        assertThatThrownBy(() -> parent.createEncore(99L, NOW.plusHours(1),
+                NOW.plusHours(2), NOW.plusHours(3), false))
+                .isInstanceOf(FlagAuthorizationException.class);
+        assertThat(parent.getDomainEvents()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("기존 앵콜이 있다는 사실을 전달하면 Flag가 생성을 거절한다")
+    void createEncore_Fail_ExistingEncore() {
+        // given
+        Flag parent = endedFlag();
+        // when & then
+        assertThatThrownBy(() -> parent.createEncore(HOST_ID, NOW.plusHours(1),
+                NOW.plusHours(2), NOW.plusHours(3), true))
+                .isInstanceOfSatisfying(FlagInvalidStatusException.class,
+                        error -> assertThat(error.getCode()).isEqualTo("FLAG_ENCORE_ALREADY_EXISTS"));
+        assertThat(parent.getDomainEvents()).isEmpty();
+    }
+
+    @Test
     @DisplayName("유효한 입력으로 플래그를 생성할 수 있다")
     void create_Success() {
         // when
@@ -159,7 +184,7 @@ class FlagTest {
         Flag parent = endedFlag();
 
         // when
-        Flag encore = parent.createEncore(HOST_ID, NOW.plusHours(2), NOW.plusHours(3), NOW.plusHours(4));
+        Flag encore = parent.createEncore(HOST_ID, NOW.plusHours(2), NOW.plusHours(3), NOW.plusHours(4), false);
 
         // then
         assertThat(encore.getTitle()).isEqualTo(parent.getTitle());
@@ -175,7 +200,7 @@ class FlagTest {
 
         // when / then
         assertThatThrownBy(() ->
-                activeFlag.createEncore(HOST_ID, NOW.plusHours(2), NOW.plusHours(3), NOW.plusHours(4)))
+                activeFlag.createEncore(HOST_ID, NOW.plusHours(2), NOW.plusHours(3), NOW.plusHours(4), false))
                 .isInstanceOf(FlagInvalidStatusException.class);
     }
 

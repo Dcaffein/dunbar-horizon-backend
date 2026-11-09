@@ -40,7 +40,7 @@ class FlagExpiryExemptionPersistenceTest {
         // given
         Flag parent = persistEndedFlag();
         LocalDateTime future = LocalDateTime.now().plusDays(1);
-        Flag encore = parent.createEncore(HOST_ID, future, future.plusHours(1), future.plusHours(2));
+        Flag encore = parent.createEncore(HOST_ID, future, future.plusHours(1), future.plusHours(2), false);
         em.persist(encore);
         em.flush();
 

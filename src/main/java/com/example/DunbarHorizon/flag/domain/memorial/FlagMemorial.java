@@ -4,7 +4,10 @@ package com.example.DunbarHorizon.flag.domain.memorial;
 
 import com.example.DunbarHorizon.global.exception.ErrorContext;
 import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;
+import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
+import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
+import com.example.DunbarHorizon.flag.domain.memorial.exception.FlagMemorialAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.memorial.exception.FlagMemorialInvalidContentException;
 import com.example.DunbarHorizon.global.common.BaseTimeAggregateRoot;
 import jakarta.persistence.*;
@@ -30,11 +33,23 @@ public class FlagMemorial extends BaseTimeAggregateRoot {
     @Column(length = CONTENT_MAX_LENGTH, nullable = false)
     private String content;
 
-    FlagMemorial(Long flagId, Long writerId, String content) {
+    private FlagMemorial(Long flagId, Long writerId, String content) {
         validateContent(content);
         this.flagId = flagId;
         this.writerId = writerId;
         this.content = content;
+    }
+
+    public static FlagMemorial create(Flag flag, Long writerId, String content, boolean isParticipant) {
+        if (!flag.isEnded()) {
+            throw new FlagInvalidStatusException(FlagErrorCode.FLAG_NOT_ENDED,
+                    ErrorContext.of("flagId", flag.getId()));
+        }
+        if (!flag.getHostId().equals(writerId) && !isParticipant) {
+            throw new FlagMemorialAuthorizationException(FlagErrorCode.FLAG_MEMORIAL_PARTICIPANT_ONLY,
+                    ErrorContext.of("flagId", flag.getId()).and("userId", writerId));
+        }
+        return new FlagMemorial(flag.getId(), writerId, content);
     }
 
     private void validateContent(String content) {
