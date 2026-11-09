@@ -14,6 +14,7 @@ import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -31,15 +32,18 @@ public class FlagHostService implements FlagHostUseCase {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Long encoreFlag(FlagEncoreCommand command) {
         try {
-            Flag parent = flagRepository.findByIdForUpdate(command.parentFlagId())
+            Flag parent = flagRepository.findById(command.parentFlagId())
                     .orElseThrow(() -> new FlagNotFoundException(command.parentFlagId()));
             boolean hasExistingEncore = flagRepository.existsByParentId(parent.getId());
             Flag encore = flagRepository.save(parent.createEncore(command.hostId(), command.deadline(),
                     command.startDateTime(), command.endDateTime(), hasExistingEncore));
-            exemptionUpdater.refresh(parent);
-            flagRepository.save(parent);
+            Flag lockedParent = flagRepository.findLatestByIdForUpdate(parent.getId())
+                    .orElseThrow(() -> new FlagNotFoundException(command.parentFlagId()));
+            exemptionUpdater.refresh(lockedParent);
+            flagRepository.save(lockedParent);
             return encore.getId();
         } catch (DataIntegrityViolationException e) {
             throw new FlagInvalidStatusException(FlagErrorCode.FLAG_ENCORE_ALREADY_EXISTS,

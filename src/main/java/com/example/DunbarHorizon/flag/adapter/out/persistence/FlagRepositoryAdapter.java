@@ -6,6 +6,8 @@ import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagExpiryTarget;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +29,7 @@ public class FlagRepositoryAdapter implements FlagRepository {
 
     private final FlagJpaRepository flagJpaRepository;
     private final FlagParticipantJpaRepository participantJpaRepository;
+    private final EntityManager entityManager;
 
     // ==================== Flag ====================
 
@@ -48,6 +51,16 @@ public class FlagRepositoryAdapter implements FlagRepository {
     @Override
     public Optional<Flag> findByIdForUpdate(Long id) {
         return flagJpaRepository.findByIdForUpdate(id);
+    }
+
+    // 같은 트랜잭션에서 이미 읽은 Flag는 잠금 조회로 다시 읽어도 영속성 컨텍스트의 낡은 인스턴스가 돌아온다.
+    // 잠금 조회로 행이 살아 있음을 확인한 뒤 잠금 읽기로 다시 채운다. 삭제된 행에 refresh를 먼저 하면
+    // @SQLRestriction 때문에 EntityNotFoundException이 난다.
+    @Override
+    public Optional<Flag> findLatestByIdForUpdate(Long id) {
+        Optional<Flag> locked = flagJpaRepository.findByIdForUpdate(id);
+        locked.ifPresent(flag -> entityManager.refresh(flag, LockModeType.PESSIMISTIC_WRITE));
+        return locked;
     }
 
     @Override

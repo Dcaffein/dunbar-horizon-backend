@@ -59,12 +59,13 @@ class FlagMemorialCommandServiceTest {
     }
 
     @Test
-    @DisplayName("참여자의 후기 생성은 Flag 잠금 뒤 참여 여부를 조회하고 저장 후 면제를 갱신한다")
+    @DisplayName("참여자의 후기 생성은 Flag를 읽고 참여 여부를 조회해 저장한 뒤 Flag를 잠가 면제를 갱신한다")
     void createMemorial_Success_Participant() {
         // given
         Flag flag = endedFlag();
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
         given(flagRepository.isParticipating(FLAG_ID, WRITER_ID)).willReturn(true);
+        given(flagRepository.findLatestByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.save(any(FlagMemorial.class))).willAnswer(invocation -> {
             FlagMemorial saved = invocation.getArgument(0);
             ReflectionTestUtils.setField(saved, "id", MEMORIAL_ID);
@@ -78,11 +79,13 @@ class FlagMemorialCommandServiceTest {
         assertThat(result).isEqualTo(MEMORIAL_ID);
         ArgumentCaptor<FlagMemorial> captor = ArgumentCaptor.forClass(FlagMemorial.class);
         InOrder order = inOrder(flagRepository, memorialRepository, exemptionUpdater);
-        order.verify(flagRepository).findByIdForUpdate(FLAG_ID);
+        order.verify(flagRepository).findById(FLAG_ID);
         order.verify(flagRepository).isParticipating(FLAG_ID, WRITER_ID);
         order.verify(memorialRepository).save(captor.capture());
+        order.verify(flagRepository).findLatestByIdForUpdate(FLAG_ID);
         order.verify(exemptionUpdater).refresh(flag);
         order.verify(flagRepository).save(flag);
+        verify(flagRepository, never()).findByIdForUpdate(any());
         assertThat(captor.getValue().getFlagId()).isEqualTo(FLAG_ID);
         assertThat(captor.getValue().getWriterId()).isEqualTo(WRITER_ID);
         assertThat(captor.getValue().getContent()).isEqualTo("후기");
@@ -92,7 +95,9 @@ class FlagMemorialCommandServiceTest {
     @DisplayName("호스트는 참여 여부를 조회하지 않고 후기를 생성한다")
     void createMemorial_Success_Host() {
         // given
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(endedFlag()));
+        Flag flag = endedFlag();
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(flag));
+        given(flagRepository.findLatestByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.save(any(FlagMemorial.class))).willAnswer(invocation -> {
             FlagMemorial saved = invocation.getArgument(0);
             ReflectionTestUtils.setField(saved, "id", MEMORIAL_ID);
@@ -111,7 +116,7 @@ class FlagMemorialCommandServiceTest {
     @DisplayName("참여하지 않은 사용자의 후기는 저장하거나 면제를 갱신하지 않는다")
     void createMemorial_Fail_Stranger() {
         // given
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(endedFlag()));
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.of(endedFlag()));
         given(flagRepository.isParticipating(FLAG_ID, OTHER_ID)).willReturn(false);
 
         // when & then
@@ -125,7 +130,7 @@ class FlagMemorialCommandServiceTest {
     @DisplayName("Flag가 없으면 후기를 생성하지 않는다")
     void createMemorial_Fail_FlagNotFound() {
         // given
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.empty());
+        given(flagRepository.findById(FLAG_ID)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> flagMemorialCommandService.createMemorial(FLAG_ID, WRITER_ID, "후기"))
@@ -134,43 +139,45 @@ class FlagMemorialCommandServiceTest {
     }
 
     @Test
-    @DisplayName("후기 삭제는 후기 조회 전에 Flag를 잠그고 삭제 후 면제를 갱신한다")
+    @DisplayName("후기 삭제는 후기를 지운 뒤 Flag를 잠가 면제를 갱신한다")
     void deleteMemorial_Success_Writer() {
         // given
         Flag flag = endedFlag();
         FlagMemorial memorial = FlagMemorial.create(flag, WRITER_ID, "후기", true);
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.findById(MEMORIAL_ID)).willReturn(Optional.of(memorial));
+        given(flagRepository.findLatestByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
 
         // when
         flagMemorialCommandService.deleteMemorial(FLAG_ID, MEMORIAL_ID, WRITER_ID);
 
         // then
         InOrder order = inOrder(flagRepository, memorialRepository, exemptionUpdater);
-        order.verify(flagRepository).findByIdForUpdate(FLAG_ID);
         order.verify(memorialRepository).findById(MEMORIAL_ID);
         order.verify(memorialRepository).delete(memorial);
+        order.verify(flagRepository).findLatestByIdForUpdate(FLAG_ID);
         order.verify(exemptionUpdater).refresh(flag);
         order.verify(flagRepository).save(flag);
     }
 
     @Test
-    @DisplayName("Flag가 없으면 후기를 조회하지 않고 삭제를 거절한다")
+    @DisplayName("후기를 지운 뒤 잠글 Flag가 없으면 삭제가 실패한다")
     void deleteMemorial_Fail_FlagNotFound() {
         // given
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.empty());
+        FlagMemorial memorial = FlagMemorial.create(endedFlag(), WRITER_ID, "후기", true);
+        given(memorialRepository.findById(MEMORIAL_ID)).willReturn(Optional.of(memorial));
+        given(flagRepository.findLatestByIdForUpdate(FLAG_ID)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> flagMemorialCommandService.deleteMemorial(FLAG_ID, MEMORIAL_ID, WRITER_ID))
                 .isInstanceOf(FlagNotFoundException.class);
-        verifyNoInteractions(memorialRepository, exemptionUpdater);
+        verifyNoInteractions(exemptionUpdater);
+        verify(flagRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("존재하지 않는 후기를 삭제하면 면제를 갱신하지 않는다")
     void deleteMemorial_Fail_MemorialNotFound() {
         // given
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(endedFlag()));
         given(memorialRepository.findById(MEMORIAL_ID)).willReturn(Optional.empty());
 
         // when & then
@@ -186,7 +193,6 @@ class FlagMemorialCommandServiceTest {
         // given
         Flag flag = endedFlag();
         FlagMemorial memorial = FlagMemorial.create(flag, WRITER_ID, "후기", true);
-        given(flagRepository.findByIdForUpdate(OTHER_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.findById(MEMORIAL_ID)).willReturn(Optional.of(memorial));
 
         // when & then
@@ -202,7 +208,6 @@ class FlagMemorialCommandServiceTest {
         // given
         Flag flag = endedFlag();
         FlagMemorial memorial = FlagMemorial.create(flag, WRITER_ID, "후기", true);
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(flag));
         given(memorialRepository.findById(MEMORIAL_ID)).willReturn(Optional.of(memorial));
 
         // when & then

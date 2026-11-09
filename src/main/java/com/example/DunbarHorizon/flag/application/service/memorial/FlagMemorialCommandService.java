@@ -10,6 +10,7 @@ import com.example.DunbarHorizon.flag.domain.memorial.exception.FlagMemorialNotF
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -22,13 +23,15 @@ public class FlagMemorialCommandService implements FlagMemorialCommandUseCase {
     private final FlagExpiryExemptionUpdater exemptionUpdater;
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Long createMemorial(Long flagId, Long userId, String content) {
-        Flag flag = lockFlag(flagId);
+        Flag flag = flagRepository.findById(flagId)
+                .orElseThrow(() -> new FlagNotFoundException(flagId));
         boolean isParticipant = !flag.getHostId().equals(userId)
                 && flagRepository.isParticipating(flagId, userId);
         FlagMemorial memorial = memorialRepository.save(
                 FlagMemorial.create(flag, userId, content, isParticipant));
-        refreshExemption(flag);
+        refreshExemption(flagId);
         return memorial.getId();
     }
 
@@ -43,24 +46,21 @@ public class FlagMemorialCommandService implements FlagMemorialCommandUseCase {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void deleteMemorial(Long flagId, Long memorialId, Long requesterId) {
-        Flag flag = lockFlag(flagId);
         FlagMemorial memorial = memorialRepository.findById(memorialId)
                 .filter(found -> flagId.equals(found.getFlagId()))
                 .orElseThrow(() -> new FlagMemorialNotFoundException(memorialId));
         memorial.validateDeletion(requesterId);
         memorialRepository.delete(memorial);
-        refreshExemption(flag);
+        refreshExemption(flagId);
     }
 
-    // 생성·삭제 트랜잭션의 첫 조회여야 한다. 일반 조회가 앞서면 REPEATABLE READ의
-    // 읽기 시점이 고정되어 잠금 대기 중 커밋된 후기·앵콜을 면제 재계산에서 놓칠 수 있다.
-    private Flag lockFlag(Long flagId) {
-        return flagRepository.findByIdForUpdate(flagId)
+    // 원천 변경 뒤에 잠그므로 호출 트랜잭션은 READ COMMITTED여야 한다. 잠금을 기다리는 사이
+    // 다른 트랜잭션이 커밋한 후기·앵콜을 면제 재계산이 봐야 한다.
+    private void refreshExemption(Long flagId) {
+        Flag flag = flagRepository.findLatestByIdForUpdate(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
-    }
-
-    private void refreshExemption(Flag flag) {
         exemptionUpdater.refresh(flag);
         flagRepository.save(flag);
     }
