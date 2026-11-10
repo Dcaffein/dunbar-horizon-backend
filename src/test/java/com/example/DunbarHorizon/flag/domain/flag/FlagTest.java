@@ -305,6 +305,64 @@ class FlagTest {
     }
 
     @Test
+    @DisplayName("보존하면 보존 필드가 켜지고 삭제되지 않는다")
+    void preserve_SetsPreserved() {
+        // given
+        Flag flag = endedFlag();
+
+        // when
+        flag.preserve();
+
+        // then
+        assertThat(flag.isAutoExpiryExempt()).isTrue();
+        assertThat(flag.isDeleted()).isFalse();
+        assertThat(flag.isConcluded()).isTrue();
+    }
+
+    @Test
+    @DisplayName("만료하면 주어진 시각으로 소프트 삭제되고 보존 필드는 꺼진 채다")
+    void expire_SoftDeletesAtGivenTime() {
+        // given
+        Flag flag = endedFlag();
+        LocalDateTime now = LocalDateTime.now();
+
+        // when
+        flag.expire(now);
+
+        // then
+        assertThat(flag.getDeletedAt()).isEqualTo(now);
+        assertThat(flag.isAutoExpiryExempt()).isFalse();
+        assertThat(flag.isConcluded()).isTrue();
+    }
+
+    @Test
+    @DisplayName("결말이 난 플래그에 다시 결말을 내면 거부된다")
+    void conclude_Twice_Rejected() {
+        // given
+        Flag preserved = endedFlag();
+        preserved.preserve();
+        Flag expired = endedFlag();
+        expired.expire(LocalDateTime.now());
+
+        // when / then
+        assertThatThrownBy(preserved::preserve).isInstanceOf(FlagInvalidStatusException.class);
+        assertThatThrownBy(() -> preserved.expire(LocalDateTime.now())).isInstanceOf(FlagInvalidStatusException.class);
+        assertThatThrownBy(expired::preserve).isInstanceOf(FlagInvalidStatusException.class);
+        assertThatThrownBy(() -> expired.expire(LocalDateTime.now())).isInstanceOf(FlagInvalidStatusException.class);
+    }
+
+    @Test
+    @DisplayName("결말 전에 호스트가 삭제한 플래그에도 결말을 낼 수 없다")
+    void conclude_AfterHostDeletion_Rejected() {
+        // given
+        Flag flag = endedFlag();
+        flag.delete(HOST_ID);
+
+        // when / then
+        assertThatThrownBy(flag::preserve).isInstanceOf(FlagInvalidStatusException.class);
+    }
+
+    @Test
     @DisplayName("호스트가 아닌 사용자가 플래그 삭제를 시도하면 FlagAuthorizationException이 발생한다")
     void delete_ByNonHost_ThrowsException() {
         // given

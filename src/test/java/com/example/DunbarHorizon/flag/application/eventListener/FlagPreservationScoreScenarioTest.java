@@ -3,11 +3,11 @@ package com.example.DunbarHorizon.flag.application.eventListener;
 import com.example.DunbarHorizon.flag.application.port.out.FlagMaintenancePort;
 import com.example.DunbarHorizon.flag.application.service.flag.FlagExpiryService;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
+import com.example.DunbarHorizon.flag.domain.flag.FlagConclusionDecider;
 import com.example.DunbarHorizon.flag.domain.flag.FlagExpiryExemptionUpdater;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagConcludedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptionChangedEvent;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagExpiryTarget;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
@@ -27,7 +27,6 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.Mockito.mock;
@@ -58,7 +57,9 @@ class FlagPreservationScoreScenarioTest {
     private final FlagConclusionEventListener conclusionListener =
             new FlagConclusionEventListener(publisher);
     private final FlagExpiryService expiryService =
-            new FlagExpiryService(flagRepository, maintenancePort, publisher);
+            new FlagExpiryService(flagRepository,
+                    new FlagConclusionDecider(flagRepository, memorialRepository),
+                    maintenancePort, publisher);
 
     private Flag flag;
 
@@ -75,12 +76,6 @@ class FlagPreservationScoreScenarioTest {
         }
     }
 
-    private record Target(Long id, Long hostId, Long parentId) implements FlagExpiryTarget {
-        @Override public Long getId() { return id; }
-        @Override public Long getHostId() { return hostId; }
-        @Override public Long getParentId() { return parentId; }
-    }
-
     @BeforeEach
     void setUp() {
         LocalDateTime now = LocalDateTime.now();
@@ -92,13 +87,10 @@ class FlagPreservationScoreScenarioTest {
         given(flagRepository.existsByParentId(FLAG_ID)).willReturn(false);
 
         // 면제가 걸린 플래그는 조회 조건에서 빠진다. 고정값으로 두면 스윕 시나리오가 거짓이 된다.
-        willAnswer(invocation -> flag.isAutoExpiryExempt()
-                ? List.of()
-                : List.<FlagExpiryTarget>of(new Target(FLAG_ID, HOST_ID, null)))
-                .given(flagRepository).findExpiryTargets(any(LocalDateTime.class));
+        willAnswer(invocation -> flag.isConcluded() ? List.of() : List.of(flag))
+                .given(flagRepository).findConclusionCandidates(any(LocalDateTime.class));
         given(flagRepository.findAllParticipantIdsByFlagIds(any(Collection.class)))
                 .willReturn(Map.of(FLAG_ID, PARTICIPANT_IDS));
-        given(flagRepository.expireByIds(any(Collection.class), any(LocalDateTime.class))).willReturn(1);
     }
 
     @Test
@@ -201,7 +193,7 @@ class FlagPreservationScoreScenarioTest {
     }
 
     private void sweep() {
-        expiryService.expireEndedFlags();
+        expiryService.concludeEndedFlags();
     }
 
     private void flushDomainEvents(Flag target) {

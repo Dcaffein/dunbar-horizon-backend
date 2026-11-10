@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagJpaReposit
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagParticipantJpaRepository;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagExpiryTarget;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -69,14 +68,8 @@ public class FlagRepositoryAdapter implements FlagRepository {
     }
 
     @Override
-    public List<FlagExpiryTarget> findExpiryTargets(LocalDateTime threshold) {
-        return flagJpaRepository.findExpiryTargets(threshold);
-    }
-
-    @Override
-    public int expireByIds(Collection<Long> ids, LocalDateTime now) {
-        if (ids.isEmpty()) return 0;
-        return flagJpaRepository.expireByIds(ids, now);
+    public List<Flag> findConclusionCandidates(LocalDateTime threshold) {
+        return flagJpaRepository.findConclusionCandidates(threshold);
     }
 
     @Override

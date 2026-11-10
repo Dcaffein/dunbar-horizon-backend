@@ -201,6 +201,20 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
         registerEvent(new FlagExpiryExemptionChangedEvent(this.id, this.hostId, this.parentId, value));
     }
 
+    public void preserve() {
+        validateNotConcluded();
+        this.autoExpiryExempt = true;
+    }
+
+    public void expire(LocalDateTime now) {
+        validateNotConcluded();
+        this.deletedAt = now;
+    }
+
+    public boolean isConcluded() {
+        return autoExpiryExempt || isDeleted();
+    }
+
     public void severParentLink() {
         this.parentId = null;
     }
@@ -225,6 +239,10 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
 
     private void validateHost(Long userId) {
         if (!this.hostId.equals(userId)) throw new FlagAuthorizationException(FlagErrorCode.FLAG_HOST_ONLY, ErrorContext.of("flagId", id).and("userId", userId));
+    }
+
+    private void validateNotConcluded() {
+        if (isConcluded()) throw new FlagInvalidStatusException(FlagErrorCode.FLAG_ALREADY_CONCLUDED, ErrorContext.of("flagId", id));
     }
 
     private void validateNotEnded() {
