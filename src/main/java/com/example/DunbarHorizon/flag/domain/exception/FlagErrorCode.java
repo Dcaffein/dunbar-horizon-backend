@@ -39,6 +39,7 @@ public enum FlagErrorCode implements ErrorCode {
     FLAG_ALREADY_ENDED(HttpStatus.CONFLICT, "종료된 깃발은 수정할 수 없습니다."),
     FLAG_NOT_ENDED(HttpStatus.CONFLICT, "아직 종료되지 않은 깃발입니다."),
     FLAG_ALREADY_DELETED(HttpStatus.CONFLICT, "이미 삭제된 깃발입니다."),
+    FLAG_ALREADY_CONCLUDED(HttpStatus.CONFLICT, "이미 결말이 정해진 깃발입니다."),
     FLAG_ENCORE_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 앵콜이 만들어진 깃발입니다."),
     FLAG_CAPACITY_BELOW_PARTICIPANTS(HttpStatus.CONFLICT, "현재 참여 인원보다 적은 수로 정원을 바꿀 수 없습니다."),
 

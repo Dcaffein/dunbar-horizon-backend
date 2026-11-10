@@ -6,7 +6,6 @@ import com.example.DunbarHorizon.global.exception.ErrorContext;import com.exampl
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
 import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagExpiryExemptionUpdater;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
@@ -14,7 +13,6 @@ import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -22,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class FlagHostService implements FlagHostUseCase {
     private final FlagRepository flagRepository;
-    private final FlagExpiryExemptionUpdater exemptionUpdater;
 
     @Override
     public Long hostFlag(FlagHostCommand command) {
@@ -32,7 +29,6 @@ public class FlagHostService implements FlagHostUseCase {
     }
 
     @Override
-    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Long encoreFlag(FlagEncoreCommand command) {
         try {
             Flag parent = flagRepository.findById(command.parentFlagId())
@@ -40,10 +36,6 @@ public class FlagHostService implements FlagHostUseCase {
             boolean hasExistingEncore = flagRepository.existsByParentId(parent.getId());
             Flag encore = flagRepository.save(parent.createEncore(command.hostId(), command.deadline(),
                     command.startDateTime(), command.endDateTime(), hasExistingEncore));
-            Flag lockedParent = flagRepository.findLatestByIdForUpdate(parent.getId())
-                    .orElseThrow(() -> new FlagNotFoundException(command.parentFlagId()));
-            exemptionUpdater.refresh(lockedParent);
-            flagRepository.save(lockedParent);
             return encore.getId();
         } catch (DataIntegrityViolationException e) {
             throw new FlagInvalidStatusException(FlagErrorCode.FLAG_ENCORE_ALREADY_EXISTS,

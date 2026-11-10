@@ -36,9 +36,9 @@ class FlagInvitationJpaRepositoryTest {
         return inv;
     }
 
-    private Flag saveFlag(FlagSchedule schedule, boolean autoExpiryExempt) {
+    private Flag saveFlag(FlagSchedule schedule, boolean preserved) {
         Flag flag = Flag.create(INVITER_ID, "플래그 제목", "플래그 설명", 10, schedule);
-        ReflectionTestUtils.setField(flag, "autoExpiryExempt", autoExpiryExempt);
+        ReflectionTestUtils.setField(flag, "preserved", preserved);
         em.persist(flag);
         return flag;
     }
@@ -138,11 +138,11 @@ class FlagInvitationJpaRepositoryTest {
     }
 
     @Test
-    @DisplayName("자동 만료에서 제외된 플래그라도 종료되었으면 초대가 삭제된다")
-    void hardDeleteByFlagEndDateTimeBefore_DeletesExemptEndedFlagInvitations() {
+    @DisplayName("보존된 플래그라도 종료되었으면 초대가 삭제된다")
+    void hardDeleteByFlagEndDateTimeBefore_DeletesPreservedEndedFlagInvitations() {
         // given
-        Flag exemptEnded = saveFlag(endedSchedule(), true);
-        save(exemptEnded.getId(), INVITER_ID, INVITEE_ID);
+        Flag preservedEnded = saveFlag(endedSchedule(), true);
+        save(preservedEnded.getId(), INVITER_ID, INVITEE_ID);
         em.flush();
         em.clear();
 

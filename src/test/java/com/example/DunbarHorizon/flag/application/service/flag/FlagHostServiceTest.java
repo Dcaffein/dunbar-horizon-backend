@@ -7,7 +7,6 @@ import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -17,7 +16,6 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
-import com.example.DunbarHorizon.flag.domain.flag.FlagExpiryExemptionUpdater;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagEncoreCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
 import org.mockito.ArgumentCaptor;
@@ -27,10 +25,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class FlagHostServiceTest {
@@ -38,7 +34,6 @@ class FlagHostServiceTest {
     @InjectMocks private FlagHostService flagHostService;
 
     @Mock private FlagRepository flagRepository;
-    @Mock private FlagExpiryExemptionUpdater exemptionUpdater;
 
     private static final Long PARENT_ID = 1L;
     private static final Long HOST_ID = 10L;
@@ -59,16 +54,15 @@ class FlagHostServiceTest {
     }
 
     @Test
-    @DisplayName("앵코르 생성은 부모를 읽어 앵코르를 저장한 뒤 부모를 잠가 면제를 갱신한다")
-    void encore_LocksParentSavesThenRefreshesParentExemption() {
+    @DisplayName("앵코르 생성은 부모를 읽어 앵코르만 저장하고 부모는 잠그거나 저장하지 않는다")
+    void encore_SavesEncoreOnly() {
         // given
         Flag parent = endedParent();
         given(flagRepository.findById(PARENT_ID)).willReturn(Optional.of(parent));
         given(flagRepository.existsByParentId(PARENT_ID)).willReturn(false);
-        given(flagRepository.findLatestByIdForUpdate(PARENT_ID)).willReturn(Optional.of(parent));
         given(flagRepository.save(any(Flag.class))).willAnswer(invocation -> {
             Flag saved = invocation.getArgument(0);
-            if (saved.getParentId() != null) ReflectionTestUtils.setField(saved, "id", 2L);
+            ReflectionTestUtils.setField(saved, "id", 2L);
             return saved;
         });
 
@@ -77,16 +71,11 @@ class FlagHostServiceTest {
 
         // then
         assertThat(encoreId).isEqualTo(2L);
-        InOrder inOrder = inOrder(flagRepository, exemptionUpdater);
-        inOrder.verify(flagRepository).findById(PARENT_ID);
-        inOrder.verify(flagRepository).existsByParentId(PARENT_ID);
         ArgumentCaptor<Flag> captor = ArgumentCaptor.forClass(Flag.class);
-        inOrder.verify(flagRepository).save(captor.capture());
+        verify(flagRepository).save(captor.capture());
         assertThat(captor.getValue().getParentId()).isEqualTo(PARENT_ID);
-        inOrder.verify(flagRepository).findLatestByIdForUpdate(PARENT_ID);
-        inOrder.verify(exemptionUpdater).refresh(parent);
-        inOrder.verify(flagRepository).save(parent);
         verify(flagRepository, never()).findByIdForUpdate(any());
+        assertThat(parent.isPreserved()).isFalse();
     }
 
     @Test
@@ -98,7 +87,6 @@ class FlagHostServiceTest {
         // when / then
         assertThatThrownBy(() -> flagHostService.encoreFlag(new FlagEncoreCommand(PARENT_ID, HOST_ID, DEADLINE, START, END)))
                 .isInstanceOf(FlagNotFoundException.class);
-        verifyNoInteractions(exemptionUpdater);
     }
 
     @Test
@@ -178,6 +166,5 @@ class FlagHostServiceTest {
         assertThatThrownBy(() -> flagHostService.encoreFlag(
                 new FlagEncoreCommand(PARENT_ID, HOST_ID, DEADLINE, START, END)))
                 .isInstanceOf(FlagInvalidStatusException.class);
-        verifyNoInteractions(exemptionUpdater);
     }
 }

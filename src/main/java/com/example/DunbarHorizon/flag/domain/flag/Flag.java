@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.flag.domain.flag;
 
 
 import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
-import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptionChangedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagEncoreEvent;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagMeetingChangedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
@@ -64,7 +63,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
     private Long parentId;
 
     @Getter
-    private boolean autoExpiryExempt = false;
+    private boolean preserved = false;
 
     @Getter
     private LocalDateTime deletedAt;
@@ -139,7 +138,6 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
         if (isDeleted()) {
             throw new FlagInvalidStatusException(FlagErrorCode.FLAG_ALREADY_DELETED, ErrorContext.of("flagId", id));
         }
-        updateAutoExpiryExempt(false);
         softDelete();
         registerEvent(new FlagDeletedEvent(
                 this.id,
@@ -194,11 +192,18 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
         this.schedule = this.schedule.withDeadline(LocalDateTime.now());
     }
 
-    void updateAutoExpiryExempt(boolean value) {
-        if (value == this.autoExpiryExempt) return;
+    public void preserve() {
+        validateNotConcluded();
+        this.preserved = true;
+    }
 
-        this.autoExpiryExempt = value;
-        registerEvent(new FlagExpiryExemptionChangedEvent(this.id, this.hostId, this.parentId, value));
+    public void expire(LocalDateTime now) {
+        validateNotConcluded();
+        this.deletedAt = now;
+    }
+
+    public boolean isConcluded() {
+        return preserved || isDeleted();
     }
 
     public void severParentLink() {
@@ -225,6 +230,10 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
 
     private void validateHost(Long userId) {
         if (!this.hostId.equals(userId)) throw new FlagAuthorizationException(FlagErrorCode.FLAG_HOST_ONLY, ErrorContext.of("flagId", id).and("userId", userId));
+    }
+
+    private void validateNotConcluded() {
+        if (isConcluded()) throw new FlagInvalidStatusException(FlagErrorCode.FLAG_ALREADY_CONCLUDED, ErrorContext.of("flagId", id));
     }
 
     private void validateNotEnded() {

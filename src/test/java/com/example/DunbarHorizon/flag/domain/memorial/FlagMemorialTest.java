@@ -51,7 +51,7 @@ class FlagMemorialTest {
         assertThat(memorial.getFlagId()).isEqualTo(FLAG_ID);
         assertThat(memorial.getWriterId()).isEqualTo(HOST_ID);
         assertThat(memorial.getContent()).isEqualTo("후기");
-        assertThat(flag.isAutoExpiryExempt()).isFalse();
+        assertThat(flag.isPreserved()).isFalse();
         assertThat(flag.getDomainEvents()).isEmpty();
     }
 

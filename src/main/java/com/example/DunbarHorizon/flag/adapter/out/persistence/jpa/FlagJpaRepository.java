@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.adapter.out.persistence.jpa;
 
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagExpiryTarget;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -40,16 +39,11 @@ public interface FlagJpaRepository extends JpaRepository<Flag, Long> {
     Optional<Flag> findByIdForUpdate(@Param("id") Long id);
 
     // @SQLRestriction이 deleted_at IS NULL을 붙이므로 이미 삭제된 행은 자동으로 빠진다.
-    @Query("SELECT f.id AS id, f.hostId AS hostId, f.parentId AS parentId FROM Flag f " +
+    @Query("SELECT f FROM Flag f " +
             "WHERE f.schedule.endDateTime < :threshold " +
-            "AND f.autoExpiryExempt = false " +
+            "AND f.preserved = false " +
             "ORDER BY f.schedule.endDateTime ASC")
-    List<FlagExpiryTarget> findExpiryTargets(@Param("threshold") LocalDateTime threshold);
-
-    @Modifying(clearAutomatically = true)
-    @Query("UPDATE Flag f SET f.deletedAt = :now " +
-           "WHERE f.id IN :ids AND f.deletedAt IS NULL AND f.autoExpiryExempt = false")
-    int expireByIds(@Param("ids") Collection<Long> ids, @Param("now") LocalDateTime now);
+    List<Flag> findConclusionCandidates(@Param("threshold") LocalDateTime threshold);
 
     @Query("SELECT f FROM Flag f WHERE f.hostId IN :hostIds AND f.schedule.deadline > :asOf")
     Slice<Flag> findByHostIdsAndDeadlineAfter(

@@ -5,7 +5,6 @@ import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
-import com.example.DunbarHorizon.flag.domain.flag.repository.FlagExpiryTarget;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -244,14 +243,14 @@ class FlagJpaRepositoryTest {
     }
 
     @Test
-    @DisplayName("만료 대상은 종료 시각이 지났고 만료 면제가 아닌 플래그뿐이다")
-    void findExpiryTargets_ReturnsOnlyEndedAndNotExempt() {
+    @DisplayName("결말 후보는 종료 시각이 지났고 아직 보존되지도 삭제되지도 않은 플래그뿐이다")
+    void findConclusionCandidates_ReturnsOnlyEndedAndUnconcluded() {
         // given
         Flag target = persistEndedFlag(HOST_ID, asOf.minusHours(1));
         Flag notEndedYet = persistEndedFlag(HOST_ID, asOf.plusHours(1));
 
-        Flag exempt = persistEndedFlag(HOST_ID, asOf.minusHours(2));
-        ReflectionTestUtils.setField(exempt, "autoExpiryExempt", true);
+        Flag preserved = persistEndedFlag(HOST_ID, asOf.minusHours(2));
+        ReflectionTestUtils.setField(preserved, "preserved", true);
 
         Flag alreadyDeleted = persistEndedFlag(HOST_ID, asOf.minusHours(3));
         alreadyDeleted.softDelete();
@@ -260,20 +259,19 @@ class FlagJpaRepositoryTest {
         em.clear();
 
         // when
-        List<FlagExpiryTarget> results = repository.findExpiryTargets(asOf);
+        List<Flag> results = repository.findConclusionCandidates(asOf);
 
         // then — 통합 테스트가 같은 컨테이너에 커밋해둔 행이 섞일 수 있어 포함 여부로만 본다
-        assertThat(results).extracting(FlagExpiryTarget::getId).contains(target.getId());
-        assertThat(results).extracting(FlagExpiryTarget::getId)
-                .doesNotContain(notEndedYet.getId(), exempt.getId(), alreadyDeleted.getId());
+        assertThat(results).extracting(Flag::getId).contains(target.getId());
+        assertThat(results).extracting(Flag::getId)
+                .doesNotContain(notEndedYet.getId(), preserved.getId(), alreadyDeleted.getId());
     }
 
     @Test
-    @DisplayName("만료 대상 조회가 hostId와 parentId를 함께 돌려준다")
-    void findExpiryTargets_CarriesHostIdAndParentId() {
+    @DisplayName("결말 후보는 후기나 앙코르 유무와 상관없이 조회된다")
+    void findConclusionCandidates_IgnoresTraces() {
         // given
         Flag parent = persistEndedFlag(HOST_ID, asOf.minusHours(5));
-        ReflectionTestUtils.setField(parent, "autoExpiryExempt", true);
         em.flush();
 
         Flag encore = persistEndedFlag(OTHER_HOST_ID, asOf.minusHours(1));
@@ -282,21 +280,15 @@ class FlagJpaRepositoryTest {
         em.clear();
 
         // when
-        List<FlagExpiryTarget> results = repository.findExpiryTargets(asOf);
+        List<Flag> results = repository.findConclusionCandidates(asOf);
 
         // then
-        FlagExpiryTarget found = results.stream()
-                .filter(t -> t.getId().equals(encore.getId()))
-                .findFirst()
-                .orElseThrow();
-        assertThat(found.getHostId()).isEqualTo(OTHER_HOST_ID);
-        assertThat(found.getParentId()).isEqualTo(parent.getId());
-        assertThat(results).extracting(FlagExpiryTarget::getId).doesNotContain(parent.getId());
+        assertThat(results).extracting(Flag::getId).contains(parent.getId(), encore.getId());
     }
 
     @Test
-    @DisplayName("만료 대상 조회에 상한이 없다")
-    void findExpiryTargets_HasNoLimit() {
+    @DisplayName("결말 후보 조회에 상한이 없다")
+    void findConclusionCandidates_HasNoLimit() {
         // given
         List<Long> ids = List.of(
                 persistEndedFlag(HOST_ID, asOf.minusHours(1)).getId(),
@@ -306,48 +298,9 @@ class FlagJpaRepositoryTest {
         em.clear();
 
         // when
-        List<FlagExpiryTarget> results = repository.findExpiryTargets(asOf);
+        List<Flag> results = repository.findConclusionCandidates(asOf);
 
         // then
-        assertThat(results).extracting(FlagExpiryTarget::getId).containsAll(ids);
-    }
-
-    @Test
-    @DisplayName("expireByIds는 넘긴 id만 소프트 삭제한다")
-    void expireByIds_SoftDeletesGivenIdsOnly() {
-        // given
-        Flag target = persistEndedFlag(HOST_ID, asOf.minusHours(1));
-        Flag untouched = persistEndedFlag(HOST_ID, asOf.minusHours(2));
-        em.flush();
-        em.clear();
-
-        // when
-        int affected = repository.expireByIds(List.of(target.getId()), asOf);
-        em.clear();
-
-        // then
-        assertThat(affected).isEqualTo(1);
-        assertThat(repository.findById(target.getId())).isEmpty();
-        assertThat(repository.findById(untouched.getId())).isPresent();
-    }
-
-    @Test
-    @DisplayName("expireByIds는 넘긴 id라도 만료 면제인 플래그는 지우지 않는다")
-    void expireByIds_SkipsExemptFlags() {
-        // given
-        Flag target = persistEndedFlag(HOST_ID, asOf.minusHours(1));
-        Flag exempt = persistEndedFlag(HOST_ID, asOf.minusHours(2));
-        ReflectionTestUtils.setField(exempt, "autoExpiryExempt", true);
-        em.flush();
-        em.clear();
-
-        // when
-        int affected = repository.expireByIds(List.of(target.getId(), exempt.getId()), asOf);
-        em.clear();
-
-        // then
-        assertThat(affected).isEqualTo(1);
-        assertThat(repository.findById(target.getId())).isEmpty();
-        assertThat(repository.findById(exempt.getId())).isPresent();
+        assertThat(results).extracting(Flag::getId).containsAll(ids);
     }
 }

@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.domain.flag;
 
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
-import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptionChangedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagDeadlinePassedException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagFullCapacityException;
@@ -239,42 +238,21 @@ class FlagTest {
     }
 
     @Test
-    @DisplayName("보존된 플래그를 삭제하면 면제가 꺼지고 해제 이벤트가 등록된다")
+    @DisplayName("보존된 플래그를 호스트가 삭제해도 보존 필드는 그대로이고 삭제 이벤트만 등록된다")
     @SuppressWarnings("unchecked")
-    void delete_PreservedFlag_RegistersExemptionRelease() {
+    void delete_PreservedFlag_KeepsPreservedAndRegistersOnlyDeletion() {
         // given
         Flag flag = endedFlag();
-        ReflectionTestUtils.setField(flag, "autoExpiryExempt", true);
+        flag.preserve();
 
         // when
         flag.delete(HOST_ID);
 
         // then
-        assertThat(flag.isAutoExpiryExempt()).isFalse();
+        assertThat(flag.isPreserved()).isTrue();
         java.util.Collection<Object> events = (java.util.Collection<Object>)
                 ReflectionTestUtils.invokeMethod(flag, "domainEvents");
-        FlagExpiryExemptionChangedEvent released = (FlagExpiryExemptionChangedEvent) events.stream()
-                .filter(e -> e instanceof FlagExpiryExemptionChangedEvent)
-                .findFirst().orElseThrow();
-        assertThat(released.exempt()).isFalse();
-        assertThat(released.flagId()).isEqualTo(flag.getId());
-        assertThat(released.hostId()).isEqualTo(HOST_ID);
-    }
-
-    @Test
-    @DisplayName("보존 상태가 아닌 플래그를 삭제하면 해제 이벤트가 등록되지 않는다")
-    @SuppressWarnings("unchecked")
-    void delete_NotPreservedFlag_RegistersNoExemptionRelease() {
-        // given
-        Flag flag = endedFlag();
-
-        // when
-        flag.delete(HOST_ID);
-
-        // then
-        java.util.Collection<Object> events = (java.util.Collection<Object>)
-                ReflectionTestUtils.invokeMethod(flag, "domainEvents");
-        assertThat(events).noneMatch(e -> e instanceof FlagExpiryExemptionChangedEvent);
+        assertThat(events).allMatch(e -> e instanceof FlagDeletedEvent);
     }
 
     @Test
@@ -285,7 +263,6 @@ class FlagTest {
         Long parentId = 99L;
         Flag encore = endedFlag();
         ReflectionTestUtils.setField(encore, "parentId", parentId);
-        ReflectionTestUtils.setField(encore, "autoExpiryExempt", true);
 
         // when
         encore.delete(HOST_ID);
@@ -297,11 +274,65 @@ class FlagTest {
         FlagDeletedEvent deleted = (FlagDeletedEvent) events.stream()
                 .filter(e -> e instanceof FlagDeletedEvent)
                 .findFirst().orElseThrow();
-        FlagExpiryExemptionChangedEvent released = (FlagExpiryExemptionChangedEvent) events.stream()
-                .filter(e -> e instanceof FlagExpiryExemptionChangedEvent)
-                .findFirst().orElseThrow();
         assertThat(deleted.parentId()).isEqualTo(parentId);
-        assertThat(released.parentId()).isEqualTo(parentId);
+    }
+
+    @Test
+    @DisplayName("보존하면 보존 필드가 켜지고 삭제되지 않는다")
+    void preserve_SetsPreserved() {
+        // given
+        Flag flag = endedFlag();
+
+        // when
+        flag.preserve();
+
+        // then
+        assertThat(flag.isPreserved()).isTrue();
+        assertThat(flag.isDeleted()).isFalse();
+        assertThat(flag.isConcluded()).isTrue();
+    }
+
+    @Test
+    @DisplayName("만료하면 주어진 시각으로 소프트 삭제되고 보존 필드는 꺼진 채다")
+    void expire_SoftDeletesAtGivenTime() {
+        // given
+        Flag flag = endedFlag();
+        LocalDateTime now = LocalDateTime.now();
+
+        // when
+        flag.expire(now);
+
+        // then
+        assertThat(flag.getDeletedAt()).isEqualTo(now);
+        assertThat(flag.isPreserved()).isFalse();
+        assertThat(flag.isConcluded()).isTrue();
+    }
+
+    @Test
+    @DisplayName("결말이 난 플래그에 다시 결말을 내면 거부된다")
+    void conclude_Twice_Rejected() {
+        // given
+        Flag preserved = endedFlag();
+        preserved.preserve();
+        Flag expired = endedFlag();
+        expired.expire(LocalDateTime.now());
+
+        // when / then
+        assertThatThrownBy(preserved::preserve).isInstanceOf(FlagInvalidStatusException.class);
+        assertThatThrownBy(() -> preserved.expire(LocalDateTime.now())).isInstanceOf(FlagInvalidStatusException.class);
+        assertThatThrownBy(expired::preserve).isInstanceOf(FlagInvalidStatusException.class);
+        assertThatThrownBy(() -> expired.expire(LocalDateTime.now())).isInstanceOf(FlagInvalidStatusException.class);
+    }
+
+    @Test
+    @DisplayName("결말 전에 호스트가 삭제한 플래그에도 결말을 낼 수 없다")
+    void conclude_AfterHostDeletion_Rejected() {
+        // given
+        Flag flag = endedFlag();
+        flag.delete(HOST_ID);
+
+        // when / then
+        assertThatThrownBy(flag::preserve).isInstanceOf(FlagInvalidStatusException.class);
     }
 
     @Test

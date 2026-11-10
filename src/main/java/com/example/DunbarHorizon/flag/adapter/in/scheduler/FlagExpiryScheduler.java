@@ -13,6 +13,6 @@ public class FlagExpiryScheduler {
 
     @Scheduled(cron = "0 0 * * * *")
     public void runExpiry() {
-        expiryService.expireEndedFlags();
+        expiryService.concludeEndedFlags();
     }
 }
