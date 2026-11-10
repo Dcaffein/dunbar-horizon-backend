@@ -7,5 +7,5 @@ import java.util.List;
 public interface FlagMaintenancePort {
     List<Long> findIdsReadyForHardDelete(LocalDateTime bufferTime, int batchSize);
     void purgeFlagsAndRelatedData(Collection<Long> flagIds);
-    int purgeInvitationsOfEndedFlags(LocalDateTime threshold);
+    int purgeInvitationsOfStartedFlags(LocalDateTime asOf);
 }

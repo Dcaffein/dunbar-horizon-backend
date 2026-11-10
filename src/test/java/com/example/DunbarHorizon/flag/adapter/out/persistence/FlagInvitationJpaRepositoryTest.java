@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.support.FlagInvitationFixture;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagInvitationJpaRepository;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
+import com.example.DunbarHorizon.flag.domain.flag.FlagStatus;
 import com.example.DunbarHorizon.flag.domain.invitation.FlagInvitation;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +17,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,12 +45,17 @@ class FlagInvitationJpaRepositoryTest {
         return flag;
     }
 
+    private static FlagSchedule inActivitySchedule() {
+        LocalDateTime now = LocalDateTime.now();
+        return FlagSchedule.of(now.minusHours(2), now.minusHours(1), now.plusHours(1));
+    }
+
     private static FlagSchedule endedSchedule() {
         LocalDateTime now = LocalDateTime.now();
         return FlagSchedule.of(now.minusHours(5), now.minusHours(4), now.minusHours(3));
     }
 
-    private static FlagSchedule ongoingSchedule() {
+    private static FlagSchedule waitingSchedule() {
         LocalDateTime now = LocalDateTime.now();
         return FlagSchedule.of(now.minusHours(1), now.plusHours(1), now.plusHours(2));
     }
@@ -138,42 +145,43 @@ class FlagInvitationJpaRepositoryTest {
     }
 
     @Test
-    @DisplayName("보존된 플래그라도 종료되었으면 초대가 삭제된다")
-    void hardDeleteByFlagEndDateTimeBefore_DeletesPreservedEndedFlagInvitations() {
+    @DisplayName("활동 중인 플래그와 보존된 종료 플래그의 초대가 삭제된다")
+    void hardDeleteByFlagStartDateTimeBefore_DeletesStartedFlagInvitations() {
         // given
+        Flag inActivity = saveFlag(inActivitySchedule(), false);
         Flag preservedEnded = saveFlag(endedSchedule(), true);
+        save(inActivity.getId(), INVITER_ID, INVITEE_ID);
         save(preservedEnded.getId(), INVITER_ID, INVITEE_ID);
         em.flush();
         em.clear();
 
         // when
-        int deleted = repository.hardDeleteByFlagEndDateTimeBefore(LocalDateTime.now());
+        repository.hardDeleteByFlagStartDateTimeBefore(LocalDateTime.now());
 
         // then
-        assertThat(deleted).isEqualTo(1);
         assertThat(repository.findAllByInviteeIdOrderByCreatedAtDesc(INVITEE_ID)).isEmpty();
     }
 
     @Test
-    @DisplayName("아직 종료되지 않은 플래그의 초대는 삭제되지 않는다")
-    void hardDeleteByFlagEndDateTimeBefore_KeepsOngoingFlagInvitations() {
+    @DisplayName("마감이 지났어도 시작 전인 플래그의 초대는 남는다 — 일정 변경으로 모집이 다시 열릴 수 있다")
+    void hardDeleteByFlagStartDateTimeBefore_KeepsWaitingFlagInvitations() {
         // given
-        Flag ongoing = saveFlag(ongoingSchedule(), false);
-        save(ongoing.getId(), INVITER_ID, INVITEE_ID);
+        Flag waiting = saveFlag(waitingSchedule(), false);
+        save(waiting.getId(), INVITER_ID, INVITEE_ID);
         em.flush();
         em.clear();
 
         // when
-        int deleted = repository.hardDeleteByFlagEndDateTimeBefore(LocalDateTime.now());
+        repository.hardDeleteByFlagStartDateTimeBefore(LocalDateTime.now());
 
         // then
-        assertThat(deleted).isZero();
-        assertThat(repository.findAllByInviteeIdOrderByCreatedAtDesc(INVITEE_ID)).hasSize(1);
+        assertThat(repository.findAllByInviteeIdOrderByCreatedAtDesc(INVITEE_ID))
+                .extracting(FlagInvitation::getFlagId).containsExactly(waiting.getId());
     }
 
     @Test
     @DisplayName("소프트 삭제된 플래그의 초대는 이 쿼리로 지워지지 않는다 — 퍼지 소관이다")
-    void hardDeleteByFlagEndDateTimeBefore_SkipsSoftDeletedFlags() {
+    void hardDeleteByFlagStartDateTimeBefore_SkipsSoftDeletedFlags() {
         // given
         Flag softDeleted = saveFlag(endedSchedule(), false);
         softDeleted.softDelete();
@@ -182,31 +190,48 @@ class FlagInvitationJpaRepositoryTest {
         em.clear();
 
         // when
-        int deleted = repository.hardDeleteByFlagEndDateTimeBefore(LocalDateTime.now());
+        repository.hardDeleteByFlagStartDateTimeBefore(LocalDateTime.now());
 
         // then
-        assertThat(deleted).isZero();
         assertThat(repository.findAllByInviteeIdOrderByCreatedAtDesc(INVITEE_ID)).hasSize(1);
     }
 
     @Test
-    @DisplayName("종료된 플래그의 초대만 지우고 진행 중인 플래그의 초대는 남긴다")
-    void hardDeleteByFlagEndDateTimeBefore_DeletesOnlyEndedFlagInvitations() {
-        // given
-        Flag ended = saveFlag(endedSchedule(), false);
-        Flag ongoing = saveFlag(ongoingSchedule(), false);
-        save(ended.getId(), INVITER_ID, INVITEE_ID);
-        save(ongoing.getId(), INVITER_ID, INVITEE_ID);
+    @DisplayName("삭제 대상은 calculateStatus가 IN_ACTIVITY 또는 ENDED로 판정하는 플래그와 같다")
+    void hardDeleteByFlagStartDateTimeBefore_MatchesStartedStatusAtBoundary() {
+        // given — 시작 시각이 기준 시각 직전, 정각, 직후인 플래그
+        LocalDateTime asOf = LocalDateTime.now().withNano(0);
+        List<Flag> flags = List.of(
+                saveFlag(startingAt(asOf.minusSeconds(1)), false),
+                saveFlag(startingAt(asOf), false),
+                saveFlag(startingAt(asOf.plusSeconds(1)), false));
+        flags.forEach(flag -> save(flag.getId(), INVITER_ID, INVITEE_ID));
         em.flush();
         em.clear();
 
+        Set<Long> startedByDomain = flags.stream()
+                .filter(flag -> {
+                    FlagStatus status = flag.getSchedule().calculateStatus(asOf);
+                    return status == FlagStatus.IN_ACTIVITY || status == FlagStatus.ENDED;
+                })
+                .map(Flag::getId)
+                .collect(Collectors.toSet());
+
         // when
-        int deleted = repository.hardDeleteByFlagEndDateTimeBefore(LocalDateTime.now());
+        repository.hardDeleteByFlagStartDateTimeBefore(asOf);
 
         // then
-        assertThat(deleted).isEqualTo(1);
-        List<FlagInvitation> remaining = repository.findAllByInviteeIdOrderByCreatedAtDesc(INVITEE_ID);
-        assertThat(remaining).hasSize(1);
-        assertThat(remaining.get(0).getFlagId()).isEqualTo(ongoing.getId());
+        Set<Long> remaining = repository.findAllByInviteeIdOrderByCreatedAtDesc(INVITEE_ID).stream()
+                .map(FlagInvitation::getFlagId)
+                .collect(Collectors.toSet());
+        Set<Long> deletedByQuery = flags.stream()
+                .map(Flag::getId)
+                .filter(id -> !remaining.contains(id))
+                .collect(Collectors.toSet());
+        assertThat(deletedByQuery).isEqualTo(startedByDomain).containsExactly(flags.get(0).getId());
+    }
+
+    private static FlagSchedule startingAt(LocalDateTime start) {
+        return FlagSchedule.of(start.minusHours(1), start, start.plusHours(1));
     }
 }

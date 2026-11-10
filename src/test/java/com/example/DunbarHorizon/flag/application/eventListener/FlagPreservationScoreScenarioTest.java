@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.flag.application.eventListener;
 
-import com.example.DunbarHorizon.flag.application.port.out.FlagMaintenancePort;
 import com.example.DunbarHorizon.flag.application.service.flag.FlagExpiryService;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagConclusionDecider;
@@ -43,7 +42,6 @@ class FlagPreservationScoreScenarioTest {
 
     private final FlagRepository flagRepository = mock(FlagRepository.class);
     private final FlagMemorialRepository memorialRepository = mock(FlagMemorialRepository.class);
-    private final FlagMaintenancePort maintenancePort = mock(FlagMaintenancePort.class);
 
     private final List<BatchMutualInteractionEvent> published = new ArrayList<>();
     private final ApplicationEventPublisher publisher = new RoutingPublisher();
@@ -51,8 +49,7 @@ class FlagPreservationScoreScenarioTest {
     private final FlagConclusionEventListener conclusionListener =
             new FlagConclusionEventListener(publisher);
     private final FlagExpiryService expiryService = new FlagExpiryService(
-            flagRepository, new FlagConclusionDecider(flagRepository, memorialRepository),
-            maintenancePort, publisher);
+            flagRepository, new FlagConclusionDecider(flagRepository, memorialRepository), publisher);
 
     private Flag flag;
 

@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
-import com.example.DunbarHorizon.flag.application.port.out.FlagMaintenancePort;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagConclusionDecider;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
@@ -41,7 +40,6 @@ class FlagExpiryServiceTest {
     @InjectMocks private FlagExpiryService flagExpiryService;
     @Mock private FlagRepository flagRepository;
     @Mock private FlagConclusionDecider conclusionDecider;
-    @Mock private FlagMaintenancePort maintenancePort;
     @Mock private ApplicationEventPublisher eventPublisher;
 
     private static Flag endedFlag(Long id, Long hostId, Long parentId) {
@@ -190,42 +188,5 @@ class FlagExpiryServiceTest {
         // then
         assertThat(publishedConclusions()).hasSize(manyTargets.size());
         verify(conclusionDecider, times(manyTargets.size())).conclude(any(), any());
-    }
-
-    @Test
-    @DisplayName("종료된 플래그의 초대를 정리한 뒤에 결말을 정한다")
-    void concludeEndedFlags_PurgesInvitationsBeforeSoftDelete() {
-        // given
-        given(maintenancePort.purgeInvitationsOfEndedFlags(any())).willReturn(2);
-        Flag flag = endedFlag(1L, 10L, null);
-        givenCandidates(List.of(flag), Map.of(1L, List.of(21L)));
-
-        // when
-        flagExpiryService.concludeEndedFlags();
-
-        // then
-        // 순서가 뒤집히면 방금 소프트 삭제된 플래그가 초대 삭제 쿼리의 서브쿼리에서 빠진다.
-        InOrder inOrder = inOrder(maintenancePort, conclusionDecider);
-        inOrder.verify(maintenancePort).purgeInvitationsOfEndedFlags(any(LocalDateTime.class));
-        inOrder.verify(conclusionDecider).conclude(eq(flag), any());
-    }
-
-    @Test
-    @DisplayName("초대 정리와 플래그 만료가 동일한 임계값을 사용한다")
-    void concludeEndedFlags_SharesThreshold() {
-        // given
-        given(maintenancePort.purgeInvitationsOfEndedFlags(any())).willReturn(0);
-        given(flagRepository.findConclusionCandidates(any())).willReturn(List.of());
-
-        // when
-        flagExpiryService.concludeEndedFlags();
-
-        // then
-        ArgumentCaptor<LocalDateTime> invitationThreshold = ArgumentCaptor.forClass(LocalDateTime.class);
-        ArgumentCaptor<LocalDateTime> flagThreshold = ArgumentCaptor.forClass(LocalDateTime.class);
-        verify(maintenancePort).purgeInvitationsOfEndedFlags(invitationThreshold.capture());
-        verify(flagRepository).findConclusionCandidates(flagThreshold.capture());
-
-        assertThat(invitationThreshold.getValue()).isEqualTo(flagThreshold.getValue());
     }
 }
