@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.domain.flag;
 
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
-import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptionChangedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagDeadlinePassedException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagFullCapacityException;
@@ -239,42 +238,21 @@ class FlagTest {
     }
 
     @Test
-    @DisplayName("보존된 플래그를 삭제하면 면제가 꺼지고 해제 이벤트가 등록된다")
+    @DisplayName("보존된 플래그를 호스트가 삭제해도 보존 필드는 그대로이고 삭제 이벤트만 등록된다")
     @SuppressWarnings("unchecked")
-    void delete_PreservedFlag_RegistersExemptionRelease() {
+    void delete_PreservedFlag_KeepsPreservedAndRegistersOnlyDeletion() {
         // given
         Flag flag = endedFlag();
-        ReflectionTestUtils.setField(flag, "autoExpiryExempt", true);
+        flag.preserve();
 
         // when
         flag.delete(HOST_ID);
 
         // then
-        assertThat(flag.isAutoExpiryExempt()).isFalse();
+        assertThat(flag.isAutoExpiryExempt()).isTrue();
         java.util.Collection<Object> events = (java.util.Collection<Object>)
                 ReflectionTestUtils.invokeMethod(flag, "domainEvents");
-        FlagExpiryExemptionChangedEvent released = (FlagExpiryExemptionChangedEvent) events.stream()
-                .filter(e -> e instanceof FlagExpiryExemptionChangedEvent)
-                .findFirst().orElseThrow();
-        assertThat(released.exempt()).isFalse();
-        assertThat(released.flagId()).isEqualTo(flag.getId());
-        assertThat(released.hostId()).isEqualTo(HOST_ID);
-    }
-
-    @Test
-    @DisplayName("보존 상태가 아닌 플래그를 삭제하면 해제 이벤트가 등록되지 않는다")
-    @SuppressWarnings("unchecked")
-    void delete_NotPreservedFlag_RegistersNoExemptionRelease() {
-        // given
-        Flag flag = endedFlag();
-
-        // when
-        flag.delete(HOST_ID);
-
-        // then
-        java.util.Collection<Object> events = (java.util.Collection<Object>)
-                ReflectionTestUtils.invokeMethod(flag, "domainEvents");
-        assertThat(events).noneMatch(e -> e instanceof FlagExpiryExemptionChangedEvent);
+        assertThat(events).allMatch(e -> e instanceof FlagDeletedEvent);
     }
 
     @Test
@@ -285,7 +263,6 @@ class FlagTest {
         Long parentId = 99L;
         Flag encore = endedFlag();
         ReflectionTestUtils.setField(encore, "parentId", parentId);
-        ReflectionTestUtils.setField(encore, "autoExpiryExempt", true);
 
         // when
         encore.delete(HOST_ID);
@@ -297,11 +274,7 @@ class FlagTest {
         FlagDeletedEvent deleted = (FlagDeletedEvent) events.stream()
                 .filter(e -> e instanceof FlagDeletedEvent)
                 .findFirst().orElseThrow();
-        FlagExpiryExemptionChangedEvent released = (FlagExpiryExemptionChangedEvent) events.stream()
-                .filter(e -> e instanceof FlagExpiryExemptionChangedEvent)
-                .findFirst().orElseThrow();
         assertThat(deleted.parentId()).isEqualTo(parentId);
-        assertThat(released.parentId()).isEqualTo(parentId);
     }
 
     @Test

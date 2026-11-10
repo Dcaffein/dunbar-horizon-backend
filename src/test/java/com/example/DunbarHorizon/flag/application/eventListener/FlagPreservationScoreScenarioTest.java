@@ -4,10 +4,8 @@ import com.example.DunbarHorizon.flag.application.port.out.FlagMaintenancePort;
 import com.example.DunbarHorizon.flag.application.service.flag.FlagExpiryService;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagConclusionDecider;
-import com.example.DunbarHorizon.flag.domain.flag.FlagExpiryExemptionUpdater;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagConcludedEvent;
-import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptionChangedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
@@ -32,7 +30,7 @@ import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.Mockito.mock;
 
 /**
- * 면제 전이와 스윕을 실제 객체로 이어 붙여 플래그 하나에 들어간 순 점수를 본다.
+ * 스윕과 결말 리스너를 실제 객체로 이어 붙여 플래그 하나에 들어간 순 점수를 본다.
  */
 class FlagPreservationScoreScenarioTest {
 
@@ -50,25 +48,18 @@ class FlagPreservationScoreScenarioTest {
     private final List<BatchMutualInteractionEvent> published = new ArrayList<>();
     private final ApplicationEventPublisher publisher = new RoutingPublisher();
 
-    private final FlagExpiryExemptionUpdater exemptionUpdater =
-            new FlagExpiryExemptionUpdater(flagRepository, memorialRepository);
-    private final FlagExpiryExemptionEventListener exemptionListener =
-            new FlagExpiryExemptionEventListener(flagRepository, publisher);
     private final FlagConclusionEventListener conclusionListener =
             new FlagConclusionEventListener(publisher);
-    private final FlagExpiryService expiryService =
-            new FlagExpiryService(flagRepository,
-                    new FlagConclusionDecider(flagRepository, memorialRepository),
-                    maintenancePort, publisher);
+    private final FlagExpiryService expiryService = new FlagExpiryService(
+            flagRepository, new FlagConclusionDecider(flagRepository, memorialRepository),
+            maintenancePort, publisher);
 
     private Flag flag;
 
     private class RoutingPublisher implements ApplicationEventPublisher {
         @Override
         public void publishEvent(Object event) {
-            if (event instanceof FlagExpiryExemptionChangedEvent changed) {
-                exemptionListener.handleExpiryExemptionChanged(changed);
-            } else if (event instanceof FlagConcludedEvent concluded) {
+            if (event instanceof FlagConcludedEvent concluded) {
                 conclusionListener.handleFlagConclusion(concluded);
             } else if (event instanceof BatchMutualInteractionEvent score) {
                 published.add(score);
@@ -83,10 +74,10 @@ class FlagPreservationScoreScenarioTest {
                 FlagSchedule.of(now.minusHours(30), now.minusHours(29), now.minusHours(26)));
         ReflectionTestUtils.setField(flag, "id", FLAG_ID);
 
-        given(flagRepository.findAllParticipantIds(FLAG_ID)).willReturn(PARTICIPANT_IDS);
         given(flagRepository.existsByParentId(FLAG_ID)).willReturn(false);
+        given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
 
-        // 면제가 걸린 플래그는 조회 조건에서 빠진다. 고정값으로 두면 스윕 시나리오가 거짓이 된다.
+        // 결말이 난 플래그는 조회 조건에서 빠진다. 고정값으로 두면 두 번째 스윕 시나리오가 거짓이 된다.
         willAnswer(invocation -> flag.isConcluded() ? List.of() : List.of(flag))
                 .given(flagRepository).findConclusionCandidates(any(LocalDateTime.class));
         given(flagRepository.findAllParticipantIdsByFlagIds(any(Collection.class)))
@@ -98,16 +89,21 @@ class FlagPreservationScoreScenarioTest {
     void sweptFlag_receivesBaseScoreOnce() {
         // when
         sweep();
+        sweep();
 
         // then
         assertThat(netScore()).isEqualTo(BASE);
+        assertThat(flag.isDeleted()).isTrue();
     }
 
     @Test
-    @DisplayName("후기가 달린 모임은 기본과 보존 가중치를 한 번분 받고 스윕에는 집히지 않는다")
-    void preservedFlag_receivesPreservedScoreOnce() {
+    @DisplayName("후기가 달린 모임은 스윕에서 보존되어 보존 점수를 한 번분 받는다")
+    void flagWithMemorial_receivesPreservedScoreOnce() {
+        // given
+        given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(true);
+
         // when
-        writeMemorial();
+        sweep();
         sweep();
 
         // then
@@ -116,89 +112,53 @@ class FlagPreservationScoreScenarioTest {
     }
 
     @Test
-    @DisplayName("후기 작성 후 삭제하고 스윕에 집히면 기본 한 번분만 남는다")
-    void memorialThenDeleteThenSweep_leavesBaseOnce() {
+    @DisplayName("보존된 뒤 후기가 모두 지워져도 다음 스윕은 결말과 점수를 바꾸지 않는다")
+    void preservedFlag_staysPreserved_afterMemorialsRemoved() {
+        // given
+        given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(true);
+        sweep();
+
         // when
-        writeMemorial();
-        removeMemorial();
+        given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
         sweep();
 
         // then
-        assertThat(netScore()).isEqualTo(BASE);
+        assertThat(netScore()).isEqualTo(PRESERVED);
+        assertThat(published).hasSize(1);
+        assertThat(flag.isDeleted()).isFalse();
+        assertThat(flag.isAutoExpiryExempt()).isTrue();
     }
 
     @Test
-    @DisplayName("후기를 지웠다 다시 쓰면 기본과 보존 가중치가 한 번분이다")
-    void memorialThenDeleteThenRewrite_leavesPreservedOnce() {
+    @DisplayName("호스트가 보존된 모임을 삭제해도 받은 점수는 회수되지 않는다")
+    void hostDeletesPreservedFlag_keepsScore() {
+        // given
+        given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(true);
+        sweep();
+
         // when
-        writeMemorial();
-        removeMemorial();
-        writeMemorial();
+        flag.delete(HOST_ID);
 
         // then
         assertThat(netScore()).isEqualTo(PRESERVED);
+        assertThat(published).hasSize(1);
     }
 
     @Test
-    @DisplayName("이미 면제가 꺼진 플래그를 다시 꺼도 아무 일이 일어나지 않는다")
-    void secondRelease_changesNothing() {
+    @DisplayName("결말 전에 호스트가 삭제한 모임은 스윕에 집히지 않아 점수가 발행되지 않는다")
+    void hostDeletesBeforeConclusion_publishesNothing() {
+        // given
+        flag.delete(HOST_ID);
+
         // when
-        writeMemorial();
-        removeMemorial();
-        removeMemorial();
-
-        // then
-        assertThat(netScore()).isZero();
-        assertThat(published).hasSize(2);
-    }
-
-    @Test
-    @DisplayName("호스트가 보존된 모임을 삭제하면 받은 점수가 회수되어 합이 0이 된다")
-    void hostDeletesPreservedFlag_netScoreIsZero() {
-        // when
-        writeMemorial();
-        hostDeletes();
-
-        // then
-        assertThat(netScore()).isZero();
-        assertThat(published).hasSize(2);
-        assertThat(flag.isAutoExpiryExempt()).isFalse();
-    }
-
-    @Test
-    @DisplayName("호스트가 보존되지 않은 모임을 삭제하면 점수가 발행되지 않는다")
-    void hostDeletesPlainFlag_publishesNothing() {
-        // when
-        hostDeletes();
+        sweep();
 
         // then
         assertThat(published).isEmpty();
     }
 
-    private void writeMemorial() {
-        given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(true);
-        exemptionUpdater.refresh(flag);
-        flushDomainEvents(flag);
-    }
-
-    private void removeMemorial() {
-        given(memorialRepository.existsByFlagId(FLAG_ID)).willReturn(false);
-        exemptionUpdater.refresh(flag);
-        flushDomainEvents(flag);
-    }
-
-    private void hostDeletes() {
-        flag.delete(HOST_ID);
-        flushDomainEvents(flag);
-    }
-
     private void sweep() {
         expiryService.concludeEndedFlags();
-    }
-
-    private void flushDomainEvents(Flag target) {
-        List.copyOf(target.getDomainEvents()).forEach(publisher::publishEvent);
-        ReflectionTestUtils.invokeMethod(target, "clearDomainEvents");
     }
 
     private double netScore() {

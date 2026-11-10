@@ -18,7 +18,6 @@ public interface FlagRepository {
     Optional<Flag> findById(Long id);
     Optional<Long> findHostIdById(Long id);
     Optional<Flag> findByIdForUpdate(Long id);
-    Optional<Flag> findLatestByIdForUpdate(Long id);
     Optional<Flag> findByParentId(Long parentId);
     List<Flag> findConclusionCandidates(LocalDateTime threshold);
     boolean existsByParentId(Long parentId);

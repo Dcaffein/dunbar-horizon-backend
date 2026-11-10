@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.flag.domain.flag;
 
 
 import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;import com.example.DunbarHorizon.flag.domain.flag.event.FlagDeletedEvent;
-import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptionChangedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagEncoreEvent;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagMeetingChangedEvent;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
@@ -139,7 +138,6 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
         if (isDeleted()) {
             throw new FlagInvalidStatusException(FlagErrorCode.FLAG_ALREADY_DELETED, ErrorContext.of("flagId", id));
         }
-        updateAutoExpiryExempt(false);
         softDelete();
         registerEvent(new FlagDeletedEvent(
                 this.id,
@@ -192,13 +190,6 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
         }
 
         this.schedule = this.schedule.withDeadline(LocalDateTime.now());
-    }
-
-    void updateAutoExpiryExempt(boolean value) {
-        if (value == this.autoExpiryExempt) return;
-
-        this.autoExpiryExempt = value;
-        registerEvent(new FlagExpiryExemptionChangedEvent(this.id, this.hostId, this.parentId, value));
     }
 
     public void preserve() {

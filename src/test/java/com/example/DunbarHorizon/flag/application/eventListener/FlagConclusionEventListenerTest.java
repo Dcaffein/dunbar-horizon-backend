@@ -20,7 +20,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,9 +61,7 @@ class FlagConclusionEventListenerTest {
             "ENDED,                 false, FLAG_ENDED,            GRANT",
             "ENDED,                 true,  FLAG_ENDED_ENCORE,     GRANT",
             "PRESERVED,             false, FLAG_PRESERVED,        GRANT",
-            "PRESERVED,             true,  FLAG_PRESERVED_ENCORE, GRANT",
-            "PRESERVATION_RELEASED, false, FLAG_PRESERVED,        REVOKE",
-            "PRESERVATION_RELEASED, true,  FLAG_PRESERVED_ENCORE, REVOKE"
+            "PRESERVED,             true,  FLAG_PRESERVED_ENCORE, GRANT"
     })
     @DisplayName("종료의 종류와 앵코르 여부로 점수 타입과 방향을 고른다")
     void handleFlagConclusion_translatesKindAndEncore(FlagConclusionKind kind,
@@ -82,26 +79,6 @@ class FlagConclusionEventListenerTest {
         BatchMutualInteractionEvent event = capturedInteraction();
         assertThat(event.type()).isEqualTo(expectedType);
         assertThat(event.direction()).isEqualTo(expectedDirection);
-    }
-
-    @Test
-    @DisplayName("보존 부여와 보존 해제는 같은 타입을 반대 방향으로 쓴다")
-    void handleFlagConclusion_grantAndRevokeShareTheSameType() {
-        // when
-        listener.handleFlagConclusion(new FlagConcludedEvent(
-                FLAG_ID, HOST_ID, null, PARTICIPANT_IDS, FlagConclusionKind.PRESERVED));
-        listener.handleFlagConclusion(new FlagConcludedEvent(
-                FLAG_ID, HOST_ID, null, PARTICIPANT_IDS, FlagConclusionKind.PRESERVATION_RELEASED));
-
-        // then
-        ArgumentCaptor<BatchMutualInteractionEvent> captor =
-                ArgumentCaptor.forClass(BatchMutualInteractionEvent.class);
-        verify(eventPublisher, times(2)).publishEvent(captor.capture());
-        BatchMutualInteractionEvent granted = captor.getAllValues().get(0);
-        BatchMutualInteractionEvent revoked = captor.getAllValues().get(1);
-        assertThat(revoked.type()).isEqualTo(granted.type());
-        assertThat(granted.direction()).isEqualTo(ScoreDirection.GRANT);
-        assertThat(revoked.direction()).isEqualTo(ScoreDirection.REVOKE);
     }
 
     @Test

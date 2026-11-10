@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.flag.application.port.in.command.FlagCapacityUp
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagDetailsUpdateCommand;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagScheduleUpdateCommand;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
-import com.example.DunbarHorizon.flag.domain.flag.FlagExpiryExemptionUpdater;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
@@ -26,11 +25,11 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class FlagModificationServiceTest {
@@ -38,7 +37,6 @@ class FlagModificationServiceTest {
     @InjectMocks private FlagModificationService flagModificationService;
 
     @Mock private FlagRepository flagRepository;
-    @Mock private FlagExpiryExemptionUpdater exemptionUpdater;
 
     private static final Long HOST_ID = 1L;
     private static final Long OTHER_ID = 99L;
@@ -218,45 +216,24 @@ class FlagModificationServiceTest {
         // then
         assertThat(flag.isDeleted()).isTrue();
         verify(flagRepository).save(flag);
-        verifyNoInteractions(exemptionUpdater);
     }
 
     @Test
-    @DisplayName("앵코르를 삭제하면 앵코르를 먼저 잠그고 지운 뒤 부모를 잠가 면제를 다시 계산한다")
-    void delete_Encore_LocksEncoreThenParentAndRefreshesParent() {
+    @DisplayName("앵코르를 삭제하면 앵코르만 잠그고 지우며 부모는 건드리지 않는다")
+    void delete_Encore_LocksAndDeletesOnlyEncore() {
         // given
         Flag encore = createEndedFlag(FLAG_ID, PARENT_ID);
-        Flag parent = createEndedFlag(PARENT_ID, null);
         given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(encore));
-        given(flagRepository.findByIdForUpdate(PARENT_ID)).willReturn(Optional.of(parent));
 
         // when
         flagModificationService.closeFlag(FLAG_ID, HOST_ID);
 
         // then
         assertThat(encore.isDeleted()).isTrue();
-        InOrder inOrder = inOrder(flagRepository, exemptionUpdater);
-        inOrder.verify(flagRepository).findByIdForUpdate(FLAG_ID);
-        inOrder.verify(flagRepository).save(encore);
-        inOrder.verify(flagRepository).findByIdForUpdate(PARENT_ID);
-        inOrder.verify(exemptionUpdater).refresh(parent);
-        inOrder.verify(flagRepository).save(parent);
-    }
-
-    @Test
-    @DisplayName("부모가 이미 삭제된 앵코르는 부모 갱신 없이 지운다")
-    void delete_EncoreWithDeletedParent_SkipsParentRefresh() {
-        // given
-        Flag encore = createEndedFlag(FLAG_ID, PARENT_ID);
-        given(flagRepository.findByIdForUpdate(FLAG_ID)).willReturn(Optional.of(encore));
-        given(flagRepository.findByIdForUpdate(PARENT_ID)).willReturn(Optional.empty());
-
-        // when
-        flagModificationService.closeFlag(FLAG_ID, HOST_ID);
-
-        // then
-        assertThat(encore.isDeleted()).isTrue();
-        verifyNoInteractions(exemptionUpdater);
+        verify(flagRepository).findByIdForUpdate(FLAG_ID);
+        verify(flagRepository, never()).findByIdForUpdate(PARENT_ID);
+        verify(flagRepository).save(encore);
+        verify(flagRepository, never()).save(argThat(flag -> PARENT_ID.equals(flag.getId())));
     }
 
     @Test
@@ -268,7 +245,6 @@ class FlagModificationServiceTest {
         // when / then
         assertThatThrownBy(() -> flagModificationService.closeFlag(FLAG_ID, HOST_ID))
                 .isInstanceOf(FlagNotFoundException.class);
-        verifyNoInteractions(exemptionUpdater);
     }
 
     @Test
@@ -282,6 +258,5 @@ class FlagModificationServiceTest {
         assertThatThrownBy(() -> flagModificationService.closeFlag(FLAG_ID, OTHER_ID))
                 .isInstanceOf(FlagAuthorizationException.class);
         verify(flagRepository, never()).save(any());
-        verifyNoInteractions(exemptionUpdater);
     }
 }

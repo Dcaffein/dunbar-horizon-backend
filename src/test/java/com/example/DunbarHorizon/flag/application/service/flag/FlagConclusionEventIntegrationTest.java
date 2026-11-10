@@ -3,7 +3,8 @@ package com.example.DunbarHorizon.flag.application.service.flag;
 import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
 import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialCommandUseCase;
 import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
-import com.example.DunbarHorizon.flag.domain.flag.event.FlagExpiryExemptionChangedEvent;
+import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagJpaRepository;
+import com.example.DunbarHorizon.flag.domain.flag.event.FlagConcludedEvent;
 import com.example.DunbarHorizon.support.TestContainerConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,20 +31,20 @@ class FlagConclusionEventIntegrationTest {
     @TestConfiguration(proxyBeanMethods = false)
     static class RecordingConfig {
         @Bean
-        ExemptionRecorder exemptionRecorder() {
-            return new ExemptionRecorder();
+        ConclusionRecorder conclusionRecorder() {
+            return new ConclusionRecorder();
         }
     }
 
-    static class ExemptionRecorder {
-        private final List<FlagExpiryExemptionChangedEvent> received = new CopyOnWriteArrayList<>();
+    static class ConclusionRecorder {
+        private final List<FlagConcludedEvent> received = new CopyOnWriteArrayList<>();
 
         @EventListener
-        void on(FlagExpiryExemptionChangedEvent event) {
+        void on(FlagConcludedEvent event) {
             received.add(event);
         }
 
-        List<FlagExpiryExemptionChangedEvent> received() {
+        List<FlagConcludedEvent> received() {
             return received;
         }
 
@@ -54,7 +55,8 @@ class FlagConclusionEventIntegrationTest {
 
     @Autowired private FlagHostUseCase flagHostUseCase;
     @Autowired private FlagMemorialCommandUseCase memorialCommandUseCase;
-    @Autowired private ExemptionRecorder recorder;
+    @Autowired private FlagJpaRepository flagJpaRepository;
+    @Autowired private ConclusionRecorder recorder;
 
     private static final Long HOST_ID = 4201L;
 
@@ -70,46 +72,16 @@ class FlagConclusionEventIntegrationTest {
     }
 
     @Test
-    @DisplayName("후기가 달려 만료 면제가 붙으면 이벤트가 발행된다")
-    void memorialGrantsExemption_publishesEvent() {
+    @DisplayName("후기를 쓰고 지워도 결말 이벤트가 나가지 않고 보존 필드가 바뀌지 않는다")
+    void memorialWriteAndDelete_concludesNothing() {
         // when
-        memorialCommandUseCase.createMemorial(endedFlagId, HOST_ID, "좋았습니다");
-
-        // then
-        assertThat(recorder.received()).hasSize(1);
-        assertThat(recorder.received().get(0).flagId()).isEqualTo(endedFlagId);
-        assertThat(recorder.received().get(0).hostId()).isEqualTo(HOST_ID);
-        assertThat(recorder.received().get(0).parentId()).isNull();
-        assertThat(recorder.received().get(0).exempt()).isTrue();
-    }
-
-    @Test
-    @DisplayName("이미 면제 상태면 후기가 더 달려도 발행되지 않는다")
-    void secondMemorial_publishesNothingMore() {
-        // given
-        memorialCommandUseCase.createMemorial(endedFlagId, HOST_ID, "첫 후기");
-        recorder.clear();
-
-        // when
-        memorialCommandUseCase.createMemorial(endedFlagId, HOST_ID, "두 번째 후기");
-
-        // then
-        assertThat(recorder.received()).isEmpty();
-    }
-
-    @Test
-    @DisplayName("후기를 지워 만료 면제가 떨어지면 해제 이벤트가 발행된다")
-    void memorialRemoved_publishesRelease() {
-        // given
         Long memorialId = memorialCommandUseCase.createMemorial(endedFlagId, HOST_ID, "후기");
-        recorder.clear();
-
-        // when
+        boolean preservedAfterWrite = flagJpaRepository.findById(endedFlagId).orElseThrow().isAutoExpiryExempt();
         memorialCommandUseCase.deleteMemorial(endedFlagId, memorialId, HOST_ID);
 
         // then
-        assertThat(recorder.received()).hasSize(1);
-        assertThat(recorder.received().get(0).flagId()).isEqualTo(endedFlagId);
-        assertThat(recorder.received().get(0).exempt()).isFalse();
+        assertThat(recorder.received()).isEmpty();
+        assertThat(preservedAfterWrite).isFalse();
+        assertThat(flagJpaRepository.findById(endedFlagId).orElseThrow().isAutoExpiryExempt()).isFalse();
     }
 }
