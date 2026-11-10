@@ -249,7 +249,7 @@ class FlagTest {
         flag.delete(HOST_ID);
 
         // then
-        assertThat(flag.isAutoExpiryExempt()).isTrue();
+        assertThat(flag.isPreserved()).isTrue();
         java.util.Collection<Object> events = (java.util.Collection<Object>)
                 ReflectionTestUtils.invokeMethod(flag, "domainEvents");
         assertThat(events).allMatch(e -> e instanceof FlagDeletedEvent);
@@ -287,7 +287,7 @@ class FlagTest {
         flag.preserve();
 
         // then
-        assertThat(flag.isAutoExpiryExempt()).isTrue();
+        assertThat(flag.isPreserved()).isTrue();
         assertThat(flag.isDeleted()).isFalse();
         assertThat(flag.isConcluded()).isTrue();
     }
@@ -304,7 +304,7 @@ class FlagTest {
 
         // then
         assertThat(flag.getDeletedAt()).isEqualTo(now);
-        assertThat(flag.isAutoExpiryExempt()).isFalse();
+        assertThat(flag.isPreserved()).isFalse();
         assertThat(flag.isConcluded()).isTrue();
     }
 

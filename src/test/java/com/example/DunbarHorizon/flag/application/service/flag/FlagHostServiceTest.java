@@ -75,7 +75,7 @@ class FlagHostServiceTest {
         verify(flagRepository).save(captor.capture());
         assertThat(captor.getValue().getParentId()).isEqualTo(PARENT_ID);
         verify(flagRepository, never()).findByIdForUpdate(any());
-        assertThat(parent.isAutoExpiryExempt()).isFalse();
+        assertThat(parent.isPreserved()).isFalse();
     }
 
     @Test

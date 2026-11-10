@@ -41,7 +41,7 @@ public interface FlagJpaRepository extends JpaRepository<Flag, Long> {
     // @SQLRestriction이 deleted_at IS NULL을 붙이므로 이미 삭제된 행은 자동으로 빠진다.
     @Query("SELECT f FROM Flag f " +
             "WHERE f.schedule.endDateTime < :threshold " +
-            "AND f.autoExpiryExempt = false " +
+            "AND f.preserved = false " +
             "ORDER BY f.schedule.endDateTime ASC")
     List<Flag> findConclusionCandidates(@Param("threshold") LocalDateTime threshold);
 

@@ -76,12 +76,12 @@ class FlagConclusionEventIntegrationTest {
     void memorialWriteAndDelete_concludesNothing() {
         // when
         Long memorialId = memorialCommandUseCase.createMemorial(endedFlagId, HOST_ID, "후기");
-        boolean preservedAfterWrite = flagJpaRepository.findById(endedFlagId).orElseThrow().isAutoExpiryExempt();
+        boolean preservedAfterWrite = flagJpaRepository.findById(endedFlagId).orElseThrow().isPreserved();
         memorialCommandUseCase.deleteMemorial(endedFlagId, memorialId, HOST_ID);
 
         // then
         assertThat(recorder.received()).isEmpty();
         assertThat(preservedAfterWrite).isFalse();
-        assertThat(flagJpaRepository.findById(endedFlagId).orElseThrow().isAutoExpiryExempt()).isFalse();
+        assertThat(flagJpaRepository.findById(endedFlagId).orElseThrow().isPreserved()).isFalse();
     }
 }

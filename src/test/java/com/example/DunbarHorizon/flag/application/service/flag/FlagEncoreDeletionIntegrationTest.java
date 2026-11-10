@@ -72,7 +72,7 @@ class FlagEncoreDeletionIntegrationTest {
 
         // then
         assertThat(flagJpaRepository.findById(recreatedEncoreId).orElseThrow().getParentId()).isEqualTo(parentId);
-        assertThat(parent().isAutoExpiryExempt()).isFalse();
+        assertThat(parent().isPreserved()).isFalse();
     }
 
     private Long encore() {

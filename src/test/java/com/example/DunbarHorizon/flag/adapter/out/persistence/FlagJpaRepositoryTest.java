@@ -250,7 +250,7 @@ class FlagJpaRepositoryTest {
         Flag notEndedYet = persistEndedFlag(HOST_ID, asOf.plusHours(1));
 
         Flag preserved = persistEndedFlag(HOST_ID, asOf.minusHours(2));
-        ReflectionTestUtils.setField(preserved, "autoExpiryExempt", true);
+        ReflectionTestUtils.setField(preserved, "preserved", true);
 
         Flag alreadyDeleted = persistEndedFlag(HOST_ID, asOf.minusHours(3));
         alreadyDeleted.softDelete();

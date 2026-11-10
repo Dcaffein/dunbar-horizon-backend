@@ -63,7 +63,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
     private Long parentId;
 
     @Getter
-    private boolean autoExpiryExempt = false;
+    private boolean preserved = false;
 
     @Getter
     private LocalDateTime deletedAt;
@@ -194,7 +194,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
 
     public void preserve() {
         validateNotConcluded();
-        this.autoExpiryExempt = true;
+        this.preserved = true;
     }
 
     public void expire(LocalDateTime now) {
@@ -203,7 +203,7 @@ public class Flag extends BaseTimeAggregateRoot implements SoftDeletable {
     }
 
     public boolean isConcluded() {
-        return autoExpiryExempt || isDeleted();
+        return preserved || isDeleted();
     }
 
     public void severParentLink() {

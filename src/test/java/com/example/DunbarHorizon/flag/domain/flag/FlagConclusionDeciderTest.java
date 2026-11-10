@@ -46,7 +46,7 @@ class FlagConclusionDeciderTest {
 
         // then
         assertThat(kind).isEqualTo(FlagConclusionKind.PRESERVED);
-        assertThat(flag.isAutoExpiryExempt()).isTrue();
+        assertThat(flag.isPreserved()).isTrue();
         assertThat(flag.isDeleted()).isFalse();
     }
 
@@ -63,7 +63,7 @@ class FlagConclusionDeciderTest {
 
         // then
         assertThat(kind).isEqualTo(FlagConclusionKind.PRESERVED);
-        assertThat(flag.isAutoExpiryExempt()).isTrue();
+        assertThat(flag.isPreserved()).isTrue();
     }
 
     @Test
@@ -81,6 +81,6 @@ class FlagConclusionDeciderTest {
         // then
         assertThat(kind).isEqualTo(FlagConclusionKind.ENDED);
         assertThat(flag.getDeletedAt()).isEqualTo(now);
-        assertThat(flag.isAutoExpiryExempt()).isFalse();
+        assertThat(flag.isPreserved()).isFalse();
     }
 }

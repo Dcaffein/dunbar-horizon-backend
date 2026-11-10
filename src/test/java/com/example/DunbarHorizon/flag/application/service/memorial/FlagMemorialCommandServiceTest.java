@@ -81,7 +81,7 @@ class FlagMemorialCommandServiceTest {
         order.verify(memorialRepository).save(captor.capture());
         verify(flagRepository, never()).findByIdForUpdate(any());
         verify(flagRepository, never()).save(any());
-        assertThat(flag.isAutoExpiryExempt()).isFalse();
+        assertThat(flag.isPreserved()).isFalse();
         assertThat(captor.getValue().getFlagId()).isEqualTo(FLAG_ID);
         assertThat(captor.getValue().getWriterId()).isEqualTo(WRITER_ID);
         assertThat(captor.getValue().getContent()).isEqualTo("후기");

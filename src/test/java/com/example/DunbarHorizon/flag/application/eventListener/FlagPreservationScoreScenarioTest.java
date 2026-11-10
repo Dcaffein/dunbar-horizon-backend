@@ -126,7 +126,7 @@ class FlagPreservationScoreScenarioTest {
         assertThat(netScore()).isEqualTo(PRESERVED);
         assertThat(published).hasSize(1);
         assertThat(flag.isDeleted()).isFalse();
-        assertThat(flag.isAutoExpiryExempt()).isTrue();
+        assertThat(flag.isPreserved()).isTrue();
     }
 
     @Test
