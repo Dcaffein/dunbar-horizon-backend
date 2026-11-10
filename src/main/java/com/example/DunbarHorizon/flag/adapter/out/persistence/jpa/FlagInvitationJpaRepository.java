@@ -30,6 +30,6 @@ public interface FlagInvitationJpaRepository extends JpaRepository<FlagInvitatio
     // 플래그는 대상에서 빠진다. 그쪽 초대는 purgeFlagsAndRelatedData가 지운다.
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM FlagInvitation fi WHERE fi.flagId IN " +
-           "(SELECT f.id FROM Flag f WHERE f.schedule.endDateTime < :threshold)")
-    int hardDeleteByFlagEndDateTimeBefore(@Param("threshold") LocalDateTime threshold);
+           "(SELECT f.id FROM Flag f WHERE f.schedule.startDateTime < :asOf)")
+    int hardDeleteByFlagStartDateTimeBefore(@Param("asOf") LocalDateTime asOf);
 }

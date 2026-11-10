@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.application.service.invitation;
 
 import com.example.DunbarHorizon.flag.application.port.out.FlagMaintenancePort;
-import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,12 +17,10 @@ public class FlagInvitationCleanupService {
 
     @Transactional
     public void purgeDeadInvitations() {
-        LocalDateTime threshold = LocalDateTime.now().minusHours(Flag.EXPIRATION_THRESHOLD_HOURS);
-
-        int purged = maintenancePort.purgeInvitationsOfEndedFlags(threshold);
+        int purged = maintenancePort.purgeInvitationsOfStartedFlags(LocalDateTime.now());
 
         if (purged > 0) {
-            log.info("초대 정리 완료: 종료된 플래그의 초대 {}건 삭제", purged);
+            log.info("초대 정리 완료: 시작한 플래그의 초대 {}건 삭제", purged);
         }
     }
 }

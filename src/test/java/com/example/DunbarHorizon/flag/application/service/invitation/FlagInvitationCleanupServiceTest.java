@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.application.service.invitation;
 
 import com.example.DunbarHorizon.flag.application.port.out.FlagMaintenancePort;
-import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,17 +21,17 @@ class FlagInvitationCleanupServiceTest {
     @Mock private FlagMaintenancePort maintenancePort;
 
     @Test
-    @DisplayName("종료 24시간이 지난 플래그의 초대를 지운다")
-    void purgeDeadInvitations_UsesExpirationThreshold() {
+    @DisplayName("현재 시각을 기준으로 시작한 플래그의 초대를 지운다")
+    void purgeDeadInvitations_UsesNowAsReference() {
         // given
-        LocalDateTime expected = LocalDateTime.now().minusHours(Flag.EXPIRATION_THRESHOLD_HOURS);
+        LocalDateTime expected = LocalDateTime.now();
 
         // when
         cleanupService.purgeDeadInvitations();
 
         // then
         ArgumentCaptor<LocalDateTime> threshold = ArgumentCaptor.forClass(LocalDateTime.class);
-        verify(maintenancePort).purgeInvitationsOfEndedFlags(threshold.capture());
+        verify(maintenancePort).purgeInvitationsOfStartedFlags(threshold.capture());
         assertThat(threshold.getValue()).isBetween(expected.minusSeconds(1), expected.plusSeconds(1));
     }
 }
