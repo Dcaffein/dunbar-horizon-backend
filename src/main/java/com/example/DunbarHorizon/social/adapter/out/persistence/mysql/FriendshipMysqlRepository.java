@@ -1,10 +1,9 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
-import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
-import com.example.DunbarHorizon.social.application.port.out.UserProfilePort;
+import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipCreationRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -21,12 +20,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @RequiredArgsConstructor
-public class FriendshipMysqlRepository {
+public class FriendshipMysqlRepository implements FriendshipCreationRepository {
 
     private static final String PAIR = "low_user_id = :low AND high_user_id = :high";
     private static final String SELECT_PAIR = "SELECT * FROM friendships WHERE " + PAIR;
@@ -59,8 +57,9 @@ public class FriendshipMysqlRepository {
             """;
 
     private final NamedParameterJdbcTemplate jdbc;
-    private final UserProfilePort userProfiles;
+    private final SocialUserMysqlRepository users;
 
+    @Override
     public void create(Friendship friendship) {
         var recognitions = friendship.getRecognitions().stream()
                 .sorted(Comparator.comparing(recognition -> recognition.getUser().getId()))
@@ -87,14 +86,22 @@ public class FriendshipMysqlRepository {
     }
 
     private Optional<Friendship> findPair(String id, String sql) {
-        return PairKey.parse(id)
+        return UserPairKey.parse(id)
                 .flatMap(pair -> restore(jdbc.query(sql, pair.parameters(), FriendshipRow::read)).stream().findFirst());
     }
 
+    @Override
     public boolean existsFriendshipBetween(Long userId, Long targetId) {
-        var key = new PairKey(Math.min(userId, targetId), Math.max(userId, targetId));
+        var key = UserPairKey.of(userId, targetId);
         return Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT EXISTS (SELECT 1 FROM friendships WHERE " + PAIR + ")", key.parameters(), Boolean.class));
+    }
+
+    @Override
+    public boolean existsFriendshipForUpdate(long userId, long targetId) {
+        var key = UserPairKey.of(userId, targetId);
+        return !jdbc.queryForList("SELECT low_user_id FROM friendships WHERE " + PAIR + " FOR UPDATE",
+                key.parameters(), Long.class).isEmpty();
     }
 
     public List<Friendship> findByUserId(Long userId) {
@@ -117,7 +124,7 @@ public class FriendshipMysqlRepository {
 
     public void updateUserFields(Friendship friendship, Long userId) {
         String side = userId < friendship.getFriend(userId).getId() ? "low" : "high";
-        PairKey pair = PairKey.parse(friendship.getId()).orElseThrow();
+        UserPairKey pair = UserPairKey.parse(friendship.getId()).orElseThrow();
         var parameters = new MapSqlParameterSource(pair.parameters())
                 .addValue("alias", friendship.getFriendAlias(userId), Types.VARCHAR)
                 .addValue("muted", friendship.isMuted(userId))
@@ -130,7 +137,7 @@ public class FriendshipMysqlRepository {
     }
 
     public void delete(String friendshipId) {
-        PairKey.parse(friendshipId)
+        UserPairKey.parse(friendshipId)
                 .ifPresent(pair -> jdbc.update("DELETE FROM friendships WHERE " + PAIR, pair.parameters()));
     }
 
@@ -145,7 +152,7 @@ public class FriendshipMysqlRepository {
     private List<Friendship> restore(List<FriendshipRow> rows) {
         Set<Long> userIds = rows.stream().flatMap(row -> Stream.of(row.key().low(), row.key().high()))
                 .collect(Collectors.toSet());
-        Map<Long, UserProfileInfo> profiles = activeProfiles(userIds);
+        Map<Long, SocialUserProfile> profiles = users.findActiveProfiles(userIds);
         return rows.stream()
                 .filter(row -> profiles.containsKey(row.key().low()) && profiles.containsKey(row.key().high()))
                 .map(row -> row.toFriendship(profiles.get(row.key().low()), profiles.get(row.key().high())))
@@ -158,53 +165,22 @@ public class FriendshipMysqlRepository {
         }
         Set<Long> userIds = new HashSet<>(ids);
         userIds.add(userId);
-        Map<Long, UserProfileInfo> profiles = activeProfiles(userIds);
+        Map<Long, SocialUserProfile> profiles = users.findActiveProfiles(userIds);
         if (!profiles.containsKey(userId)) {
             return Set.of();
         }
         return ids.stream().filter(profiles::containsKey).collect(Collectors.toSet());
     }
 
-    private Map<Long, UserProfileInfo> activeProfiles(Set<Long> ids) {
-        if (ids.isEmpty()) {
-            return Map.of();
-        }
-        return userProfiles.getUserProfilesForSync(ids).stream()
-                .collect(Collectors.toMap(UserProfileInfo::id, Function.identity()));
-    }
-
-    private record PairKey(long low, long high) {
-        static Optional<PairKey> parse(String id) {
-            String[] ids = id.split("_", -1);
-            if (ids.length != 2) {
-                return Optional.empty();
-            }
-            try {
-                var pair = new PairKey(Long.parseLong(ids[0]), Long.parseLong(ids[1]));
-                return pair.low < pair.high && pair.id().equals(id) ? Optional.of(pair) : Optional.empty();
-            } catch (NumberFormatException invalidId) {
-                return Optional.empty();
-            }
-        }
-
-        String id() {
-            return Friendship.generateCompositeId(low, high);
-        }
-
-        Map<String, Long> parameters() {
-            return Map.of("low", low, "high", high);
-        }
-    }
-
-    private record FriendshipRow(PairKey key, LocalDate createdAt, double intimacy,
+    private record FriendshipRow(UserPairKey key, LocalDate createdAt, double intimacy,
                                  RecognitionRow low, RecognitionRow high) {
         static FriendshipRow read(ResultSet rs, int rowNumber) throws SQLException {
-            var key = new PairKey(rs.getLong("low_user_id"), rs.getLong("high_user_id"));
+            var key = new UserPairKey(rs.getLong("low_user_id"), rs.getLong("high_user_id"));
             return new FriendshipRow(key, rs.getObject("created_at", LocalDate.class), rs.getDouble("intimacy"),
                     RecognitionRow.read(rs, "low"), RecognitionRow.read(rs, "high"));
         }
 
-        Friendship toFriendship(UserProfileInfo lowProfile, UserProfileInfo highProfile) {
+        Friendship toFriendship(SocialUserProfile lowProfile, SocialUserProfile highProfile) {
             return Friendship.restore(key.id(), createdAt, intimacy,
                     List.of(low.toRecognition(lowProfile), high.toRecognition(highProfile)));
         }
@@ -218,25 +194,8 @@ public class FriendshipMysqlRepository {
                     rs.getBoolean(side + "_is_muted"), rs.getBoolean(side + "_is_routable"));
         }
 
-        FriendRecognition toRecognition(UserProfileInfo profile) {
-            return FriendRecognition.restore(new AccountReference(profile), alias, score, interactedAt, muted, routable);
-        }
-    }
-
-    private record AccountReference(UserProfileInfo profile) implements UserReference {
-        @Override
-        public Long getId() {
-            return profile.id();
-        }
-
-        @Override
-        public String getNickname() {
-            return profile.nickname();
-        }
-
-        @Override
-        public String getProfileImageUrl() {
-            return profile.profileImage();
+        FriendRecognition toRecognition(SocialUserProfile profile) {
+            return FriendRecognition.restore(profile, alias, score, interactedAt, muted, routable);
         }
     }
 }

@@ -1,10 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
-import com.example.DunbarHorizon.account.adapter.out.persistence.UserRepositoryAdapter;
-import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
-import com.example.DunbarHorizon.account.application.service.UserQueryService;
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.adapter.out.account.AccountUserProfileAdapter;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
@@ -17,7 +13,6 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -28,8 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
-@Import({FriendshipMysqlRepository.class, AccountUserProfileAdapter.class,
-        UserQueryService.class, UserRepositoryAdapter.class})
+@Import({FriendshipMysqlRepository.class, SocialUserMysqlRepository.class})
 class FriendshipMysqlRepositoryTest {
 
     private static final LocalDate CREATED_AT = LocalDate.of(2026, 9, 14);
@@ -39,7 +33,6 @@ class FriendshipMysqlRepositoryTest {
     @Autowired private FriendshipMysqlRepository repository;
     @Autowired private TestEntityManager em;
     @Autowired private JdbcTemplate jdbc;
-    @MockitoBean private ProfileImageStoragePort profileImageStoragePort;
 
     private User low;
     private User high;
