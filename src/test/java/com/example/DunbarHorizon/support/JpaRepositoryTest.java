@@ -14,7 +14,7 @@ import java.lang.annotation.*;
 @Inherited
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({TestContainerConfig.class, TestJpaConfig.class})
+@Import({MySqlTestContainerConfig.class, TestJpaConfig.class})
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Transactional
 public @interface JpaRepositoryTest {

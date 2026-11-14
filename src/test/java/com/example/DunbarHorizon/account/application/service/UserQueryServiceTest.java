@@ -15,11 +15,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 @ExtendWith(MockitoExtension.class)
 class UserQueryServiceTest {
@@ -27,6 +29,28 @@ class UserQueryServiceTest {
     @InjectMocks private UserQueryService userQueryService;
     @Mock private UserRepository userRepository;
     @Mock private ProfileImageStoragePort profileImageStoragePort;
+
+    @Test
+    @DisplayName("여러 사용자 ID의 활성 프로필을 저장소 한 번 호출로 가져온다")
+    void getUserProfiles_ReturnsActiveProfiles_MultipleIds() {
+        // given
+        List<Long> ids = List.of(1L, 2L, 3L);
+        User first = User.builder().email("first@test.com").nickname("first").build();
+        User second = User.builder().email("second@test.com").nickname("second").build();
+        ReflectionTestUtils.setField(first, "id", 1L);
+        ReflectionTestUtils.setField(second, "id", 2L);
+        given(userRepository.findActivatedUsers(ids)).willReturn(List.of(first, second));
+
+        // when
+        List<UserProfileInfo> profiles = userQueryService.getUserProfiles(ids);
+
+        // then
+        assertThat(profiles).containsExactly(
+                new UserProfileInfo(1L, "first", null),
+                new UserProfileInfo(2L, "second", null));
+        then(userRepository).should().findActivatedUsers(ids);
+        then(userRepository).shouldHaveNoMoreInteractions();
+    }
 
     @Test
     @DisplayName("ACTIVE 유저가 존재하면 UserProfileInfo를 반환한다")
