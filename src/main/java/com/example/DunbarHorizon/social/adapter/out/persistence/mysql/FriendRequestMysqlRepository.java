@@ -32,8 +32,8 @@ public class FriendRequestMysqlRepository implements FriendRequestCommandReposit
 
     @Override
     public FriendRequest saveRequest(FriendRequest request) {
-        long requesterId = request.getRequester().getId();
-        long receiverId = request.getReceiver().getId();
+        long requesterId = request.getRequesterId();
+        long receiverId = request.getReceiverId();
         UserPairKey pair = UserPairKey.of(requesterId, receiverId);
         try {
             jdbc.update("""
@@ -49,7 +49,7 @@ public class FriendRequestMysqlRepository implements FriendRequestCommandReposit
 
     @Override
     public FriendRequest updateStatus(FriendRequest request) {
-        UserPairKey pair = UserPairKey.of(request.getRequester().getId(), request.getReceiver().getId());
+        UserPairKey pair = UserPairKey.of(request.getRequesterId(), request.getReceiverId());
         jdbc.update("UPDATE friend_requests SET status = :status WHERE " + PAIR,
                 Map.of("low", pair.low(), "high", pair.high(), "status", request.getStatus().name()));
         return request;
@@ -114,7 +114,7 @@ public class FriendRequestMysqlRepository implements FriendRequestCommandReposit
         Map<Long, SocialUserProfile> profiles = users.findActiveProfiles(ids);
         return rows.stream()
                 .filter(row -> profiles.containsKey(row.requesterId()) && profiles.containsKey(row.receiverId()))
-                .map(row -> row.toRequest(profiles.get(row.requesterId()), profiles.get(row.receiverId())))
+                .map(RequestRow::toRequest)
                 .toList();
     }
 
@@ -124,8 +124,8 @@ public class FriendRequestMysqlRepository implements FriendRequestCommandReposit
                     rs.getObject("created_at", LocalDateTime.class), FriendRequestStatus.valueOf(rs.getString("status")));
         }
 
-        FriendRequest toRequest(SocialUserProfile requester, SocialUserProfile receiver) {
-            return new FriendRequest(FriendRequest.generateId(requesterId, receiverId), requester, receiver, createdAt, status);
+        FriendRequest toRequest() {
+            return new FriendRequest(FriendRequest.generateId(requesterId, receiverId), requesterId, receiverId, createdAt, status);
         }
     }
 }

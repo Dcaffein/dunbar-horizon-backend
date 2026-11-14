@@ -1,26 +1,25 @@
 package com.example.DunbarHorizon.social.domain.friend;
 
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 
 public class FriendTestFactory {
 
-    public static FriendRequest createRequest(UserReference req, UserReference res) {
+    public static FriendRequest createRequest(Long req, Long res) {
         return new FriendRequest(req, res);
     }
 
-    public static FriendRequest createAcceptedRequest(UserReference req, UserReference res) {
+    public static FriendRequest createAcceptedRequest(Long req, Long res) {
         FriendRequest request = new FriendRequest(req, res);
-        request.updateStatus(res.getId(), FriendRequestStatus.ACCEPTED);
+        request.updateStatus(res, FriendRequestStatus.ACCEPTED);
         return request;
     }
 
-    public static Friendship createFriendship(UserReference userA, UserReference userB) {
+    public static Friendship createFriendship(Long userA, Long userB) {
         return new Friendship(userA, userB);
     }
 
-    public static Friendship createFriendshipWithIntimacy(UserReference userA, UserReference userB, double intimacyDelta) {
+    public static Friendship createFriendshipWithIntimacy(Long userA, Long userB, double intimacyDelta) {
         Friendship friendship = new Friendship(userA, userB);
-        friendship.adjustInterestScore(userA.getId(), intimacyDelta);
+        friendship.adjustInterestScore(userA, intimacyDelta);
         return friendship;
     }
 }

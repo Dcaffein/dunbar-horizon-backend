@@ -1,14 +1,6 @@
 spring:
   application:
     name: dunbarhorizon
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.neo4j.Neo4jAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jDataAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jRepositoriesAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jReactiveDataAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jReactiveRepositoriesAutoConfiguration
-      - ac.simons.neo4j.migrations.springframework.boot.autoconfigure.MigrationsAutoConfiguration
 
   security:
     oauth2:

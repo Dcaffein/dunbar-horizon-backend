@@ -7,7 +7,6 @@ import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
-import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,15 +30,14 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class InteractionScoreServiceTest {
 
-    private static final Long FLAG_ID = 100L;
     private static final Long HOST_ID = 10L;
     private static final List<Long> PARTICIPANT_IDS = List.of(21L, 22L);
     private static final InteractionType FLAG_TYPE = InteractionType.FLAG_ENDED;
     private static final double FLAG_DELTA = InteractionScorePolicy.scoreOf(FLAG_TYPE);
-    private static final SocialUser USER_1 = new SocialUser(1L, "사용자1", null);
-    private static final SocialUser USER_2 = new SocialUser(2L, "사용자2", null);
+    private static final Long USER_1 = 1L;
+    private static final Long USER_2 = 2L;
 
-    @InjectMocks private InteractionScoreService interactionScoreService;
+    @InjectMocks private MySqlFriendshipScoreService interactionScoreService;
     @Mock private FriendshipRepository friendshipRepository;
 
     @Test
@@ -100,7 +98,7 @@ class InteractionScoreServiceTest {
         when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of());
 
         // when
-        interactionScoreService.applyFlagConclusion(FLAG_ID, HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT);
+        interactionScoreService.applyFlagConclusion(HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT);
 
         // then
         ArgumentCaptor<Collection<String>> captor = ArgumentCaptor.forClass(Collection.class);
@@ -116,7 +114,7 @@ class InteractionScoreServiceTest {
         when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of(friendship));
 
         // when
-        interactionScoreService.applyFlagConclusion(FLAG_ID, 1L, List.of(2L, 3L), FLAG_TYPE, ScoreDirection.GRANT);
+        interactionScoreService.applyFlagConclusion(1L, List.of(2L, 3L), FLAG_TYPE, ScoreDirection.GRANT);
 
         // then
         verify(friendshipRepository).saveInterestScores(List.of(friendship));
@@ -133,7 +131,7 @@ class InteractionScoreServiceTest {
         when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of(friendship));
 
         // when
-        interactionScoreService.applyFlagConclusion(FLAG_ID, 1L, List.of(2L), type, ScoreDirection.REVOKE);
+        interactionScoreService.applyFlagConclusion(1L, List.of(2L), type, ScoreDirection.REVOKE);
 
         // then
         double expected = Math.max(0.0, FriendRecognition.INITIAL_RAW_SCORE - InteractionScorePolicy.scoreOf(type));

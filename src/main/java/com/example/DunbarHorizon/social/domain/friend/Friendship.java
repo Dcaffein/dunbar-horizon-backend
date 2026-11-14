@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.social.domain.friend;
 
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipAuthorizationException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipInvalidException;
 import lombok.Getter;
@@ -28,12 +27,12 @@ public class Friendship {
 
     private final List<FriendRecognition> recognitions;
 
-    Friendship(UserReference userA, UserReference userB) {
+    Friendship(Long userA, Long userB) {
         FriendRecognition recognitionA = new FriendRecognition(userA);
         FriendRecognition recognitionB = new FriendRecognition(userB);
 
         this.recognitions = new ArrayList<>(List.of(recognitionA, recognitionB));
-        this.id = generateCompositeId(userA.getId(), userB.getId());
+        this.id = generateCompositeId(userA, userB);
         this.createdAt = LocalDate.now();
 
         this.intimacy = Math.sqrt(recognitionA.getNormalizedScore() * recognitionB.getNormalizedScore());
@@ -56,20 +55,20 @@ public class Friendship {
 
     private FriendRecognition getSelfRecognition(Long userId) {
         return this.recognitions.stream()
-                .filter(friendRecognition -> friendRecognition.getUser().getId().equals(userId))
+                .filter(friendRecognition -> friendRecognition.getUserId().equals(userId))
                 .findFirst()
                 .orElseThrow(() -> new FriendshipAuthorizationException(userId));
     }
 
     private FriendRecognition getFriendRecognition(Long myId) {
         boolean isMember = this.recognitions.stream()
-                .anyMatch(friendRecognition -> friendRecognition.getUser().getId().equals(myId));
+                .anyMatch(friendRecognition -> friendRecognition.getUserId().equals(myId));
         if (!isMember) {
             throw new FriendshipAuthorizationException(myId);
         }
 
         return this.recognitions.stream()
-                .filter(friendRecognition -> !friendRecognition.getUser().getId().equals(myId))
+                .filter(friendRecognition -> !friendRecognition.getUserId().equals(myId))
                 .findFirst()
                 .orElseThrow(() -> new FriendshipAuthorizationException(myId));
     }
@@ -80,9 +79,9 @@ public class Friendship {
         return min + "_" + max;
     }
 
-    public Set<UserReference> getUsers() {
+    public Set<Long> getUserIds() {
         return this.recognitions.stream()
-                .map(FriendRecognition::getUser)
+                .map(FriendRecognition::getUserId)
                 .collect(Collectors.toSet());
     }
 
@@ -98,8 +97,8 @@ public class Friendship {
         return getSelfRecognition(myId).getNormalizedScore();
     }
 
-    public UserReference getFriend(Long myId) {
-        return getFriendRecognition(myId).getUser();
+    public Long getFriendId(Long myId) {
+        return getFriendRecognition(myId).getUserId();
     }
 
     public void updateFriendAlias(Long myId, String alias) {

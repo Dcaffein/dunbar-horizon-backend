@@ -7,7 +7,6 @@ import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelUpdateRequest;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.domain.label.Label;
-import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
@@ -35,12 +34,9 @@ class LabelControllerTest extends BaseControllerTest {
         LabelCreateRequest dto = new LabelCreateRequest("친한친구");
 
         Label mockLabel = mock(Label.class);
-        SocialUser mockOwner = mock(SocialUser.class);
 
         given(mockLabel.getId()).willReturn(labelId);
         given(mockLabel.getLabelName()).willReturn("친한친구");
-        given(mockLabel.getOwner()).willReturn(mockOwner);
-        given(mockOwner.getId()).willReturn(1L);
 
         given(labelCommandUseCase.createLabel(eq(1L), eq("친한친구")))
                 .willReturn(mockLabel);

@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult.IntermediaryResult;
+import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.port.in.FriendRequestReceiverActionUseCase;
 import com.example.DunbarHorizon.social.application.port.in.FriendshipCommandUseCase;
@@ -13,6 +14,7 @@ import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.in.SocialConnectionPathQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.in.SocialExpansionQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
+import com.example.DunbarHorizon.social.application.port.in.SocialUserQueryUseCase;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
@@ -21,7 +23,6 @@ import com.example.DunbarHorizon.support.MySqlTestContainerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.neo4j.driver.Driver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
@@ -70,6 +71,7 @@ class SocialMysqlCutoverIntegrationTest {
     @Autowired private SocialExpansionQueryUseCase expansion;
     @Autowired private SocialConnectionPathQueryUseCase paths;
     @Autowired private LabelQueryUseCase labels;
+    @Autowired private SocialUserQueryUseCase profiles;
 
     @AfterEach
     void cleanUp() {
@@ -100,7 +102,7 @@ class SocialMysqlCutoverIntegrationTest {
                 """, ME, REQUESTER, REQUESTER, ME);
 
         // when & then
-        assertThat(app.getBeansOfType(Driver.class)).isEmpty();
+        assertThat(app.containsBean("neo4jDriver")).isFalse();
         assertThat(network.getFriendsNetwork(ME, DunbarCircle.DUNBAR)).extracting(NodeGraphResult::nodeId)
                 .containsExactly(ANCHOR, FRIEND);
         assertThat(network.getLabelNetwork(ANCHOR, LABEL_ID)).extracting(NodeGraphResult::nodeId)
@@ -109,6 +111,13 @@ class SocialMysqlCutoverIntegrationTest {
                 .containsExactly(TARGET);
         assertThat(paths.getConnectionPath(ME, TARGET).intermediaries()).extracting(IntermediaryResult::userId)
                 .containsExactly(ANCHOR, FRIEND);
+
+        jdbc.update("UPDATE users SET nickname = 'renamed' WHERE user_id = ?", TARGET);
+        assertThat(profiles.getSocialProfile(TARGET).nickname()).isEqualTo("renamed");
+        assertThat(labels.getLabelMembers(ANCHOR, LABEL_ID)).contains(new LabelMemberResult(TARGET, "renamed"));
+        jdbc.update("UPDATE users SET status = 'DORMANT' WHERE user_id = ?", TARGET);
+        assertThat(expansion.getRecommendationsByAnchor(ME, ANCHOR)).isEmpty();
+        jdbc.update("UPDATE users SET status = 'ACTIVE' WHERE user_id = ?", TARGET);
 
         requests.updateStatus(ME, REQUESTER, FriendRequestStatus.ACCEPTED);
         assertThat(friendships.areFriends(ME, REQUESTER)).isTrue();

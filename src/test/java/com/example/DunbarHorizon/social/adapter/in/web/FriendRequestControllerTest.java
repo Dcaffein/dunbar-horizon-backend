@@ -3,9 +3,9 @@ package com.example.DunbarHorizon.social.adapter.in.web;
 import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendRequestCreateRequest;
 import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendRequestStatusUpdateRequest;
 import com.example.DunbarHorizon.social.application.dto.FriendRequestDirection;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
+import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
+import com.example.DunbarHorizon.social.application.dto.result.FriendResult;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
-import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
@@ -17,7 +17,6 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -31,19 +30,11 @@ class FriendRequestControllerTest extends BaseControllerTest {
         Long receiverId = 2L;
         FriendRequestCreateRequest dto = new FriendRequestCreateRequest(receiverId);
 
-        FriendRequest mockRequest = mock(FriendRequest.class);
-        SocialUser mockRequester = mock(SocialUser.class);
-        SocialUser mockReceiver = mock(SocialUser.class);
-
-        given(mockRequest.getId()).willReturn("newRequest");
-        given(mockRequest.getRequester()).willReturn(mockRequester);
-        given(mockRequest.getReceiver()).willReturn(mockReceiver);
-        given(mockRequest.getStatus()).willReturn(FriendRequestStatus.PENDING);
-        given(mockRequester.getId()).willReturn(1L);
-        given(mockReceiver.getId()).willReturn(2L);
+        var result = new FriendRequestResult("newRequest", new FriendResult(1L, "요청자"),
+                new FriendResult(receiverId, "수신자"), FriendRequestStatus.PENDING, null);
 
         given(friendRequesterActionUseCase.sendRequest(eq(1L), eq(receiverId)))
-                .willReturn(mockRequest);
+                .willReturn(result);
 
         mockMvc.perform(post("/api/v1/friend-requests")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.domain.friend;
 
 import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
-import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -19,8 +18,8 @@ class FriendshipTest {
     @DisplayName("유저 ID 순서에 상관없이 항상 동일한 복합 ID가 생성되어야 한다")
     void generateCompositeId_Consistency() {
         // given
-        SocialUser user1 = new SocialUser(1L, "유저1", "");
-        SocialUser user2 = new SocialUser(2L, "유저2", "");
+        Long user1 = 1L;
+        Long user2 = 2L;
 
         // when
         Friendship friendship1 = new Friendship(user1, user2);
@@ -35,8 +34,8 @@ class FriendshipTest {
     @DisplayName("관심도 점수에 따라 친밀도가 정규화된 값의 기하평균으로 정확히 계산되어야 한다")
     void recalculateIntimacy_Success() {
         // given
-        SocialUser userA = new SocialUser(1L, "A", "");
-        SocialUser userB = new SocialUser(2L, "B", "");
+        Long userA = 1L;
+        Long userB = 2L;
         Friendship friendship = new Friendship(userA, userB);
 
         double deltaA = 4.0;
@@ -63,8 +62,8 @@ class FriendshipTest {
     @DisplayName("adjustMutualInterestScore는 양쪽 모두 동일한 delta를 적용하고 intimacy를 1회 재계산한다")
     void adjustMutualInterestScore_updatesBothSides() {
         // given
-        SocialUser userA = new SocialUser(1L, "A", "");
-        SocialUser userB = new SocialUser(2L, "B", "");
+        Long userA = 1L;
+        Long userB = 2L;
         Friendship friendship = new Friendship(userA, userB);
         double delta = 10.0;
         double k = FriendRecognition.CONVERGENCE_K;
@@ -87,7 +86,7 @@ class FriendshipTest {
     @DisplayName("한 명의 관심도가 0이라면 정규화 후에도 친밀도는 0이어야 한다")
     void recalculateIntimacy_WithZero() {
         // given
-        Friendship friendship = new Friendship(new SocialUser(1L, "A", ""), new SocialUser(2L, "B", ""));
+        Friendship friendship = new Friendship(1L, 2L);
 
         // when
         friendship.adjustInterestScore(1L, 100.0);
@@ -101,7 +100,7 @@ class FriendshipTest {
     @DisplayName("별명에 비어있지 않은 값을 전달하면 해당 값으로 설정된다")
     void updateUserFields_withAlias_setsAlias() {
         // given
-        Friendship friendship = new Friendship(new SocialUser(1L, "A", ""), new SocialUser(2L, "B", ""));
+        Friendship friendship = new Friendship(1L, 2L);
 
         // when
         friendship.updateUserFields(1L, "동기", null, null);
@@ -114,7 +113,7 @@ class FriendshipTest {
     @DisplayName("별명에 빈 문자열을 전달하면 alias가 삭제되어 빈 문자열로 반환된다")
     void updateUserFields_withEmptyAlias_clearsAlias() {
         // given
-        Friendship friendship = new Friendship(new SocialUser(1L, "A", ""), new SocialUser(2L, "B", ""));
+        Friendship friendship = new Friendship(1L, 2L);
         friendship.updateUserFields(1L, "동기", null, null);
 
         // when
@@ -128,7 +127,7 @@ class FriendshipTest {
     @DisplayName("별명에 null을 전달하면 기존 alias가 변경되지 않는다")
     void updateUserFields_withNullAlias_doesNotChangeAlias() {
         // given
-        Friendship friendship = new Friendship(new SocialUser(1L, "A", ""), new SocialUser(2L, "B", ""));
+        Friendship friendship = new Friendship(1L, 2L);
         friendship.updateUserFields(1L, "동기", null, null);
 
         // when
@@ -141,7 +140,7 @@ class FriendshipTest {
     @Test
     @DisplayName("별명이 20자를 초과하면 InvalidFriendAliasException이 발생한다")
     void updateUserFields_withTooLongAlias_throws() {
-        Friendship friendship = new Friendship(new SocialUser(1L, "A", ""), new SocialUser(2L, "B", ""));
+        Friendship friendship = new Friendship(1L, 2L);
         String tooLong = "가".repeat(Friendship.ALIAS_MAX_LENGTH + 1);
 
         assertThatThrownBy(() -> friendship.updateUserFields(1L, tooLong, null, null))
@@ -155,8 +154,8 @@ class FriendshipTest {
     private static final double THRESHOLD = 1.0;
 
     private static Friendship friendshipOf(double lowScore, LocalDateTime lowAt, double highScore, LocalDateTime highAt) {
-        FriendRecognition low = FriendRecognition.restore(new SocialUser(1L, "A", ""), null, lowScore, lowAt, false, true);
-        FriendRecognition high = FriendRecognition.restore(new SocialUser(2L, "B", ""), null, highScore, highAt, false, true);
+        FriendRecognition low = FriendRecognition.restore(1L, null, lowScore, lowAt, false, true);
+        FriendRecognition high = FriendRecognition.restore(2L, null, highScore, highAt, false, true);
         double intimacy = Math.sqrt(FriendRecognition.normalize(lowScore) * FriendRecognition.normalize(highScore));
         return Friendship.restore("1_2", LocalDate.of(2026, 1, 1), intimacy, List.of(low, high));
     }
@@ -227,8 +226,8 @@ class FriendshipTest {
     void decay_alreadyAtOrBelowThreshold_keepsScoreAndRecalculatesIntimacy() {
         // given
         Friendship friendship = Friendship.restore("1_2", LocalDate.of(2026, 1, 1), 0.9, List.of(
-                FriendRecognition.restore(new SocialUser(1L, "A", ""), null, 0.5, STALE, false, true),
-                FriendRecognition.restore(new SocialUser(2L, "B", ""), null, THRESHOLD, STALE, false, true)));
+                FriendRecognition.restore(1L, null, 0.5, STALE, false, true),
+                FriendRecognition.restore(2L, null, THRESHOLD, STALE, false, true)));
 
         // when
         friendship.decay(RATE, THRESHOLD, DECAY_TIME);
@@ -244,8 +243,8 @@ class FriendshipTest {
     void decay_bothRecent_changesNothing() {
         // given
         Friendship friendship = Friendship.restore("1_2", LocalDate.of(2026, 1, 1), 0.9, List.of(
-                FriendRecognition.restore(new SocialUser(1L, "A", ""), null, 40.0, RECENT, false, true),
-                FriendRecognition.restore(new SocialUser(2L, "B", ""), null, 20.0, RECENT, false, true)));
+                FriendRecognition.restore(1L, null, 40.0, RECENT, false, true),
+                FriendRecognition.restore(2L, null, 20.0, RECENT, false, true)));
 
         // when
         friendship.decay(RATE, THRESHOLD, DECAY_TIME);

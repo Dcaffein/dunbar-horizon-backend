@@ -11,7 +11,7 @@ public record LabelResult(
         return new LabelResult(
                 label.getId(),
                 label.getLabelName(),
-                label.getMembers().size()
+                label.getMemberIds().size()
         );
     }
 }

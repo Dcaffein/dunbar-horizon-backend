@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.social.domain.friend;
 import com.example.DunbarHorizon.social.domain.friend.exception.CannotRequestToSelfException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestAuthorizationException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestInvalidException;
-import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,13 +14,13 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 class FriendRequestTest {
 
-    private SocialUser requester;
-    private SocialUser receiver;
+    private Long requester;
+    private Long receiver;
 
     @BeforeEach
     void setUp() {
-        requester = new SocialUser(1L, "요청자", "");
-        receiver = new SocialUser(2L, "수신자", "");
+        requester = 1L;
+        receiver = 2L;
     }
 
     @Test
@@ -60,7 +59,7 @@ class FriendRequestTest {
     void updateStatus_ToHidden_Success() {
         FriendRequest request = new FriendRequest(requester, receiver);
 
-        request.updateStatus(receiver.getId(), FriendRequestStatus.HIDDEN);
+        request.updateStatus(receiver, FriendRequestStatus.HIDDEN);
 
         assertThat(request.getStatus()).isEqualTo(FriendRequestStatus.HIDDEN);
     }
@@ -68,9 +67,9 @@ class FriendRequestTest {
     @Test
     void updateStatus_ToPending_FromHidden_Success() {
         FriendRequest request = new FriendRequest(requester, receiver);
-        request.updateStatus(receiver.getId(), FriendRequestStatus.HIDDEN);
+        request.updateStatus(receiver, FriendRequestStatus.HIDDEN);
 
-        request.updateStatus(receiver.getId(), FriendRequestStatus.PENDING);
+        request.updateStatus(receiver, FriendRequestStatus.PENDING);
 
         assertThat(request.getStatus()).isEqualTo(FriendRequestStatus.PENDING);
     }
@@ -79,7 +78,7 @@ class FriendRequestTest {
     void updateStatus_WithoutTargetStatus_Fail() {
         FriendRequest request = new FriendRequest(requester, receiver);
 
-        assertThatThrownBy(() -> request.updateStatus(receiver.getId(), null))
+        assertThatThrownBy(() -> request.updateStatus(receiver, null))
                 .isInstanceOf(FriendRequestInvalidException.class);
     }
 

@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepo
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
-import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 import com.example.DunbarHorizon.social.application.service.MySqlFriendshipScoreService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
@@ -233,7 +232,7 @@ class FriendshipMysqlScoreTest {
     }
 
     private static FriendRecognition recognition(Long userId, double score, LocalDateTime lastInteraction) {
-        return FriendRecognition.restore(new SocialUserProfile(userId, null, null), null, score, lastInteraction,
+        return FriendRecognition.restore(userId, null, score, lastInteraction,
                 false, true);
     }
 

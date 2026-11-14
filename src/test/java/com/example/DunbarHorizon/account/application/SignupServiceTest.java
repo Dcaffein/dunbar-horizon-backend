@@ -13,7 +13,6 @@ import com.example.DunbarHorizon.account.domain.exception.InvalidVerificationTok
 import com.example.DunbarHorizon.account.domain.repository.AuthRepository;
 import com.example.DunbarHorizon.account.domain.repository.PendingSignupRepository;
 import com.example.DunbarHorizon.account.domain.repository.UserRepository;
-import com.example.DunbarHorizon.global.event.user.UserActivatedEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,7 +20,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
@@ -42,7 +40,6 @@ class SignupServiceTest {
     @Mock private PendingSignupRepository pendingSignupRepository;
     @Mock private PasswordHasher passwordHasher;
     @Mock private LoginUseCase loginUseCase;
-    @Mock private ApplicationEventPublisher eventPublisher;
 
     private void givenUserIsAssignedId(long id) {
         given(userRepository.save(any(User.class))).willAnswer(inv -> {
@@ -75,26 +72,6 @@ class SignupServiceTest {
 
         verify(authRepository).save(any(Auth.class));
         verify(loginUseCase).issueTokens(any(User.class));
-    }
-
-    @Test
-    @DisplayName("계정 생성 후 UserActivatedEvent가 발행된다 - Neo4j SocialUser 동기화 경로")
-    void signup_활성화_이벤트_발행() {
-        // given
-        given(pendingSignupRepository.consumeEmailByToken("valid-token"))
-                .willReturn(Optional.of("test@test.com"));
-        given(userRepository.findByEmail("test@test.com")).willReturn(Optional.empty());
-        givenUserIsAssignedId(42L);
-        given(passwordHasher.hash(any())).willReturn(new HashedPassword("encoded-pw"));
-
-        // when
-        signupService.signup("valid-token", "Pw12345!", "tester");
-
-        // then - 이벤트가 누락되면 가입은 되는데 소셜 그래프에 노드가 없는 계정이 만들어진다
-        ArgumentCaptor<UserActivatedEvent> captor = ArgumentCaptor.forClass(UserActivatedEvent.class);
-        verify(eventPublisher).publishEvent(captor.capture());
-        assertThat(captor.getValue().userId()).isEqualTo(42L);
-        assertThat(captor.getValue().nickname()).isEqualTo("tester");
     }
 
     @Test
@@ -175,7 +152,7 @@ class SignupServiceTest {
     // ─────────────────────── registerOAuthUser() ────────────────────────
 
     @Test
-    @DisplayName("신규 OAuth 유저는 ACTIVE로 생성되고 UserActivatedEvent가 발행된다")
+    @DisplayName("신규 OAuth 유저는 ACTIVE로 생성된다")
     void registerOAuthUser_신규_유저() {
         // given
         String email = "oauth@test.com";
@@ -190,7 +167,6 @@ class SignupServiceTest {
         // then
         assertThat(result.getEmail()).isEqualTo(email);
         assertThat(result.getStatus()).isEqualTo(UserStatus.ACTIVE);
-        verify(eventPublisher).publishEvent(any(UserActivatedEvent.class));
         verify(authRepository).save(any(Auth.class));
     }
 
@@ -211,11 +187,10 @@ class SignupServiceTest {
 
         // then
         verify(authRepository, never()).save(any());
-        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
-    @DisplayName("기존 유저에 새 provider가 연동되면 auth만 추가하고 이벤트는 발행하지 않는다")
+    @DisplayName("기존 유저에 새 provider가 연동되면 auth를 추가한다")
     void registerOAuthUser_새_provider_연동() {
         // given
         String email = "active@test.com";
@@ -231,6 +206,5 @@ class SignupServiceTest {
 
         // then - 계정이 새로 생긴 게 아니므로 활성화 이벤트를 다시 쏘면 안 된다
         verify(authRepository).save(any(Auth.class));
-        verify(eventPublisher, never()).publishEvent(any());
     }
 }

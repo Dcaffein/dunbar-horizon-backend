@@ -5,38 +5,17 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.testcontainers.containers.MongoDBContainer;
-import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.utility.DockerImageName;
-import org.testcontainers.utility.LicenseAcceptance;
 
 @TestConfiguration(proxyBeanMethods = false)
 @Import(MySqlTestContainerConfig.class)
 public class TestContainerConfig {
 
-    private static final String NEO4J_IMAGE = "neo4j:5.26-enterprise";
-
-    private static final Neo4jContainer<?> NEO4J = new Neo4jContainer<>(DockerImageName.parse(NEO4J_IMAGE))
-            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
-            .withNeo4jConfig("db.format", "block")
-            .withAdminPassword("password")
-            .withEnv("NEO4J_PLUGINS", "[\"apoc\"]")
-            .withNeo4jConfig("dbms.security.procedures.unrestricted", "apoc.*")
-            .withNeo4jConfig("dbms.security.procedures.allowlist", "apoc.*")
-            .withReuse(true);
-
     private static final MongoDBContainer MONGO = new MongoDBContainer(DockerImageName.parse("mongo:7.0"))
             .withReuse(true);
 
     static {
-        LicenseAcceptance.assertLicenseAccepted(NEO4J_IMAGE);
-        NEO4J.start();
         MONGO.start();
-    }
-
-    @Bean
-    @ServiceConnection
-    public Neo4jContainer<?> neo4jContainer() {
-        return NEO4J;
     }
 
     @Bean

@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.domain.friend;
 
 import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -13,7 +12,7 @@ public class FriendRecognition {
 
     public static final double INITIAL_RAW_SCORE = 21.4;
 
-    private final UserReference user;
+    private final Long userId;
 
     private String friendAlias;
 
@@ -25,16 +24,16 @@ public class FriendRecognition {
 
     private boolean isRoutable = true;
 
-    public FriendRecognition(UserReference user) {
-        this.user = user;
+    public FriendRecognition(Long userId) {
+        this.userId = userId;
         this.friendAlias = null;
         this.interestScore = INITIAL_RAW_SCORE;
         this.lastInteractedAt = LocalDateTime.now();
     }
 
-    private FriendRecognition(UserReference user, String friendAlias, Double interestScore,
+    private FriendRecognition(Long userId, String friendAlias, Double interestScore,
                               LocalDateTime lastInteractedAt, boolean isMuted, boolean isRoutable) {
-        this.user = user;
+        this.userId = userId;
         this.friendAlias = friendAlias;
         this.interestScore = interestScore;
         this.lastInteractedAt = lastInteractedAt;
@@ -42,9 +41,9 @@ public class FriendRecognition {
         this.isRoutable = isRoutable;
     }
 
-    public static FriendRecognition restore(UserReference user, String friendAlias, Double interestScore,
+    public static FriendRecognition restore(Long userId, String friendAlias, Double interestScore,
                                             LocalDateTime lastInteractedAt, boolean isMuted, boolean isRoutable) {
-        return new FriendRecognition(user, friendAlias, interestScore, lastInteractedAt, isMuted, isRoutable);
+        return new FriendRecognition(userId, friendAlias, interestScore, lastInteractedAt, isMuted, isRoutable);
     }
 
     public static double normalize(Double raw) {

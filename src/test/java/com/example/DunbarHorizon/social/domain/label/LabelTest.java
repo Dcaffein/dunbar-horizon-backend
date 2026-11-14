@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.domain.label;
 
 import com.example.DunbarHorizon.social.domain.label.exception.InvalidLabelNameException;
-import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,11 +10,11 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 class LabelTest {
 
-    private SocialUser owner;
+    private Long owner;
 
     @BeforeEach
     void setUp() {
-        owner = new SocialUser(1L, "owner", "profile1");
+        owner = 1L;
     }
 
     @Test
@@ -26,8 +25,8 @@ class LabelTest {
 
         // then
         assertThat(label.getLabelName()).isEqualTo("친구들");
-        assertThat(label.getOwner().getId()).isEqualTo(1L);
-        assertThat(label.getMembers()).isEmpty();
+        assertThat(label.getOwnerId()).isEqualTo(1L);
+        assertThat(label.getMemberIds()).isEmpty();
     }
 
     @Test

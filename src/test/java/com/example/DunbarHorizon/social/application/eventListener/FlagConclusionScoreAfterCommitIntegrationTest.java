@@ -3,13 +3,11 @@ package com.example.DunbarHorizon.social.application.eventListener;
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
-import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.springData.SocialUserNeo4jRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
-import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.support.TestContainerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.neo4j.core.Neo4jClient;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -36,8 +34,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 /**
- * 모임 종료 점수는 flag의 JPA 트랜잭션이 커밋된 직후 콜백(AFTER_COMMIT) 안에서 Neo4j 트랜잭션을 연다.
- * 그 자리에서 Neo4j 트랜잭션이 실제로 열려 커밋되는지, 잠금부터 쓰기까지 하나로 묶이는지 본다.
+ * 모임 종료 점수는 flag의 JPA 트랜잭션이 커밋된 직후 콜백(AFTER_COMMIT) 안에서 새로운 MySQL 트랜잭션을 연다.
+ * 그 자리에서 새 MySQL 트랜잭션이 실제로 열려 커밋되는지, 잠금부터 쓰기까지 하나로 묶이는지 본다.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -53,22 +51,22 @@ class FlagConclusionScoreAfterCommitIntegrationTest {
 
     @Autowired private ApplicationEventPublisher eventPublisher;
     @Autowired private PlatformTransactionManager transactionManager;
-    @Autowired private SocialUserNeo4jRepository socialUserNeo4jRepository;
     @Autowired private FriendshipRepository friendshipRepository;
-    @Autowired private Neo4jClient neo4jClient;
+    @Autowired private JdbcTemplate jdbc;
 
     private final List<String> friendshipIds = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
         deleteMembers();
-        List<SocialUser> users = MEMBER_IDS.stream()
-                .map(id -> socialUserNeo4jRepository.save(new SocialUser(id, "사용자" + id, null)))
-                .toList();
+        for (long memberId : MEMBER_IDS) {
+            jdbc.update("INSERT INTO users (user_id, email, nickname, role, status) VALUES (?, ?, ?, 'USER', 'ACTIVE')",
+                    memberId, memberId + "@flag-conclusion.test", "사용자" + memberId);
+        }
         friendshipIds.clear();
-        for (int i = 0; i < users.size(); i++) {
-            for (int j = i + 1; j < users.size(); j++) {
-                Friendship friendship = FriendTestFactory.createFriendship(users.get(i), users.get(j));
+        for (int i = 0; i < MEMBER_IDS.size(); i++) {
+            for (int j = i + 1; j < MEMBER_IDS.size(); j++) {
+                Friendship friendship = FriendTestFactory.createFriendship(MEMBER_IDS.get(i), MEMBER_IDS.get(j));
                 friendshipRepository.create(friendship);
                 friendshipIds.add(friendship.getId());
             }
@@ -141,7 +139,7 @@ class FlagConclusionScoreAfterCommitIntegrationTest {
     private void assertBothSides(String friendshipId, double expected) {
         Friendship friendship = friendshipRepository.findById(friendshipId).orElseThrow();
         for (Long memberId : MEMBER_IDS) {
-            if (friendship.getUsers().stream().anyMatch(user -> user.getId().equals(memberId))) {
+            if (friendship.getUserIds().contains(memberId)) {
                 assertThat(friendship.getMyInterestScore(memberId))
                         .as("%s의 %d 쪽 점수", friendshipId, memberId)
                         .isCloseTo(expected, within(TOLERANCE));
@@ -150,8 +148,11 @@ class FlagConclusionScoreAfterCommitIntegrationTest {
     }
 
     private void deleteMembers() {
-        neo4jClient.query("MATCH (u:SocialUser) WHERE u.id IN $ids DETACH DELETE u")
-                .bind(MEMBER_IDS).to("ids")
-                .run();
+        for (String id : friendshipIds) {
+            friendshipRepository.delete(id);
+        }
+        for (long memberId : MEMBER_IDS) {
+            jdbc.update("DELETE FROM users WHERE user_id = ?", memberId);
+        }
     }
 }

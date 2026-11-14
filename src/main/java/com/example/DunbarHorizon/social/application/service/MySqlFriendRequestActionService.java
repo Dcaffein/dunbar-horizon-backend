@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
+import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
 import com.example.DunbarHorizon.social.application.port.in.FriendRequestReceiverActionUseCase;
 import com.example.DunbarHorizon.social.application.port.in.FriendRequesterActionUseCase;
 import com.example.DunbarHorizon.social.application.port.out.FriendRequestCommandRepository;
@@ -33,18 +34,18 @@ public class MySqlFriendRequestActionService implements FriendRequesterActionUse
     private final ApplicationEventPublisher events;
 
     @Override
-    public FriendRequest sendRequest(Long requesterId, Long receiverId) {
+    public FriendRequestResult sendRequest(Long requesterId, Long receiverId) {
         Map<Long, SocialUserProfile> profiles = userProfiles.findActiveProfiles(List.of(requesterId, receiverId));
         SocialUserProfile requester = requireActiveProfile(profiles, requesterId);
         SocialUserProfile receiver = requireActiveProfile(profiles, receiverId);
-        FriendRequest request = FriendshipBroker.propose(requester, receiver, friendships::existsFriendshipBetween,
+        FriendRequest request = FriendshipBroker.propose(requesterId, receiverId, friendships::existsFriendshipBetween,
                 requests::existsRequestBetween);
         requests.saveRequest(request);
         // A concurrent acceptance can delete the old request while this insert waits.
         if (friendships.existsFriendshipForUpdate(requesterId, receiverId)) {
             throw new AlreadyFriendsException(requesterId, receiverId);
         }
-        return request;
+        return FriendRequestResult.from(request, requester, receiver);
     }
 
     @Override
@@ -62,8 +63,8 @@ public class MySqlFriendRequestActionService implements FriendRequesterActionUse
             Friendship friendship = FriendshipBroker.createFrom(request, friendships::existsFriendshipForUpdate);
             friendships.create(friendship);
             requests.deleteById(request.getId());
-            events.publishEvent(new FriendRequestAcceptedEvent(request.getRequester().getId(),
-                    request.getReceiver().getId(), request.getReceiver().getNickname()));
+            var receiver = requireActiveProfile(userProfiles.findActiveProfiles(List.of(receiverId)), receiverId);
+            events.publishEvent(new FriendRequestAcceptedEvent(request.getRequesterId(), receiverId, receiver.nickname()));
         } else {
             requests.updateStatus(request);
         }

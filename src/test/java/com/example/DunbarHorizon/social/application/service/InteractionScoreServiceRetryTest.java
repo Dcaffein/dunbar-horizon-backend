@@ -2,11 +2,11 @@ package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
+import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.neo4j.driver.exceptions.TransientException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -44,22 +44,23 @@ class InteractionScoreServiceRetryTest {
     @Configuration
     @EnableRetry
     @EnableTransactionManagement
-    @Import(InteractionScoreService.class)
+    @Import(MySqlFriendshipScoreService.class)
     static class Config {
         @Bean
-        PlatformTransactionManager neo4jTransactionManager() {
+        PlatformTransactionManager transactionManager() {
             return mock(PlatformTransactionManager.class);
         }
     }
 
-    @Autowired private InteractionScoreService interactionScoreService;
-    @Autowired private PlatformTransactionManager neo4jTransactionManager;
+    @Autowired private MySqlFriendshipScoreService interactionScoreService;
+    @Autowired private PlatformTransactionManager transactionManager;
     @MockitoBean private FriendshipRepository friendshipRepository;
+    @MockitoBean private FriendshipDecayPolicy decayPolicy;
 
     @BeforeEach
     void setUp() {
-        reset(neo4jTransactionManager);
-        when(neo4jTransactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
+        reset(transactionManager);
+        when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
     }
 
     @Test
@@ -71,30 +72,30 @@ class InteractionScoreServiceRetryTest {
                 .thenReturn(List.of());
 
         // when
-        interactionScoreService.applyFlagConclusion(1L, 10L, List.of(21L, 22L), FLAG_TYPE, ScoreDirection.GRANT);
+        interactionScoreService.applyFlagConclusion(10L, List.of(21L, 22L), FLAG_TYPE, ScoreDirection.GRANT);
 
         // then
         verify(friendshipRepository, times(2)).findAllByIdsForUpdate(anyCollection());
-        verify(neo4jTransactionManager, times(2)).getTransaction(any());
-        verify(neo4jTransactionManager).rollback(any());
-        verify(neo4jTransactionManager).commit(any());
+        verify(transactionManager, times(2)).getTransaction(any());
+        verify(transactionManager).rollback(any());
+        verify(transactionManager).commit(any());
     }
 
     @Test
-    @DisplayName("커밋 시점에 드라이버가 던진 일시적 실패도 재시도한다")
+    @DisplayName("커밋 시점에 DB가 던진 일시적 실패도 재시도한다")
     void applyInteraction_Retries_TransientFailureOnCommit() {
         // given
         when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of());
-        doThrow(new TransientException("Neo.TransientError.Transaction.DeadlockDetected", "deadlock"))
+        doThrow(new TransientDataAccessResourceException("deadlock"))
                 .doNothing()
-                .when(neo4jTransactionManager).commit(any());
+                .when(transactionManager).commit(any());
 
         // when
         interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT);
 
         // then
-        verify(neo4jTransactionManager, times(2)).getTransaction(any());
-        verify(neo4jTransactionManager, times(2)).commit(any());
+        verify(transactionManager, times(2)).getTransaction(any());
+        verify(transactionManager, times(2)).commit(any());
     }
 
     @Test
@@ -108,7 +109,7 @@ class InteractionScoreServiceRetryTest {
         assertThatThrownBy(() -> interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT))
                 .isInstanceOf(TransientDataAccessResourceException.class);
         verify(friendshipRepository, times(3)).findAllByIdsForUpdate(anyCollection());
-        verify(neo4jTransactionManager, times(3)).rollback(any());
+        verify(transactionManager, times(3)).rollback(any());
     }
 
     @Test
@@ -122,6 +123,6 @@ class InteractionScoreServiceRetryTest {
         assertThatThrownBy(() -> interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT))
                 .isInstanceOf(IllegalStateException.class);
         verify(friendshipRepository, times(1)).findAllByIdsForUpdate(anyCollection());
-        verify(neo4jTransactionManager, never()).commit(any());
+        verify(transactionManager, never()).commit(any());
     }
 }

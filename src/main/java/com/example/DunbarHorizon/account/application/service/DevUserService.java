@@ -6,9 +6,7 @@ import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.account.domain.exception.AlreadyRegisteredEmailException;
 import com.example.DunbarHorizon.account.domain.repository.AuthRepository;
 import com.example.DunbarHorizon.account.domain.repository.UserRepository;
-import com.example.DunbarHorizon.global.event.user.UserActivatedEvent;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +22,6 @@ public class DevUserService {
     private final UserRepository userRepository;
     private final AuthRepository authRepository;
     private final PasswordHasher passwordHasher;
-    private final ApplicationEventPublisher eventPublisher;
 
     public User createDummyUser(String email, String nickname) {
         userRepository.findByEmail(email).ifPresent(u -> {
@@ -35,8 +32,6 @@ public class DevUserService {
 
         Auth auth = Auth.createLocalAuth(user.getId(), passwordHasher.hash(DEFAULT_PASSWORD));
         authRepository.save(auth);
-
-        eventPublisher.publishEvent(new UserActivatedEvent(user.getId(), user.getNickname(), user.getProfileImage()));
 
         return user;
     }

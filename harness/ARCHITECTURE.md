@@ -15,7 +15,7 @@
 - **adapter**:
     - `in/web`: REST Controller, API Request/Response DTO.
     - `in/scheduler`: Spring Scheduler (@Scheduled).
-    - `out/persistence`: 데이터베이스 어댑터 구현체 및 Spring Data Repository. 저장소가 둘 이상이면 그 아래를 `jpa`, `neo4j`, `mongo`로 나눈다.
+    - `out/persistence`: 데이터베이스 어댑터 구현체 및 Spring Data Repository. 저장소가 둘 이상이면 그 아래를 `jpa`, `mysql`, `mongo`로 나눈다.
     - 그 밖의 out 어댑터는 역할 이름을 그대로 쓴다. 외부 서비스는 `email`, `jwt`, `encrypt`, `imageStorage`, `redis`, `infrastructure`처럼, 다른 도메인 호출은 그 도메인 이름으로 둔다(`buzz/adapter/out/social`, `social/adapter/out/account`, `flag/adapter/out/user`).
 
 ### 모델·도메인 서비스·애플리케이션의 책임 배치
@@ -43,7 +43,7 @@
 ## 2. 데이터베이스 사용 전략 (Polyglot Persistence)
 기능의 특성에 따라 알맞은 저장소를 선택하여 사용한다.
 - **JPA (MySQL)**: `account`, `flag`, `trace` 등 트랜잭션과 정형화된 관계형 데이터가 중요한 도메인.
-- **Neo4j**: `social` 도메인. 친구 관계(Friendship), 친구 요청, 그래프 탐색(n-hop) 등 관계 중심 데이터.
+- **JDBC (MySQL)**: `social` 도메인의 친구 관계, 친구 요청, 라벨 및 관계망 조회.
 - **MongoDB**: `buzz`, `notification` 등 수명이 생성 시점에 정해져 TTL로 관리되고, 수신자 명단 같은 값 목록을 도큐먼트 안에 함께 두는 도메인.
 
 ## 3. 통신 및 결합도 규칙

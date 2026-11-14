@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew test
 ```
 
-> 통합 테스트는 Docker가 필요하다(Testcontainers: MySQL, Neo4j, MongoDB).
+> 통합 테스트는 Docker가 필요하다(Testcontainers: MySQL, MongoDB).
 > 컨테이너 이미지와 버전의 정본은 `src/test/java/com/example/DunbarHorizon/support/TestContainerConfig.java`다.
 
 ## 문서 지도 (Document Map)
@@ -38,7 +38,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `account/` — 가입, 로그인, 이메일 인증, OAuth2 Google
 - `buzz/` — 콘텐츠 캐스팅(핵심 소셜 기능), MongoDB
 - `flag/` — Flag, FlagComment, Memorial
-- `social/` — Friendship, 친구 요청, Label, 관계망 분석 (Neo4j)
+- `social/` — Friendship, 친구 요청, Label, 관계망 분석 (MySQL)
 - `notification/` — Firebase FCM 푸시, MongoDB
 - `trace/` — 방문 기록
 - `global/` — 횡단 관심사: security, DB config, 예외 처리, 어노테이션, 도메인 이벤트, base entity
@@ -49,15 +49,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Database | Config | Base packages |
 |----------|--------|---------------|
-| MySQL (JPA/Hibernate) | `global/config/database/JpaConfig.java` | `account`, `buzz`, `trace`, `flag`, `notification.adapter.out.persistence.jpa`, `social.adapter.out.persistence.jpa` |
-| Neo4j | `global/config/database/Neo4jConfig.java` | `social` |
+| MySQL (JPA/Hibernate) | `global/config/database/JpaConfig.java` | `account`, `buzz`, `trace`, `flag`, `notification.adapter.out.persistence.jpa`, `social.adapter.out.persistence.jpa`, `social.adapter.out.persistence.mysql` |
 | MongoDB | `global/config/database/MongoConfig.java` | `notification.adapter.out.persistence.mongo`, `buzz.adapter.out.persistence.mongo` |
-
-Neo4j 스키마와 데이터 변경은 `src/main/resources/neo4j/migrations/`의 Cypher 파일이 앱 기동 때 실행된다(Neo4j-Migrations).
 
 로컬 기본값:
 - MySQL: `localhost:3306/dunbar_horizon`
-- Neo4j: `bolt://localhost:7687`, database: `dev` (Neo4j Desktop)
 - MongoDB: `localhost:27017/dunbar_horizon_notification`
 
 ## Authentication
@@ -87,32 +83,12 @@ Neo4j 스키마와 데이터 변경은 `src/main/resources/neo4j/migrations/`의
 
 ## Key Domain Concepts
 
-### Social Graph (Neo4j)
+### Social 관계망
 
-**노드:**
-- `SocialUser` (label: `USER_REFERENCE`) — account 도메인에서 동기화된다
-- `Label` — 사용자가 만든 친구 그룹
-  - 속성: `name`, `exposure`
-
-**관계:**
-- `(low)-[:FRIENDS_WITH]->(high)` — 친구 쌍마다 하나. 낮은 id의 사용자가 시작 노드다
-  - 공통 속성: `id`, `createdAt`, `intimacy`
-  - 사용자별 속성: `low`, `high` 접두사 + `FriendAlias`, `InterestScore`, `LastInteractedAt`, `IsMuted`, `IsRoutable`
-- `(user)-[:OWNS_LABEL]->(label)`
-- `(user)-[:ATTACHED_TO]->(label)`
-
-**DunbarCircle** (`social/domain/friend/DunbarCircle.java`):
-```java
-SUPPORT(5), SYMPATHY(15), KINSHIP(50), DUNBAR(150)
-```
-프론트엔드 슬라이더 값을 관계망 조회 크기 상한으로 매핑한다. 이 150은 시각화 상한이며 실제 친구 수 상한이 아니다.
-
-**관계망 조회 규칙:**
-- 기본 관계망: intimacy 상위 N명 + 그들 사이의 상호 연결
-- Stranger Quota: 노출되는 공통 친구는 최대 5명 (프라이버시)
-- `isRoutable = false` 친구는 다른 사람의 관계망 뷰에서 숨는다
-
-Neo4j 접근은 두 층이다. Cypher는 `neo4j/springData/`의 Spring Data 리포지터리에서 `@Query`로 쓰는 것이 기본이고, SDN이 매핑하지 못하는 경우에만 `neo4j/`의 어댑터가 `Neo4jClient`로 직접 실행한다. `Friendship`은 관계라서 SDN 엔티티가 아니고, 어댑터가 관계와 양 끝 노드로 조립한다. `SocialNetworkRepositoryAdapter`가 `apoc.path.expandConfig`를 쓰므로 Neo4j에 APOC 플러그인이 필요하다.
+- `friendships`는 낮은 사용자 ID와 높은 사용자 ID를 복합 키로 사용한다. 친밀도와 생성일은 공유하고, 관심도·별명·공개 설정은 사용자별 열에 둔다.
+- `friend_requests`는 복합 키에 요청 발신자와 수신자를 별도로 기록한다. 라벨 소유자는 `labels`, 멤버십은 `label_members`에 저장한다.
+- 조회용 프로필과 계정 상태는 MySQL `users`에서 읽는다. `DunbarCircle`은 관계망 조회 상한 5·15·50·150명을 정한다.
+- 기준 친구 추천과 공통 친구 중개인 조회는 각 SQL에서 해당 사용자의 `isRoutable`을 적용한다.
 
 ### Buzz Recipients
 
@@ -124,8 +100,7 @@ Neo4j 접근은 두 층이다. Cypher는 `neo4j/springData/`의 Spring Data 리�
 ### Domain Events
 
 `global/event/`에 있다:
-- `UserActivatedEvent`, `UserDeactivatedEvent` — 계정 생명주기
-- `UserInteractionEvent(actorId, targetId, InteractionType)` — Neo4j interestScore 갱신
+- `UserInteractionEvent(actorId, targetId, InteractionType)` — MySQL interestScore 갱신
 - `MutualInteractionEvent` — 상호 작용 추적
 - `NotificationEvent` — FCM 푸시 발행
 
@@ -134,10 +109,9 @@ Neo4j 접근은 두 층이다. Cypher는 `neo4j/springData/`의 Spring Data 리�
 ## Key Patterns
 
 - **Soft delete:** `global/common/SoftDeletable`.
-- **Auditing:** `BaseTimeEntity`(JPA) + Neo4j auditing으로 `createdAt`/`updatedAt` 관리.
+- **Auditing:** `BaseTimeEntity`와 JPA auditing으로 `createdAt`/`updatedAt` 관리.
 - **Async:** 알림과 백그라운드 작업에 `@Async` + Spring Retry.
-- **Cross-DB sync:** `SocialUserSyncHelper`가 계정 이벤트에 맞춰 MySQL ↔ Neo4j `SocialUser` 노드를 맞춘다.
-- **Friendship decay:** `FriendshipDecayService` / `FriendshipDecayPolicy`가 시간 기반 intimacy 감쇠를 처리한다.
+- **Friendship decay:** `MySqlFriendshipScoreService`와 `FriendshipDecayPolicy`가 시간 기반 intimacy 감쇠를 처리한다.
 
 ## Environment Variables
 
@@ -154,12 +128,10 @@ SMTP_USER                   # Gmail address
 SMTP_PASSWORD               # Gmail app password
 
 MYSQL_PASSWORD              # MySQL root password
-NEO4J_PASSWORD
 
 # Optional (have defaults)
 MYSQL_URL                   # default: jdbc:mysql://localhost:3306/dunbar_horizon
 DB_USERNAME                 # default: root
-NEO4J_URI                   # default: bolt://localhost:7687
 MONGO_URI                   # default: mongodb://localhost:27017/dunbar_horizon_notification
 ```
 
@@ -167,7 +139,7 @@ MONGO_URI                   # default: mongodb://localhost:27017/dunbar_horizon_
 
 설정은 `src/main/resources/application.yml`에 있다.
 
-- `local` (기본) — Neo4j Cypher 로깅 DEBUG, CORS는 `http://localhost:3000` 허용. `@Profile("local")` dev 컨트롤러가 여기서만 뜬다.
+- `local` (기본) — CORS는 `http://localhost:3000` 허용. `@Profile("local")` dev 컨트롤러가 여기서만 뜬다.
 - `prod` — CORS는 `https://www.dunbarhorizon.com` 허용. JVM: `-Xms256m -Xmx512m`
 - `test` — 테스트 전용. `src/test/resources/application-test.yml`
 - `perf` — 성능 측정 엔드포인트(`@Profile("perf")`)용

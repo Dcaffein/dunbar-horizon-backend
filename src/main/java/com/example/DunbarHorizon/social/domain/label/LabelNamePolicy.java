@@ -15,7 +15,7 @@ public class LabelNamePolicy {
             return;
         }
 
-        Long ownerId = targetLabel.getOwner().getId();
+        Long ownerId = targetLabel.getOwnerId();
         validateLabelNameUniqueness(ownerId, newLabelName);
         targetLabel.applyNewLabelName(newLabelName);
     }

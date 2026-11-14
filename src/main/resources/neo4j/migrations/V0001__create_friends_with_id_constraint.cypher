@@ -1,2 +1,0 @@
-CREATE CONSTRAINT friends_with_id_unique IF NOT EXISTS
-FOR ()-[r:FRIENDS_WITH]-() REQUIRE r.id IS UNIQUE;

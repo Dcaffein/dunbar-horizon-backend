@@ -1,15 +1,15 @@
 package com.example.DunbarHorizon.social.application.dto.result;
 
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
+import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 
 public record LabelMemberResult(
         Long id,
         String nickname
 ) {
-    public static LabelMemberResult from(UserReference user) {
+    public static LabelMemberResult from(SocialUserProfile user) {
         return new LabelMemberResult(
-                user.getId(),
-                user.getNickname()
+                user.id(),
+                user.nickname()
         );
     }
 }

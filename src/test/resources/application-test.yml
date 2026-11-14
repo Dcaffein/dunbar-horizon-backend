@@ -19,16 +19,9 @@ spring:
     data:
         mongodb:
             auto-index-creation: true
-        neo4j:
-            database: neo4j
     mail:
         host: localhost
         port: 3025
-
-org:
-    neo4j:
-        migrations:
-            enabled: false
 
 jwt:
     secret: thisIsAVeryLongAndSecureSecretKeyForJWTAuthUsingHS512Algorithm1234567890abcdefghijklmn

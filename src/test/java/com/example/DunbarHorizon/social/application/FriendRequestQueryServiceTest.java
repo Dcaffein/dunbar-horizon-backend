@@ -8,7 +8,6 @@ import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestInvalidException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
-import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +16,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
+import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
+import com.example.DunbarHorizon.social.application.port.out.SocialUserProfileReader;
 
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -36,26 +38,28 @@ class FriendRequestQueryServiceTest {
     @Mock
     private FriendRequestRepository friendRequestRepository;
 
+    @Mock
+    private SocialUserProfileReader profiles;
+
     @Test
     @DisplayName("수신된 친구 요청 목록을 PENDING 상태로 조회한다")
     void getReceivedRequests_ReturnsPendingRequests() {
         // given
         Long userId = 1L;
-        SocialUser req = mock(SocialUser.class);
-        SocialUser res = mock(SocialUser.class);
-        given(req.getId()).willReturn(1L);
-        given(res.getId()).willReturn(2L);
-        FriendRequest request = FriendTestFactory.createRequest(req, res);
+        FriendRequest request = FriendTestFactory.createRequest(1L, 2L);
 
         given(friendRequestRepository.findAllByReceiver_IdAndStatus(userId, FriendRequestStatus.PENDING))
                 .willReturn(List.of(request));
+
+        given(profiles.findActiveProfiles(List.of(1L, 2L)))
+                .willReturn(Map.of(2L, new SocialUserProfile(2L, "receiver", null)));
 
         // when
         List<FriendRequestResult> result = queryService.getRequests(
                 userId, FriendRequestDirection.RECEIVED, null);
 
         // then
-        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().receiver().nickname()).isEqualTo("receiver");
     }
 
     @Test
@@ -79,11 +83,7 @@ class FriendRequestQueryServiceTest {
     void getHiddenRequests_ReturnsHiddenRequests() {
         // given
         Long userId = 2L;
-        SocialUser req = mock(SocialUser.class);
-        SocialUser res = mock(SocialUser.class);
-        given(req.getId()).willReturn(1L);
-        given(res.getId()).willReturn(userId);
-        FriendRequest request = FriendTestFactory.createRequest(req, res);
+        FriendRequest request = FriendTestFactory.createRequest(1L, 2L);
         request.updateStatus(userId, FriendRequestStatus.HIDDEN);
 
         given(friendRequestRepository.findAllByReceiver_IdAndStatus(userId, FriendRequestStatus.HIDDEN))
@@ -104,8 +104,8 @@ class FriendRequestQueryServiceTest {
         Long userId = 2L;
         FriendRequest orphanRequest = mock(FriendRequest.class);
         given(orphanRequest.getId()).willReturn("orphan-id");
-        given(orphanRequest.getRequester()).willReturn(null);
-        given(orphanRequest.getReceiver()).willReturn(null);
+        given(orphanRequest.getRequesterId()).willReturn(null);
+        given(orphanRequest.getReceiverId()).willReturn(null);
         given(orphanRequest.getStatus()).willReturn(FriendRequestStatus.PENDING);
 
         given(friendRequestRepository.findAllByReceiver_IdAndStatus(userId, FriendRequestStatus.PENDING))
@@ -121,11 +121,7 @@ class FriendRequestQueryServiceTest {
     void getSentRequests_ReturnsPendingRequests() {
         // given
         Long userId = 1L;
-        SocialUser req = mock(SocialUser.class);
-        SocialUser res = mock(SocialUser.class);
-        given(req.getId()).willReturn(1L);
-        given(res.getId()).willReturn(2L);
-        FriendRequest request = FriendTestFactory.createRequest(req, res);
+        FriendRequest request = FriendTestFactory.createRequest(1L, 2L);
 
         given(friendRequestRepository.findAllByRequester_IdAndStatus(userId, FriendRequestStatus.PENDING))
                 .willReturn(List.of(request));

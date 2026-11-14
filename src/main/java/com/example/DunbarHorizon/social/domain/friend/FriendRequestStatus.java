@@ -54,13 +54,13 @@ public enum FriendRequestStatus {
     }
 
     protected void validateReceiver(FriendRequest request, Long userId) {
-        if (!request.getReceiver().getId().equals(userId)) {
+        if (!request.getReceiverId().equals(userId)) {
             throw new FriendRequestAuthorizationException(request.getId(), userId);
         }
     }
 
     protected void validateRequester(FriendRequest request, Long userId) {
-        if (!request.getRequester().getId().equals(userId)) {
+        if (!request.getRequesterId().equals(userId)) {
             throw new FriendRequestAuthorizationException(request.getId(), userId);
         }
     }

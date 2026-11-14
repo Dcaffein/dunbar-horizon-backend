@@ -9,7 +9,6 @@ import com.example.DunbarHorizon.social.application.port.in.FriendRequestReceive
 import com.example.DunbarHorizon.social.application.port.in.FriendRequestQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.in.FriendRequesterActionUseCase;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -42,12 +41,11 @@ public class FriendRequestController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid FriendRequestCreateRequest request) {
 
-        FriendRequest newRequest = requesterActionUseCase.sendRequest(currentUserId, request.receiverId());
-        FriendRequestResult response = FriendRequestResult.from(newRequest);
+        FriendRequestResult response = requesterActionUseCase.sendRequest(currentUserId, request.receiverId());
 
         return ResponseEntity
                 .created(URI.create(
-                        "/api/v1/friend-requests/" + newRequest.getReceiver().getId()))
+                        "/api/v1/friend-requests/" + response.receiver().id()))
                 .body(response);
     }
 

@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.social.application.port.in;
 
-import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
+import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
 
 public interface FriendRequesterActionUseCase {
-    FriendRequest sendRequest(Long requesterId, Long receiverId);
+    FriendRequestResult sendRequest(Long requesterId, Long receiverId);
     void cancelRequest(Long counterpartId, Long requesterId);
 }

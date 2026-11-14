@@ -1,53 +1,42 @@
 package com.example.DunbarHorizon.social.domain.label;
 
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.social.domain.label.exception.InvalidLabelNameException;
 import lombok.*;
 import com.example.DunbarHorizon.global.util.UuidUtil;
-import org.springframework.data.neo4j.core.schema.Id;
-import org.springframework.data.neo4j.core.schema.Node;
-import org.springframework.data.neo4j.core.schema.Relationship;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.ATTACHED_TO;
-import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.LABEL;
-import static com.example.DunbarHorizon.social.domain.label.constant.LabelConstants.OWNS_LABEL;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PACKAGE)
 @Getter
-@Node(LABEL)
 public class Label {
 
     public static final int NAME_MAX_LENGTH = 20;
     public static final String NAME_LENGTH_MESSAGE = "라벨 이름은 1자 이상 20자 이하로 입력해주세요.";
 
-    @Id
     private String id;
 
     private String labelName;
 
-    @Relationship(type = OWNS_LABEL, direction = Relationship.Direction.INCOMING)
-    private UserReference owner;
+    private Long ownerId;
 
-    @Relationship(type = ATTACHED_TO, direction = Relationship.Direction.OUTGOING)
-    private Set<UserReference> members = new HashSet<>();
+    private Set<Long> memberIds = new HashSet<>();
 
-    Label(UserReference owner, String labelName) {
+    Label(Long ownerId, String labelName) {
         validateName(labelName);
         this.id = UuidUtil.createV7().toString();
-        this.owner = owner;
+        this.ownerId = ownerId;
         this.labelName = labelName;
     }
 
-    public static Label restore(String id, String labelName, UserReference owner, Set<UserReference> members) {
-        return new Label(id, labelName, owner, new HashSet<>(members));
+    public static Label restore(String id, String labelName, Long ownerId, Set<Long> memberIds) {
+        return new Label(id, labelName, ownerId, new HashSet<>(memberIds));
     }
 
-    public Set<UserReference> getMembers() {
-        return Set.copyOf(members);
+    public Set<Long> getMemberIds() {
+        return Set.copyOf(memberIds);
     }
 
     void applyNewLabelName(String newLabelName) {

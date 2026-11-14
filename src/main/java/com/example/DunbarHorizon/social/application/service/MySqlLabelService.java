@@ -40,7 +40,8 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
 
     @Override
     public Label createLabel(Long ownerId, String name) {
-        Label label = labelFactory.create(activeProfile(ownerId), name);
+        activeProfile(ownerId);
+        Label label = labelFactory.create(ownerId, name);
         labels.create(label);
         return label;
     }
@@ -77,7 +78,7 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
         List<Long> requested = memberIds == null ? List.of() : memberIds.stream().distinct().toList();
         List<String> pairIds = requested.stream().map(id -> Friendship.generateCompositeId(ownerId, id)).toList();
         Set<Long> valid = friendships.findAllByIdsForUpdate(pairIds).stream()
-                .map(friendship -> friendship.getFriend(ownerId).getId()).collect(Collectors.toSet());
+                .map(friendship -> friendship.getFriendId(ownerId)).collect(Collectors.toSet());
         List<Long> invalid = requested.stream().filter(id -> !valid.contains(id)).toList();
         if (!invalid.isEmpty()) {
             throw new NonFriendLabelMemberException(invalid);
@@ -120,12 +121,13 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
     @Override
     @Transactional(readOnly = true)
     public List<LabelMemberResult> getLabelMembers(Long ownerId, String labelId) {
-        return ownedLabel(ownerId, labelId).getMembers().stream().map(LabelMemberResult::from).toList();
+        var profiles = users.findActiveProfiles(ownedLabel(ownerId, labelId).getMemberIds());
+        return profiles.values().stream().map(LabelMemberResult::from).toList();
     }
 
     private Label ownedLabel(Long ownerId, String labelId) {
         Label label = labels.findById(labelId).orElseThrow(() -> new LabelNotFoundException(labelId));
-        requireOwner(Optional.of(label.getOwner().getId()), labelId, ownerId);
+        requireOwner(Optional.of(label.getOwnerId()), labelId, ownerId);
         return label;
     }
 

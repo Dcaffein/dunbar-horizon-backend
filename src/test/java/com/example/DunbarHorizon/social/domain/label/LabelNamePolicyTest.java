@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.domain.label;
 
 import com.example.DunbarHorizon.social.domain.label.repository.LabelRepository;
-import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +26,7 @@ class LabelNamePolicyTest {
     @DisplayName("기존 이름과 동일한 이름으로 변경 시 중복 검사를 하지 않고 종료한다")
     void changeLabelName_SameName_Skip() {
         // given
-        SocialUser owner = new SocialUser(1L, "owner", null);
+        Long owner = 1L;
         Label label = new Label(owner, "기존이름");
 
         // when
@@ -41,11 +40,11 @@ class LabelNamePolicyTest {
     @DisplayName("다른 유저가 가진 라벨 이름이라도 내 라벨 이름과 중복되지 않으면 변경 가능하다")
     void changeLabelName_Success() {
         // given
-        SocialUser owner = new SocialUser(1L, "owner", null);
+        Long owner = 1L;
         Label label = new Label(owner, "기존이름");
         String newName = "새로운이름";
 
-        given(labelRepository.existsByOwner_IdAndLabelName(owner.getId(), newName))
+        given(labelRepository.existsByOwner_IdAndLabelName(owner, newName))
                 .willReturn(false);
 
         // when

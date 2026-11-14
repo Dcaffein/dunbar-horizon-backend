@@ -12,9 +12,7 @@ import com.example.DunbarHorizon.account.domain.exception.InvalidVerificationTok
 import com.example.DunbarHorizon.account.domain.repository.AuthRepository;
 import com.example.DunbarHorizon.account.domain.repository.PendingSignupRepository;
 import com.example.DunbarHorizon.account.domain.repository.UserRepository;
-import com.example.DunbarHorizon.global.event.user.UserActivatedEvent;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +25,6 @@ public class SignupService implements SignupUseCase {
     private final PendingSignupRepository pendingSignupRepository;
     private final PasswordHasher passwordHasher;
     private final LoginUseCase loginUseCase;
-    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public AuthTokenResult signup(String token, String password, String nickname) {
@@ -40,11 +37,10 @@ public class SignupService implements SignupUseCase {
             throw new AlreadyRegisteredEmailException(email);
         });
 
-        // save()가 끝나야 id가 생긴다. 이벤트 발행이 그 뒤여야 하는 이유다.
+        // Auth를 저장하기 전에 User ID를 발급받는다.
         User user = userRepository.save(User.createActive(email, nickname));
         authRepository.save(Auth.createLocalAuth(user.getId(), passwordHasher.hash(password)));
 
-        publishActivated(user);
 
         return loginUseCase.issueTokens(user);
     }
@@ -52,11 +48,7 @@ public class SignupService implements SignupUseCase {
     @Override
     public User registerOAuthUser(String email, String nickname, AuthProvider provider, String providerId) {
         User user = userRepository.findByEmail(email)
-                .orElseGet(() -> {
-                    User newUser = userRepository.save(User.createActive(email, nickname));
-                    publishActivated(newUser);
-                    return newUser;
-                });
+                .orElseGet(() -> userRepository.save(User.createActive(email, nickname)));
 
         if (!authRepository.existsByUserIdAndProviderAndProviderId(user.getId(), provider, providerId)) {
             authRepository.save(Auth.createOAuth(user.getId(), provider, providerId));
@@ -65,8 +57,4 @@ public class SignupService implements SignupUseCase {
         return user;
     }
 
-    private void publishActivated(User user) {
-        eventPublisher.publishEvent(
-                new UserActivatedEvent(user.getId(), user.getNickname(), user.getProfileImage()));
-    }
 }

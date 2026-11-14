@@ -13,15 +13,14 @@
 - **규칙**: 외부 시스템이나 데이터베이스를 띄우지 않고, Mockito를 사용하여 순수 비즈니스 로직만 검증한다.
 
 ## 3. 통합 및 슬라이스 테스트 (Integration/Slice Tests)
-테스트 환경을 수동으로 구성하지 말고, 프로젝트 패키지 `com.example.DunbarHorizon.support`에 미리 정의된 것을 쓴다. `BaseControllerTest`는 상속하고, `JpaRepositoryTest`·`Neo4jRepositoryTest`·`MongoRepositoryTest`는 클래스에 어노테이션으로 붙인다.
+테스트 환경을 수동으로 구성하지 말고, 프로젝트 패키지 `com.example.DunbarHorizon.support`에 미리 정의된 것을 쓴다. `BaseControllerTest`는 상속하고, `JpaRepositoryTest`·`MongoRepositoryTest`는 클래스에 어노테이션으로 붙인다.
 
 - **Web / Controller 테스트**:
     - `BaseControllerTest`를 상속받아라.
     - 보안/인증이 필요한 API는 `@WithMockCustomUser` 어노테이션을 사용하여 인증된 상태를 모킹하라.
 - **Persistence / Repository 테스트**:
-    - JPA 관련 테스트: `JpaRepositoryTest`를 상속받아라.
-    - Neo4j 관련 테스트: `Neo4jRepositoryTest`를 상속받아라.
-    - MongoDB 관련 테스트: `MongoRepositoryTest`를 상속받아라.
+    - MySQL 관련 테스트에는 `@JpaRepositoryTest`를 붙인다.
+    - MongoDB 관련 테스트에는 `@MongoRepositoryTest`를 붙인다.
     - `TestContainerConfig.java`를 통해 Docker 컨테이너가 띄워지므로 실제 DB와 동일한 환경에서 쿼리를 검증해야 한다.
 
 ## 4. 테스트 작성 규칙 (Given-When-Then)

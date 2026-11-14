@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.application.service.MySqlFriendRequestActionService;
+import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
@@ -82,8 +83,8 @@ class FriendRequestMysqlRepositoryTest {
         assertThat(requests.findAllByReceiver_IdAndStatus(low, FriendRequestStatus.HIDDEN)).singleElement()
                 .satisfies(request -> {
                     assertThat(request.getId()).isEqualTo(requestId);
-                    assertThat(request.getRequester().getId()).isEqualTo(high);
-                    assertThat(request.getReceiver().getId()).isEqualTo(low);
+                    assertThat(request.getRequesterId()).isEqualTo(high);
+                    assertThat(request.getReceiverId()).isEqualTo(low);
                 });
         assertThat(requests.existsRequestBetween(high, low)).isTrue();
         assertThat(requests.existsRequestBetween(low, high)).isFalse();
@@ -163,7 +164,7 @@ class FriendRequestMysqlRepositoryTest {
 
             // then
             assertThat(List.of(first.get(10, TimeUnit.SECONDS), second.get(10, TimeUnit.SECONDS)))
-                    .containsExactlyInAnyOrder(FriendRequest.class, DuplicateFriendRequestException.class);
+                    .containsExactlyInAnyOrder(FriendRequestResult.class, DuplicateFriendRequestException.class);
         }
         assertThat(requests.findById(requestId)).isPresent();
     }
@@ -176,7 +177,7 @@ class FriendRequestMysqlRepositoryTest {
         CountDownLatch resume = new CountDownLatch(1);
         doAnswer(invocation -> {
             FriendRequest pending = invocation.getArgument(0);
-            if (pending.getRequester().getId().equals(high)) {
+            if (pending.getRequesterId().equals(high)) {
                 beforeInsert.countDown();
                 await(resume);
             }

@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.application.dto.result;
 
 import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPort;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
+import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 
 public record FriendshipDetailResult(
         Long friendId,
@@ -14,13 +14,11 @@ public record FriendshipDetailResult(
         boolean isMuted,
         boolean isRoutable
 ) {
-    public static FriendshipDetailResult from(Friendship friendship, Long myId, ImageUrlResolverPort resolver) {
-        UserReference friend = friendship.getFriend(myId);
-
+    public static FriendshipDetailResult from(Friendship friendship, Long myId, SocialUserProfile friend, ImageUrlResolverPort resolver) {
         return new FriendshipDetailResult(
-                friend.getId(),
-                friend.getNickname(),
-                resolver.resolveUrl(friend.getProfileImageUrl()),
+                friend.id(),
+                friend.nickname(),
+                resolver.resolveUrl(friend.imageKey()),
                 friendship.getFriendAlias(myId),
                 friendship.getIntimacy(),
                 friendship.getMyNormalizedInterestScore(myId),

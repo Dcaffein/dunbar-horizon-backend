@@ -1,12 +1,10 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
-import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 import com.example.DunbarHorizon.social.application.port.out.LabelMembershipRepository;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelNameException;
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.dao.DuplicateKeyException;
@@ -27,8 +25,7 @@ import java.util.stream.Stream;
 public class LabelMysqlRepository implements LabelMembershipRepository {
 
     private static final String SELECT_LABELS = """
-            SELECT l.id, l.name, l.owner_id, o.nickname AS owner_name, o.profile_image AS owner_image,
-                   u.user_id AS member_id, u.nickname AS member_name, u.profile_image AS member_image
+            SELECT l.id, l.name, l.owner_id, u.user_id AS member_id
             FROM labels l
             JOIN users o ON o.user_id = l.owner_id
             LEFT JOIN label_members lm ON lm.label_id = l.id
@@ -42,7 +39,7 @@ public class LabelMysqlRepository implements LabelMembershipRepository {
 
     @Override
     public void create(Label label) {
-        Long ownerId = label.getOwner().getId();
+        Long ownerId = label.getOwnerId();
         try {
             jdbc.update("INSERT INTO labels (id, owner_id, name) VALUES (:id, :owner, :name)",
                     Map.of("id", label.getId(), "owner", ownerId, "name", label.getLabelName()));
@@ -205,24 +202,21 @@ public class LabelMysqlRepository implements LabelMembershipRepository {
                 String id = rows.getString("id");
                 LabelRow label = labels.get(id);
                 if (label == null) {
-                    var owner = new SocialUserProfile(rows.getLong("owner_id"),
-                            rows.getString("owner_name"), rows.getString("owner_image"));
-                    label = new LabelRow(id, rows.getString("name"), owner, new HashSet<>());
+                    label = new LabelRow(id, rows.getString("name"), rows.getLong("owner_id"), new HashSet<>());
                     labels.put(id, label);
                 }
                 Long memberId = rows.getObject("member_id", Long.class);
                 if (memberId != null) {
-                    label.members().add(new SocialUserProfile(memberId,
-                            rows.getString("member_name"), rows.getString("member_image")));
+                    label.memberIds().add(memberId);
                 }
             }
             return labels.values().stream().map(LabelRow::toLabel).toList();
         });
     }
 
-    private record LabelRow(String id, String name, UserReference owner, Set<UserReference> members) {
+    private record LabelRow(String id, String name, Long ownerId, Set<Long> memberIds) {
         Label toLabel() {
-            return Label.restore(id, name, owner, members);
+            return Label.restore(id, name, ownerId, memberIds);
         }
     }
 }

@@ -72,13 +72,13 @@ public class FriendshipMysqlRepository implements FriendshipLifecycleRepository,
     @Override
     public void create(Friendship friendship) {
         var recognitions = friendship.getRecognitions().stream()
-                .sorted(Comparator.comparing(recognition -> recognition.getUser().getId()))
+                .sorted(Comparator.comparing(recognition -> recognition.getUserId()))
                 .toList();
         FriendRecognition low = recognitions.getFirst();
         FriendRecognition high = recognitions.getLast();
         var parameters = new MapSqlParameterSource()
-                .addValue("low", low.getUser().getId())
-                .addValue("high", high.getUser().getId())
+                .addValue("low", low.getUserId())
+                .addValue("high", high.getUserId())
                 .addValue("createdAt", friendship.getCreatedAt(), Types.DATE)
                 .addValue("intimacy", friendship.getIntimacy());
         bindRecognition(parameters, "low", low);
@@ -127,7 +127,7 @@ public class FriendshipMysqlRepository implements FriendshipLifecycleRepository,
 
     @Override
     public void updateUserFields(Friendship friendship, Long userId) {
-        updateUserFields(userId, friendship.getFriend(userId).getId(), friendship.getFriendAlias(userId),
+        updateUserFields(userId, friendship.getFriendId(userId), friendship.getFriendAlias(userId),
                 friendship.isMuted(userId), friendship.isRoutable(userId));
     }
 
@@ -191,7 +191,7 @@ public class FriendshipMysqlRepository implements FriendshipLifecycleRepository,
         for (Friendship friendship : friendships) {
             var pair = UserPairKey.parse(friendship.getId()).orElseThrow();
             var sides = friendship.getRecognitions().stream()
-                    .sorted(Comparator.comparing(recognition -> recognition.getUser().getId()))
+                    .sorted(Comparator.comparing(recognition -> recognition.getUserId()))
                     .toList();
             String suffix = Integer.toString(index++);
             rows.add("""
@@ -284,7 +284,7 @@ public class FriendshipMysqlRepository implements FriendshipLifecycleRepository,
         Map<Long, SocialUserProfile> profiles = users.findActiveProfiles(userIds);
         return rows.stream()
                 .filter(row -> profiles.containsKey(row.key().low()) && profiles.containsKey(row.key().high()))
-                .map(row -> row.toFriendship(profiles.get(row.key().low()), profiles.get(row.key().high())))
+                .map(FriendshipRow::toFriendship)
                 .toList();
     }
 
@@ -309,9 +309,9 @@ public class FriendshipMysqlRepository implements FriendshipLifecycleRepository,
                     RecognitionRow.read(rs, "low"), RecognitionRow.read(rs, "high"));
         }
 
-        Friendship toFriendship(SocialUserProfile lowProfile, SocialUserProfile highProfile) {
+        Friendship toFriendship() {
             return Friendship.restore(key.id(), createdAt, intimacy,
-                    List.of(low.toRecognition(lowProfile), high.toRecognition(highProfile)));
+                    List.of(low.toRecognition(key.low()), high.toRecognition(key.high())));
         }
     }
 
@@ -323,8 +323,8 @@ public class FriendshipMysqlRepository implements FriendshipLifecycleRepository,
                     rs.getBoolean(side + "_is_muted"), rs.getBoolean(side + "_is_routable"));
         }
 
-        FriendRecognition toRecognition(SocialUserProfile profile) {
-            return FriendRecognition.restore(profile, alias, score, interactedAt, muted, routable);
+        FriendRecognition toRecognition(long userId) {
+            return FriendRecognition.restore(userId, alias, score, interactedAt, muted, routable);
         }
     }
 }

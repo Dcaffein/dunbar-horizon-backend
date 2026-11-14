@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.buzz.adapter.out.social.LabelRecipientStrategyAdapter;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
-import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.application.service.MySqlLabelService;
@@ -73,7 +72,7 @@ class LabelMysqlRepositoryTest {
         assertThat(service.getLabelsByMember(owner.getId(), first.getId())).containsExactly(expected);
         assertThat(service.getLabelMembers(owner.getId(), label.getId()))
                 .containsExactly(new LabelMemberResult(first.getId(), "first"));
-        assertThatThrownBy(() -> labels.findById(label.getId()).orElseThrow().getMembers().clear())
+        assertThatThrownBy(() -> labels.findById(label.getId()).orElseThrow().getMemberIds().clear())
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
@@ -86,7 +85,7 @@ class LabelMysqlRepositoryTest {
         service.createLabel(first.getId(), "Work");
 
         // when & then
-        assertThatThrownBy(() -> labels.create(Label.restore("another-id", "Work", firstLabel.getOwner(), Set.of())))
+        assertThatThrownBy(() -> labels.create(Label.restore("another-id", "Work", firstLabel.getOwnerId(), Set.of())))
                 .isInstanceOf(DuplicateLabelNameException.class);
         assertThatThrownBy(() -> service.updateLabel(secondLabel.getId(), owner.getId(), "Work"))
                 .isInstanceOf(DuplicateLabelNameException.class);
@@ -189,6 +188,6 @@ class LabelMysqlRepositoryTest {
     }
 
     private static FriendRecognition recognition(User user) {
-        return new FriendRecognition(new SocialUserProfile(user.getId(), user.getNickname(), null));
+        return new FriendRecognition(user.getId());
     }
 }

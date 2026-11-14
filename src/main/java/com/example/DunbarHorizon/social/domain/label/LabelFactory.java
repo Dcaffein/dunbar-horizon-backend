@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.social.domain.label;
 
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -10,8 +9,8 @@ public class LabelFactory {
 
     private final LabelNamePolicy labelNamePolicy;
 
-    public Label create(UserReference owner, String labelName) {
-        labelNamePolicy.validateLabelNameUniqueness(owner.getId(), labelName);
-        return new Label(owner, labelName);
+    public Label create(Long ownerId, String labelName) {
+        labelNamePolicy.validateLabelNameUniqueness(ownerId, labelName);
+        return new Label(ownerId, labelName);
     }
 }

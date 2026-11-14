@@ -4,44 +4,35 @@ package com.example.DunbarHorizon.social.domain.friend;
 
 import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;import com.example.DunbarHorizon.social.domain.friend.exception.CannotRequestToSelfException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestInvalidException;
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.neo4j.core.schema.*;
 
 import java.time.LocalDateTime;
 
-import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.FRIEND_REQUEST;
-import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.SENT_FRIEND_REQUEST;
-import static com.example.DunbarHorizon.social.domain.friend.constant.FriendConstants.FRIEND_REQUEST_TO;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Node(FRIEND_REQUEST)
 public class FriendRequest {
-    @Id
     private String id;
 
-    @Relationship(type = SENT_FRIEND_REQUEST, direction = Relationship.Direction.INCOMING)
-    private UserReference requester;
+    private Long requesterId;
 
-    @Relationship(type = FRIEND_REQUEST_TO, direction = Relationship.Direction.OUTGOING)
-    private UserReference receiver;
+    private Long receiverId;
 
     private LocalDateTime createdAt;
 
     private FriendRequestStatus status;
 
-    FriendRequest(UserReference requester, UserReference receiver) {
-        if (requester.getId().equals(receiver.getId())) {
-            throw new CannotRequestToSelfException(requester.getId());
+    FriendRequest(Long requesterId, Long receiverId) {
+        if (requesterId.equals(receiverId)) {
+            throw new CannotRequestToSelfException(requesterId);
         }
-        this.id = generateId(requester.getId(), receiver.getId());
-        this.requester = requester;
-        this.receiver = receiver;
+        this.id = generateId(requesterId, receiverId);
+        this.requesterId = requesterId;
+        this.receiverId = receiverId;
         this.status = FriendRequestStatus.PENDING;
         this.createdAt = LocalDateTime.now();
     }

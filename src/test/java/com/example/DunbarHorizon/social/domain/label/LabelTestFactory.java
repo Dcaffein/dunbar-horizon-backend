@@ -1,10 +1,9 @@
 package com.example.DunbarHorizon.social.domain.label;
 
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 
 public class LabelTestFactory {
 
-    public static Label createLabel(UserReference owner, String name) {
+    public static Label createLabel(Long owner, String name) {
         return new Label(owner, name);
     }
 

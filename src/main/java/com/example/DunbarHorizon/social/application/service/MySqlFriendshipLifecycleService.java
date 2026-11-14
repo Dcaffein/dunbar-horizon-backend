@@ -56,7 +56,7 @@ public class MySqlFriendshipLifecycleService implements FriendshipCommandUseCase
 
         List<FriendshipArchiveCandidate> records = eligible.stream()
                 .map(friendship -> {
-                    var idsInOrder = friendship.getUsers().stream().map(user -> user.getId()).sorted().toList();
+                    var idsInOrder = friendship.getUserIds().stream().sorted().toList();
                     return new FriendshipArchiveCandidate(friendship.getId(), idsInOrder.getFirst(),
                             idsInOrder.getLast(), friendship.getCreatedAt());
                 })

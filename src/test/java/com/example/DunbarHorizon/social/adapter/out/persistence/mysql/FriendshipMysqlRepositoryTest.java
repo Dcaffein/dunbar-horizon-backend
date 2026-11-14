@@ -5,7 +5,6 @@ import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
-import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -59,10 +58,9 @@ class FriendshipMysqlRepositoryTest {
         // then
         assertThat(fromLow).singleElement().satisfies(friendship -> {
             assertThat(friendship.getId()).isEqualTo(original.getId());
+            assertThat(friendship.getFriendId(low.getId())).isEqualTo(high.getId());
             assertThat(friendship.getCreatedAt()).isEqualTo(CREATED_AT);
             assertThat(friendship.getIntimacy()).isEqualTo(INTIMACY);
-            assertThat(friendship.getFriend(low.getId()).getNickname()).isEqualTo("high");
-            assertThat(friendship.getFriend(low.getId()).getProfileImageUrl()).isEqualTo("profiles/high");
             assertThat(friendship.getFriendAlias(low.getId())).isEqualTo("from low");
             assertThat(friendship.getMyInterestScore(low.getId())).isEqualTo(51.0);
             assertThat(friendship.isMuted(low.getId())).isTrue();
@@ -71,7 +69,7 @@ class FriendshipMysqlRepositoryTest {
         assertThat(fromHigh).singleElement().satisfies(friendship -> {
             assertThat(friendship.getId()).isEqualTo(original.getId());
             assertThat(friendship.getIntimacy()).isEqualTo(INTIMACY);
-            assertThat(friendship.getFriend(high.getId()).getId()).isEqualTo(low.getId());
+            assertThat(friendship.getFriendId(high.getId())).isEqualTo(low.getId());
             assertThat(friendship.getFriendAlias(high.getId())).isEqualTo("from high");
             assertThat(friendship.getMyInterestScore(high.getId())).isEqualTo(32.0);
             assertThat(friendship.isMuted(high.getId())).isFalse();
@@ -234,21 +232,10 @@ class FriendshipMysqlRepositoryTest {
 
     private static Friendship friendship(User low, User high) {
         return Friendship.restore(Friendship.generateCompositeId(low.getId(), high.getId()), CREATED_AT, INTIMACY,
-                List.of(FriendRecognition.restore(new Reference(high.getId()), "from high", 32.0,
+                List.of(FriendRecognition.restore(high.getId(), "from high", 32.0,
                                 INTERACTED_AT.plusDays(1), false, true),
-                        FriendRecognition.restore(new Reference(low.getId()), "from low", 51.0,
+                        FriendRecognition.restore(low.getId(), "from low", 51.0,
                                 INTERACTED_AT, true, false)));
     }
 
-    private record Reference(Long getId) implements UserReference {
-        @Override
-        public String getNickname() {
-            return null;
-        }
-
-        @Override
-        public String getProfileImageUrl() {
-            return null;
-        }
-    }
 }

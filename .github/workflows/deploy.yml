@@ -64,9 +64,6 @@ jobs:
           MYSQL_URL: ${{ secrets.MYSQL_URL }}
           MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          NEO4J_URI: ${{ secrets.NEO4J_URI }}
-          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
-          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
           MONGO_URI: ${{ secrets.MONGO_URI }}
           OAUTH_GOOGLE_CLIENT_ID: ${{ secrets.OAUTH_GOOGLE_CLIENT_ID }}
           OAUTH_GOOGLE_CLIENT_SECRET: ${{ secrets.OAUTH_GOOGLE_CLIENT_SECRET }}
@@ -84,9 +81,6 @@ jobs:
           echo "MYSQL_URL=$MYSQL_URL" >> .env
           echo "MYSQL_PASSWORD=$MYSQL_PASSWORD" >> .env
           echo "DB_USERNAME=$DB_USERNAME" >> .env
-          echo "NEO4J_URI=$NEO4J_URI" >> .env
-          echo "NEO4J_PASSWORD=$NEO4J_PASSWORD" >> .env
-          echo "NEO4J_USERNAME=$NEO4J_USERNAME" >> .env
           echo "MONGO_URI=$MONGO_URI" >> .env
           echo "REDIS_HOST=dunbarhorizon-redis" >> .env
           echo "OAUTH_GOOGLE_CLIENT_ID=$OAUTH_GOOGLE_CLIENT_ID" >> .env
