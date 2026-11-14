@@ -2,11 +2,11 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
 import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipCreationRepository;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipLifecycleRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @RequiredArgsConstructor
-public class FriendshipMysqlRepository implements FriendshipRepository, FriendshipCreationRepository {
+public class FriendshipMysqlRepository implements FriendshipLifecycleRepository, FriendshipCreationRepository {
 
     private static final String PAIR = "low_user_id = :low AND high_user_id = :high";
     private static final String SELECT_PAIR = "SELECT * FROM friendships WHERE " + PAIR;
@@ -129,6 +129,7 @@ public class FriendshipMysqlRepository implements FriendshipRepository, Friendsh
                 friendship.isMuted(userId), friendship.isRoutable(userId));
     }
 
+    @Override
     public void updateUserFields(Long userId, Long friendId, String alias, Boolean muted, Boolean routable) {
         FriendRecognition.validateFriendAlias(alias);
         var pair = UserPairKey.of(userId, friendId);

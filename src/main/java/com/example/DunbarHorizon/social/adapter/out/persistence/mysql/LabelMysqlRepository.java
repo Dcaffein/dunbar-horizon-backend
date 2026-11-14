@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
 import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 import com.example.DunbarHorizon.social.application.port.out.LabelMembershipRepository;
+import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelNameException;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 public class LabelMysqlRepository implements LabelMembershipRepository {
@@ -105,6 +107,38 @@ public class LabelMysqlRepository implements LabelMembershipRepository {
                 JOIN labels l ON l.id = lm.label_id
                 WHERE l.owner_id = :ownerId AND lm.member_id = :memberId
                 """, Map.of("ownerId", ownerId, "memberId", memberId));
+    }
+
+    @Override
+    public void removeMembersForEndedFriendships(Collection<Friendship> friendships) {
+        List<Object[]> directions = friendships.stream()
+                .map(friendship -> UserPairKey.parse(friendship.getId()).orElseThrow())
+                .flatMap(pair -> Stream.of(new Object[]{pair.low(), pair.high()},
+                        new Object[]{pair.high(), pair.low()}))
+                .toList();
+        if (directions.isEmpty()) {
+            return;
+        }
+
+        // The caller holds these friendships, so their affected memberships cannot be added concurrently.
+        List<String> affectedLabels = jdbc.queryForList("""
+                SELECT DISTINCT l.id FROM labels l
+                JOIN label_members lm ON lm.label_id = l.id
+                WHERE (l.owner_id, lm.member_id) IN (:directions)
+                """, Map.of("directions", directions), String.class);
+        if (affectedLabels.isEmpty()) {
+            return;
+        }
+
+        jdbc.queryForList("""
+                SELECT id FROM labels FORCE INDEX (PRIMARY)
+                WHERE id IN (:ids) ORDER BY id FOR UPDATE
+                """, Map.of("ids", affectedLabels), String.class);
+        jdbc.update("""
+                DELETE lm FROM label_members lm
+                JOIN labels l ON l.id = lm.label_id
+                WHERE l.id IN (:ids) AND (l.owner_id, lm.member_id) IN (:directions)
+                """, Map.of("ids", affectedLabels, "directions", directions));
     }
 
     @Override
