@@ -1,0 +1,21 @@
+CREATE TABLE friendships (
+    low_user_id BIGINT NOT NULL,
+    high_user_id BIGINT NOT NULL,
+    created_at DATE,
+    intimacy DOUBLE NOT NULL,
+    low_friend_alias VARCHAR(20),
+    low_interest_score DOUBLE NOT NULL,
+    low_last_interacted_at DATETIME(6),
+    low_is_muted BOOLEAN NOT NULL,
+    low_is_routable BOOLEAN NOT NULL,
+    high_friend_alias VARCHAR(20),
+    high_interest_score DOUBLE NOT NULL,
+    high_last_interacted_at DATETIME(6),
+    high_is_muted BOOLEAN NOT NULL,
+    high_is_routable BOOLEAN NOT NULL,
+    PRIMARY KEY (low_user_id, high_user_id),
+    KEY idx_friendships_high_low (high_user_id, low_user_id),
+    CONSTRAINT chk_friendships_user_order CHECK (low_user_id < high_user_id),
+    CONSTRAINT fk_friendships_low_user FOREIGN KEY (low_user_id) REFERENCES users (user_id),
+    CONSTRAINT fk_friendships_high_user FOREIGN KEY (high_user_id) REFERENCES users (user_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
