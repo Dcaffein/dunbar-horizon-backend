@@ -42,12 +42,20 @@ public class Label {
         this.labelName = labelName;
     }
 
+    public static Label restore(String id, String labelName, UserReference owner, Set<UserReference> members) {
+        return new Label(id, labelName, owner, new HashSet<>(members));
+    }
+
+    public Set<UserReference> getMembers() {
+        return Set.copyOf(members);
+    }
+
     void applyNewLabelName(String newLabelName) {
         validateName(newLabelName);
         this.labelName = newLabelName;
     }
 
-    private void validateName(String name) {
+    public static void validateName(String name) {
         if (name == null || name.isBlank() || name.length() > NAME_MAX_LENGTH) {
             throw new InvalidLabelNameException();
         }
