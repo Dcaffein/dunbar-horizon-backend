@@ -82,10 +82,14 @@ public class FriendRecognition {
     }
 
     public void updateFriendAlias(String newAlias) {
+        validateFriendAlias(newAlias);
+        this.friendAlias = newAlias;
+    }
+
+    public static void validateFriendAlias(String newAlias) {
         if (newAlias != null && newAlias.length() > Friendship.ALIAS_MAX_LENGTH) {
             throw new InvalidFriendAliasException();
         }
-        this.friendAlias = newAlias;
     }
 
     public String getFriendAlias() {

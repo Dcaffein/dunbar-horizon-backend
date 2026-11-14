@@ -3,6 +3,8 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
+import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -116,11 +118,8 @@ class FriendshipMysqlRepositoryTest {
         // given
         Friendship original = friendship(low, high);
         repository.create(original);
-        Friendship locked = repository.findByIdForUpdate(original.getId()).orElseThrow();
-
         // when
-        locked.updateUserFields(high.getId(), "", true, false);
-        repository.updateUserFields(locked, high.getId());
+        repository.updateUserFields(high.getId(), low.getId(), "", true, false);
 
         // then
         Friendship updated = repository.findById(original.getId()).orElseThrow();
@@ -135,6 +134,45 @@ class FriendshipMysqlRepositoryTest {
                 .containsExactly(51.0, 32.0);
         assertThat(updated.getRecognitions()).extracting(FriendRecognition::getLastInteractedAt)
                 .containsExactly(INTERACTED_AT, INTERACTED_AT.plusDays(1));
+    }
+
+    @Test
+    @DisplayName("동일 값을 다시 보내거나 수정 필드가 없어도 존재하는 관계의 요청은 성공한다")
+    void updateUserFields_AllowsUnchangedSettings_ExistingRelationship() {
+        // given
+        Friendship original = friendship(low, high);
+        repository.create(original);
+
+        // when
+        repository.updateUserFields(low.getId(), high.getId(), "from low", null, null);
+        repository.updateUserFields(high.getId(), low.getId(), null, null, null);
+
+        // then
+        assertThat(repository.findById(original.getId()).orElseThrow().getFriendAlias(low.getId()))
+                .isEqualTo("from low");
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 관계에 설정 변경이나 빈 요청을 보내면 기존 예외가 발생한다")
+    void updateUserFields_ThrowsNotFound_MissingRelationship() {
+        assertThatThrownBy(() -> repository.updateUserFields(low.getId(), high.getId(), null, false, null))
+                .isInstanceOf(FriendshipNotFoundException.class);
+        assertThatThrownBy(() -> repository.updateUserFields(low.getId(), high.getId(), null, null, null))
+                .isInstanceOf(FriendshipNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("별명 검증에 실패하면 함께 요청한 다른 설정도 바뀌지 않는다")
+    void updateUserFields_RejectsEntireUpdate_InvalidAlias() {
+        // given
+        Friendship original = friendship(low, high);
+        repository.create(original);
+
+        // when & then
+        assertThatThrownBy(() -> repository.updateUserFields(high.getId(), low.getId(),
+                "a".repeat(Friendship.ALIAS_MAX_LENGTH + 1), true, null))
+                .isInstanceOf(InvalidFriendAliasException.class);
+        assertThat(repository.findById(original.getId()).orElseThrow().isMuted(high.getId())).isFalse();
     }
 
     @Test

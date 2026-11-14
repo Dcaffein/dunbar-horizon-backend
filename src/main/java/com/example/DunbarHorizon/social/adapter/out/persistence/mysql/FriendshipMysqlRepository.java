@@ -4,6 +4,9 @@ import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipCreationRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -20,11 +23,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @RequiredArgsConstructor
-public class FriendshipMysqlRepository implements FriendshipCreationRepository {
+public class FriendshipMysqlRepository implements FriendshipRepository, FriendshipCreationRepository {
 
     private static final String PAIR = "low_user_id = :low AND high_user_id = :high";
     private static final String SELECT_PAIR = "SELECT * FROM friendships WHERE " + PAIR;
@@ -55,6 +59,10 @@ public class FriendshipMysqlRepository implements FriendshipCreationRepository {
             UNION ALL
             SELECT low_user_id FROM friendships WHERE high_user_id = :userId AND low_user_id IN (:candidateIds)
             """;
+    private static final String ACTIVE_PAIR = """
+            EXISTS (SELECT 1 FROM users WHERE user_id = low_user_id AND status = 'ACTIVE')
+            AND EXISTS (SELECT 1 FROM users WHERE user_id = high_user_id AND status = 'ACTIVE')
+            """;
 
     private final NamedParameterJdbcTemplate jdbc;
     private final SocialUserMysqlRepository users;
@@ -76,18 +84,11 @@ public class FriendshipMysqlRepository implements FriendshipCreationRepository {
         jdbc.update(INSERT, parameters);
     }
 
+    @Override
     public Optional<Friendship> findById(String id) {
-        return findPair(id, SELECT_PAIR);
-    }
-
-    // The caller keeps the lock through the settings update in the same transaction.
-    public Optional<Friendship> findByIdForUpdate(String id) {
-        return findPair(id, SELECT_PAIR + " FOR UPDATE");
-    }
-
-    private Optional<Friendship> findPair(String id, String sql) {
         return UserPairKey.parse(id)
-                .flatMap(pair -> restore(jdbc.query(sql, pair.parameters(), FriendshipRow::read)).stream().findFirst());
+                .flatMap(pair -> restore(jdbc.query(SELECT_PAIR, pair.parameters(), FriendshipRow::read))
+                        .stream().findFirst());
     }
 
     @Override
@@ -122,23 +123,148 @@ public class FriendshipMysqlRepository implements FriendshipCreationRepository {
         return activeFriendIds(userId, ids);
     }
 
+    @Override
     public void updateUserFields(Friendship friendship, Long userId) {
-        String side = userId < friendship.getFriend(userId).getId() ? "low" : "high";
-        UserPairKey pair = UserPairKey.parse(friendship.getId()).orElseThrow();
-        var parameters = new MapSqlParameterSource(pair.parameters())
-                .addValue("alias", friendship.getFriendAlias(userId), Types.VARCHAR)
-                .addValue("muted", friendship.isMuted(userId))
-                .addValue("routable", friendship.isRoutable(userId));
-        jdbc.update("""
-                UPDATE friendships
-                SET %1$s_friend_alias = :alias, %1$s_is_muted = :muted, %1$s_is_routable = :routable
-                WHERE %2$s
-                """.formatted(side, PAIR), parameters);
+        updateUserFields(userId, friendship.getFriend(userId).getId(), friendship.getFriendAlias(userId),
+                friendship.isMuted(userId), friendship.isRoutable(userId));
+    }
+
+    public void updateUserFields(Long userId, Long friendId, String alias, Boolean muted, Boolean routable) {
+        FriendRecognition.validateFriendAlias(alias);
+        var pair = UserPairKey.of(userId, friendId);
+        var parameters = new MapSqlParameterSource(pair.parameters());
+        String side = userId < friendId ? "low" : "high";
+        var changes = new StringJoiner(", ");
+        if (alias != null) {
+            changes.add(side + "_friend_alias = :alias");
+            parameters.addValue("alias", alias.isEmpty() ? null : alias, Types.VARCHAR);
+        }
+        if (muted != null) {
+            changes.add(side + "_is_muted = :muted");
+            parameters.addValue("muted", muted);
+        }
+        if (routable != null) {
+            changes.add(side + "_is_routable = :routable");
+            parameters.addValue("routable", routable);
+        }
+
+        String where = " WHERE " + PAIR + " AND " + ACTIVE_PAIR;
+        boolean found = changes.length() == 0
+                ? Boolean.TRUE.equals(jdbc.queryForObject(
+                        "SELECT EXISTS (SELECT 1 FROM friendships" + where + ")", parameters, Boolean.class))
+                : jdbc.update("UPDATE friendships SET " + changes + where, parameters) > 0;
+        if (!found) {
+            throw new FriendshipNotFoundException(userId, friendId);
+        }
     }
 
     public void delete(String friendshipId) {
         UserPairKey.parse(friendshipId)
                 .ifPresent(pair -> jdbc.update("DELETE FROM friendships WHERE " + PAIR, pair.parameters()));
+    }
+
+    @Override
+    public List<Friendship> findAllByIdsForUpdate(Collection<String> ids) {
+        List<Object[]> pairs = pairParameters(ids);
+        if (pairs.isEmpty()) {
+            return List.of();
+        }
+        return restore(jdbc.query("""
+                SELECT * FROM friendships FORCE INDEX (PRIMARY)
+                WHERE (low_user_id, high_user_id) IN (:pairs)
+                ORDER BY low_user_id, high_user_id
+                FOR UPDATE
+                """, Map.of("pairs", pairs), FriendshipRow::read));
+    }
+
+    @Override
+    public void saveInterestScores(Collection<Friendship> friendships) {
+        if (friendships.isEmpty()) {
+            return;
+        }
+        var parameters = new MapSqlParameterSource();
+        var rows = new StringJoiner(", ");
+        int index = 0;
+        for (Friendship friendship : friendships) {
+            var pair = UserPairKey.parse(friendship.getId()).orElseThrow();
+            var sides = friendship.getRecognitions().stream()
+                    .sorted(Comparator.comparing(recognition -> recognition.getUser().getId()))
+                    .toList();
+            String suffix = Integer.toString(index++);
+            rows.add("""
+                    ROW(:low%1$s, :high%1$s, :lowScore%1$s, :highScore%1$s,
+                        CAST(:lowTime%1$s AS DATETIME(6)), CAST(:highTime%1$s AS DATETIME(6)), :intimacy%1$s)
+                    """.formatted(suffix));
+            parameters.addValue("low" + suffix, pair.low())
+                    .addValue("high" + suffix, pair.high())
+                    .addValue("lowScore" + suffix, sides.getFirst().getInterestScore())
+                    .addValue("highScore" + suffix, sides.getLast().getInterestScore())
+                    .addValue("lowTime" + suffix, sides.getFirst().getLastInteractedAt(), Types.TIMESTAMP)
+                    .addValue("highTime" + suffix, sides.getLast().getLastInteractedAt(), Types.TIMESTAMP)
+                    .addValue("intimacy" + suffix, friendship.getIntimacy());
+        }
+        jdbc.update("""
+                UPDATE friendships f
+                JOIN (VALUES %s) AS scores (low_id, high_id, low_score, high_score, low_time, high_time, intimacy)
+                  ON f.low_user_id = scores.low_id AND f.high_user_id = scores.high_id
+                SET f.low_interest_score = scores.low_score,
+                    f.high_interest_score = scores.high_score,
+                    f.low_last_interacted_at = scores.low_time,
+                    f.high_last_interacted_at = scores.high_time,
+                    f.intimacy = scores.intimacy
+                """.formatted(rows), parameters);
+    }
+
+    @Override
+    public void applyDecay(double rate, double threshold, LocalDateTime decayTime) {
+        // In a single-table MySQL UPDATE, intimacy reads the scores assigned above it.
+        jdbc.update("""
+                UPDATE friendships FORCE INDEX (PRIMARY)
+                SET low_interest_score = CASE
+                        WHEN low_last_interacted_at <= :decayTime AND low_interest_score > :threshold
+                        THEN GREATEST(low_interest_score * :rate, :threshold) ELSE low_interest_score END,
+                    high_interest_score = CASE
+                        WHEN high_last_interacted_at <= :decayTime AND high_interest_score > :threshold
+                        THEN GREATEST(high_interest_score * :rate, :threshold) ELSE high_interest_score END,
+                    intimacy = SQRT((low_interest_score / (low_interest_score + :convergence))
+                                  * (high_interest_score / (high_interest_score + :convergence)))
+                WHERE (low_last_interacted_at <= :decayTime OR high_last_interacted_at <= :decayTime)
+                  AND
+                """ + ACTIVE_PAIR + " ORDER BY low_user_id, high_user_id",
+                Map.of("rate", rate, "threshold", threshold, "decayTime", decayTime,
+                        "convergence", FriendRecognition.CONVERGENCE_K));
+    }
+
+    @Override
+    public List<FriendshipArchiveCandidate> findArchiveCandidates(double threshold) {
+        return jdbc.query("""
+                SELECT low_user_id, high_user_id, created_at FROM friendships
+                WHERE intimacy <= :threshold AND
+                """ + ACTIVE_PAIR, Map.of("threshold", threshold), (row, index) -> {
+            var pair = new UserPairKey(row.getLong("low_user_id"), row.getLong("high_user_id"));
+            return new FriendshipArchiveCandidate(pair.id(), pair.low(), pair.high(),
+                    row.getObject("created_at", LocalDate.class));
+        });
+    }
+
+    @Override
+    public void deleteAllByIds(Collection<String> ids) {
+        List<Object[]> pairs = pairParameters(ids);
+        if (!pairs.isEmpty()) {
+            jdbc.update("""
+                    DELETE FROM friendships WHERE (low_user_id, high_user_id) IN (:pairs)
+                    ORDER BY low_user_id, high_user_id
+                    """, Map.of("pairs", pairs));
+        }
+    }
+
+    private static List<Object[]> pairParameters(Collection<String> ids) {
+        return ids.stream()
+                .map(UserPairKey::parse)
+                .flatMap(Optional::stream)
+                .distinct()
+                .map(pair -> new Object[]{pair.low(), pair.high()})
+                .toList();
     }
 
     private static void bindRecognition(MapSqlParameterSource parameters, String side, FriendRecognition recognition) {
