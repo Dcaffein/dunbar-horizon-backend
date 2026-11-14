@@ -18,6 +18,7 @@ import com.example.DunbarHorizon.social.domain.label.exception.LabelNotFoundExce
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Service
 @RequiredArgsConstructor
 @Transactional(transactionManager = "transactionManager", isolation = Isolation.READ_COMMITTED)
 public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase {

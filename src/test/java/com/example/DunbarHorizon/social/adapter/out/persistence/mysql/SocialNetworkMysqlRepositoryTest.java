@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
-import com.example.DunbarHorizon.social.application.service.MySqlSocialNetworkQueryService;
+import com.example.DunbarHorizon.social.application.service.SocialNetworkQueryService;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.social.domain.friend.SocialNetworkExposurePolicy;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
@@ -20,12 +20,12 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
-@Import({SocialNetworkMysqlRepository.class, MySqlSocialNetworkQueryService.class, FriendshipMysqlRepository.class,
+@Import({SocialNetworkMysqlRepository.class, SocialNetworkQueryService.class, FriendshipMysqlRepository.class,
         SocialUserMysqlRepository.class, SocialNetworkExposurePolicy.class})
 class SocialNetworkMysqlRepositoryTest {
 
     @Autowired private SocialNetworkMysqlRepository repository;
-    @Autowired private MySqlSocialNetworkQueryService queryService;
+    @Autowired private SocialNetworkQueryService queryService;
     @Autowired private TestEntityManager em;
     @Autowired private JdbcTemplate jdbc;
 

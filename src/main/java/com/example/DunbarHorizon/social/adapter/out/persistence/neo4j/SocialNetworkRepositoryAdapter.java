@@ -9,11 +9,9 @@ import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.neo4j.core.Neo4jClient;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-@Repository
 @RequiredArgsConstructor
 public class SocialNetworkRepositoryAdapter implements SocialNetworkRepository {
 

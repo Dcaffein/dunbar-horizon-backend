@@ -13,7 +13,6 @@ import org.neo4j.driver.Record;
 import org.neo4j.driver.types.Node;
 import org.neo4j.driver.types.Relationship;
 import org.springframework.data.neo4j.core.Neo4jClient;
-import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -26,7 +25,6 @@ import java.util.Set;
 
 import static com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.schema.SocialGraphSchema.*;
 
-@Repository
 @RequiredArgsConstructor
 public class FriendshipRepositoryAdapter implements FriendshipRepository {
 

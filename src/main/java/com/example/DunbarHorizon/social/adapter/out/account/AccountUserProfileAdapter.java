@@ -4,13 +4,11 @@ import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
 import com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.UserProfilePort;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-@Component
 @RequiredArgsConstructor
 public class AccountUserProfileAdapter implements UserProfilePort {
 

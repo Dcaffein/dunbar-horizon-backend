@@ -10,11 +10,13 @@ import com.example.DunbarHorizon.social.domain.friend.FriendshipArchivePolicy;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.repository.ArchivedFriendshipRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Service
 @RequiredArgsConstructor
 public class MySqlFriendshipLifecycleService implements FriendshipCommandUseCase {
 

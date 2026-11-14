@@ -4,11 +4,9 @@ import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
-@Service
 @RequiredArgsConstructor
 public class FriendshipDecayService {
 

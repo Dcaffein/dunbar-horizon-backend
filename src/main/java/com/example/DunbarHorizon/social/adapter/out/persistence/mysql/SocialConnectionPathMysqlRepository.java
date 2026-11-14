@@ -4,12 +4,14 @@ import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathRes
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult.IntermediaryResult;
 import com.example.DunbarHorizon.social.application.port.out.SocialConnectionPathRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Repository
 @RequiredArgsConstructor
 public class SocialConnectionPathMysqlRepository implements SocialConnectionPathRepository {
 

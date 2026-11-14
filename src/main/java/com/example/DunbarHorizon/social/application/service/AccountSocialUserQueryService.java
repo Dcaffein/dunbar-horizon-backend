@@ -7,9 +7,11 @@ import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPor
 import com.example.DunbarHorizon.social.application.port.out.SocialUserProfileReader;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@Service
 @RequiredArgsConstructor
 public class AccountSocialUserQueryService implements SocialUserQueryUseCase {
 

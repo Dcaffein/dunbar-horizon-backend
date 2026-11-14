@@ -15,12 +15,14 @@ import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsEx
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestNotFoundException;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
 
+@Service
 @RequiredArgsConstructor
 @Transactional(transactionManager = "transactionManager")
 public class MySqlFriendRequestActionService implements FriendRequesterActionUseCase, FriendRequestReceiverActionUseCase {

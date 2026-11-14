@@ -7,7 +7,6 @@ import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenc
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.neo4j.core.mapping.Constants;
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext;
-import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
@@ -15,7 +14,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-@Repository
 @RequiredArgsConstructor
 public class LabelRepositoryAdapter implements LabelRepository {
 

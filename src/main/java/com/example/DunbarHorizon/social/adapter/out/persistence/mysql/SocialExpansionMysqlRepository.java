@@ -3,11 +3,13 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
 import com.example.DunbarHorizon.social.application.port.out.SocialExpansionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.util.List;
 import java.util.Map;
 
+@Repository
 @RequiredArgsConstructor
 public class SocialExpansionMysqlRepository implements SocialExpansionRepository {
 

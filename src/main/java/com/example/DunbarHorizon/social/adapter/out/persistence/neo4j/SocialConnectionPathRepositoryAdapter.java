@@ -4,12 +4,10 @@ import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathRes
 import com.example.DunbarHorizon.social.application.port.out.SocialConnectionPathRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.neo4j.core.Neo4jClient;
-import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Repository
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class SocialConnectionPathRepositoryAdapter implements SocialConnectionPathRepository {

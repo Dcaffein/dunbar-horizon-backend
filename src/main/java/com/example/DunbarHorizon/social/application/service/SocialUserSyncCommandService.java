@@ -5,10 +5,8 @@ import com.example.DunbarHorizon.global.event.user.UserSyncIntegrationEvent;
 import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 
-@Service
 @RequiredArgsConstructor
 public class SocialUserSyncCommandService {
 

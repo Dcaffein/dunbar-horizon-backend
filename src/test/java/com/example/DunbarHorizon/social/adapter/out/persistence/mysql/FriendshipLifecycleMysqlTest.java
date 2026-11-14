@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ArchivedFriendshipJpaRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.neo4j.ArchivedFriendshipRepositoryAdapter;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ArchivedFriendshipRepositoryAdapter;
 import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.application.service.MySqlFriendshipLifecycleService;

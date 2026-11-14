@@ -9,14 +9,14 @@ import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestInv
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
 import lombok.RequiredArgsConstructor;
-import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Neo4jTransactional(readOnly = true)
+@Transactional(readOnly = true)
 public class FriendRequestQueryService implements FriendRequestQueryUseCase {
     private final FriendRequestRepository friendRequestRepository;
 

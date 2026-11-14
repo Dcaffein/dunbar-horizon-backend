@@ -12,9 +12,7 @@ import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenc
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
-import org.springframework.stereotype.Service;
 
-@Service
 @RequiredArgsConstructor
 @Neo4jTransactional
 public class FriendRequestRequesterActionService implements FriendRequesterActionUseCase {

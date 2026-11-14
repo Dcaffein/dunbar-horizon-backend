@@ -4,11 +4,9 @@ import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionRe
 import com.example.DunbarHorizon.social.application.port.out.SocialExpansionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.neo4j.core.Neo4jClient;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-@Repository
 @RequiredArgsConstructor
 public class SocialExpansionRepositoryAdapter implements SocialExpansionRepository {
 

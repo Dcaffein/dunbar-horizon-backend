@@ -12,9 +12,7 @@ import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepos
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
-import org.springframework.stereotype.Service;
 
-@Service
 @RequiredArgsConstructor
 @Neo4jTransactional
 public class FriendRequestReceiverActionService implements FriendRequestReceiverActionUseCase {

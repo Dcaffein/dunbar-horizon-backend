@@ -8,6 +8,7 @@ import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMem
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelNameException;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSourceUtils;
@@ -21,6 +22,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
+@Repository
 @RequiredArgsConstructor
 public class LabelMysqlRepository implements LabelMembershipRepository {
 

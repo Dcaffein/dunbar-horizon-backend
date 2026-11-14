@@ -10,12 +10,10 @@ import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepos
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @RequiredArgsConstructor
-@Service
 public class FriendshipCommandService implements FriendshipCommandUseCase {
     private final FriendshipRepository friendshipRepository;
     private final ApplicationEventPublisher eventPublisher;

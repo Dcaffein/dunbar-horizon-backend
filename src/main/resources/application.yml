@@ -1,6 +1,14 @@
 spring:
   application:
     name: dunbarhorizon
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.neo4j.Neo4jAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jReactiveDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jReactiveRepositoriesAutoConfiguration
+      - ac.simons.neo4j.migrations.springframework.boot.autoconfigure.MigrationsAutoConfiguration
 
   security:
     oauth2:
@@ -55,15 +63,7 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MySQL8Dialect
 
-  # Graph DB (Neo4j)
-  neo4j:
-    uri: ${NEO4J_URI:bolt://localhost:7687}
-    authentication:
-      username: ${NEO4J_USERNAME:neo4j}
-      password: ${NEO4J_PASSWORD}
   data:
-    neo4j:
-      database: ${NEO4J_USERNAME:dev}
     mongodb:
       uri: ${MONGO_URI:mongodb://localhost:27017/dunbar_horizon_notification}
       auto-index-creation: true
@@ -92,15 +92,8 @@ jwt:
   access-expiration-seconds: ${JWT_ACCESS_EXPIRATION}
   refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION:604800}
 
-org:
-  neo4j:
-    migrations:
-      database: ${spring.data.neo4j.database}
-
 logging:
   level:
     root: INFO
     org.springframework.security: DEBUG
     org.springframework.web: INFO
-    org.springframework.data.neo4j.cypher: ${LOG_LEVEL_NEO4J:INFO}
-    org.neo4j.driver: INFO

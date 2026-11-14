@@ -7,6 +7,7 @@ import com.example.DunbarHorizon.social.application.port.out.SocialNetworkReposi
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
@@ -15,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@Repository
 @RequiredArgsConstructor
 public class SocialNetworkMysqlRepository implements SocialNetworkRepository {
 

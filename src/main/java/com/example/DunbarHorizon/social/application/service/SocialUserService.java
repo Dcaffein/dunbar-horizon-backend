@@ -7,7 +7,6 @@ import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
 
 import java.util.Collection;
@@ -16,7 +15,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-@Service
 @RequiredArgsConstructor
 @Neo4jTransactional
 public class SocialUserService implements SocialUserQueryUseCase {

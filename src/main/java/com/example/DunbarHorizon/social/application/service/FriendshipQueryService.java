@@ -7,7 +7,7 @@ import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
-import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
@@ -16,7 +16,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
-@Neo4jTransactional(readOnly = true)
+@Transactional(readOnly = true)
 public class FriendshipQueryService implements FriendshipQueryUseCase {
 
     private final FriendshipRepository friendshipRepository;

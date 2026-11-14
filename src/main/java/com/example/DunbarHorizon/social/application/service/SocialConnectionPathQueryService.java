@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.application.service;
 
-import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
+import org.springframework.transaction.annotation.Transactional;
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.port.in.SocialConnectionPathQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.SocialConnectionPathRepository;
@@ -12,7 +12,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Neo4jTransactional(readOnly = true)
+@Transactional(readOnly = true)
 public class SocialConnectionPathQueryService implements SocialConnectionPathQueryUseCase {
 
     private static final int INTERMEDIARY_LIMIT = 3;

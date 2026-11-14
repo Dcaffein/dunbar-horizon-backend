@@ -1,7 +1,5 @@
-package com.example.DunbarHorizon.social.adapter.out.persistence.neo4j;
+package com.example.DunbarHorizon.social.adapter.out.persistence.jpa;
 
-import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ArchivedFriendship;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ArchivedFriendshipJpaRepository;
 import com.example.DunbarHorizon.social.domain.friend.repository.ArchivedFriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

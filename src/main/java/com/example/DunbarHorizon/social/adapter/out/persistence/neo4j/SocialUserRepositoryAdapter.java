@@ -5,7 +5,6 @@ import com.example.DunbarHorizon.social.domain.socialUser.SocialUser;
 import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.UserReference;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -13,7 +12,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-@Repository
 @RequiredArgsConstructor
 public class SocialUserRepositoryAdapter implements SocialUserRepository {
 

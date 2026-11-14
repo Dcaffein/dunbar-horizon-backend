@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.in.scheduler;
 
-import com.example.DunbarHorizon.social.application.service.FriendshipDecayService;
+import com.example.DunbarHorizon.social.application.service.MySqlFriendshipScoreService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -52,8 +52,8 @@ class FriendshipDecaySchedulerTest {
     static class SchedulingConfig {
 
         @Bean
-        FriendshipDecayService friendshipDecayService() {
-            return mock(FriendshipDecayService.class);
+        MySqlFriendshipScoreService friendshipScores() {
+            return mock(MySqlFriendshipScoreService.class);
         }
     }
 }

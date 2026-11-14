@@ -6,13 +6,11 @@ import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMem
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.repository.LabelRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@Component
 @RequiredArgsConstructor
 public class LabelMemberEnroller {
     private final FriendshipRepository friendshipRepository;

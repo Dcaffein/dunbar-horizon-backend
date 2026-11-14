@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
-import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
+import org.springframework.transaction.annotation.Transactional;
 import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkRepository;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
@@ -35,7 +35,7 @@ public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
         return socialNetworkRepository.getLabelCustomNetwork(userId, labelId, DunbarCircle.KINSHIP,PRUNING_EDGE_MIN, PRUNING_EDGE_RANGE);
     }
 
-    @Neo4jTransactional(readOnly = true)
+    @Transactional(readOnly = true)
     @Override
     public List<MutualFriendEdgeResult> getNetworkEdges(Long userId, Long targetId, List<Long> baseNetworkFriendIds) {
         if (baseNetworkFriendIds == null || baseNetworkFriendIds.isEmpty()) return List.of();

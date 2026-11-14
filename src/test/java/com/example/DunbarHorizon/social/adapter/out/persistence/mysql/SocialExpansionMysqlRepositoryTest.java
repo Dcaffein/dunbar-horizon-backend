@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.buzz.adapter.out.social.AnchorRecipientStrategyAdapter;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
-import com.example.DunbarHorizon.social.application.service.MySqlSocialExpansionQueryService;
+import com.example.DunbarHorizon.social.application.service.SocialExpansionQueryService;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.DisplayName;
@@ -18,12 +18,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
-@Import({SocialExpansionMysqlRepository.class, MySqlSocialExpansionQueryService.class,
+@Import({SocialExpansionMysqlRepository.class, SocialExpansionQueryService.class,
         SocialUserMysqlRepository.class, FriendshipMysqlRepository.class, AnchorRecipientStrategyAdapter.class})
 class SocialExpansionMysqlRepositoryTest {
 
     @Autowired private SocialExpansionMysqlRepository repository;
-    @Autowired private MySqlSocialExpansionQueryService queryService;
+    @Autowired private SocialExpansionQueryService queryService;
     @Autowired private AnchorRecipientStrategyAdapter buzzRecipients;
     @Autowired private TestEntityManager em;
     @Autowired private JdbcTemplate jdbc;

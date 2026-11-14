@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import com.example.DunbarHorizon.social.application.eventListener.FriendInteractionEventListener;
-import com.example.DunbarHorizon.social.application.service.InteractionScoreService;
+import com.example.DunbarHorizon.social.application.service.MySqlFriendshipScoreService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,7 +24,7 @@ class FriendInteractionEventListenerTest {
     private FriendInteractionEventListener listener;
 
     @Mock
-    private InteractionScoreService interactionScoreService;
+    private MySqlFriendshipScoreService friendshipScores;
 
     private static final Long USER_A = 1L;
     private static final Long USER_B = 2L;
@@ -37,7 +37,7 @@ class FriendInteractionEventListenerTest {
 
         listener.handleUserInteraction(event);
 
-        verify(interactionScoreService).applyInteraction(USER_A, USER_B, InteractionType.VISIT);
+        verify(friendshipScores).applyInteraction(USER_A, USER_B, InteractionType.VISIT);
     }
 
     @Test
@@ -50,8 +50,7 @@ class FriendInteractionEventListenerTest {
 
         listener.handleBatchMutualInteraction(event);
 
-        verify(interactionScoreService).applyFlagConclusion(
-                flagId, HOST, participants, InteractionType.FLAG_ENDED, ScoreDirection.GRANT);
+        verify(friendshipScores).applyFlagConclusion(HOST, participants, InteractionType.FLAG_ENDED, ScoreDirection.GRANT);
     }
 
     @Test
@@ -64,7 +63,6 @@ class FriendInteractionEventListenerTest {
 
         listener.handleBatchMutualInteraction(event);
 
-        verify(interactionScoreService).applyFlagConclusion(
-                flagId, HOST, participants, InteractionType.FLAG_PRESERVED, ScoreDirection.REVOKE);
+        verify(friendshipScores).applyFlagConclusion(HOST, participants, InteractionType.FLAG_PRESERVED, ScoreDirection.REVOKE);
     }
 }

@@ -16,13 +16,11 @@ import com.example.DunbarHorizon.social.domain.socialUser.repository.SocialUserR
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import com.example.DunbarHorizon.global.annotation.Neo4jTransactional;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
-@Service
 @RequiredArgsConstructor
 public class LabelService implements LabelCommandUseCase, LabelQueryUseCase {
     private final LabelRepository labelRepository;
