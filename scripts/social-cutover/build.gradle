@@ -1,0 +1,36 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+dependencies {
+    implementation platform('org.springframework.boot:spring-boot-dependencies:3.4.0')
+    implementation 'org.neo4j.driver:neo4j-java-driver:5.25.0'
+    runtimeOnly 'com.mysql:mysql-connector-j:9.1.0'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.3'
+    testImplementation 'org.testcontainers:junit-jupiter:1.20.4'
+    testImplementation 'org.testcontainers:neo4j:1.20.4'
+    testImplementation 'org.testcontainers:mysql:1.20.4'
+    testImplementation 'org.flywaydb:flyway-core:10.20.1'
+    testRuntimeOnly 'org.flywaydb:flyway-mysql:10.20.1'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.11.3'
+}
+
+application {
+    mainClass = 'cutover.SocialCutover'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    systemProperty 'cutover.migrations', file('../../src/main/resources/db/migration').absolutePath
+}
