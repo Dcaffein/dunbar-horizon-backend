@@ -7,7 +7,7 @@ import com.example.DunbarHorizon.social.application.port.in.LabelCommandUseCase;
 import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepository;
 import com.example.DunbarHorizon.social.application.port.out.LabelMembershipRepository;
-import com.example.DunbarHorizon.social.application.port.out.SocialUserProfileReader;
+import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelFactory;
@@ -33,7 +33,7 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
     private final LabelMembershipRepository labels;
     private final LabelFactory labelFactory;
     private final FriendshipLockRepository friendships;
-    private final SocialUserProfileReader users;
+    private final UserProfileRepository userProfileRepository;
 
     @Override
     public Label createLabel(Long ownerId, String name) {
@@ -117,7 +117,7 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
     @Override
     @Transactional(readOnly = true)
     public List<LabelMemberResult> getLabelMembers(Long ownerId, String labelId) {
-        var profiles = users.findActiveProfiles(ownedLabel(ownerId, labelId).getMemberIds());
+        var profiles = userProfileRepository.findActiveProfiles(ownedLabel(ownerId, labelId).getMemberIds());
         return profiles.values().stream().map(LabelMemberResult::from).toList();
     }
 
@@ -134,7 +134,7 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
     }
 
     private SocialUserProfile activeProfile(Long id) {
-        return Optional.ofNullable(users.findActiveProfiles(List.of(id)).get(id))
+        return Optional.ofNullable(userProfileRepository.findActiveProfiles(List.of(id)).get(id))
                 .orElseThrow(() -> new UserReferenceNotFoundException(id));
     }
 }

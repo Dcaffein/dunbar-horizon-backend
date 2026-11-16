@@ -1,15 +1,15 @@
 # Backend Architecture & Coding Conventions
 
-이 프로젝트는 Domain-Driven Design(DDD) 기반의 Hexagonal Architecture(Ports and Adapters)를 따르고, 유스케이스를 Command와 Query로 나눈다. 분리 기준은 §1의 service 항목에 있다.
+이 프로젝트는 Domain-Driven Design(DDD) 기반의 Hexagonal Architecture(Ports and Adapters)를 따른다. 유스케이스를 서비스로 나누는 기준은 §1의 service 항목에 있다.
 
 ## 1. 패키지 및 계층 분리 원칙 (Layered Architecture)
 아래는 도메인 패키지(예: `account`, `social`, `flag`, `buzz`)의 책임별 기본 배치 기준이다. 각 도메인에는 필요한 패키지와 구성 요소만 둔다.
 
 - **domain**: 핵심 비즈니스 로직, Entity, Value Object, Domain Event, 자체 Exception, Repository Interface(Port)가 위치한다.
 - **application**:
-    - `port/in`: UseCase 인터페이스 (Command와 Query를 분리).
+    - `port/in`: UseCase 인터페이스. 나누는 기준은 service와 같다.
     - `port/out`: 외부 시스템 호출이나 데이터 저장을 위한 인터페이스.
-    - `service`: UseCase의 구현체. 도메인 객체를 지휘한다. 트랜잭션(`@Transactional`) 관리가 포함된다. 조회 전용 유스케이스는 `QueryService`로 분리한다. 명령 쪽도 따로 둘 만큼 커지면 `CommandService`를 짝으로 만든다.
+    - `service`: UseCase의 구현체. 도메인 객체를 지휘한다. 트랜잭션(`@Transactional`) 관리가 포함된다. 애그리거트 하나의 유스케이스는 서비스 하나(`XxxService`)에 둔다. 쓰는 곳이나 바뀌는 이유가 갈리면 그때 나눈다. 다른 모듈이 쓰는 조회는 `QueryService`, 이벤트로 움직이는 흐름은 그 책임 이름의 서비스로 뗀다(예: Friendship의 Query·Command·Score). 조회 메서드에는 `@Transactional(readOnly = true)`를 단다.
     - `eventListener`: Spring `@EventListener` 또는 `@TransactionalEventListener`를 이용한 도메인 이벤트 처리기.
     - `dto`: UseCase 내부 계층에서 사용하는 DTO 또는 Result 객체.
 - **adapter**:

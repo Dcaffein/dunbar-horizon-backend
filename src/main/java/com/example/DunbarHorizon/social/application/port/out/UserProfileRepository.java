@@ -5,6 +5,6 @@ import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 import java.util.Collection;
 import java.util.Map;
 
-public interface SocialUserProfileReader {
+public interface UserProfileRepository {
     Map<Long, SocialUserProfile> findActiveProfiles(Collection<Long> ids);
 }

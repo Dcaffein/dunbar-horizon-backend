@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.FriendshipDetailResult;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipIdRepository;
-import com.example.DunbarHorizon.social.application.port.out.SocialUserProfileReader;
+import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
 import com.example.DunbarHorizon.social.application.port.in.FriendshipQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPort;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
@@ -24,12 +24,12 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
     private final FriendshipRepository friendshipRepository;
     private final FriendshipIdRepository friendshipIdRepository;
     private final ImageUrlResolverPort imageUrlResolverPort;
-    private final SocialUserProfileReader profiles;
+    private final UserProfileRepository userProfileRepository;
 
     @Override
     public List<FriendshipDetailResult> getDetailedFriendships(Long userId) {
         List<Friendship> friendships = friendshipRepository.findByUserId(userId);
-        var friends = profiles.findActiveProfiles(friendships.stream().map(friendship -> friendship.getFriendId(userId)).toList());
+        var friends = userProfileRepository.findActiveProfiles(friendships.stream().map(friendship -> friendship.getFriendId(userId)).toList());
 
         return friendships.stream()
                 .map(friendship -> FriendshipDetailResult.from(friendship, userId, friends.get(friendship.getFriendId(userId)), imageUrlResolverPort))
@@ -44,7 +44,7 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
     @Override
     public FriendshipDetailResult getFriend(Long userId, Long targetId) {
         Friendship friendship = friendshipRepository.findBetween(userId, targetId).orElseThrow(() -> new FriendshipNotFoundException(userId, targetId));
-        var friend = profiles.findActiveProfiles(List.of(targetId)).get(targetId);
+        var friend = userProfileRepository.findActiveProfiles(List.of(targetId)).get(targetId);
         return FriendshipDetailResult.from(friendship, userId, friend, imageUrlResolverPort);
     }
 

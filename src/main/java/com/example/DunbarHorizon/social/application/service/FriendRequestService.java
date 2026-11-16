@@ -1,0 +1,108 @@
+package com.example.DunbarHorizon.social.application.service;
+
+import com.example.DunbarHorizon.global.exception.ErrorContext;
+import com.example.DunbarHorizon.social.application.dto.FriendRequestDirection;
+import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
+import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
+import com.example.DunbarHorizon.social.application.port.in.FriendRequestUseCase;
+import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
+import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;
+import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
+import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
+import com.example.DunbarHorizon.social.domain.friend.FriendshipBroker;
+import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestInvalidException;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestNotFoundException;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(transactionManager = "transactionManager")
+public class FriendRequestService implements FriendRequestUseCase {
+
+    private final FriendRequestRepository friendRequestRepository;
+    private final FriendshipRepository friendshipRepository;
+    private final UserProfileRepository userProfileRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
+
+    @Override
+    public FriendRequestResult sendRequest(Long currentUserId, Long counterpartId) {
+        Map<Long, SocialUserProfile> profiles = userProfileRepository.findActiveProfiles(List.of(currentUserId, counterpartId));
+        SocialUserProfile requester = requireActiveProfile(profiles, currentUserId);
+        SocialUserProfile receiver = requireActiveProfile(profiles, counterpartId);
+        boolean existingFriendship = friendshipRepository.existsFriendshipBetween(currentUserId, counterpartId);
+        boolean existingRequest = friendRequestRepository.existsBetween(currentUserId, counterpartId);
+        FriendRequest request = FriendshipBroker.propose(currentUserId, counterpartId, existingFriendship, existingRequest);
+        friendRequestRepository.create(request);
+        return FriendRequestResult.from(request, currentUserId, requester, receiver);
+    }
+
+    @Override
+    public void cancelRequest(Long currentUserId, Long counterpartId) {
+        FriendRequest request = friendRequestRepository.findBetween(currentUserId, counterpartId)
+                .orElseThrow(() -> new FriendRequestNotFoundException(currentUserId, counterpartId));
+        request.cancel(currentUserId);
+        friendRequestRepository.delete(request);
+    }
+
+    @Override
+    public void updateStatus(Long currentUserId, Long counterpartId, FriendRequestStatus status) {
+        FriendRequest request = friendRequestRepository.findBetween(currentUserId, counterpartId)
+                .orElseThrow(() -> new FriendRequestNotFoundException(currentUserId, counterpartId));
+        request.updateStatus(currentUserId, status);
+        if (!request.isAccepted()) {
+            return;
+        }
+
+        friendRequestRepository.delete(request);
+        boolean existingFriendship = friendshipRepository.existsFriendshipBetween(request.getRequesterId(), request.getReceiverId());
+        friendshipRepository.create(FriendshipBroker.createFrom(request, existingFriendship));
+        SocialUserProfile receiver = requireActiveProfile(
+                userProfileRepository.findActiveProfiles(List.of(request.getReceiverId())), request.getReceiverId());
+        applicationEventPublisher.publishEvent(
+                new FriendRequestAcceptedEvent(request.getRequesterId(), request.getReceiverId(), receiver.nickname()));
+    }
+
+    private static SocialUserProfile requireActiveProfile(Map<Long, SocialUserProfile> profiles, Long id) {
+        SocialUserProfile profile = profiles.get(id);
+        if (profile == null) {
+            throw new UserReferenceNotFoundException(id);
+        }
+        return profile;
+    }
+
+    @Override
+    @Transactional(transactionManager = "transactionManager", readOnly = true)
+    public List<FriendRequestResult> getRequests(Long currentUserId, FriendRequestDirection direction,
+                                                 FriendRequestStatus status) {
+        if (direction == FriendRequestDirection.SENT) {
+            if (status != null) {
+                throw new FriendRequestInvalidException(SocialErrorCode.FRIEND_REQUEST_STATUS_NOT_ALLOWED_FOR_SENT,
+                        ErrorContext.of("status", status));
+            }
+            return toResults(currentUserId, friendRequestRepository.findAllByRequesterId(currentUserId));
+        }
+        FriendRequestStatus receivedStatus = status == null ? FriendRequestStatus.PENDING : status;
+        return toResults(currentUserId, friendRequestRepository.findAllByReceiverIdAndStatus(currentUserId, receivedStatus));
+    }
+
+    private List<FriendRequestResult> toResults(Long viewerId, List<FriendRequest> found) {
+        var ids = found.stream().flatMap(request -> Stream.of(request.getRequesterId(), request.getReceiverId()))
+                .distinct().toList();
+        var users = userProfileRepository.findActiveProfiles(ids);
+        return found.stream()
+                .map(request -> FriendRequestResult.from(request, viewerId,
+                        users.get(request.getRequesterId()), users.get(request.getReceiverId())))
+                .toList();
+    }
+}

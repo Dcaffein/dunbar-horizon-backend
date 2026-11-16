@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
 import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
-import com.example.DunbarHorizon.social.application.port.out.SocialUserProfileReader;
+import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
-public class SocialUserMysqlRepository implements SocialUserProfileReader {
+public class SocialUserMysqlRepository implements UserProfileRepository {
 
     private final NamedParameterJdbcTemplate jdbc;
 

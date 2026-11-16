@@ -1,24 +1,25 @@
-package com.example.DunbarHorizon.social.application;
+package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
 import com.example.DunbarHorizon.social.application.dto.FriendRequestDirection;
-import com.example.DunbarHorizon.social.application.service.FriendRequestQueryService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestInvalidException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 import java.util.Map;
 import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
-import com.example.DunbarHorizon.social.application.port.out.SocialUserProfileReader;
+import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
 
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -28,16 +29,22 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class FriendRequestQueryServiceTest {
+class FriendRequestServiceTest {
 
     @InjectMocks
-    private FriendRequestQueryService queryService;
+    private FriendRequestService service;
 
     @Mock
     private FriendRequestRepository friendRequestRepository;
 
     @Mock
-    private SocialUserProfileReader profiles;
+    private FriendshipRepository friendshipRepository;
+
+    @Mock
+    private UserProfileRepository userProfileRepository;
+
+    @Mock
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @Test
     @DisplayName("수신된 친구 요청 목록을 PENDING 상태로 조회한다")
@@ -49,11 +56,11 @@ class FriendRequestQueryServiceTest {
         given(friendRequestRepository.findAllByReceiverIdAndStatus(userId, FriendRequestStatus.PENDING))
                 .willReturn(List.of(request));
 
-        given(profiles.findActiveProfiles(List.of(1L, 2L)))
+        given(userProfileRepository.findActiveProfiles(List.of(1L, 2L)))
                 .willReturn(Map.of(2L, new SocialUserProfile(2L, "receiver", null)));
 
         // when
-        List<FriendRequestResult> result = queryService.getRequests(
+        List<FriendRequestResult> result = service.getRequests(
                 userId, FriendRequestDirection.RECEIVED, null);
 
         // then
@@ -69,7 +76,7 @@ class FriendRequestQueryServiceTest {
                 .willReturn(List.of());
 
         // when
-        List<FriendRequestResult> result = queryService.getRequests(
+        List<FriendRequestResult> result = service.getRequests(
                 userId, FriendRequestDirection.RECEIVED, null);
 
         // then
@@ -88,7 +95,7 @@ class FriendRequestQueryServiceTest {
                 .willReturn(List.of(request));
 
         // when
-        List<FriendRequestResult> result = queryService.getRequests(
+        List<FriendRequestResult> result = service.getRequests(
                 userId, FriendRequestDirection.RECEIVED, FriendRequestStatus.HIDDEN);
 
         // then
@@ -106,7 +113,7 @@ class FriendRequestQueryServiceTest {
         given(friendRequestRepository.findAllByRequesterId(userId)).willReturn(List.of(request));
 
         // when
-        List<FriendRequestResult> result = queryService.getRequests(
+        List<FriendRequestResult> result = service.getRequests(
                 userId, FriendRequestDirection.SENT, null);
 
         // then
@@ -125,7 +132,7 @@ class FriendRequestQueryServiceTest {
         given(friendRequestRepository.findAllByRequesterId(userId)).willReturn(List.of(request));
 
         // when
-        List<FriendRequestResult> result = queryService.getRequests(
+        List<FriendRequestResult> result = service.getRequests(
                 userId, FriendRequestDirection.SENT, null);
 
         // then
@@ -136,7 +143,7 @@ class FriendRequestQueryServiceTest {
     @Test
     @DisplayName("sent 조회에 status를 사용하면 400 예외가 발생한다")
     void getRequests_SentWithStatus_ThrowsException() {
-        assertThatThrownBy(() -> queryService.getRequests(
+        assertThatThrownBy(() -> service.getRequests(
                 1L, FriendRequestDirection.SENT, FriendRequestStatus.HIDDEN))
                 .isInstanceOf(FriendRequestInvalidException.class);
     }
@@ -149,7 +156,7 @@ class FriendRequestQueryServiceTest {
                 .willReturn(List.of());
 
         // when
-        List<FriendRequestResult> result = queryService.getRequests(
+        List<FriendRequestResult> result = service.getRequests(
                 1L, FriendRequestDirection.RECEIVED, FriendRequestStatus.ACCEPTED);
 
         // then

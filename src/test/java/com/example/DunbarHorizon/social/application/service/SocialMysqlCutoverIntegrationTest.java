@@ -7,7 +7,7 @@ import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionRe
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult.IntermediaryResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
-import com.example.DunbarHorizon.social.application.port.in.FriendRequestReceiverActionUseCase;
+import com.example.DunbarHorizon.social.application.port.in.FriendRequestUseCase;
 import com.example.DunbarHorizon.social.application.port.in.FriendshipCommandUseCase;
 import com.example.DunbarHorizon.social.application.port.in.FriendshipQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
@@ -66,7 +66,7 @@ class SocialMysqlCutoverIntegrationTest {
     @Autowired private TransactionTemplate transactions;
     @Autowired private FriendshipQueryUseCase friendships;
     @Autowired private FriendshipCommandUseCase friendshipChanges;
-    @Autowired private FriendRequestReceiverActionUseCase requests;
+    @Autowired private FriendRequestUseCase requests;
     @Autowired private SocialNetworkQueryUseCase network;
     @Autowired private SocialExpansionQueryUseCase expansion;
     @Autowired private SocialConnectionPathQueryUseCase paths;
