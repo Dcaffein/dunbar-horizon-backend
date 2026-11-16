@@ -33,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.doAnswer;
 
 @JpaRepositoryTest
@@ -47,7 +46,7 @@ class FriendshipLifecycleMysqlTest {
     @Autowired private UserJpaRepository users;
     @Autowired private FriendshipCommandService lifecycle;
     @Autowired private MySqlLabelService labelService;
-    @Autowired private LabelMysqlRepository labels;
+    @MockitoSpyBean private LabelMysqlRepository labels;
     @Autowired private JdbcTemplate jdbc;
     @MockitoSpyBean private FriendshipMysqlRepository friendships;
 
@@ -94,7 +93,7 @@ class FriendshipLifecycleMysqlTest {
     void brokeUpWith_RollsBackBothMemberships_OnFailure() {
         // given
         connectWithBothMemberships(FriendRecognition.INITIAL_RAW_SCORE);
-        failAfterDeletion();
+        failAfterLabelCleanup();
 
         // when & then
         assertThatThrownBy(() -> lifecycle.brokeUpWith(first, second)).isInstanceOf(IllegalStateException.class);
@@ -139,24 +138,25 @@ class FriendshipLifecycleMysqlTest {
     }
 
     @Test
-    @DisplayName("친구 끊기가 먼저 관계를 잠그면 뒤따르는 멤버 교체는 관계가 없음을 확인한다")
-    void replaceMembers_RejectsEndedFriend_WhenBreakupLocksFirst() throws Exception {
+    @DisplayName("친구 끊기가 먼저 관계를 삭제하면 뒤따르는 멤버 교체는 관계가 없음을 확인한다")
+    void replaceMembers_RejectsEndedFriend_WhenBreakupDeletesFirst() throws Exception {
         // given
         connectWithBothMemberships(FriendRecognition.INITIAL_RAW_SCORE);
-        var beforeDelete = new CountDownLatch(1);
+        var deleted = new CountDownLatch(1);
         var finishBreakup = new CountDownLatch(1);
         var replacementStarted = new CountDownLatch(1);
         doAnswer(call -> {
-            beforeDelete.countDown();
+            Object result = call.callRealMethod();
+            deleted.countDown();
             await(finishBreakup);
-            return call.callRealMethod();
-        }).when(friendships).deleteAll(anyCollection());
+            return result;
+        }).when(friendships).deleteBetween(second, first);
 
         // when
         try (var workers = Executors.newFixedThreadPool(2)) {
             var breakup = workers.submit(() -> lifecycle.brokeUpWith(second, first));
             try {
-                await(beforeDelete);
+                await(deleted);
                 var replacement = workers.submit(() -> {
                     replacementStarted.countDown();
                     assertThatThrownBy(() -> labelService.replaceLabelMembers(first, firstLabel, List.of(second)))
@@ -175,11 +175,11 @@ class FriendshipLifecycleMysqlTest {
         assertEnded();
     }
 
-    private void failAfterDeletion() {
+    private void failAfterLabelCleanup() {
         doAnswer(call -> {
             call.callRealMethod();
-            throw new IllegalStateException("interrupted after relationship deletion");
-        }).when(friendships).deleteAll(anyCollection());
+            throw new IllegalStateException("interrupted after label cleanup");
+        }).when(labels).removeMembersBetween(first, second);
     }
 
     @Test

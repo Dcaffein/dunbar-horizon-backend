@@ -35,5 +35,5 @@ public interface FriendshipRepository {
 
     void applyDecay(double rate, double threshold, LocalDateTime decayTime);
 
-    void deleteAll(Collection<Friendship> friendships);
+    boolean deleteBetween(Long userId, Long friendId);
 }

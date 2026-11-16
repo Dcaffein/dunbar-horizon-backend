@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
 import com.example.DunbarHorizon.social.application.port.out.LabelMembershipRepository;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelNameException;
@@ -18,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 
 @Repository
 @RequiredArgsConstructor
@@ -109,19 +107,10 @@ public class LabelMysqlRepository implements LabelMembershipRepository {
     }
 
     @Override
-    public void removeMembersForEndedFriendships(Collection<Friendship> friendships) {
-        List<Object[]> directions = friendships.stream()
-                .flatMap(friendship -> {
-                    Long low = friendship.getLower().getOwnerId();
-                    Long high = friendship.getHigher().getOwnerId();
-                    return Stream.of(new Object[]{low, high}, new Object[]{high, low});
-                })
-                .toList();
-        if (directions.isEmpty()) {
-            return;
-        }
+    public void removeMembersBetween(Long userId, Long friendId) {
+        List<Object[]> directions = List.of(new Object[]{userId, friendId}, new Object[]{friendId, userId});
 
-        // The caller holds these friendships, so their affected memberships cannot be added concurrently.
+        // The caller deleted this friendship first, so its memberships cannot be added concurrently.
         List<String> affectedLabels = jdbc.queryForList("""
                 SELECT DISTINCT l.id FROM labels l
                 JOIN label_members lm ON lm.label_id = l.id

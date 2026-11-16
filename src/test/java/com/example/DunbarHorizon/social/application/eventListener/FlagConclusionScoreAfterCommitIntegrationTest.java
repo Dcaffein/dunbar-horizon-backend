@@ -149,7 +149,8 @@ class FlagConclusionScoreAfterCommitIntegrationTest {
     }
 
     private void deleteMembers() {
-        friendshipRepository.deleteAll(friendships);
+        friendships.forEach(created -> friendshipRepository.deleteBetween(
+                created.getLower().getOwnerId(), created.getHigher().getOwnerId()));
         for (long memberId : MEMBER_IDS) {
             jdbc.update("DELETE FROM users WHERE user_id = ?", memberId);
         }

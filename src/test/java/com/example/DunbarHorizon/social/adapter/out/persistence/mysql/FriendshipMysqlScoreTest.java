@@ -63,7 +63,7 @@ class FriendshipMysqlScoreTest {
 
     @AfterEach
     void tearDown() {
-        friendships.deleteAll(friendships.findAllAmongForUpdate(List.of(low, middle, high)));
+        jdbc.update("DELETE FROM friendships WHERE low_user_id IN (?, ?, ?)", low, middle, high);
         users.deleteAllById(List.of(low, middle, high));
     }
 

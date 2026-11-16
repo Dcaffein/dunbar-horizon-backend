@@ -11,8 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 public class FriendshipCommandService implements FriendshipCommandUseCase {
@@ -32,13 +30,9 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
     @Override
     @Transactional(transactionManager = "transactionManager", isolation = Isolation.READ_COMMITTED)
     public void brokeUpWith(Long currentUserId, Long friendId) {
-        Friendship locked = friendships.findBetweenForUpdate(currentUserId, friendId)
-                .orElseThrow(() -> new FriendshipNotFoundException(currentUserId, friendId));
-        removeFriendships(List.of(locked));
-    }
-
-    private void removeFriendships(List<Friendship> locked) {
-        labels.removeMembersForEndedFriendships(locked);
-        friendships.deleteAll(locked);
+        if (!friendships.deleteBetween(currentUserId, friendId)) {
+            throw new FriendshipNotFoundException(currentUserId, friendId);
+        }
+        labels.removeMembersBetween(currentUserId, friendId);
     }
 }

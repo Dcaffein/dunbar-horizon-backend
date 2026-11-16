@@ -242,16 +242,9 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
     }
 
     @Override
-    public void deleteAll(Collection<Friendship> friendships) {
-        List<Object[]> pairs = pairParameters(friendships.stream()
-                .map(friendship -> new UserPairKey(friendship.getLower().getOwnerId(), friendship.getHigher().getOwnerId()))
-                .toList());
-        if (!pairs.isEmpty()) {
-            jdbc.update("""
-                    DELETE FROM friendships WHERE (low_user_id, high_user_id) IN (:pairs)
-                    ORDER BY low_user_id, high_user_id
-                    """, Map.of("pairs", pairs));
-        }
+    public boolean deleteBetween(Long userId, Long friendId) {
+        var key = UserPairKey.of(userId, friendId);
+        return jdbc.update("DELETE FROM friendships WHERE " + PAIR + " AND " + ACTIVE_PAIR, key.parameters()) > 0;
     }
 
     private static List<Object[]> pairParameters(Collection<UserPairKey> keys) {

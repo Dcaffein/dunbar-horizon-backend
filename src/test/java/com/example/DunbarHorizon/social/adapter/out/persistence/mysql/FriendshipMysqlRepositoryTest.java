@@ -169,7 +169,7 @@ class FriendshipMysqlRepositoryTest {
         Friendship original = friendship(low, high);
         repository.create(original);
         Friendship loaded = repository.findBetween(low.getId(), high.getId()).orElseThrow();
-        repository.deleteAll(List.of(loaded));
+        repository.deleteBetween(low.getId(), high.getId());
 
         // when & then
         assertThatThrownBy(() -> repository.updateUserFields(loaded, low.getId()))
@@ -225,6 +225,8 @@ class FriendshipMysqlRepositoryTest {
         assertThat(repository.findByUserId(low.getId())).isEmpty();
         assertThat(repository.findFriendIdsByMuteStatus(low.getId(), true)).isEmpty();
         assertThat(repository.filterFriendIdsAmong(low.getId(), List.of(high.getId()))).isEmpty();
+        assertThat(repository.deleteBetween(low.getId(), high.getId())).isFalse();
+        assertThat(repository.existsFriendshipBetween(low.getId(), high.getId())).isTrue();
     }
 
     @Test
@@ -285,11 +287,13 @@ class FriendshipMysqlRepositoryTest {
         repository.create(original);
 
         // when
-        repository.deleteAll(List.of(repository.findBetween(high.getId(), low.getId()).orElseThrow()));
+        boolean deleted = repository.deleteBetween(high.getId(), low.getId());
 
         // then
+        assertThat(deleted).isTrue();
         assertThat(repository.findBetween(low.getId(), high.getId())).isEmpty();
         assertThat(repository.existsFriendshipBetween(high.getId(), low.getId())).isFalse();
+        assertThat(repository.deleteBetween(low.getId(), high.getId())).isFalse();
         assertThat(repository.findByUserId(low.getId())).isEmpty();
         assertThat(repository.findByUserId(high.getId())).isEmpty();
     }
