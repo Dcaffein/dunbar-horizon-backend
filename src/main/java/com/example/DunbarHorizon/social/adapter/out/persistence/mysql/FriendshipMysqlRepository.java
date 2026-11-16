@@ -97,11 +97,6 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
         return findPair(SELECT_PAIR + " FOR UPDATE", userId, friendId);
     }
 
-    private Optional<Friendship> findPair(String sql, Long userId, Long friendId) {
-        var key = UserPairKey.of(userId, friendId);
-        return restore(jdbc.query(sql, key.parameters(), FriendshipRow::read)).stream().findFirst();
-    }
-
     @Override
     public List<Friendship> findAllBetweenForUpdate(Long userId, Collection<Long> friendIds) {
         return lockPairs(friendIds.stream().map(friendId -> UserPairKey.of(userId, friendId)).toList());
@@ -120,15 +115,15 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
     }
 
     @Override
-    public boolean existsFriendshipBetween(Long userId, Long targetId) {
-        var key = UserPairKey.of(userId, targetId);
+    public boolean existsFriendshipBetween(Long userId, Long friendId) {
+        var key = UserPairKey.of(userId, friendId);
         return Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT EXISTS (SELECT 1 FROM friendships WHERE " + PAIR + ")", key.parameters(), Boolean.class));
     }
 
     @Override
-    public boolean existsFriendshipForUpdate(Long userId, Long targetId) {
-        var key = UserPairKey.of(userId, targetId);
+    public boolean existsFriendshipForUpdate(Long userId, Long friendId) {
+        var key = UserPairKey.of(userId, friendId);
         return !jdbc.queryForList("SELECT low_user_id FROM friendships WHERE " + PAIR + " FOR UPDATE",
                 key.parameters(), Long.class).isEmpty();
     }
@@ -170,19 +165,6 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
         if (updated == 0) {
             throw new FriendshipNotFoundException(ownerId, friendId);
         }
-    }
-
-    private List<Friendship> lockPairs(Collection<UserPairKey> keys) {
-        List<Object[]> pairs = pairParameters(keys);
-        if (pairs.isEmpty()) {
-            return List.of();
-        }
-        return restore(jdbc.query("""
-                SELECT * FROM friendships FORCE INDEX (PRIMARY)
-                WHERE (low_user_id, high_user_id) IN (:pairs)
-                ORDER BY low_user_id, high_user_id
-                FOR UPDATE
-                """, Map.of("pairs", pairs), FriendshipRow::read));
     }
 
     @Override
@@ -245,6 +227,24 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
     public boolean deleteBetween(Long userId, Long friendId) {
         var key = UserPairKey.of(userId, friendId);
         return jdbc.update("DELETE FROM friendships WHERE " + PAIR + " AND " + ACTIVE_PAIR, key.parameters()) > 0;
+    }
+
+    private Optional<Friendship> findPair(String sql, Long userId, Long friendId) {
+        var key = UserPairKey.of(userId, friendId);
+        return restore(jdbc.query(sql, key.parameters(), FriendshipRow::read)).stream().findFirst();
+    }
+
+    private List<Friendship> lockPairs(Collection<UserPairKey> keys) {
+        List<Object[]> pairs = pairParameters(keys);
+        if (pairs.isEmpty()) {
+            return List.of();
+        }
+        return restore(jdbc.query("""
+                SELECT * FROM friendships FORCE INDEX (PRIMARY)
+                WHERE (low_user_id, high_user_id) IN (:pairs)
+                ORDER BY low_user_id, high_user_id
+                FOR UPDATE
+                """, Map.of("pairs", pairs), FriendshipRow::read));
     }
 
     private static List<Object[]> pairParameters(Collection<UserPairKey> keys) {
@@ -310,8 +310,8 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
                     rs.getBoolean(side + "_is_muted"), rs.getBoolean(side + "_is_routable"));
         }
 
-        FriendRecognition toRecognition(long userId) {
-            return FriendRecognition.restore(userId, alias, score, interactedAt, muted, routable);
+        FriendRecognition toRecognition(long ownerId) {
+            return FriendRecognition.restore(ownerId, alias, score, interactedAt, muted, routable);
         }
     }
 }
