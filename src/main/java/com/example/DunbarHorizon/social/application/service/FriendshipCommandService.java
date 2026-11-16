@@ -19,7 +19,7 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
     private final LabelMembershipRepository labels;
 
     @Override
-    @Transactional(transactionManager = "transactionManager", isolation = Isolation.READ_COMMITTED)
+    @Transactional(transactionManager = "transactionManager")
     public void updateFriendship(Long currentUserId, Long friendId, FriendshipUpdateCommand command) {
         Friendship friendship = friendships.findBetween(currentUserId, friendId)
                 .orElseThrow(() -> new FriendshipNotFoundException(currentUserId, friendId));
