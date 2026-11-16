@@ -14,7 +14,5 @@ public interface FriendshipRepository {
 
     boolean existsFriendshipBetween(Long userId, Long friendId);
 
-    void saveSettings(Friendship friendship, Long ownerId);
-
     boolean deleteBetween(Long userId, Long friendId);
 }

@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendshipRepositoryAdapter;
 import com.example.DunbarHorizon.social.application.service.MySqlFriendRequestActionService;
 import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
@@ -42,13 +43,15 @@ import static org.mockito.Mockito.doReturn;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendRequestMysqlRepository.class, FriendshipMysqlRepository.class, MySqlFriendRequestActionService.class,
+@Import({FriendRequestMysqlRepository.class, FriendshipMysqlRepository.class, FriendshipRepositoryAdapter.class,
+        MySqlFriendRequestActionService.class,
         SocialUserMysqlRepository.class,
         FriendRequestMysqlRepositoryTest.AcceptedEvents.class})
 class FriendRequestMysqlRepositoryTest {
 
     @Autowired private MySqlFriendRequestActionService actions;
-    @MockitoSpyBean private FriendshipMysqlRepository friendships;
+    @MockitoSpyBean private FriendshipMysqlRepository friendshipLocks;
+    @Autowired private FriendshipRepositoryAdapter friendships;
     @Autowired private UserJpaRepository users;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private AcceptedEvents acceptedEvents;
@@ -158,7 +161,7 @@ class FriendRequestMysqlRepositoryTest {
         friendships.create(Friendship.restore(LocalDate.of(2026, 1, 1),
                 FriendRecognition.restore(low, "기존", 21.4, null, false, true),
                 FriendRecognition.restore(high, null, 21.4, null, false, true)));
-        doReturn(false).when(friendships).existsFriendshipForUpdate(low, high);
+        doReturn(false).when(friendshipLocks).existsFriendshipForUpdate(low, high);
 
         // when & then
         assertThatThrownBy(() -> actions.updateStatus(high, low, FriendRequestStatus.ACCEPTED))

@@ -5,11 +5,7 @@ import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepos
 import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
-import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -29,36 +25,16 @@ import java.util.StringJoiner;
 @Repository
 @RequiredArgsConstructor
 public class FriendshipMysqlRepository
-        implements FriendshipRepository, FriendshipScoreRepository, FriendshipLockRepository, FriendshipIdRepository {
+        implements FriendshipScoreRepository, FriendshipLockRepository, FriendshipIdRepository {
 
     private static final String ACTIVE_PAIR = """
             EXISTS (SELECT 1 FROM users WHERE user_id = low_user_id AND status = 'ACTIVE')
               AND EXISTS (SELECT 1 FROM users WHERE user_id = high_user_id AND status = 'ACTIVE')""";
 
-    private static final String INSERT = """
-            INSERT INTO friendships (
-                low_user_id, high_user_id, created_at,
-                low_friend_alias, low_interest_score, low_last_interacted_at, low_is_muted, low_is_routable,
-                high_friend_alias, high_interest_score, high_last_interacted_at, high_is_muted, high_is_routable
-            ) VALUES (
-                :low, :high, :createdAt,
-                :lowAlias, :lowScore, :lowInteractedAt, :lowMuted, :lowRoutable,
-                :highAlias, :highScore, :highInteractedAt, :highMuted, :highRoutable
-            )
-            """;
-
     private static final String SELECT_PAIR = """
             SELECT * FROM friendships
             WHERE low_user_id = :low AND high_user_id = :high
               AND %s
-            """.formatted(ACTIVE_PAIR);
-
-    private static final String EXISTS_PAIR = """
-            SELECT EXISTS (
-                SELECT 1 FROM friendships
-                WHERE low_user_id = :low AND high_user_id = :high
-                  AND %s
-            )
             """.formatted(ACTIVE_PAIR);
 
     private static final String LOCK_PAIR = """
@@ -74,14 +50,6 @@ public class FriendshipMysqlRepository
               AND %s
             ORDER BY low_user_id, high_user_id
             FOR UPDATE
-            """.formatted(ACTIVE_PAIR);
-
-    private static final String SELECT_BY_USER = """
-            SELECT * FROM friendships
-            WHERE low_user_id = :userId AND %1$s
-            UNION ALL
-            SELECT * FROM friendships
-            WHERE high_user_id = :userId AND %1$s
             """.formatted(ACTIVE_PAIR);
 
     private static final String SELECT_FRIEND_IDS_BY_MUTE_STATUS = """
@@ -100,13 +68,6 @@ public class FriendshipMysqlRepository
             WHERE high_user_id = :userId AND low_user_id IN (:candidateIds) AND %1$s
             """.formatted(ACTIVE_PAIR);
 
-    private static final String UPDATE_SETTINGS = """
-            UPDATE friendships
-            SET {side}_friend_alias = :alias, {side}_is_muted = :muted, {side}_is_routable = :routable
-            WHERE low_user_id = :low AND high_user_id = :high
-              AND %s
-            """.formatted(ACTIVE_PAIR);
-
     private static final String APPLY_DECAY = """
             UPDATE friendships FORCE INDEX (PRIMARY)
             SET low_interest_score = CASE
@@ -120,27 +81,7 @@ public class FriendshipMysqlRepository
             ORDER BY low_user_id, high_user_id
             """.formatted(ACTIVE_PAIR);
 
-    private static final String DELETE_PAIR = """
-            DELETE FROM friendships
-            WHERE low_user_id = :low AND high_user_id = :high
-              AND %s
-            """.formatted(ACTIVE_PAIR);
-
     private final NamedParameterJdbcTemplate jdbc;
-
-    @Override
-    public void create(Friendship friendship) {
-        try {
-            jdbc.update(INSERT, FriendshipRows.insertParameters(friendship));
-        } catch (DuplicateKeyException e) {
-            throw new AlreadyFriendsException(friendship.getLower().getOwnerId(), friendship.getHigher().getOwnerId());
-        }
-    }
-
-    @Override
-    public Optional<Friendship> findBetween(Long userId, Long friendId) {
-        return findPair(SELECT_PAIR, userId, friendId);
-    }
 
     @Override
     public Optional<Friendship> findBetweenForUpdate(Long userId, Long friendId) {
@@ -165,20 +106,9 @@ public class FriendshipMysqlRepository
     }
 
     @Override
-    public boolean existsFriendshipBetween(Long userId, Long friendId) {
-        var key = UserPairKey.of(userId, friendId);
-        return Boolean.TRUE.equals(jdbc.queryForObject(EXISTS_PAIR, key.parameters(), Boolean.class));
-    }
-
-    @Override
     public boolean existsFriendshipForUpdate(Long userId, Long friendId) {
         var key = UserPairKey.of(userId, friendId);
         return !jdbc.queryForList(LOCK_PAIR, key.parameters(), Long.class).isEmpty();
-    }
-
-    @Override
-    public List<Friendship> findByUserId(Long userId) {
-        return jdbc.query(SELECT_BY_USER, Map.of("userId", userId), FriendshipRows::read);
     }
 
     @Override
@@ -194,22 +124,6 @@ public class FriendshipMysqlRepository
         }
         return new HashSet<>(jdbc.queryForList(SELECT_FRIEND_IDS_AMONG,
                 Map.of("userId", userId, "candidateIds", candidateIds), Long.class));
-    }
-
-    @Override
-    public void saveSettings(Friendship friendship, Long ownerId) {
-        Long friendId = friendship.getFriendId(ownerId);
-        FriendRecognition low = friendship.getLower();
-        String side = low.getOwnerId().equals(ownerId) ? "low" : "high";
-        var parameters = new MapSqlParameterSource()
-                .addValue("low", low.getOwnerId())
-                .addValue("high", friendship.getHigher().getOwnerId())
-                .addValue("alias", FriendshipRows.storedAlias(friendship.getFriendAlias(ownerId)), Types.VARCHAR)
-                .addValue("muted", friendship.isMuted(ownerId))
-                .addValue("routable", friendship.isRoutable(ownerId));
-        if (jdbc.update(UPDATE_SETTINGS.replace("{side}", side), parameters) == 0) {
-            throw new FriendshipNotFoundException(ownerId, friendId);
-        }
     }
 
     @Override
@@ -249,12 +163,6 @@ public class FriendshipMysqlRepository
     @Override
     public void applyDecay(double rate, double threshold, LocalDateTime decayTime) {
         jdbc.update(APPLY_DECAY, Map.of("rate", rate, "threshold", threshold, "decayTime", decayTime));
-    }
-
-    @Override
-    public boolean deleteBetween(Long userId, Long friendId) {
-        var key = UserPairKey.of(userId, friendId);
-        return jdbc.update(DELETE_PAIR, key.parameters()) > 0;
     }
 
     private Optional<Friendship> findPair(String sql, Long userId, Long friendId) {

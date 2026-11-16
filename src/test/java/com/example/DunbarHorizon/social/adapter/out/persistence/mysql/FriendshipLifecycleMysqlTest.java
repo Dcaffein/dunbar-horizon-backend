@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendshipRepositoryAdapter;
 import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.service.MySqlLabelService;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Propagation;
@@ -37,7 +39,7 @@ import static org.mockito.Mockito.doAnswer;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipMysqlRepository.class, LabelMysqlRepository.class, SocialUserMysqlRepository.class,
+@Import({FriendshipMysqlRepository.class, FriendshipRepositoryAdapter.class, LabelMysqlRepository.class, SocialUserMysqlRepository.class,
         FriendshipCommandService.class, MySqlLabelService.class, LabelFactory.class, LabelNamePolicy.class})
 class FriendshipLifecycleMysqlTest {
 
@@ -48,7 +50,8 @@ class FriendshipLifecycleMysqlTest {
     @Autowired private MySqlLabelService labelService;
     @MockitoSpyBean private LabelMysqlRepository labels;
     @Autowired private JdbcTemplate jdbc;
-    @MockitoSpyBean private FriendshipMysqlRepository friendships;
+    @MockitoSpyBean private FriendshipMysqlRepository friendshipLocks;
+    @MockitoSpyBean private FriendshipRepositoryAdapter friendships;
 
     private Long first;
     private Long second;
@@ -113,7 +116,7 @@ class FriendshipLifecycleMysqlTest {
             additionLocked.countDown();
             await(resumeAddition);
             return exists;
-        }).when(friendships).existsFriendshipForUpdate(first, second);
+        }).when(friendshipLocks).existsFriendshipForUpdate(first, second);
 
         // when
         try (var workers = Executors.newFixedThreadPool(2)) {
@@ -223,6 +226,24 @@ class FriendshipLifecycleMysqlTest {
         assertThat(updated.isRoutable(first)).isFalse();
         assertThat(updated.isMuted(second)).isFalse();
         assertThat(updated.isRoutable(second)).isTrue();
+    }
+
+    @Test
+    @DisplayName("설정을 바꾸려고 읽은 관계가 커밋 전에 끊기면 설정 변경은 동시 수정 실패로 끝난다")
+    void updateFriendship_FailsConcurrentModification_DeletedAfterLoad() {
+        // given
+        connect(FriendRecognition.INITIAL_RAW_SCORE);
+        doAnswer(call -> {
+            Object loaded = call.callRealMethod();
+            jdbc.update("DELETE FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
+                    Math.min(first, second), Math.max(first, second));
+            return loaded;
+        }).when(friendships).findBetween(first, second);
+
+        // when & then
+        assertThatThrownBy(() -> lifecycle.updateFriendship(first, second,
+                new FriendshipUpdateCommand(first, second, "친구", null, null)))
+                .isInstanceOf(OptimisticLockingFailureException.class);
     }
 
     private void connect(double interestScore) {

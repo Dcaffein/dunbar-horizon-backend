@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.buzz.adapter.out.social.LabelRecipientStrategyAdapter;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendshipRepositoryAdapter;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.application.service.MySqlLabelService;
@@ -36,13 +37,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
-@Import({LabelMysqlRepository.class, FriendshipMysqlRepository.class, SocialUserMysqlRepository.class,
+@Import({LabelMysqlRepository.class, FriendshipMysqlRepository.class, FriendshipRepositoryAdapter.class, SocialUserMysqlRepository.class,
         MySqlLabelService.class, LabelFactory.class, LabelNamePolicy.class})
 class LabelMysqlRepositoryTest {
 
     @Autowired private TestEntityManager em;
     @Autowired private LabelMysqlRepository labels;
-    @Autowired private FriendshipMysqlRepository friendships;
+    @Autowired private FriendshipRepositoryAdapter friendships;
     @Autowired private MySqlLabelService service;
 
     private User owner;

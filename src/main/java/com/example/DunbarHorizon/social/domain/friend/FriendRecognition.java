@@ -1,18 +1,23 @@
 package com.example.DunbarHorizon.social.domain.friend;
 
 import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
+import jakarta.persistence.Embeddable;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Getter
+@Embeddable
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FriendRecognition {
 
     public static final double CONVERGENCE_K = 50.0;
 
     public static final double INITIAL_RAW_SCORE = 21.4;
 
-    private final Long ownerId;
+    private Long ownerId;
 
     private String friendAlias;
 
@@ -34,7 +39,7 @@ public class FriendRecognition {
     private FriendRecognition(Long ownerId, String friendAlias, double interestScore,
                               LocalDateTime lastInteractedAt, boolean isMuted, boolean isRoutable) {
         this.ownerId = ownerId;
-        this.friendAlias = friendAlias;
+        this.friendAlias = friendAlias == null || friendAlias.isEmpty() ? null : friendAlias;
         this.interestScore = interestScore;
         this.lastInteractedAt = lastInteractedAt;
         this.isMuted = isMuted;
