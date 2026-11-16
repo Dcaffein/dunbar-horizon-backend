@@ -55,10 +55,6 @@ public class Friendship {
         }
     }
 
-    public String getId() {
-        return generateCompositeId(lower.getUserId(), higher.getUserId());
-    }
-
     private FriendRecognition getSelfRecognition(Long userId) {
         if (lower.getUserId().equals(userId)) return lower;
         if (higher.getUserId().equals(userId)) return higher;
@@ -67,12 +63,6 @@ public class Friendship {
 
     private FriendRecognition getFriendRecognition(Long myId) {
         return getSelfRecognition(myId) == lower ? higher : lower;
-    }
-
-    public static String generateCompositeId(Long id1, Long id2) {
-        long min = Math.min(id1, id2);
-        long max = Math.max(id1, id2);
-        return min + "_" + max;
     }
 
     public Set<Long> getUserIds() {

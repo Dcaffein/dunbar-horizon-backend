@@ -5,10 +5,8 @@ import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.application.port.in.LabelCommandUseCase;
 import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipCreationRepository;
 import com.example.DunbarHorizon.social.application.port.out.LabelMembershipRepository;
 import com.example.DunbarHorizon.social.application.port.out.SocialUserProfileReader;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import com.example.DunbarHorizon.social.domain.label.Label;
@@ -34,7 +32,6 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
 
     private final LabelMembershipRepository labels;
     private final LabelFactory labelFactory;
-    private final FriendshipCreationRepository friendshipLocks;
     private final FriendshipRepository friendships;
     private final SocialUserProfileReader users;
 
@@ -64,7 +61,7 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
     @Override
     public void addMemberToLabel(Long ownerId, String labelId, Long memberId) {
         requireOwner(labels.findOwnerId(labelId), labelId, ownerId);
-        if (!friendshipLocks.existsFriendshipForUpdate(ownerId, memberId)) {
+        if (!friendships.existsFriendshipForUpdate(ownerId, memberId)) {
             throw new FriendshipNotFoundException(ownerId, memberId);
         }
         activeProfile(memberId);
@@ -76,8 +73,7 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
     public void replaceLabelMembers(Long ownerId, String labelId, List<Long> memberIds) {
         requireOwner(labels.findOwnerId(labelId), labelId, ownerId);
         List<Long> requested = memberIds == null ? List.of() : memberIds.stream().distinct().toList();
-        List<String> pairIds = requested.stream().map(id -> Friendship.generateCompositeId(ownerId, id)).toList();
-        Set<Long> valid = friendships.findAllByIdsForUpdate(pairIds).stream()
+        Set<Long> valid = friendships.findAllBetweenForUpdate(ownerId, requested).stream()
                 .map(friendship -> friendship.getFriendId(ownerId)).collect(Collectors.toSet());
         List<Long> invalid = requested.stream().filter(id -> !valid.contains(id)).toList();
         if (!invalid.isEmpty()) {

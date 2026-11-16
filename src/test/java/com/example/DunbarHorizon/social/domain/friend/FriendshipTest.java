@@ -111,22 +111,6 @@ class FriendshipTest {
     }
 
     @Test
-    @DisplayName("유저 ID 순서에 상관없이 항상 동일한 복합 ID가 생성되어야 한다")
-    void generateCompositeId_Consistency() {
-        // given
-        Long user1 = 1L;
-        Long user2 = 2L;
-
-        // when
-        Friendship friendship1 = new Friendship(user1, user2);
-        Friendship friendship2 = new Friendship(user2, user1);
-
-        // then
-        assertThat(friendship1.getId()).isEqualTo("1_2");
-        assertThat(friendship2.getId()).isEqualTo("1_2");
-    }
-
-    @Test
     @DisplayName("관심도 점수에 따라 친밀도가 정규화된 값의 기하평균으로 정확히 계산되어야 한다")
     void recalculateIntimacy_Success() {
         // given

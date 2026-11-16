@@ -24,6 +24,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +38,10 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 
 @JpaRepositoryTest
@@ -55,6 +61,7 @@ class FriendshipLifecycleMysqlTest {
     @Autowired private FriendshipArchivePolicy archivePolicy;
     @Autowired private JdbcTemplate jdbc;
     @MockitoSpyBean private FriendshipMysqlRepository friendships;
+    @MockitoSpyBean private NamedParameterJdbcTemplate namedJdbc;
 
     private Long first;
     private Long second;
@@ -66,7 +73,7 @@ class FriendshipLifecycleMysqlTest {
     void setUp() {
         first = users.save(User.createActive("first@mysql-friendship-lifecycle.test", "first")).getId();
         second = users.save(User.createActive("second@mysql-friendship-lifecycle.test", "second")).getId();
-        pairId = Friendship.generateCompositeId(first, second);
+        pairId = Math.min(first, second) + "_" + Math.max(first, second);
         firstLabel = labelService.createLabel(first, "내 라벨").getId();
         secondLabel = labelService.createLabel(second, "상대 라벨").getId();
     }
@@ -75,7 +82,8 @@ class FriendshipLifecycleMysqlTest {
     void tearDown() {
         labels.delete(firstLabel);
         labels.delete(secondLabel);
-        friendships.delete(pairId);
+        jdbc.update("DELETE FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
+                Math.min(first, second), Math.max(first, second));
         archives.deleteById(pairId);
         users.deleteAllById(List.of(first, second));
     }
@@ -86,7 +94,7 @@ class FriendshipLifecycleMysqlTest {
         // given
         connectWithBothMemberships(0.3);
         lifecycle.updateFriendship(second, first, new FriendshipUpdateCommand(second, first, "친구", null, null));
-        assertThat(friendships.findById(pairId).orElseThrow().getFriendAlias(second)).isEqualTo("친구");
+        assertThat(friendships.findBetween(first, second).orElseThrow().getFriendAlias(second)).isEqualTo("친구");
 
         // when
         lifecycle.brokeUpWith(second, first);
@@ -158,7 +166,7 @@ class FriendshipLifecycleMysqlTest {
             beforeDelete.countDown();
             await(finishBreakup);
             return call.callRealMethod();
-        }).when(friendships).deleteAllByIds(List.of(pairId));
+        }).when(friendships).deleteAll(anyCollection());
 
         // when
         try (var workers = Executors.newFixedThreadPool(2)) {
@@ -224,11 +232,13 @@ class FriendshipLifecycleMysqlTest {
             Object candidates = call.callRealMethod();
             try (var worker = Executors.newSingleThreadExecutor()) {
                 worker.submit(() -> jdbc.update("""
-                        UPDATE friendships SET intimacy = 0.3 WHERE low_user_id = ? AND high_user_id = ?
-                        """, first, second)).get(10, TimeUnit.SECONDS);
+                        UPDATE friendships SET low_interest_score = 30, high_interest_score = 30, intimacy = 0.375
+                        WHERE low_user_id = ? AND high_user_id = ?
+                        """, Math.min(first, second), Math.max(first, second))).get(10, TimeUnit.SECONDS);
             }
             return candidates;
-        }).when(friendships).findArchiveCandidates(threshold);
+        }).when(namedJdbc).query(argThat((String sql) -> sql != null && sql.contains("intimacy <= :threshold")),
+                anyMap(), any(RowMapper.class));
 
         // when
         lifecycle.archiveFriendships();
@@ -242,7 +252,7 @@ class FriendshipLifecycleMysqlTest {
         doAnswer(call -> {
             call.callRealMethod();
             throw new IllegalStateException("interrupted after relationship deletion");
-        }).when(friendships).deleteAllByIds(List.of(pairId));
+        }).when(friendships).deleteAll(anyCollection());
     }
 
     @Test
@@ -266,7 +276,7 @@ class FriendshipLifecycleMysqlTest {
         assertThatThrownBy(() -> lifecycle.updateFriendship(second, first, new FriendshipUpdateCommand(second, first,
                 "a".repeat(Friendship.ALIAS_MAX_LENGTH + 1), true, null)))
                 .isInstanceOf(InvalidFriendAliasException.class);
-        assertThat(friendships.findById(pairId).orElseThrow().isMuted(second)).isFalse();
+        assertThat(friendships.findBetween(first, second).orElseThrow().isMuted(second)).isFalse();
     }
 
     @Test
@@ -280,7 +290,7 @@ class FriendshipLifecycleMysqlTest {
         lifecycle.updateFriendship(first, second, new FriendshipUpdateCommand(first, second, "", null, false));
 
         // then
-        Friendship updated = friendships.findById(pairId).orElseThrow();
+        Friendship updated = friendships.findBetween(first, second).orElseThrow();
         assertThat(updated.getFriendAlias(first)).isEmpty();
         assertThat(updated.isMuted(first)).isTrue();
         assertThat(updated.isRoutable(first)).isFalse();

@@ -5,7 +5,6 @@ import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResu
 import com.example.DunbarHorizon.social.application.port.in.FriendRequestReceiverActionUseCase;
 import com.example.DunbarHorizon.social.application.port.in.FriendRequesterActionUseCase;
 import com.example.DunbarHorizon.social.application.port.out.FriendRequestCommandRepository;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipCreationRepository;
 import com.example.DunbarHorizon.social.application.port.out.SocialUserProfileReader;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
@@ -14,6 +13,7 @@ import com.example.DunbarHorizon.social.domain.friend.FriendshipBroker;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
 import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestNotFoundException;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,7 +29,7 @@ import java.util.Map;
 public class MySqlFriendRequestActionService implements FriendRequesterActionUseCase, FriendRequestReceiverActionUseCase {
 
     private final FriendRequestCommandRepository requests;
-    private final FriendshipCreationRepository friendships;
+    private final FriendshipRepository friendships;
     private final SocialUserProfileReader userProfiles;
     private final ApplicationEventPublisher events;
 

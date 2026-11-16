@@ -82,7 +82,7 @@ class SocialNetworkQueryServiceTest {
     void getNetworkEdges_직접_친구() {
         List<Long> baseNetworkFriendIds = List.of(20L, 30L);
         List<MutualFriendEdgeResult> expected = List.of(new MutualFriendEdgeResult(10L, 20L, 0.6));
-        given(friendshipRepository.findById(Friendship.generateCompositeId(1L, 10L)))
+        given(friendshipRepository.findBetween(1L, 10L))
                 .willReturn(Optional.of(friendship));
         given(friendship.getIntimacy()).willReturn(0.5);
         given(exposurePolicy.directFriendEdgeLimit(0.5)).willReturn(7);
@@ -100,7 +100,7 @@ class SocialNetworkQueryServiceTest {
     void getNetworkEdges_직접_친구가_아니면_2홉() {
         List<Long> baseNetworkFriendIds = List.of(20L, 30L);
         List<MutualFriendEdgeResult> expected = List.of(new MutualFriendEdgeResult(10L, 20L, null));
-        given(friendshipRepository.findById(Friendship.generateCompositeId(1L, 10L)))
+        given(friendshipRepository.findBetween(1L, 10L))
                 .willReturn(Optional.empty());
         given(exposurePolicy.twoHopContactEdgeLimit()).willReturn(5);
         given(socialNetworkRepository.getTwoHopContactEdgesForTarget(1L, 10L, baseNetworkFriendIds, 5)).willReturn(expected);

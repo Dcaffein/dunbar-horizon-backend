@@ -6,7 +6,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.SocialNetworkRepository;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.SocialNetworkExposurePolicy;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +38,7 @@ public class SocialNetworkQueryService implements SocialNetworkQueryUseCase {
     @Override
     public List<MutualFriendEdgeResult> getNetworkEdges(Long userId, Long targetId, List<Long> baseNetworkFriendIds) {
         if (baseNetworkFriendIds == null || baseNetworkFriendIds.isEmpty()) return List.of();
-        return friendshipRepository.findById(Friendship.generateCompositeId(userId, targetId))
+        return friendshipRepository.findBetween(userId, targetId)
                 .map(friendship -> socialNetworkRepository.getDirectFriendEdgesForTarget(
                         userId, targetId, baseNetworkFriendIds,
                         exposurePolicy.directFriendEdgeLimit(friendship.getIntimacy())))

@@ -56,7 +56,7 @@ class FriendshipMysqlRepositoryTest {
 
         // then
         assertThat(fromLow).singleElement().satisfies(friendship -> {
-            assertThat(friendship.getId()).isEqualTo(original.getId());
+            assertThat(friendship.getUserIds()).containsExactlyInAnyOrder(low.getId(), high.getId());
             assertThat(friendship.getFriendId(low.getId())).isEqualTo(high.getId());
             assertThat(friendship.getCreatedAt()).isEqualTo(CREATED_AT);
             assertThat(friendship.getIntimacy()).isEqualTo(INTIMACY);
@@ -66,7 +66,7 @@ class FriendshipMysqlRepositoryTest {
             assertThat(friendship.isRoutable(low.getId())).isFalse();
         });
         assertThat(fromHigh).singleElement().satisfies(friendship -> {
-            assertThat(friendship.getId()).isEqualTo(original.getId());
+            assertThat(friendship.getUserIds()).containsExactlyInAnyOrder(low.getId(), high.getId());
             assertThat(friendship.getIntimacy()).isEqualTo(INTIMACY);
             assertThat(friendship.getFriendId(high.getId())).isEqualTo(low.getId());
             assertThat(friendship.getFriendAlias(high.getId())).isEqualTo("from high");
@@ -115,7 +115,7 @@ class FriendshipMysqlRepositoryTest {
         // given
         Friendship original = friendship(low, high);
         repository.create(original);
-        Friendship loaded = repository.findById(original.getId()).orElseThrow();
+        Friendship loaded = repository.findBetween(low.getId(), high.getId()).orElseThrow();
         jdbc.update("""
                 UPDATE friendships SET low_friend_alias = 'changed by low', low_is_muted = FALSE,
                     low_interest_score = 60, high_interest_score = 40
@@ -127,7 +127,7 @@ class FriendshipMysqlRepositoryTest {
         repository.updateUserFields(loaded, high.getId());
 
         // then
-        Friendship updated = repository.findById(original.getId()).orElseThrow();
+        Friendship updated = repository.findBetween(low.getId(), high.getId()).orElseThrow();
         assertThat(updated.getFriendAlias(high.getId())).isEmpty();
         assertThat(updated.isMuted(high.getId())).isTrue();
         assertThat(updated.isRoutable(high.getId())).isFalse();
@@ -148,13 +148,13 @@ class FriendshipMysqlRepositoryTest {
         // given
         Friendship original = friendship(low, high);
         repository.create(original);
-        Friendship loaded = repository.findById(original.getId()).orElseThrow();
+        Friendship loaded = repository.findBetween(low.getId(), high.getId()).orElseThrow();
 
         // when
         repository.updateUserFields(loaded, low.getId());
 
         // then
-        assertThat(repository.findById(original.getId()).orElseThrow().getFriendAlias(low.getId()))
+        assertThat(repository.findBetween(low.getId(), high.getId()).orElseThrow().getFriendAlias(low.getId()))
                 .isEqualTo("from low");
     }
 
@@ -164,8 +164,8 @@ class FriendshipMysqlRepositoryTest {
         // given
         Friendship original = friendship(low, high);
         repository.create(original);
-        Friendship loaded = repository.findById(original.getId()).orElseThrow();
-        repository.delete(original.getId());
+        Friendship loaded = repository.findBetween(low.getId(), high.getId()).orElseThrow();
+        repository.deleteAll(List.of(loaded));
 
         // when & then
         assertThatThrownBy(() -> repository.updateUserFields(loaded, low.getId()))
@@ -224,17 +224,86 @@ class FriendshipMysqlRepositoryTest {
     }
 
     @Test
-    @DisplayName("관계 한 행을 삭제하면 어느 방향에서도 조회되지 않는다")
-    void delete_RemovesPair_FromBothDirections() {
+    @DisplayName("같은 사용자 두 명으로 조회하면 예외 없이 관계 없음으로 끝난다")
+    void lookups_ReturnNothing_SameUser() {
+        // given
+        repository.create(friendship(low, high));
+        Long self = low.getId();
+
+        // when & then
+        assertThat(repository.findBetween(self, self)).isEmpty();
+        assertThat(repository.findBetweenForUpdate(self, self)).isEmpty();
+        assertThat(repository.existsFriendshipBetween(self, self)).isFalse();
+        assertThat(repository.existsFriendshipForUpdate(self, self)).isFalse();
+        assertThat(repository.findAllBetweenForUpdate(self, List.of(self))).isEmpty();
+        assertThat(repository.findAllAmongForUpdate(List.of(self, self))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("한 사람과 여러 사람 사이의 잠금 조회는 실제 친구 관계만 돌려준다")
+    void findAllBetweenForUpdate_ReturnsExistingFriendships_MixedCandidates() {
+        // given
+        User third = createUser("third");
+        repository.create(friendship(low, high));
+
+        // when
+        var locked = repository.findAllBetweenForUpdate(high.getId(), List.of(low.getId(), third.getId(), high.getId()));
+
+        // then
+        assertThat(locked).singleElement()
+                .satisfies(friendship -> assertThat(friendship.getFriendId(high.getId())).isEqualTo(low.getId()));
+    }
+
+    @Test
+    @DisplayName("한 무리 안의 잠금 조회는 존재하는 모든 쌍을 PK 순서로 돌려준다")
+    void findAllAmongForUpdate_ReturnsExistingPairsInKeyOrder_Group() {
+        // given
+        User third = createUser("third");
+        User outsider = createUser("outsider");
+        repository.create(friendship(high, third));
+        repository.create(friendship(low, high));
+        repository.create(friendship(low, outsider));
+
+        // when
+        var locked = repository.findAllAmongForUpdate(List.of(third.getId(), low.getId(), high.getId(), low.getId()));
+
+        // then
+        assertThat(locked).extracting(friendship -> friendship.getLower().getUserId() + "_"
+                        + friendship.getHigher().getUserId())
+                .containsExactly(low.getId() + "_" + high.getId(), high.getId() + "_" + third.getId());
+    }
+
+    @Test
+    @DisplayName("아카이브 대상 잠금 조회는 친밀도 열이 기준 이하인 관계만 돌려준다")
+    void findArchivableForUpdate_ReturnsRelationshipsAtOrBelowThreshold() {
+        // given
+        User third = createUser("third");
+        repository.create(friendship(low, high));
+        repository.create(Friendship.restore(CREATED_AT, 0.01,
+                FriendRecognition.restore(high.getId(), null, 0.5, INTERACTED_AT, false, true),
+                FriendRecognition.restore(third.getId(), null, 0.5, INTERACTED_AT, false, true)));
+
+        // when
+        var locked = repository.findArchivableForUpdate(0.02);
+
+        // then
+        assertThat(locked).singleElement()
+                .satisfies(friendship -> assertThat(friendship.getUserIds())
+                        .containsExactlyInAnyOrder(high.getId(), third.getId()));
+    }
+
+    @Test
+    @DisplayName("관계를 삭제하면 어느 방향에서도 조회되지 않는다")
+    void deleteAll_RemovesPair_FromBothDirections() {
         // given
         Friendship original = friendship(low, high);
         repository.create(original);
 
         // when
-        repository.delete(original.getId());
+        repository.deleteAll(List.of(repository.findBetween(high.getId(), low.getId()).orElseThrow()));
 
         // then
-        assertThat(repository.findById(original.getId())).isEmpty();
+        assertThat(repository.findBetween(low.getId(), high.getId())).isEmpty();
         assertThat(repository.existsFriendshipBetween(high.getId(), low.getId())).isFalse();
         assertThat(repository.findByUserId(low.getId())).isEmpty();
         assertThat(repository.findByUserId(high.getId())).isEmpty();

@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.social.application.service;
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
 import com.example.DunbarHorizon.social.application.port.in.SocialExpansionQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.SocialExpansionRepository;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +46,7 @@ public class SocialExpansionQueryService implements SocialExpansionQueryUseCase 
     @Override
     public List<AnchorExpansionResult> getRecommendationsByAnchor(Long userId, Long anchorFriendId) {
         double intimacy = friendshipRepository
-                .findById(Friendship.generateCompositeId(userId, anchorFriendId))
+                .findBetween(userId, anchorFriendId)
                 .orElseThrow(() -> new FriendshipNotFoundException(userId, anchorFriendId))
                 .getIntimacy();
         int limit = calculateLimit(intimacy, REC_MIN_LIMIT, REC_INFLECTION_LIMIT, REC_MAX_LIMIT);

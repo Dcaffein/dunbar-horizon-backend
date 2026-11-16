@@ -20,10 +20,12 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -67,7 +69,7 @@ class FriendshipScoreServiceRetryTest {
     @DisplayName("일시적 실패는 시도마다 새 트랜잭션을 열어 재시도한다")
     void applyFlagConclusion_RetriesInNewTransaction_TransientFailure() {
         // given
-        when(friendshipRepository.findAllByIdsForUpdate(anyCollection()))
+        when(friendshipRepository.findAllAmongForUpdate(anyCollection()))
                 .thenThrow(new TransientDataAccessResourceException("deadlock"))
                 .thenReturn(List.of());
 
@@ -75,7 +77,7 @@ class FriendshipScoreServiceRetryTest {
         interactionScoreService.applyFlagConclusion(10L, List.of(21L, 22L), FLAG_TYPE, ScoreDirection.GRANT);
 
         // then
-        verify(friendshipRepository, times(2)).findAllByIdsForUpdate(anyCollection());
+        verify(friendshipRepository, times(2)).findAllAmongForUpdate(anyCollection());
         verify(transactionManager, times(2)).getTransaction(any());
         verify(transactionManager).rollback(any());
         verify(transactionManager).commit(any());
@@ -85,7 +87,7 @@ class FriendshipScoreServiceRetryTest {
     @DisplayName("커밋 시점에 DB가 던진 일시적 실패도 재시도한다")
     void applyInteraction_Retries_TransientFailureOnCommit() {
         // given
-        when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of());
+        when(friendshipRepository.findBetweenForUpdate(anyLong(), anyLong())).thenReturn(Optional.empty());
         doThrow(new TransientDataAccessResourceException("deadlock"))
                 .doNothing()
                 .when(transactionManager).commit(any());
@@ -102,13 +104,13 @@ class FriendshipScoreServiceRetryTest {
     @DisplayName("재시도를 소진한 실패는 삼키지 않고 호출자에게 올린다")
     void applyInteraction_Rethrows_RetriesExhausted() {
         // given
-        when(friendshipRepository.findAllByIdsForUpdate(anyCollection()))
+        when(friendshipRepository.findBetweenForUpdate(anyLong(), anyLong()))
                 .thenThrow(new TransientDataAccessResourceException("deadlock"));
 
         // when & then
         assertThatThrownBy(() -> interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT))
                 .isInstanceOf(TransientDataAccessResourceException.class);
-        verify(friendshipRepository, times(3)).findAllByIdsForUpdate(anyCollection());
+        verify(friendshipRepository, times(3)).findBetweenForUpdate(anyLong(), anyLong());
         verify(transactionManager, times(3)).rollback(any());
     }
 
@@ -116,13 +118,13 @@ class FriendshipScoreServiceRetryTest {
     @DisplayName("비일시적 실패는 재시도하지 않고 바로 올린다")
     void applyInteraction_RethrowsImmediately_NonTransientFailure() {
         // given
-        when(friendshipRepository.findAllByIdsForUpdate(anyCollection()))
+        when(friendshipRepository.findBetweenForUpdate(anyLong(), anyLong()))
                 .thenThrow(new IllegalStateException("not transient"));
 
         // when & then
         assertThatThrownBy(() -> interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT))
                 .isInstanceOf(IllegalStateException.class);
-        verify(friendshipRepository, times(1)).findAllByIdsForUpdate(anyCollection());
+        verify(friendshipRepository, times(1)).findBetweenForUpdate(anyLong(), anyLong());
         verify(transactionManager, never()).commit(any());
     }
 }

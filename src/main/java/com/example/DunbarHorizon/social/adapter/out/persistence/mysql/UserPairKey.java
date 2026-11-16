@@ -1,7 +1,5 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,7 +23,7 @@ record UserPairKey(long low, long high) {
     }
 
     String id() {
-        return Friendship.generateCompositeId(low, high);
+        return low + "_" + high;
     }
 
     Map<String, Long> parameters() {

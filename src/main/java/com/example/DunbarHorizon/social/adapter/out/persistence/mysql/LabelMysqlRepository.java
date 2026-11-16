@@ -111,9 +111,11 @@ public class LabelMysqlRepository implements LabelMembershipRepository {
     @Override
     public void removeMembersForEndedFriendships(Collection<Friendship> friendships) {
         List<Object[]> directions = friendships.stream()
-                .map(friendship -> UserPairKey.parse(friendship.getId()).orElseThrow())
-                .flatMap(pair -> Stream.of(new Object[]{pair.low(), pair.high()},
-                        new Object[]{pair.high(), pair.low()}))
+                .flatMap(friendship -> {
+                    Long low = friendship.getLower().getUserId();
+                    Long high = friendship.getHigher().getUserId();
+                    return Stream.of(new Object[]{low, high}, new Object[]{high, low});
+                })
                 .toList();
         if (directions.isEmpty()) {
             return;

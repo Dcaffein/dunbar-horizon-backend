@@ -65,7 +65,7 @@ class FriendRequestMysqlRepositoryTest {
     @AfterEach
     void tearDown() {
         jdbc.update("DELETE FROM friend_requests WHERE low_user_id = ? AND high_user_id = ?", low, high);
-        friendships.delete(requestId);
+        jdbc.update("DELETE FROM friendships WHERE low_user_id = ? AND high_user_id = ?", low, high);
         users.deleteAllById(List.of(low, high));
     }
 

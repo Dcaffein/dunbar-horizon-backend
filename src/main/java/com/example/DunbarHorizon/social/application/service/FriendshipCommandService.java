@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.social.application.port.in.FriendshipCommandUse
 import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.application.port.out.LabelMembershipRepository;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipArchivePolicy;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.repository.ArchivedFriendshipRepository;
@@ -28,7 +27,7 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
     @Override
     @Transactional(transactionManager = "transactionManager", isolation = Isolation.READ_COMMITTED)
     public void updateFriendship(Long currentUserId, Long friendId, FriendshipUpdateCommand command) {
-        Friendship friendship = friendships.findById(Friendship.generateCompositeId(currentUserId, friendId))
+        Friendship friendship = friendships.findBetween(currentUserId, friendId)
                 .orElseThrow(() -> new FriendshipNotFoundException(currentUserId, friendId));
         friendship.updateUserFields(currentUserId, command.friendAlias(), command.isMuted(), command.isRoutable());
         friendships.updateUserFields(friendship, currentUserId);
@@ -37,20 +36,15 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
     @Override
     @Transactional(transactionManager = "transactionManager", isolation = Isolation.READ_COMMITTED)
     public void brokeUpWith(Long currentUserId, Long friendId) {
-        String id = Friendship.generateCompositeId(currentUserId, friendId);
-        List<Friendship> locked = friendships.findAllByIdsForUpdate(List.of(id));
-        if (locked.isEmpty()) {
-            throw new FriendshipNotFoundException(currentUserId, friendId);
-        }
-        removeFriendships(locked);
+        Friendship locked = friendships.findBetweenForUpdate(currentUserId, friendId)
+                .orElseThrow(() -> new FriendshipNotFoundException(currentUserId, friendId));
+        removeFriendships(List.of(locked));
     }
 
     @Transactional(transactionManager = "transactionManager", isolation = Isolation.READ_COMMITTED)
     public void archiveFriendships() {
         double threshold = archivePolicy.archiveThreshold();
-        List<FriendshipArchiveCandidate> candidates = friendships.findArchiveCandidates(threshold);
-        List<String> ids = candidates.stream().map(FriendshipArchiveCandidate::id).toList();
-        List<Friendship> eligible = friendships.findAllByIdsForUpdate(ids).stream()
+        List<Friendship> eligible = friendships.findArchivableForUpdate(threshold).stream()
                 .filter(friendship -> friendship.getIntimacy() <= threshold)
                 .toList();
         if (eligible.isEmpty()) {
@@ -63,6 +57,6 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
 
     private void removeFriendships(List<Friendship> locked) {
         labels.removeMembersForEndedFriendships(locked);
-        friendships.deleteAllByIds(locked.stream().map(Friendship::getId).toList());
+        friendships.deleteAll(locked);
     }
 }

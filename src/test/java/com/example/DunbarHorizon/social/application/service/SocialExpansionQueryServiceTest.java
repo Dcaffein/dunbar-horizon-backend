@@ -122,7 +122,7 @@ class SocialExpansionQueryServiceTest {
         // given
         Long userId = 1L, anchorId = 10L;
         double intimacy = 0.5; // limit=7, threshold=3
-        given(friendshipRepository.findById(Friendship.generateCompositeId(userId, anchorId)))
+        given(friendshipRepository.findBetween(userId, anchorId))
                 .willReturn(Optional.of(friendship));
         given(friendship.getIntimacy()).willReturn(intimacy);
         given(socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, 3, 7))
@@ -140,7 +140,7 @@ class SocialExpansionQueryServiceTest {
     void getRecommendationsByAnchor_친구가_아닌_경우_예외() {
         // given
         Long userId = 1L, anchorId = 10L;
-        given(friendshipRepository.findById(Friendship.generateCompositeId(userId, anchorId)))
+        given(friendshipRepository.findBetween(userId, anchorId))
                 .willReturn(Optional.empty());
 
         // when & then
@@ -156,7 +156,7 @@ class SocialExpansionQueryServiceTest {
         List<AnchorExpansionResult> expected = List.of(
                 new AnchorExpansionResult(200L, "유저B")
         );
-        given(friendshipRepository.findById(Friendship.generateCompositeId(userId, anchorId)))
+        given(friendshipRepository.findBetween(userId, anchorId))
                 .willReturn(Optional.of(friendship));
         given(friendship.getIntimacy()).willReturn(0.9);
         given(socialExpansionRepository.getRecommendedNetworkByAnchor(eq(userId), eq(anchorId), anyInt(), anyInt()))

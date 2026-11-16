@@ -18,11 +18,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -45,14 +46,14 @@ class FriendshipScoreServiceTest {
     void applyInteraction_LoadsForUpdateThenSaves() {
         // given
         Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
-        when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of(friendship));
+        when(friendshipRepository.findBetweenForUpdate(anyLong(), anyLong())).thenReturn(Optional.of(friendship));
 
         // when
         interactionScoreService.applyInteraction(1L, 2L, InteractionType.FLAG_ENDED);
 
         // then
         InOrder order = inOrder(friendshipRepository);
-        order.verify(friendshipRepository).findAllByIdsForUpdate(Set.of("1_2"));
+        order.verify(friendshipRepository).findBetweenForUpdate(1L, 2L);
         order.verify(friendshipRepository).saveInterestScores(List.of(friendship));
     }
 
@@ -62,7 +63,7 @@ class FriendshipScoreServiceTest {
         // given
         InteractionType type = InteractionType.FLAG_ENDED_ENCORE;
         Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
-        when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of(friendship));
+        when(friendshipRepository.findBetweenForUpdate(anyLong(), anyLong())).thenReturn(Optional.of(friendship));
 
         // when
         interactionScoreService.applyInteraction(2L, 1L, type);
@@ -80,7 +81,7 @@ class FriendshipScoreServiceTest {
         // given
         InteractionType type = InteractionType.VISIT;
         Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
-        when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of(friendship));
+        when(friendshipRepository.findBetweenForUpdate(anyLong(), anyLong())).thenReturn(Optional.of(friendship));
 
         // when
         interactionScoreService.applyInteraction(2L, 1L, type);
@@ -92,18 +93,18 @@ class FriendshipScoreServiceTest {
     }
 
     @Test
-    @DisplayName("Flag 결론은 호스트-참가자와 참가자끼리의 쌍 전체를 한 번에 불러온다")
+    @DisplayName("Flag 결론은 호스트와 참가자 전체를 한 무리로 한 번에 불러온다")
     void applyFlagConclusion_LoadsEveryPairOnce() {
         // given
-        when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of());
+        when(friendshipRepository.findAllAmongForUpdate(anyCollection())).thenReturn(List.of());
 
         // when
         interactionScoreService.applyFlagConclusion(HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT);
 
         // then
-        ArgumentCaptor<Collection<String>> captor = ArgumentCaptor.forClass(Collection.class);
-        verify(friendshipRepository).findAllByIdsForUpdate(captor.capture());
-        assertThat(captor.getValue()).containsExactlyInAnyOrder("10_21", "10_22", "21_22");
+        ArgumentCaptor<Collection<Long>> captor = ArgumentCaptor.forClass(Collection.class);
+        verify(friendshipRepository).findAllAmongForUpdate(captor.capture());
+        assertThat(captor.getValue()).containsExactlyInAnyOrder(HOST_ID, 21L, 22L);
     }
 
     @Test
@@ -111,7 +112,7 @@ class FriendshipScoreServiceTest {
     void applyFlagConclusion_SkipsMissingPairs() {
         // given
         Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
-        when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of(friendship));
+        when(friendshipRepository.findAllAmongForUpdate(anyCollection())).thenReturn(List.of(friendship));
 
         // when
         interactionScoreService.applyFlagConclusion(1L, List.of(2L, 3L), FLAG_TYPE, ScoreDirection.GRANT);
@@ -128,7 +129,7 @@ class FriendshipScoreServiceTest {
         // given
         InteractionType type = InteractionType.FLAG_PRESERVED;
         Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
-        when(friendshipRepository.findAllByIdsForUpdate(anyCollection())).thenReturn(List.of(friendship));
+        when(friendshipRepository.findAllAmongForUpdate(anyCollection())).thenReturn(List.of(friendship));
 
         // when
         interactionScoreService.applyFlagConclusion(1L, List.of(2L), type, ScoreDirection.REVOKE);

@@ -1,10 +1,8 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
 import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipCreationRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -18,9 +16,11 @@ import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -29,7 +29,7 @@ import java.util.stream.Stream;
 
 @Repository
 @RequiredArgsConstructor
-public class FriendshipMysqlRepository implements FriendshipRepository, FriendshipCreationRepository {
+public class FriendshipMysqlRepository implements FriendshipRepository {
 
     private static final String PAIR = "low_user_id = :low AND high_user_id = :high";
     private static final String SELECT_PAIR = "SELECT * FROM friendships WHERE " + PAIR;
@@ -83,10 +83,45 @@ public class FriendshipMysqlRepository implements FriendshipRepository, Friendsh
     }
 
     @Override
-    public Optional<Friendship> findById(String id) {
-        return UserPairKey.parse(id)
-                .flatMap(pair -> restore(jdbc.query(SELECT_PAIR, pair.parameters(), FriendshipRow::read))
-                        .stream().findFirst());
+    public Optional<Friendship> findBetween(Long userId, Long friendId) {
+        return findPair(SELECT_PAIR, userId, friendId);
+    }
+
+    @Override
+    public Optional<Friendship> findBetweenForUpdate(Long userId, Long friendId) {
+        return findPair(SELECT_PAIR + " FOR UPDATE", userId, friendId);
+    }
+
+    private Optional<Friendship> findPair(String sql, Long userId, Long friendId) {
+        var key = UserPairKey.of(userId, friendId);
+        return restore(jdbc.query(sql, key.parameters(), FriendshipRow::read)).stream().findFirst();
+    }
+
+    @Override
+    public List<Friendship> findAllBetweenForUpdate(Long userId, Collection<Long> friendIds) {
+        return lockPairs(friendIds.stream().map(friendId -> UserPairKey.of(userId, friendId)).toList());
+    }
+
+    @Override
+    public List<Friendship> findAllAmongForUpdate(Collection<Long> userIds) {
+        List<Long> members = userIds.stream().filter(Objects::nonNull).distinct().toList();
+        List<UserPairKey> pairs = new ArrayList<>();
+        for (int i = 0; i < members.size(); i++) {
+            for (int j = i + 1; j < members.size(); j++) {
+                pairs.add(UserPairKey.of(members.get(i), members.get(j)));
+            }
+        }
+        return lockPairs(pairs);
+    }
+
+    @Override
+    public List<Friendship> findArchivableForUpdate(double intimacyThreshold) {
+        List<UserPairKey> candidates = jdbc.query("""
+                SELECT low_user_id, high_user_id FROM friendships
+                WHERE intimacy <= :threshold AND
+                """ + ACTIVE_PAIR, Map.of("threshold", intimacyThreshold),
+                (row, index) -> new UserPairKey(row.getLong("low_user_id"), row.getLong("high_user_id")));
+        return lockPairs(candidates);
     }
 
     @Override
@@ -97,21 +132,24 @@ public class FriendshipMysqlRepository implements FriendshipRepository, Friendsh
     }
 
     @Override
-    public boolean existsFriendshipForUpdate(long userId, long targetId) {
+    public boolean existsFriendshipForUpdate(Long userId, Long targetId) {
         var key = UserPairKey.of(userId, targetId);
         return !jdbc.queryForList("SELECT low_user_id FROM friendships WHERE " + PAIR + " FOR UPDATE",
                 key.parameters(), Long.class).isEmpty();
     }
 
+    @Override
     public List<Friendship> findByUserId(Long userId) {
         return restore(jdbc.query(SELECT_FRIENDSHIPS, Map.of("userId", userId), FriendshipRow::read));
     }
 
+    @Override
     public Set<Long> findFriendIdsByMuteStatus(Long userId, boolean isMuted) {
         List<Long> ids = jdbc.queryForList(SELECT_BY_MUTE_STATUS, Map.of("userId", userId, "muted", isMuted), Long.class);
         return activeFriendIds(userId, ids);
     }
 
+    @Override
     public Set<Long> filterFriendIdsAmong(Long userId, Collection<Long> candidateIds) {
         if (candidateIds.isEmpty()) {
             return Set.of();
@@ -139,14 +177,8 @@ public class FriendshipMysqlRepository implements FriendshipRepository, Friendsh
         }
     }
 
-    public void delete(String friendshipId) {
-        UserPairKey.parse(friendshipId)
-                .ifPresent(pair -> jdbc.update("DELETE FROM friendships WHERE " + PAIR, pair.parameters()));
-    }
-
-    @Override
-    public List<Friendship> findAllByIdsForUpdate(Collection<String> ids) {
-        List<Object[]> pairs = pairParameters(ids);
+    private List<Friendship> lockPairs(Collection<UserPairKey> keys) {
+        List<Object[]> pairs = pairParameters(keys);
         if (pairs.isEmpty()) {
             return List.of();
         }
@@ -215,20 +247,10 @@ public class FriendshipMysqlRepository implements FriendshipRepository, Friendsh
     }
 
     @Override
-    public List<FriendshipArchiveCandidate> findArchiveCandidates(double threshold) {
-        return jdbc.query("""
-                SELECT low_user_id, high_user_id, created_at FROM friendships
-                WHERE intimacy <= :threshold AND
-                """ + ACTIVE_PAIR, Map.of("threshold", threshold), (row, index) -> {
-            var pair = new UserPairKey(row.getLong("low_user_id"), row.getLong("high_user_id"));
-            return new FriendshipArchiveCandidate(pair.id(), pair.low(), pair.high(),
-                    row.getObject("created_at", LocalDate.class));
-        });
-    }
-
-    @Override
-    public void deleteAllByIds(Collection<String> ids) {
-        List<Object[]> pairs = pairParameters(ids);
+    public void deleteAll(Collection<Friendship> friendships) {
+        List<Object[]> pairs = pairParameters(friendships.stream()
+                .map(friendship -> new UserPairKey(friendship.getLower().getUserId(), friendship.getHigher().getUserId()))
+                .toList());
         if (!pairs.isEmpty()) {
             jdbc.update("""
                     DELETE FROM friendships WHERE (low_user_id, high_user_id) IN (:pairs)
@@ -237,10 +259,9 @@ public class FriendshipMysqlRepository implements FriendshipRepository, Friendsh
         }
     }
 
-    private static List<Object[]> pairParameters(Collection<String> ids) {
-        return ids.stream()
-                .map(UserPairKey::parse)
-                .flatMap(Optional::stream)
+    private static List<Object[]> pairParameters(Collection<UserPairKey> keys) {
+        return keys.stream()
+                .filter(pair -> pair.low() < pair.high())
                 .distinct()
                 .map(pair -> new Object[]{pair.low(), pair.high()})
                 .toList();

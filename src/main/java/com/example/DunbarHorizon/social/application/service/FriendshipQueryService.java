@@ -41,8 +41,7 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
 
     @Override
     public FriendshipDetailResult getFriend(Long userId, Long targetId) {
-        String friendshipId = Friendship.generateCompositeId(userId, targetId);
-        Friendship friendship = friendshipRepository.findById(friendshipId).orElseThrow(() -> new FriendshipNotFoundException(userId, targetId));
+        Friendship friendship = friendshipRepository.findBetween(userId, targetId).orElseThrow(() -> new FriendshipNotFoundException(userId, targetId));
         var friend = profiles.findActiveProfiles(List.of(targetId)).get(targetId);
         return FriendshipDetailResult.from(friendship, userId, friend, imageUrlResolverPort);
     }

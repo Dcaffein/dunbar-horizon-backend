@@ -17,8 +17,7 @@ final class FriendshipScoreUpdater {
 
     static void applyInteraction(FriendshipRepository repository, Long userAId, Long userBId, InteractionType type) {
         double delta = InteractionScorePolicy.scoreOf(type);
-        List<Friendship> friendships = repository.findAllByIdsForUpdate(
-                Set.of(Friendship.generateCompositeId(userAId, userBId)));
+        List<Friendship> friendships = repository.findBetweenForUpdate(userAId, userBId).stream().toList();
 
         for (Friendship friendship : friendships) {
             if (type.isMutual()) {
@@ -33,21 +32,11 @@ final class FriendshipScoreUpdater {
     static void applyFlagConclusion(FriendshipRepository repository, Long hostId, List<Long> participantIds,
                                     InteractionType type, ScoreDirection direction) {
         double delta = direction.signed(InteractionScorePolicy.scoreOf(type));
-        List<Friendship> friendships = repository.findAllByIdsForUpdate(flagPairIds(hostId, participantIds));
+        Set<Long> members = new LinkedHashSet<>();
+        members.add(hostId);
+        members.addAll(participantIds);
+        List<Friendship> friendships = repository.findAllAmongForUpdate(members);
         friendships.forEach(friendship -> friendship.adjustMutualInterestScore(delta));
         repository.saveInterestScores(friendships);
-    }
-
-    private static Set<String> flagPairIds(Long hostId, List<Long> participantIds) {
-        Set<String> ids = new LinkedHashSet<>();
-        for (Long participantId : participantIds) {
-            ids.add(Friendship.generateCompositeId(hostId, participantId));
-        }
-        for (int i = 0; i < participantIds.size(); i++) {
-            for (int j = i + 1; j < participantIds.size(); j++) {
-                ids.add(Friendship.generateCompositeId(participantIds.get(i), participantIds.get(j)));
-            }
-        }
-        return ids;
     }
 }

@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.domain.friend.repository;
 
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -11,10 +10,20 @@ import java.util.Set;
 
 public interface FriendshipRepository {
     void create(Friendship friendship);
-    Optional<Friendship> findById(String id);
-    void delete(String friendshipId);
 
-    boolean existsFriendshipBetween(Long userId, Long targetId);
+    Optional<Friendship> findBetween(Long userId, Long friendId);
+
+    Optional<Friendship> findBetweenForUpdate(Long userId, Long friendId);
+
+    List<Friendship> findAllBetweenForUpdate(Long userId, Collection<Long> friendIds);
+
+    List<Friendship> findAllAmongForUpdate(Collection<Long> userIds);
+
+    List<Friendship> findArchivableForUpdate(double intimacyThreshold);
+
+    boolean existsFriendshipBetween(Long userId, Long friendId);
+
+    boolean existsFriendshipForUpdate(Long userId, Long friendId);
 
     List<Friendship> findByUserId(Long userId);
 
@@ -22,10 +31,11 @@ public interface FriendshipRepository {
 
     Set<Long> filterFriendIdsAmong(Long userId, Collection<Long> candidateIds);
 
-    void applyDecay(double rate, double threshold, LocalDateTime decayTime);
     void updateUserFields(Friendship friendship, Long userId);
-    List<Friendship> findAllByIdsForUpdate(Collection<String> ids);
+
     void saveInterestScores(Collection<Friendship> friendships);
-    List<FriendshipArchiveCandidate> findArchiveCandidates(double threshold);
-    void deleteAllByIds(Collection<String> ids);
+
+    void applyDecay(double rate, double threshold, LocalDateTime decayTime);
+
+    void deleteAll(Collection<Friendship> friendships);
 }

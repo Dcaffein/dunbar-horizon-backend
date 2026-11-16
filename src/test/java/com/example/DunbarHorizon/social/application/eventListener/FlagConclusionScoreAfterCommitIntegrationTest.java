@@ -54,7 +54,7 @@ class FlagConclusionScoreAfterCommitIntegrationTest {
     @Autowired private FriendshipRepository friendshipRepository;
     @Autowired private JdbcTemplate jdbc;
 
-    private final List<String> friendshipIds = new ArrayList<>();
+    private final List<Friendship> friendships = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -63,12 +63,12 @@ class FlagConclusionScoreAfterCommitIntegrationTest {
             jdbc.update("INSERT INTO users (user_id, email, nickname, role, status) VALUES (?, ?, ?, 'USER', 'ACTIVE')",
                     memberId, memberId + "@flag-conclusion.test", "사용자" + memberId);
         }
-        friendshipIds.clear();
+        friendships.clear();
         for (int i = 0; i < MEMBER_IDS.size(); i++) {
             for (int j = i + 1; j < MEMBER_IDS.size(); j++) {
                 Friendship friendship = FriendTestFactory.createFriendship(MEMBER_IDS.get(i), MEMBER_IDS.get(j));
                 friendshipRepository.create(friendship);
-                friendshipIds.add(friendship.getId());
+                friendships.add(friendship);
             }
         }
     }
@@ -86,8 +86,8 @@ class FlagConclusionScoreAfterCommitIntegrationTest {
 
         // then
         double expected = FriendRecognition.INITIAL_RAW_SCORE + DELTA;
-        for (String friendshipId : friendshipIds) {
-            assertBothSides(friendshipId, expected);
+        for (Friendship created : friendships) {
+            assertBothSides(created, expected);
         }
     }
 
@@ -125,8 +125,8 @@ class FlagConclusionScoreAfterCommitIntegrationTest {
 
         // then
         double expected = FriendRecognition.INITIAL_RAW_SCORE + events * DELTA;
-        for (String friendshipId : friendshipIds) {
-            assertBothSides(friendshipId, expected);
+        for (Friendship created : friendships) {
+            assertBothSides(created, expected);
         }
     }
 
@@ -136,21 +136,20 @@ class FlagConclusionScoreAfterCommitIntegrationTest {
                         flagId, PARTICIPANT_IDS, HOST_ID, TYPE, ScoreDirection.GRANT)));
     }
 
-    private void assertBothSides(String friendshipId, double expected) {
-        Friendship friendship = friendshipRepository.findById(friendshipId).orElseThrow();
+    private void assertBothSides(Friendship created, double expected) {
+        Friendship friendship = friendshipRepository.findBetween(created.getLower().getUserId(),
+                created.getHigher().getUserId()).orElseThrow();
         for (Long memberId : MEMBER_IDS) {
             if (friendship.getUserIds().contains(memberId)) {
                 assertThat(friendship.getMyInterestScore(memberId))
-                        .as("%s의 %d 쪽 점수", friendshipId, memberId)
+                        .as("%s의 %d 쪽 점수", friendship.getUserIds(), memberId)
                         .isCloseTo(expected, within(TOLERANCE));
             }
         }
     }
 
     private void deleteMembers() {
-        for (String id : friendshipIds) {
-            friendshipRepository.delete(id);
-        }
+        friendshipRepository.deleteAll(friendships);
         for (long memberId : MEMBER_IDS) {
             jdbc.update("DELETE FROM users WHERE user_id = ?", memberId);
         }

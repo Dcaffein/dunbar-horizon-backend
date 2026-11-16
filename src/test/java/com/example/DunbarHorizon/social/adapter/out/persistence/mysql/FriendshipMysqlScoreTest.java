@@ -27,6 +27,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -64,7 +65,7 @@ class FriendshipMysqlScoreTest {
 
     @AfterEach
     void tearDown() {
-        friendships.deleteAllByIds(List.of(id(low, middle), id(low, high), id(middle, high)));
+        friendships.deleteAll(friendships.findAllAmongForUpdate(List.of(low, middle, high)));
         users.deleteAllById(List.of(low, middle, high));
     }
 
@@ -178,8 +179,8 @@ class FriendshipMysqlScoreTest {
         var decayed = assertScores(low, middle, 1, 42);
         assertThat(decayed.getLower().getLastInteractedAt()).isEqualTo(OLD_INTERACTION);
         assertScores(middle, high, 0.5, 2);
-        assertThat(friendships.findArchiveCandidates(FriendRecognition.normalize(1.0)))
-                .extracting(candidate -> candidate.id()).contains(id(low, high));
+        assertThat(friendships.findArchivableForUpdate(FriendRecognition.normalize(1.0)))
+                .extracting(Friendship::getUserIds).contains(Set.of(low, high));
     }
 
     @Test
@@ -195,7 +196,7 @@ class FriendshipMysqlScoreTest {
         // when
         try (var workers = Executors.newFixedThreadPool(2)) {
             var interaction = workers.submit(() -> transactions.executeWithoutResult(status -> {
-                var locked = friendships.findAllByIdsForUpdate(List.of(id(low, high)));
+                var locked = friendships.findBetweenForUpdate(low, high).stream().toList();
                 rowLocked.countDown();
                 await(finishInteraction);
                 locked.getFirst().adjustInterestScore(high, 2);
@@ -239,7 +240,7 @@ class FriendshipMysqlScoreTest {
     }
 
     private Friendship assertScores(Long first, Long second, double firstScore, double secondScore) {
-        Friendship friendship = friendships.findById(id(first, second)).orElseThrow();
+        Friendship friendship = friendships.findBetween(first, second).orElseThrow();
         assertThat(friendship.getMyInterestScore(first)).isCloseTo(firstScore, within(1e-9));
         assertThat(friendship.getMyInterestScore(second)).isCloseTo(secondScore, within(1e-9));
         assertThat(friendship.getIntimacy()).isCloseTo(intimacy(firstScore, secondScore), within(1e-9));
@@ -248,10 +249,6 @@ class FriendshipMysqlScoreTest {
 
     private static double intimacy(double firstScore, double secondScore) {
         return Math.sqrt(FriendRecognition.normalize(firstScore) * FriendRecognition.normalize(secondScore));
-    }
-
-    private static String id(Long first, Long second) {
-        return Friendship.generateCompositeId(first, second);
     }
 
     private static void await(CountDownLatch latch) {
