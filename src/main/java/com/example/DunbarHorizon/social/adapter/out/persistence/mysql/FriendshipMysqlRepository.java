@@ -18,7 +18,6 @@ import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -71,11 +70,8 @@ public class FriendshipMysqlRepository implements FriendshipLifecycleRepository,
 
     @Override
     public void create(Friendship friendship) {
-        var recognitions = friendship.getRecognitions().stream()
-                .sorted(Comparator.comparing(recognition -> recognition.getUserId()))
-                .toList();
-        FriendRecognition low = recognitions.getFirst();
-        FriendRecognition high = recognitions.getLast();
+        FriendRecognition low = friendship.getLower();
+        FriendRecognition high = friendship.getHigher();
         var parameters = new MapSqlParameterSource()
                 .addValue("low", low.getUserId())
                 .addValue("high", high.getUserId())
@@ -189,21 +185,19 @@ public class FriendshipMysqlRepository implements FriendshipLifecycleRepository,
         var rows = new StringJoiner(", ");
         int index = 0;
         for (Friendship friendship : friendships) {
-            var pair = UserPairKey.parse(friendship.getId()).orElseThrow();
-            var sides = friendship.getRecognitions().stream()
-                    .sorted(Comparator.comparing(recognition -> recognition.getUserId()))
-                    .toList();
+            FriendRecognition low = friendship.getLower();
+            FriendRecognition high = friendship.getHigher();
             String suffix = Integer.toString(index++);
             rows.add("""
                     ROW(:low%1$s, :high%1$s, :lowScore%1$s, :highScore%1$s,
                         CAST(:lowTime%1$s AS DATETIME(6)), CAST(:highTime%1$s AS DATETIME(6)), :intimacy%1$s)
                     """.formatted(suffix));
-            parameters.addValue("low" + suffix, pair.low())
-                    .addValue("high" + suffix, pair.high())
-                    .addValue("lowScore" + suffix, sides.getFirst().getInterestScore())
-                    .addValue("highScore" + suffix, sides.getLast().getInterestScore())
-                    .addValue("lowTime" + suffix, sides.getFirst().getLastInteractedAt(), Types.TIMESTAMP)
-                    .addValue("highTime" + suffix, sides.getLast().getLastInteractedAt(), Types.TIMESTAMP)
+            parameters.addValue("low" + suffix, low.getUserId())
+                    .addValue("high" + suffix, high.getUserId())
+                    .addValue("lowScore" + suffix, low.getInterestScore())
+                    .addValue("highScore" + suffix, high.getInterestScore())
+                    .addValue("lowTime" + suffix, low.getLastInteractedAt(), Types.TIMESTAMP)
+                    .addValue("highTime" + suffix, high.getLastInteractedAt(), Types.TIMESTAMP)
                     .addValue("intimacy" + suffix, friendship.getIntimacy());
         }
         jdbc.update("""
@@ -310,8 +304,7 @@ public class FriendshipMysqlRepository implements FriendshipLifecycleRepository,
         }
 
         Friendship toFriendship() {
-            return Friendship.restore(key.id(), createdAt, intimacy,
-                    List.of(low.toRecognition(key.low()), high.toRecognition(key.high())));
+            return Friendship.restore(createdAt, intimacy, low.toRecognition(key.low()), high.toRecognition(key.high()));
         }
     }
 

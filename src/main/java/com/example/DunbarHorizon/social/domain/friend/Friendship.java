@@ -6,10 +6,7 @@ import lombok.Getter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class Friendship {
 
@@ -17,60 +14,59 @@ public class Friendship {
     public static final String ALIAS_LENGTH_MESSAGE = "별명은 20자 이하로 입력해주세요.";
 
     @Getter
-    private final String id;
-
-    @Getter
     private final LocalDate createdAt;
 
     @Getter
     private double intimacy;
 
-    private final List<FriendRecognition> recognitions;
+    @Getter
+    private final FriendRecognition lower;
+
+    @Getter
+    private final FriendRecognition higher;
 
     Friendship(Long userA, Long userB) {
-        FriendRecognition recognitionA = new FriendRecognition(userA);
-        FriendRecognition recognitionB = new FriendRecognition(userB);
-
-        this.recognitions = new ArrayList<>(List.of(recognitionA, recognitionB));
-        this.id = generateCompositeId(userA, userB);
+        validateUserIds(userA, userB);
+        this.lower = new FriendRecognition(Math.min(userA, userB));
+        this.higher = new FriendRecognition(Math.max(userA, userB));
         this.createdAt = LocalDate.now();
-
-        this.intimacy = Math.sqrt(recognitionA.getNormalizedScore() * recognitionB.getNormalizedScore());
+        recalculateIntimacy();
     }
 
-    private Friendship(String id, LocalDate createdAt, double intimacy, List<FriendRecognition> recognitions) {
-        this.id = id;
+    private Friendship(LocalDate createdAt, double intimacy, FriendRecognition first, FriendRecognition second) {
         this.createdAt = createdAt;
         this.intimacy = intimacy;
-        this.recognitions = new ArrayList<>(recognitions);
+        this.lower = first.getUserId() < second.getUserId() ? first : second;
+        this.higher = first.getUserId() < second.getUserId() ? second : first;
     }
 
-    public static Friendship restore(String id, LocalDate createdAt, double intimacy,
-                                     List<FriendRecognition> recognitions) {
-        if (recognitions == null || recognitions.size() != 2) {
-            throw new FriendshipInvalidException("Friendship은 반드시 2명의 구성원을 가져야 합니다. ID: " + id);
+    public static Friendship restore(LocalDate createdAt, double intimacy,
+                                     FriendRecognition first, FriendRecognition second) {
+        if (first == null || second == null) {
+            throw new FriendshipInvalidException("missing recognition");
         }
-        return new Friendship(id, createdAt, intimacy, recognitions);
+        validateUserIds(first.getUserId(), second.getUserId());
+        return new Friendship(createdAt, intimacy, first, second);
+    }
+
+    private static void validateUserIds(Long first, Long second) {
+        if (first == null || second == null || first.equals(second)) {
+            throw new FriendshipInvalidException(first + "_" + second);
+        }
+    }
+
+    public String getId() {
+        return generateCompositeId(lower.getUserId(), higher.getUserId());
     }
 
     private FriendRecognition getSelfRecognition(Long userId) {
-        return this.recognitions.stream()
-                .filter(friendRecognition -> friendRecognition.getUserId().equals(userId))
-                .findFirst()
-                .orElseThrow(() -> new FriendshipAuthorizationException(userId));
+        if (lower.getUserId().equals(userId)) return lower;
+        if (higher.getUserId().equals(userId)) return higher;
+        throw new FriendshipAuthorizationException(userId);
     }
 
     private FriendRecognition getFriendRecognition(Long myId) {
-        boolean isMember = this.recognitions.stream()
-                .anyMatch(friendRecognition -> friendRecognition.getUserId().equals(myId));
-        if (!isMember) {
-            throw new FriendshipAuthorizationException(myId);
-        }
-
-        return this.recognitions.stream()
-                .filter(friendRecognition -> !friendRecognition.getUserId().equals(myId))
-                .findFirst()
-                .orElseThrow(() -> new FriendshipAuthorizationException(myId));
+        return getSelfRecognition(myId) == lower ? higher : lower;
     }
 
     public static String generateCompositeId(Long id1, Long id2) {
@@ -80,9 +76,7 @@ public class Friendship {
     }
 
     public Set<Long> getUserIds() {
-        return this.recognitions.stream()
-                .map(FriendRecognition::getUserId)
-                .collect(Collectors.toSet());
+        return Set.of(lower.getUserId(), higher.getUserId());
     }
 
     public String getFriendAlias(Long myId) {
@@ -111,16 +105,18 @@ public class Friendship {
     }
 
     public void adjustMutualInterestScore(double scoreDelta) {
-        recognitions.forEach(r -> r.adjustInterestScore(scoreDelta));
+        lower.adjustInterestScore(scoreDelta);
+        higher.adjustInterestScore(scoreDelta);
         recalculateIntimacy();
     }
 
     public void decay(double rate, double minThreshold, LocalDateTime thresholdTime) {
-        boolean isTarget = recognitions.stream().anyMatch(r -> r.isDecayTarget(thresholdTime));
+        boolean isTarget = lower.isDecayTarget(thresholdTime) || higher.isDecayTarget(thresholdTime);
         if (!isTarget) {
             return;
         }
-        recognitions.forEach(r -> r.decay(rate, minThreshold, thresholdTime));
+        lower.decay(rate, minThreshold, thresholdTime);
+        higher.decay(rate, minThreshold, thresholdTime);
         recalculateIntimacy();
     }
 
@@ -133,8 +129,8 @@ public class Friendship {
     }
 
     private void recalculateIntimacy() {
-        double a = Math.max(0, this.recognitions.get(0).getNormalizedScore());
-        double b = Math.max(0, this.recognitions.get(1).getNormalizedScore());
+        double a = Math.max(0, lower.getNormalizedScore());
+        double b = Math.max(0, higher.getNormalizedScore());
         this.intimacy = Math.sqrt(a * b);
     }
 
@@ -144,10 +140,6 @@ public class Friendship {
 
     public boolean isRoutable(Long myId) {
         return getSelfRecognition(myId).isRoutable();
-    }
-
-    public List<FriendRecognition> getRecognitions() {
-        return List.copyOf(recognitions);
     }
 
     public void updateUserFields(Long userId, String alias, Boolean isMuted, Boolean isRoutable) {

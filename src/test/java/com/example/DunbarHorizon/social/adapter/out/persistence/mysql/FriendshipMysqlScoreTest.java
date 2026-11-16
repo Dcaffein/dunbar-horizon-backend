@@ -73,8 +73,8 @@ class FriendshipMysqlScoreTest {
 
         // then
         Friendship first = assertScores(low, high, 21.4, 32);
-        assertThat(first.getRecognitions().getFirst().getLastInteractedAt()).isEqualTo(OLD_INTERACTION);
-        assertThat(first.getRecognitions().getLast().getLastInteractedAt()).isAfter(OLD_INTERACTION);
+        assertThat(first.getLower().getLastInteractedAt()).isEqualTo(OLD_INTERACTION);
+        assertThat(first.getHigher().getLastInteractedAt()).isAfter(OLD_INTERACTION);
         scores.applyInteraction(low, high, InteractionType.VISIT);
         assertScores(low, high, 22.4, 32);
         scores.applyInteraction(high, low, InteractionType.FLAG_ENDED);
@@ -174,7 +174,7 @@ class FriendshipMysqlScoreTest {
 
         // then
         var decayed = assertScores(low, middle, 1, 42);
-        assertThat(decayed.getRecognitions().getFirst().getLastInteractedAt()).isEqualTo(OLD_INTERACTION);
+        assertThat(decayed.getLower().getLastInteractedAt()).isEqualTo(OLD_INTERACTION);
         assertScores(middle, high, 0.5, 2);
         assertThat(friendships.findArchiveCandidates(FriendRecognition.normalize(1.0)))
                 .extracting(candidate -> candidate.id()).contains(id(low, high));
@@ -227,8 +227,8 @@ class FriendshipMysqlScoreTest {
 
     private void create(Long first, Long second, double firstScore, double secondScore,
                         LocalDateTime firstTime, LocalDateTime secondTime) {
-        friendships.create(Friendship.restore(id(first, second), CREATED_AT, intimacy(firstScore, secondScore),
-                List.of(recognition(first, firstScore, firstTime), recognition(second, secondScore, secondTime))));
+        friendships.create(Friendship.restore(CREATED_AT, intimacy(firstScore, secondScore),
+                recognition(first, firstScore, firstTime), recognition(second, secondScore, secondTime)));
     }
 
     private static FriendRecognition recognition(Long userId, double score, LocalDateTime lastInteraction) {

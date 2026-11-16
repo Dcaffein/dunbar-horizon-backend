@@ -55,7 +55,7 @@ public class FriendRecognition {
         return normalize(getInterestScore());
     }
 
-    public void adjustInterestScore(double delta) {
+    void adjustInterestScore(double delta) {
         if (this.interestScore == null) {
             this.interestScore = 0.0;
         }
@@ -80,7 +80,7 @@ public class FriendRecognition {
         this.interestScore = score;
     }
 
-    public void updateFriendAlias(String newAlias) {
+    void updateFriendAlias(String newAlias) {
         validateFriendAlias(newAlias);
         this.friendAlias = newAlias;
     }
@@ -99,11 +99,11 @@ public class FriendRecognition {
         return this.interestScore == null ? 0.0 : this.interestScore;
     }
 
-    public void updateMuteStatus(boolean isMuted) {
+    void updateMuteStatus(boolean isMuted) {
         this.isMuted = isMuted;
     }
 
-    public void updateRoutableStatus(boolean isRoutable) {
+    void updateRoutableStatus(boolean isRoutable) {
         this.isRoutable = isRoutable;
     }
 }

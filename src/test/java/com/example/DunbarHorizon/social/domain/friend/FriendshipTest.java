@@ -1,18 +1,114 @@
 package com.example.DunbarHorizon.social.domain.friend;
 
 import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipInvalidException;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipAuthorizationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.within;
 
 class FriendshipTest {
+
+    @Test
+    @DisplayName("역순으로 생성해도 작은 ID의 인식을 lower에 배치한다")
+    void create_OrdersRecognitions_ReversedIds() {
+        // when
+        Friendship friendship = new Friendship(2L, 1L);
+
+        // then
+        assertThat(friendship.getLower().getUserId()).isEqualTo(1L);
+        assertThat(friendship.getHigher().getUserId()).isEqualTo(2L);
+        assertThat(friendship.getFriendId(1L)).isEqualTo(2L);
+        assertThat(friendship.getFriendId(2L)).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("같은 사용자 또는 null 사용자로 친구 관계를 생성하지 못한다")
+    void create_Fails_InvalidUserIds() {
+        assertThatThrownBy(() -> new Friendship(1L, 1L)).isInstanceOf(FriendshipInvalidException.class);
+        assertThatThrownBy(() -> new Friendship(null, 1L)).isInstanceOf(FriendshipInvalidException.class);
+        assertThatThrownBy(() -> new Friendship(1L, null)).isInstanceOf(FriendshipInvalidException.class);
+    }
+
+    @Test
+    @DisplayName("복원 시 입력 순서를 정규화하면서 사용자별 설정과 저장된 친밀도를 보존한다")
+    void restore_PreservesState_ReversedRecognitions() {
+        // given
+        FriendRecognition high = FriendRecognition.restore(2L, "high alias", 40.0, RECENT, true, false);
+        FriendRecognition low = FriendRecognition.restore(1L, "low alias", 20.0, STALE, false, true);
+
+        // when
+        Friendship friendship = Friendship.restore(LocalDate.of(2026, 1, 1), 0.7, high, low);
+
+        // then
+        assertThat(friendship.getLower()).isSameAs(low);
+        assertThat(friendship.getHigher()).isSameAs(high);
+        assertThat(friendship.getFriendAlias(1L)).isEqualTo("low alias");
+        assertThat(friendship.getFriendAlias(2L)).isEqualTo("high alias");
+        assertThat(friendship.getIntimacy()).isEqualTo(0.7);
+    }
+
+    @Test
+    @DisplayName("복원 시 인식 누락과 중복 사용자 및 null 사용자 ID를 거절한다")
+    void restore_Fails_InvalidRecognitions() {
+        // given
+        FriendRecognition one = new FriendRecognition(1L);
+        LocalDate date = LocalDate.of(2026, 1, 1);
+
+        // when & then
+        assertThatThrownBy(() -> Friendship.restore(date, 0.3, null, one))
+                .isInstanceOf(FriendshipInvalidException.class);
+        assertThatThrownBy(() -> Friendship.restore(date, 0.3, one, null))
+                .isInstanceOf(FriendshipInvalidException.class);
+        assertThatThrownBy(() -> Friendship.restore(date, 0.3, one, new FriendRecognition(1L)))
+                .isInstanceOf(FriendshipInvalidException.class);
+        assertThatThrownBy(() -> Friendship.restore(date, 0.3, one, new FriendRecognition(null)))
+                .isInstanceOf(FriendshipInvalidException.class);
+    }
+
+    @Test
+    @DisplayName("관계의 구성원이 아닌 사용자는 조회하거나 상태를 변경할 수 없다")
+    void access_Fails_NonMember() {
+        // given
+        Friendship friendship = new Friendship(1L, 2L);
+        double intimacy = friendship.getIntimacy();
+
+        // when & then
+        assertThatThrownBy(() -> friendship.getFriendId(3L)).isInstanceOf(FriendshipAuthorizationException.class);
+        assertThatThrownBy(() -> friendship.getFriendAlias(3L)).isInstanceOf(FriendshipAuthorizationException.class);
+        assertThatThrownBy(() -> friendship.adjustInterestScore(3L, 10)).isInstanceOf(FriendshipAuthorizationException.class);
+        assertThatThrownBy(() -> friendship.updateUserFields(3L, "alias", true, false))
+                .isInstanceOf(FriendshipAuthorizationException.class);
+        assertThat(friendship.getIntimacy()).isEqualTo(intimacy);
+    }
+
+    @Test
+    @DisplayName("높은 ID 사용자의 설정 변경은 낮은 ID 사용자의 설정과 점수를 바꾸지 않는다")
+    void updateUserFields_PreservesOtherSide_HigherUser() {
+        // given
+        Friendship friendship = new Friendship(2L, 1L);
+        double intimacy = friendship.getIntimacy();
+
+        // when
+        friendship.updateUserFields(2L, "alias", true, false);
+
+        // then
+        assertThat(friendship.getFriendAlias(2L)).isEqualTo("alias");
+        assertThat(friendship.isMuted(2L)).isTrue();
+        assertThat(friendship.isRoutable(2L)).isFalse();
+        assertThat(friendship.getFriendAlias(1L)).isEmpty();
+        assertThat(friendship.isMuted(1L)).isFalse();
+        assertThat(friendship.isRoutable(1L)).isTrue();
+        assertThat(friendship.getIntimacy()).isEqualTo(intimacy);
+        assertThat(friendship.getMyInterestScore(1L)).isEqualTo(FriendRecognition.INITIAL_RAW_SCORE);
+        assertThat(friendship.getMyInterestScore(2L)).isEqualTo(FriendRecognition.INITIAL_RAW_SCORE);
+    }
 
     @Test
     @DisplayName("유저 ID 순서에 상관없이 항상 동일한 복합 ID가 생성되어야 한다")
@@ -157,7 +253,8 @@ class FriendshipTest {
         FriendRecognition low = FriendRecognition.restore(1L, null, lowScore, lowAt, false, true);
         FriendRecognition high = FriendRecognition.restore(2L, null, highScore, highAt, false, true);
         double intimacy = Math.sqrt(FriendRecognition.normalize(lowScore) * FriendRecognition.normalize(highScore));
-        return Friendship.restore("1_2", LocalDate.of(2026, 1, 1), intimacy, List.of(low, high));
+        return Friendship.restore(LocalDate.of(2026, 1, 1), intimacy,
+                low, high);
     }
 
     private static double intimacyOf(double a, double b) {
@@ -225,9 +322,10 @@ class FriendshipTest {
     @DisplayName("이미 하한 이하인 관심도는 바뀌지 않지만 대상 관계라 친밀도는 다시 계산한다")
     void decay_alreadyAtOrBelowThreshold_keepsScoreAndRecalculatesIntimacy() {
         // given
-        Friendship friendship = Friendship.restore("1_2", LocalDate.of(2026, 1, 1), 0.9, List.of(
+        Friendship friendship = Friendship.restore(LocalDate.of(2026, 1, 1), 0.9,
+
                 FriendRecognition.restore(1L, null, 0.5, STALE, false, true),
-                FriendRecognition.restore(2L, null, THRESHOLD, STALE, false, true)));
+                FriendRecognition.restore(2L, null, THRESHOLD, STALE, false, true));
 
         // when
         friendship.decay(RATE, THRESHOLD, DECAY_TIME);
@@ -242,9 +340,10 @@ class FriendshipTest {
     @DisplayName("양쪽 모두 최근에 교류했으면 관심도와 친밀도가 바뀌지 않는다")
     void decay_bothRecent_changesNothing() {
         // given
-        Friendship friendship = Friendship.restore("1_2", LocalDate.of(2026, 1, 1), 0.9, List.of(
+        Friendship friendship = Friendship.restore(LocalDate.of(2026, 1, 1), 0.9,
+
                 FriendRecognition.restore(1L, null, 40.0, RECENT, false, true),
-                FriendRecognition.restore(2L, null, 20.0, RECENT, false, true)));
+                FriendRecognition.restore(2L, null, 20.0, RECENT, false, true));
 
         // when
         friendship.decay(RATE, THRESHOLD, DECAY_TIME);
@@ -278,7 +377,7 @@ class FriendshipTest {
         friendship.decay(RATE, THRESHOLD, DECAY_TIME);
 
         // then
-        assertThat(friendship.getRecognitions().get(0).getLastInteractedAt()).isEqualTo(STALE);
-        assertThat(friendship.getRecognitions().get(1).getLastInteractedAt()).isEqualTo(RECENT);
+        assertThat(friendship.getLower().getLastInteractedAt()).isEqualTo(STALE);
+        assertThat(friendship.getHigher().getLastInteractedAt()).isEqualTo(RECENT);
     }
 }

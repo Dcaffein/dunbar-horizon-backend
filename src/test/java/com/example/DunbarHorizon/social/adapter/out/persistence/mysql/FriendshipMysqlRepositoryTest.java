@@ -128,9 +128,9 @@ class FriendshipMysqlRepositoryTest {
         assertThat(updated.isMuted(low.getId())).isTrue();
         assertThat(updated.isRoutable(low.getId())).isFalse();
         assertThat(updated.getIntimacy()).isEqualTo(INTIMACY);
-        assertThat(updated.getRecognitions()).extracting(FriendRecognition::getInterestScore)
+        assertThat(List.of(updated.getLower(), updated.getHigher())).extracting(FriendRecognition::getInterestScore)
                 .containsExactly(51.0, 32.0);
-        assertThat(updated.getRecognitions()).extracting(FriendRecognition::getLastInteractedAt)
+        assertThat(List.of(updated.getLower(), updated.getHigher())).extracting(FriendRecognition::getLastInteractedAt)
                 .containsExactly(INTERACTED_AT, INTERACTED_AT.plusDays(1));
     }
 
@@ -231,11 +231,11 @@ class FriendshipMysqlRepositoryTest {
     }
 
     private static Friendship friendship(User low, User high) {
-        return Friendship.restore(Friendship.generateCompositeId(low.getId(), high.getId()), CREATED_AT, INTIMACY,
-                List.of(FriendRecognition.restore(high.getId(), "from high", 32.0,
-                                INTERACTED_AT.plusDays(1), false, true),
-                        FriendRecognition.restore(low.getId(), "from low", 51.0,
-                                INTERACTED_AT, true, false)));
+        return Friendship.restore(CREATED_AT, INTIMACY,
+                FriendRecognition.restore(high.getId(), "from high", 32.0,
+                        INTERACTED_AT.plusDays(1), false, true),
+                FriendRecognition.restore(low.getId(), "from low", 51.0,
+                        INTERACTED_AT, true, false));
     }
 
 }

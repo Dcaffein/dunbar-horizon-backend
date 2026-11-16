@@ -245,9 +245,9 @@ class FriendshipLifecycleMysqlTest {
     }
 
     private void connect(double intimacy) {
-        friendships.create(Friendship.restore(pairId, FRIENDS_SINCE, intimacy, List.of(
+        friendships.create(Friendship.restore(FRIENDS_SINCE, intimacy,
                 new FriendRecognition(first),
-                new FriendRecognition(second))));
+                new FriendRecognition(second)));
     }
 
     private void connectWithBothMemberships(double intimacy) {

@@ -183,8 +183,7 @@ class LabelMysqlRepositoryTest {
     }
 
     private void connect(User one, User two) {
-        friendships.create(Friendship.restore(Friendship.generateCompositeId(one.getId(), two.getId()),
-                LocalDate.of(2026, 1, 1), 0.3, List.of(recognition(one), recognition(two))));
+        friendships.create(Friendship.restore(LocalDate.of(2026, 1, 1), 0.3, recognition(one), recognition(two)));
     }
 
     private static FriendRecognition recognition(User user) {
