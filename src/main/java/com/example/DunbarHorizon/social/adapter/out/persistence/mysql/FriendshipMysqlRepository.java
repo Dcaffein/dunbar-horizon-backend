@@ -152,8 +152,11 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
     @Override
     public void saveSettings(Friendship friendship, Long ownerId) {
         Long friendId = friendship.getFriendId(ownerId);
-        String side = ownerId < friendId ? "low" : "high";
-        var parameters = new MapSqlParameterSource(UserPairKey.of(ownerId, friendId).parameters())
+        FriendRecognition low = friendship.getLower();
+        String side = low.getOwnerId().equals(ownerId) ? "low" : "high";
+        var parameters = new MapSqlParameterSource()
+                .addValue("low", low.getOwnerId())
+                .addValue("high", friendship.getHigher().getOwnerId())
                 .addValue("alias", storedAlias(friendship.getFriendAlias(ownerId)), Types.VARCHAR)
                 .addValue("muted", friendship.isMuted(ownerId))
                 .addValue("routable", friendship.isRoutable(ownerId));
