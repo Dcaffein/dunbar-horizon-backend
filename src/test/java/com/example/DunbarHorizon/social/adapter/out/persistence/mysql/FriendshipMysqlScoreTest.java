@@ -4,7 +4,8 @@ import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepo
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendshipRepositoryAdapter;
+import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipPersistenceAdapter;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
 import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.service.FriendshipScoreService;
@@ -36,7 +37,7 @@ import static org.assertj.core.api.Assertions.within;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipMysqlRepository.class, FriendshipRepositoryAdapter.class, SocialUserMysqlRepository.class, LabelMysqlRepository.class,
+@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, SocialUserMysqlRepository.class, LabelMysqlRepository.class,
         FriendshipScoreService.class, FriendshipCommandService.class, FriendshipDecayPolicy.class})
 class FriendshipMysqlScoreTest {
 
@@ -45,8 +46,7 @@ class FriendshipMysqlScoreTest {
     private static final LocalDateTime RECENT_INTERACTION = LocalDateTime.now().withNano(0);
 
     @Autowired private UserJpaRepository users;
-    @Autowired private FriendshipMysqlRepository friendships;
-    @Autowired private FriendshipRepositoryAdapter friendshipRepository;
+    @Autowired private FriendshipPersistenceAdapter friendships;
     @Autowired private FriendshipScoreService scores;
     @Autowired private FriendshipCommandService commands;
     @Autowired private PlatformTransactionManager transactionManager;
@@ -101,7 +101,7 @@ class FriendshipMysqlScoreTest {
         // then
         assertScores(low, middle, 14, 18);
         assertScores(middle, high, 14, 18);
-        assertThat(friendshipRepository.existsFriendshipBetween(low, high)).isFalse();
+        assertThat(friendships.existsFriendshipBetween(low, high)).isFalse();
         scores.applyFlagConclusion(low, List.of(middle, high), InteractionType.FLAG_PRESERVED, ScoreDirection.REVOKE);
         assertScores(low, middle, 0, 3);
         assertScores(middle, high, 0, 3);
@@ -197,7 +197,7 @@ class FriendshipMysqlScoreTest {
                         recognition(high, 0.5, OLD_INTERACTION)),
                 Friendship.restore(CREATED_AT, recognition(low, floor, decayTime),
                         recognition(high, 63.2, decayTime)));
-        inputs.forEach(friendshipRepository::create);
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> inputs.forEach(friendships::create));
         List<Friendship> expected = List.of(
                 Friendship.restore(CREATED_AT, recognition(low, 40, OLD_INTERACTION),
                         recognition(middle, 20, decayTime.plusSeconds(1))),
@@ -215,7 +215,7 @@ class FriendshipMysqlScoreTest {
         for (Friendship domain : expected) {
             Long lowerId = domain.getLower().getOwnerId();
             Long higherId = domain.getHigher().getOwnerId();
-            Friendship stored = friendshipRepository.findBetween(lowerId, higherId).orElseThrow();
+            Friendship stored = friendships.findBetween(lowerId, higherId).orElseThrow();
             assertThat(stored.getMyInterestScore(lowerId))
                     .isCloseTo(domain.getMyInterestScore(lowerId), within(1e-9));
             assertThat(stored.getMyInterestScore(higherId))
@@ -271,8 +271,9 @@ class FriendshipMysqlScoreTest {
 
     private void create(Long first, Long second, double firstScore, double secondScore,
                         LocalDateTime firstTime, LocalDateTime secondTime) {
-        friendshipRepository.create(Friendship.restore(CREATED_AT,
-                recognition(first, firstScore, firstTime), recognition(second, secondScore, secondTime)));
+        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                friendships.create(Friendship.restore(CREATED_AT,
+                        recognition(first, firstScore, firstTime), recognition(second, secondScore, secondTime))));
     }
 
     private static FriendRecognition recognition(Long userId, double score, LocalDateTime lastInteraction) {
@@ -281,7 +282,7 @@ class FriendshipMysqlScoreTest {
     }
 
     private Friendship assertScores(Long first, Long second, double firstScore, double secondScore) {
-        Friendship friendship = friendshipRepository.findBetween(first, second).orElseThrow();
+        Friendship friendship = friendships.findBetween(first, second).orElseThrow();
         assertThat(friendship.getMyInterestScore(first)).isCloseTo(firstScore, within(1e-9));
         assertThat(friendship.getMyInterestScore(second)).isCloseTo(secondScore, within(1e-9));
         assertThat(friendship.getIntimacy()).isCloseTo(intimacy(firstScore, secondScore), within(1e-9));

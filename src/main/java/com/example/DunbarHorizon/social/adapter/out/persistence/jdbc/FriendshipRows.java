@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
+package com.example.DunbarHorizon.social.adapter.out.persistence.jdbc;
 
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;

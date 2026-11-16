@@ -2,7 +2,8 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendshipRepositoryAdapter;
+import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipPersistenceAdapter;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
 import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.service.MySqlLabelService;
@@ -23,8 +24,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -39,7 +42,7 @@ import static org.mockito.Mockito.doAnswer;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipMysqlRepository.class, FriendshipRepositoryAdapter.class, LabelMysqlRepository.class, SocialUserMysqlRepository.class,
+@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelMysqlRepository.class, SocialUserMysqlRepository.class,
         FriendshipCommandService.class, MySqlLabelService.class, LabelFactory.class, LabelNamePolicy.class})
 class FriendshipLifecycleMysqlTest {
 
@@ -50,8 +53,8 @@ class FriendshipLifecycleMysqlTest {
     @Autowired private MySqlLabelService labelService;
     @MockitoSpyBean private LabelMysqlRepository labels;
     @Autowired private JdbcTemplate jdbc;
-    @MockitoSpyBean private FriendshipMysqlRepository friendshipLocks;
-    @MockitoSpyBean private FriendshipRepositoryAdapter friendships;
+    @Autowired private PlatformTransactionManager transactionManager;
+    @MockitoSpyBean private FriendshipPersistenceAdapter friendships;
 
     private Long first;
     private Long second;
@@ -116,7 +119,7 @@ class FriendshipLifecycleMysqlTest {
             additionLocked.countDown();
             await(resumeAddition);
             return exists;
-        }).when(friendshipLocks).existsFriendshipForUpdate(first, second);
+        }).when(friendships).existsFriendshipForUpdate(first, second);
 
         // when
         try (var workers = Executors.newFixedThreadPool(2)) {
@@ -247,9 +250,10 @@ class FriendshipLifecycleMysqlTest {
     }
 
     private void connect(double interestScore) {
-        friendships.create(Friendship.restore(FRIENDS_SINCE,
-                FriendRecognition.restore(first, null, interestScore, LocalDateTime.now(), false, true),
-                FriendRecognition.restore(second, null, interestScore, LocalDateTime.now(), false, true)));
+        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                friendships.create(Friendship.restore(FRIENDS_SINCE,
+                        FriendRecognition.restore(first, null, interestScore, LocalDateTime.now(), false, true),
+                        FriendRecognition.restore(second, null, interestScore, LocalDateTime.now(), false, true))));
     }
 
     private void connectWithBothMemberships(double interestScore) {

@@ -2,9 +2,10 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendshipRepositoryAdapter;
-import com.example.DunbarHorizon.social.application.service.MySqlFriendRequestActionService;
+import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipPersistenceAdapter;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
+import com.example.DunbarHorizon.social.application.service.MySqlFriendRequestActionService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
@@ -22,9 +23,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -43,17 +46,17 @@ import static org.mockito.Mockito.doReturn;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendRequestMysqlRepository.class, FriendshipMysqlRepository.class, FriendshipRepositoryAdapter.class,
+@Import({FriendRequestMysqlRepository.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class,
         MySqlFriendRequestActionService.class,
         SocialUserMysqlRepository.class,
         FriendRequestMysqlRepositoryTest.AcceptedEvents.class})
 class FriendRequestMysqlRepositoryTest {
 
     @Autowired private MySqlFriendRequestActionService actions;
-    @MockitoSpyBean private FriendshipMysqlRepository friendshipLocks;
-    @Autowired private FriendshipRepositoryAdapter friendships;
+    @MockitoSpyBean private FriendshipPersistenceAdapter friendships;
     @Autowired private UserJpaRepository users;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private AcceptedEvents acceptedEvents;
     @MockitoSpyBean private FriendRequestMysqlRepository requests;
 
@@ -158,10 +161,11 @@ class FriendRequestMysqlRepositoryTest {
     void accept_KeepsRequest_DuplicateFriendshipKey() {
         // given
         actions.sendRequest(low, high);
-        friendships.create(Friendship.restore(LocalDate.of(2026, 1, 1),
-                FriendRecognition.restore(low, "기존", 21.4, null, false, true),
-                FriendRecognition.restore(high, null, 21.4, null, false, true)));
-        doReturn(false).when(friendshipLocks).existsFriendshipForUpdate(low, high);
+        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                friendships.create(Friendship.restore(LocalDate.of(2026, 1, 1),
+                        FriendRecognition.restore(low, "기존", 21.4, null, false, true),
+                        FriendRecognition.restore(high, null, 21.4, null, false, true))));
+        doReturn(false).when(friendships).existsFriendshipForUpdate(low, high);
 
         // when & then
         assertThatThrownBy(() -> actions.updateStatus(high, low, FriendRequestStatus.ACCEPTED))

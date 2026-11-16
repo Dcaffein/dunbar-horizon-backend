@@ -66,11 +66,11 @@ class FlagConclusionScoreAfterCommitIntegrationTest {
         friendships.clear();
         for (int i = 0; i < MEMBER_IDS.size(); i++) {
             for (int j = i + 1; j < MEMBER_IDS.size(); j++) {
-                Friendship friendship = FriendTestFactory.createFriendship(MEMBER_IDS.get(i), MEMBER_IDS.get(j));
-                friendshipRepository.create(friendship);
-                friendships.add(friendship);
+                friendships.add(FriendTestFactory.createFriendship(MEMBER_IDS.get(i), MEMBER_IDS.get(j)));
             }
         }
+        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                friendships.forEach(friendshipRepository::create));
     }
 
     @AfterEach
@@ -149,8 +149,9 @@ class FlagConclusionScoreAfterCommitIntegrationTest {
     }
 
     private void deleteMembers() {
-        friendships.forEach(created -> friendshipRepository.deleteBetween(
-                created.getLower().getOwnerId(), created.getHigher().getOwnerId()));
+        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                friendships.forEach(created -> friendshipRepository.deleteBetween(
+                        created.getLower().getOwnerId(), created.getHigher().getOwnerId())));
         for (long memberId : MEMBER_IDS) {
             jdbc.update("DELETE FROM users WHERE user_id = ?", memberId);
         }

@@ -1,8 +1,6 @@
-package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
+package com.example.DunbarHorizon.social.adapter.out.persistence.jdbc;
 
-import com.example.DunbarHorizon.social.application.port.out.FriendshipIdRepository;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepository;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipKey;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import lombok.RequiredArgsConstructor;
@@ -12,29 +10,25 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.Types;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 
+import static com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipConditions.ACTIVE_PAIR;
+
 @Repository
 @RequiredArgsConstructor
-public class FriendshipMysqlRepository
-        implements FriendshipScoreRepository, FriendshipLockRepository, FriendshipIdRepository {
+public class FriendshipJdbcRepository {
 
-    private static final String ACTIVE_PAIR = """
-            EXISTS (SELECT 1 FROM users WHERE user_id = low_user_id AND status = 'ACTIVE')
-              AND EXISTS (SELECT 1 FROM users WHERE user_id = high_user_id AND status = 'ACTIVE')""";
-
-    private static final String SELECT_PAIR = """
+    private static final String SELECT_PAIR_FOR_UPDATE = """
             SELECT * FROM friendships
             WHERE low_user_id = :low AND high_user_id = :high
               AND %s
+            FOR UPDATE
             """.formatted(ACTIVE_PAIR);
 
     private static final String LOCK_PAIR = """
@@ -83,42 +77,28 @@ public class FriendshipMysqlRepository
 
     private final NamedParameterJdbcTemplate jdbc;
 
-    @Override
-    public Optional<Friendship> findBetweenForUpdate(Long userId, Long friendId) {
-        return findPair(SELECT_PAIR + "FOR UPDATE", userId, friendId);
+    public Optional<Friendship> findForUpdate(FriendshipKey key) {
+        return jdbc.query(SELECT_PAIR_FOR_UPDATE, parameters(key), FriendshipRows::read).stream().findFirst();
     }
 
-    @Override
-    public List<Friendship> findAllBetweenForUpdate(Long userId, Collection<Long> friendIds) {
-        return lockPairs(friendIds.stream().map(friendId -> UserPairKey.of(userId, friendId)).toList());
+    public boolean existsForUpdate(FriendshipKey key) {
+        return !jdbc.queryForList(LOCK_PAIR, parameters(key), Long.class).isEmpty();
     }
 
-    @Override
-    public List<Friendship> findAllAmongForUpdate(Collection<Long> userIds) {
-        List<Long> members = userIds.stream().filter(Objects::nonNull).distinct().toList();
-        List<UserPairKey> pairs = new ArrayList<>();
-        for (int i = 0; i < members.size(); i++) {
-            for (int j = i + 1; j < members.size(); j++) {
-                pairs.add(UserPairKey.of(members.get(i), members.get(j)));
-            }
+    public List<Friendship> findAllForUpdate(Collection<FriendshipKey> keys) {
+        if (keys.isEmpty()) {
+            return List.of();
         }
-        return lockPairs(pairs);
+        List<Object[]> pairs = keys.stream().map(key -> new Object[]{key.low(), key.high()}).toList();
+        return jdbc.query(LOCK_PAIRS, Map.of("pairs", pairs), FriendshipRows::read);
     }
 
-    @Override
-    public boolean existsFriendshipForUpdate(Long userId, Long friendId) {
-        var key = UserPairKey.of(userId, friendId);
-        return !jdbc.queryForList(LOCK_PAIR, key.parameters(), Long.class).isEmpty();
-    }
-
-    @Override
-    public Set<Long> findFriendIdsByMuteStatus(Long userId, boolean isMuted) {
+    public Set<Long> findFriendIdsByMuteStatus(long userId, boolean isMuted) {
         return new HashSet<>(jdbc.queryForList(SELECT_FRIEND_IDS_BY_MUTE_STATUS,
                 Map.of("userId", userId, "muted", isMuted), Long.class));
     }
 
-    @Override
-    public Set<Long> filterFriendIdsAmong(Long userId, Collection<Long> candidateIds) {
+    public Set<Long> filterFriendIdsAmong(long userId, Collection<Long> candidateIds) {
         if (candidateIds.isEmpty()) {
             return Set.of();
         }
@@ -126,7 +106,6 @@ public class FriendshipMysqlRepository
                 Map.of("userId", userId, "candidateIds", candidateIds), Long.class));
     }
 
-    @Override
     public void saveInterestScores(Collection<Friendship> friendships) {
         if (friendships.isEmpty()) {
             return;
@@ -160,25 +139,11 @@ public class FriendshipMysqlRepository
                 """.formatted(rows), parameters);
     }
 
-    @Override
     public void applyDecay(double rate, double threshold, LocalDateTime decayTime) {
         jdbc.update(APPLY_DECAY, Map.of("rate", rate, "threshold", threshold, "decayTime", decayTime));
     }
 
-    private Optional<Friendship> findPair(String sql, Long userId, Long friendId) {
-        var key = UserPairKey.of(userId, friendId);
-        return jdbc.query(sql, key.parameters(), FriendshipRows::read).stream().findFirst();
-    }
-
-    private List<Friendship> lockPairs(Collection<UserPairKey> keys) {
-        List<Object[]> pairs = keys.stream()
-                .filter(pair -> pair.low() < pair.high())
-                .distinct()
-                .map(pair -> new Object[]{pair.low(), pair.high()})
-                .toList();
-        if (pairs.isEmpty()) {
-            return List.of();
-        }
-        return jdbc.query(LOCK_PAIRS, Map.of("pairs", pairs), FriendshipRows::read);
+    private static Map<String, Long> parameters(FriendshipKey key) {
+        return Map.of("low", key.low(), "high", key.high());
     }
 }
