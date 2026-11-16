@@ -1,17 +1,9 @@
 package com.example.DunbarHorizon.social.domain.friend.repository;
 
-import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ArchivedFriendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
+import com.example.DunbarHorizon.social.domain.friend.Friendship;
 
-import java.util.List;
+import java.util.Collection;
 
 public interface ArchivedFriendshipRepository {
-    void saveAll(List<ArchivedFriendship> friendships);
-
-    default void saveCandidates(List<FriendshipArchiveCandidate> candidates) {
-        saveAll(candidates.stream()
-                .map(candidate -> new ArchivedFriendship(candidate.id(), candidate.userAId(), candidate.userBId(),
-                        candidate.friendedAt()))
-                .toList());
-    }
+    void archive(Collection<Friendship> friendships);
 }

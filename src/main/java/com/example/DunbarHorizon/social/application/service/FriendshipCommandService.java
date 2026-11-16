@@ -54,14 +54,7 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
             return;
         }
 
-        List<FriendshipArchiveCandidate> records = eligible.stream()
-                .map(friendship -> {
-                    var idsInOrder = friendship.getUserIds().stream().sorted().toList();
-                    return new FriendshipArchiveCandidate(friendship.getId(), idsInOrder.getFirst(),
-                            idsInOrder.getLast(), friendship.getCreatedAt());
-                })
-                .toList();
-        archives.saveCandidates(records);
+        archives.archive(eligible);
         removeFriendships(eligible);
     }
 
