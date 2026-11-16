@@ -18,6 +18,7 @@ import com.example.DunbarHorizon.social.domain.label.exception.InvalidLabelNameE
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelNotFoundException;
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
+import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -129,6 +130,21 @@ class LabelMysqlRepositoryTest {
                 .isInstanceOf(FriendshipNotFoundException.class);
         assertThat(service.getLabelMembers(owner.getId(), label.getId())).hasSize(1);
         service.removeMemberFromLabel(owner.getId(), label.getId(), first.getId());
+        assertThat(service.getLabelMembers(owner.getId(), label.getId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("비활성 친구를 멤버로 추가하면 관계 없음이 아니라 사용자 없음으로 거부한다")
+    void addMember_RejectsInactiveFriend_AsMissingUser() {
+        // given
+        Label label = service.createLabel(owner.getId(), "친구");
+        connect(owner, first);
+        first.deactivate();
+        em.flush();
+
+        // when & then
+        assertThatThrownBy(() -> service.addMemberToLabel(owner.getId(), label.getId(), first.getId()))
+                .isInstanceOf(UserReferenceNotFoundException.class);
         assertThat(service.getLabelMembers(owner.getId(), label.getId())).isEmpty();
     }
 

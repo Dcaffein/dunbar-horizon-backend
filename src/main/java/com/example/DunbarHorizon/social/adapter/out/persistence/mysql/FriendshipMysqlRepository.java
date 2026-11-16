@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
-import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
@@ -26,15 +25,18 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Repository
 @RequiredArgsConstructor
 public class FriendshipMysqlRepository implements FriendshipRepository {
 
+    private static final String ACTIVE_PAIR = """
+            EXISTS (SELECT 1 FROM users WHERE user_id = low_user_id AND status = 'ACTIVE')
+            AND EXISTS (SELECT 1 FROM users WHERE user_id = high_user_id AND status = 'ACTIVE')
+            """;
     private static final String PAIR = "low_user_id = :low AND high_user_id = :high";
-    private static final String SELECT_PAIR = "SELECT * FROM friendships WHERE " + PAIR;
+    private static final String ACTIVE_PAIR_MATCH = PAIR + " AND " + ACTIVE_PAIR;
+    private static final String SELECT_PAIR = "SELECT * FROM friendships WHERE " + ACTIVE_PAIR_MATCH;
     private static final String INSERT = """
             INSERT INTO friendships (
                 low_user_id, high_user_id, created_at, intimacy,
@@ -46,28 +48,21 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
                 :highAlias, :highScore, :highInteractedAt, :highMuted, :highRoutable
             )
             """;
-    private static final String SELECT_FRIENDSHIPS = """
-            SELECT * FROM friendships WHERE low_user_id = :userId
-            UNION ALL
-            SELECT * FROM friendships WHERE high_user_id = :userId
-            """;
-    private static final String SELECT_BY_MUTE_STATUS = """
-            SELECT high_user_id FROM friendships WHERE low_user_id = :userId AND low_is_muted = :muted
-            UNION ALL
-            SELECT low_user_id FROM friendships WHERE high_user_id = :userId AND high_is_muted = :muted
-            """;
-    private static final String SELECT_FRIEND_IDS_AMONG = """
-            SELECT high_user_id FROM friendships WHERE low_user_id = :userId AND high_user_id IN (:candidateIds)
-            UNION ALL
-            SELECT low_user_id FROM friendships WHERE high_user_id = :userId AND low_user_id IN (:candidateIds)
-            """;
-    private static final String ACTIVE_PAIR = """
-            EXISTS (SELECT 1 FROM users WHERE user_id = low_user_id AND status = 'ACTIVE')
-            AND EXISTS (SELECT 1 FROM users WHERE user_id = high_user_id AND status = 'ACTIVE')
-            """;
+    private static final String SELECT_FRIENDSHIPS =
+            "SELECT * FROM friendships WHERE low_user_id = :userId AND " + ACTIVE_PAIR
+            + " UNION ALL SELECT * FROM friendships WHERE high_user_id = :userId AND " + ACTIVE_PAIR;
+    private static final String SELECT_BY_MUTE_STATUS =
+            "SELECT high_user_id FROM friendships WHERE low_user_id = :userId AND low_is_muted = :muted AND "
+            + ACTIVE_PAIR
+            + " UNION ALL SELECT low_user_id FROM friendships WHERE high_user_id = :userId AND high_is_muted = :muted AND "
+            + ACTIVE_PAIR;
+    private static final String SELECT_FRIEND_IDS_AMONG =
+            "SELECT high_user_id FROM friendships WHERE low_user_id = :userId AND high_user_id IN (:candidateIds) AND "
+            + ACTIVE_PAIR
+            + " UNION ALL SELECT low_user_id FROM friendships WHERE high_user_id = :userId AND low_user_id IN (:candidateIds) AND "
+            + ACTIVE_PAIR;
 
     private final NamedParameterJdbcTemplate jdbc;
-    private final SocialUserMysqlRepository users;
 
     @Override
     public void create(Friendship friendship) {
@@ -118,13 +113,14 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
     public boolean existsFriendshipBetween(Long userId, Long friendId) {
         var key = UserPairKey.of(userId, friendId);
         return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM friendships WHERE " + PAIR + ")", key.parameters(), Boolean.class));
+                "SELECT EXISTS (SELECT 1 FROM friendships WHERE " + ACTIVE_PAIR_MATCH + ")", key.parameters(),
+                Boolean.class));
     }
 
     @Override
     public boolean existsFriendshipForUpdate(Long userId, Long friendId) {
         var key = UserPairKey.of(userId, friendId);
-        return !jdbc.queryForList("SELECT low_user_id FROM friendships WHERE " + PAIR + " FOR UPDATE",
+        return !jdbc.queryForList("SELECT low_user_id FROM friendships WHERE " + ACTIVE_PAIR_MATCH + " FOR UPDATE",
                 key.parameters(), Long.class).isEmpty();
     }
 
@@ -135,8 +131,8 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
 
     @Override
     public Set<Long> findFriendIdsByMuteStatus(Long userId, boolean isMuted) {
-        List<Long> ids = jdbc.queryForList(SELECT_BY_MUTE_STATUS, Map.of("userId", userId, "muted", isMuted), Long.class);
-        return activeFriendIds(userId, ids);
+        return new HashSet<>(jdbc.queryForList(SELECT_BY_MUTE_STATUS,
+                Map.of("userId", userId, "muted", isMuted), Long.class));
     }
 
     @Override
@@ -144,9 +140,8 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
         if (candidateIds.isEmpty()) {
             return Set.of();
         }
-        List<Long> ids = jdbc.queryForList(SELECT_FRIEND_IDS_AMONG,
-                Map.of("userId", userId, "candidateIds", candidateIds), Long.class);
-        return activeFriendIds(userId, ids);
+        return new HashSet<>(jdbc.queryForList(SELECT_FRIEND_IDS_AMONG,
+                Map.of("userId", userId, "candidateIds", candidateIds), Long.class));
     }
 
     @Override
@@ -163,8 +158,8 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
         int updated = jdbc.update("""
                 UPDATE friendships
                 SET %1$s_friend_alias = :alias, %1$s_is_muted = :muted, %1$s_is_routable = :routable
-                WHERE %2$s AND %3$s
-                """.formatted(side, PAIR, ACTIVE_PAIR), parameters);
+                WHERE %2$s
+                """.formatted(side, ACTIVE_PAIR_MATCH), parameters);
         if (updated == 0) {
             throw new FriendshipNotFoundException(ownerId, friendId);
         }
@@ -229,7 +224,7 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
     @Override
     public boolean deleteBetween(Long userId, Long friendId) {
         var key = UserPairKey.of(userId, friendId);
-        return jdbc.update("DELETE FROM friendships WHERE " + PAIR + " AND " + ACTIVE_PAIR, key.parameters()) > 0;
+        return jdbc.update("DELETE FROM friendships WHERE " + ACTIVE_PAIR_MATCH, key.parameters()) > 0;
     }
 
     private Optional<Friendship> findPair(String sql, Long userId, Long friendId) {
@@ -244,7 +239,8 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
         }
         return restore(jdbc.query("""
                 SELECT * FROM friendships FORCE INDEX (PRIMARY)
-                WHERE (low_user_id, high_user_id) IN (:pairs)
+                WHERE (low_user_id, high_user_id) IN (:pairs) AND
+                """ + ACTIVE_PAIR + """
                 ORDER BY low_user_id, high_user_id
                 FOR UPDATE
                 """, Map.of("pairs", pairs), FriendshipRow::read));
@@ -270,27 +266,8 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
         return alias.isEmpty() ? null : alias;
     }
 
-    private List<Friendship> restore(List<FriendshipRow> rows) {
-        Set<Long> userIds = rows.stream().flatMap(row -> Stream.of(row.key().low(), row.key().high()))
-                .collect(Collectors.toSet());
-        Map<Long, SocialUserProfile> profiles = users.findActiveProfiles(userIds);
-        return rows.stream()
-                .filter(row -> profiles.containsKey(row.key().low()) && profiles.containsKey(row.key().high()))
-                .map(FriendshipRow::toFriendship)
-                .toList();
-    }
-
-    private Set<Long> activeFriendIds(Long userId, List<Long> ids) {
-        if (ids.isEmpty()) {
-            return Set.of();
-        }
-        Set<Long> userIds = new HashSet<>(ids);
-        userIds.add(userId);
-        Map<Long, SocialUserProfile> profiles = users.findActiveProfiles(userIds);
-        if (!profiles.containsKey(userId)) {
-            return Set.of();
-        }
-        return ids.stream().filter(profiles::containsKey).collect(Collectors.toSet());
+    private static List<Friendship> restore(List<FriendshipRow> rows) {
+        return rows.stream().map(FriendshipRow::toFriendship).toList();
     }
 
     private record FriendshipRow(UserPairKey key, LocalDate createdAt, RecognitionRow low, RecognitionRow high) {

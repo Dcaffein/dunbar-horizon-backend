@@ -213,20 +213,31 @@ class FriendshipMysqlRepositoryTest {
     }
 
     @Test
-    @DisplayName("계정이 비활성화되면 친구 목록과 후보 ID에서 제외된다")
-    void findFriends_ExcludesInactiveAccount_AfterStatusChange() {
+    @DisplayName("계정이 비활성화되면 모든 조회·잠금·삭제에서 관계가 없는 것으로 다뤄지고 행은 남는다")
+    void lookups_TreatAsMissing_InactiveAccount() {
         // given
         repository.create(friendship(low, high));
         high.deactivate();
         em.flush();
         em.clear();
+        Long me = low.getId();
+        Long friend = high.getId();
 
         // when & then
-        assertThat(repository.findByUserId(low.getId())).isEmpty();
-        assertThat(repository.findFriendIdsByMuteStatus(low.getId(), true)).isEmpty();
-        assertThat(repository.filterFriendIdsAmong(low.getId(), List.of(high.getId()))).isEmpty();
-        assertThat(repository.deleteBetween(low.getId(), high.getId())).isFalse();
-        assertThat(repository.existsFriendshipBetween(low.getId(), high.getId())).isTrue();
+        assertThat(repository.findByUserId(me)).isEmpty();
+        assertThat(repository.findByUserId(friend)).isEmpty();
+        assertThat(repository.findFriendIdsByMuteStatus(me, true)).isEmpty();
+        assertThat(repository.findFriendIdsByMuteStatus(friend, false)).isEmpty();
+        assertThat(repository.filterFriendIdsAmong(me, List.of(friend))).isEmpty();
+        assertThat(repository.findBetween(me, friend)).isEmpty();
+        assertThat(repository.findBetweenForUpdate(me, friend)).isEmpty();
+        assertThat(repository.existsFriendshipBetween(me, friend)).isFalse();
+        assertThat(repository.existsFriendshipForUpdate(me, friend)).isFalse();
+        assertThat(repository.findAllBetweenForUpdate(me, List.of(friend))).isEmpty();
+        assertThat(repository.findAllAmongForUpdate(List.of(me, friend))).isEmpty();
+        assertThat(repository.deleteBetween(me, friend)).isFalse();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
+                Integer.class, me, friend)).isEqualTo(1);
     }
 
     @Test

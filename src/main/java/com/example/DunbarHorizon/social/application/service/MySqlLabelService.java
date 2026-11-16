@@ -61,10 +61,10 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
     @Override
     public void addMemberToLabel(Long ownerId, String labelId, Long memberId) {
         requireOwner(labels.findOwnerId(labelId), labelId, ownerId);
+        activeProfile(memberId);
         if (!friendships.existsFriendshipForUpdate(ownerId, memberId)) {
             throw new FriendshipNotFoundException(ownerId, memberId);
         }
-        activeProfile(memberId);
         requireOwner(labels.lockOwnerId(labelId), labelId, ownerId);
         labels.addMember(labelId, memberId);
     }
