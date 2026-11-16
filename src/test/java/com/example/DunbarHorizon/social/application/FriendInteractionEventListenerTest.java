@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import com.example.DunbarHorizon.social.application.eventListener.FriendInteractionEventListener;
-import com.example.DunbarHorizon.social.application.service.MySqlFriendshipScoreService;
+import com.example.DunbarHorizon.social.application.service.FriendshipScoreService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,7 +24,7 @@ class FriendInteractionEventListenerTest {
     private FriendInteractionEventListener listener;
 
     @Mock
-    private MySqlFriendshipScoreService friendshipScores;
+    private FriendshipScoreService friendshipScores;
 
     private static final Long USER_A = 1L;
     private static final Long USER_B = 2L;

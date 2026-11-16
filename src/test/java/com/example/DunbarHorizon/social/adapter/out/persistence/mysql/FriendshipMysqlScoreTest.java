@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepo
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
-import com.example.DunbarHorizon.social.application.service.MySqlFriendshipScoreService;
+import com.example.DunbarHorizon.social.application.service.FriendshipScoreService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.within;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendshipMysqlRepository.class, SocialUserMysqlRepository.class,
-        MySqlFriendshipScoreService.class, FriendshipDecayPolicy.class})
+        FriendshipScoreService.class, FriendshipDecayPolicy.class})
 class FriendshipMysqlScoreTest {
 
     private static final LocalDate CREATED_AT = LocalDate.of(2026, 1, 1);
@@ -42,7 +42,7 @@ class FriendshipMysqlScoreTest {
 
     @Autowired private UserJpaRepository users;
     @Autowired private FriendshipMysqlRepository friendships;
-    @Autowired private MySqlFriendshipScoreService scores;
+    @Autowired private FriendshipScoreService scores;
     @Autowired private PlatformTransactionManager transactionManager;
 
     private Long low;

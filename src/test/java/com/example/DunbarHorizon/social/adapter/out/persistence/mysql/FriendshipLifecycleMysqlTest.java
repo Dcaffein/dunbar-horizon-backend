@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ArchivedFriendshipJpaRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ArchivedFriendshipRepositoryAdapter;
 import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
-import com.example.DunbarHorizon.social.application.service.MySqlFriendshipLifecycleService;
+import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.service.MySqlLabelService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
@@ -40,7 +40,7 @@ import static org.mockito.Mockito.doAnswer;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendshipMysqlRepository.class, LabelMysqlRepository.class, SocialUserMysqlRepository.class,
-        MySqlFriendshipLifecycleService.class, MySqlLabelService.class, LabelFactory.class, LabelNamePolicy.class,
+        FriendshipCommandService.class, MySqlLabelService.class, LabelFactory.class, LabelNamePolicy.class,
         ArchivedFriendshipRepositoryAdapter.class, FriendshipArchivePolicy.class, FriendshipDecayPolicy.class})
 class FriendshipLifecycleMysqlTest {
 
@@ -48,7 +48,7 @@ class FriendshipLifecycleMysqlTest {
 
     @Autowired private UserJpaRepository users;
     @Autowired private ArchivedFriendshipJpaRepository archives;
-    @Autowired private MySqlFriendshipLifecycleService lifecycle;
+    @Autowired private FriendshipCommandService lifecycle;
     @Autowired private MySqlLabelService labelService;
     @Autowired private LabelMysqlRepository labels;
     @Autowired private FriendshipArchivePolicy archivePolicy;

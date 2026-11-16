@@ -111,7 +111,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Soft delete:** `global/common/SoftDeletable`.
 - **Auditing:** `BaseTimeEntity`와 JPA auditing으로 `createdAt`/`updatedAt` 관리.
 - **Async:** 알림과 백그라운드 작업에 `@Async` + Spring Retry.
-- **Friendship decay:** `MySqlFriendshipScoreService`와 `FriendshipDecayPolicy`가 시간 기반 intimacy 감쇠를 처리한다.
+- **Friendship decay:** `FriendshipScoreService`와 `FriendshipDecayPolicy`가 시간 기반 intimacy 감쇠를 처리한다.
 
 ## Environment Variables
 

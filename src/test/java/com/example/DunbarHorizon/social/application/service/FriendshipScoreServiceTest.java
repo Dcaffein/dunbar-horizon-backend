@@ -28,7 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class InteractionScoreServiceTest {
+class FriendshipScoreServiceTest {
 
     private static final Long HOST_ID = 10L;
     private static final List<Long> PARTICIPANT_IDS = List.of(21L, 22L);
@@ -37,7 +37,7 @@ class InteractionScoreServiceTest {
     private static final Long USER_1 = 1L;
     private static final Long USER_2 = 2L;
 
-    @InjectMocks private MySqlFriendshipScoreService interactionScoreService;
+    @InjectMocks private FriendshipScoreService interactionScoreService;
     @Mock private FriendshipRepository friendshipRepository;
 
     @Test

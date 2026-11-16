@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.application.eventListener;
 
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
-import com.example.DunbarHorizon.social.application.service.MySqlFriendshipScoreService;
+import com.example.DunbarHorizon.social.application.service.FriendshipScoreService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -13,7 +13,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class FriendInteractionEventListener {
 
-    private final MySqlFriendshipScoreService friendshipScores;
+    private final FriendshipScoreService friendshipScores;
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)

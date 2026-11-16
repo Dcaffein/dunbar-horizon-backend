@@ -36,15 +36,15 @@ import static org.mockito.Mockito.when;
  * 재시도와 트랜잭션은 프록시가 거는 것이라 Spring 컨텍스트에서 본다.
  * 시도마다 트랜잭션이 새로 열리는지(재시도 프록시가 트랜잭션 프록시 바깥인지)가 핵심이다.
  */
-@SpringJUnitConfig(InteractionScoreServiceRetryTest.Config.class)
-class InteractionScoreServiceRetryTest {
+@SpringJUnitConfig(FriendshipScoreServiceRetryTest.Config.class)
+class FriendshipScoreServiceRetryTest {
 
     private static final InteractionType FLAG_TYPE = InteractionType.FLAG_ENDED;
 
     @Configuration
     @EnableRetry
     @EnableTransactionManagement
-    @Import(MySqlFriendshipScoreService.class)
+    @Import(FriendshipScoreService.class)
     static class Config {
         @Bean
         PlatformTransactionManager transactionManager() {
@@ -52,7 +52,7 @@ class InteractionScoreServiceRetryTest {
         }
     }
 
-    @Autowired private MySqlFriendshipScoreService interactionScoreService;
+    @Autowired private FriendshipScoreService interactionScoreService;
     @Autowired private PlatformTransactionManager transactionManager;
     @MockitoBean private FriendshipRepository friendshipRepository;
     @MockitoBean private FriendshipDecayPolicy decayPolicy;

@@ -18,7 +18,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class MySqlFriendshipLifecycleService implements FriendshipCommandUseCase {
+public class FriendshipCommandService implements FriendshipCommandUseCase {
 
     private final FriendshipLifecycleRepository friendships;
     private final LabelMembershipRepository labels;

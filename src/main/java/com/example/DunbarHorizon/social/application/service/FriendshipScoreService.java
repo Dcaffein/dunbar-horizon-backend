@@ -17,7 +17,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class MySqlFriendshipScoreService {
+public class FriendshipScoreService {
 
     private final FriendshipRepository friendships;
     private final FriendshipDecayPolicy decayPolicy;
