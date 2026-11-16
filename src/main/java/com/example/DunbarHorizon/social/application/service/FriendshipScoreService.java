@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
 import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.dao.TransientDataAccessException;
@@ -23,7 +23,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class FriendshipScoreService {
 
-    private final FriendshipRepository friendships;
+    private final FriendshipScoreRepository friendships;
     private final FriendshipDecayPolicy decayPolicy;
 
     @Retryable(retryFor = TransientDataAccessException.class, maxAttempts = 3,

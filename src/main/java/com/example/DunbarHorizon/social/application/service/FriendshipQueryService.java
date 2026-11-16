@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.FriendshipDetailResult;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipIdRepository;
 import com.example.DunbarHorizon.social.application.port.out.SocialUserProfileReader;
 import com.example.DunbarHorizon.social.application.port.in.FriendshipQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPort;
@@ -21,6 +22,7 @@ import java.util.Set;
 public class FriendshipQueryService implements FriendshipQueryUseCase {
 
     private final FriendshipRepository friendshipRepository;
+    private final FriendshipIdRepository friendshipIdRepository;
     private final ImageUrlResolverPort imageUrlResolverPort;
     private final SocialUserProfileReader profiles;
 
@@ -48,16 +50,16 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
 
     @Override
     public Set<Long> getFriendIdsIn(Long userId, Collection<Long> targetIds) {
-        return friendshipRepository.filterFriendIdsAmong(userId, targetIds);
+        return friendshipIdRepository.filterFriendIdsAmong(userId, targetIds);
     }
 
     @Override
     public Set<Long> getMutedIds(Long userId) {
-        return friendshipRepository.findFriendIdsByMuteStatus(userId, true);
+        return friendshipIdRepository.findFriendIdsByMuteStatus(userId, true);
     }
 
     @Override
     public Set<Long> getListenableFriendIds(Long userId) {
-        return friendshipRepository.findFriendIdsByMuteStatus(userId, false);
+        return friendshipIdRepository.findFriendIdsByMuteStatus(userId, false);
     }
 }

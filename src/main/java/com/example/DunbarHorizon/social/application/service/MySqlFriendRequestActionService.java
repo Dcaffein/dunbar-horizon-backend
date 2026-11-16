@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResu
 import com.example.DunbarHorizon.social.application.port.in.FriendRequestReceiverActionUseCase;
 import com.example.DunbarHorizon.social.application.port.in.FriendRequesterActionUseCase;
 import com.example.DunbarHorizon.social.application.port.out.FriendRequestCommandRepository;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepository;
 import com.example.DunbarHorizon.social.application.port.out.SocialUserProfileReader;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
@@ -30,6 +31,7 @@ public class MySqlFriendRequestActionService implements FriendRequesterActionUse
 
     private final FriendRequestCommandRepository requests;
     private final FriendshipRepository friendships;
+    private final FriendshipLockRepository friendshipLocks;
     private final SocialUserProfileReader userProfiles;
     private final ApplicationEventPublisher events;
 
@@ -44,7 +46,7 @@ public class MySqlFriendRequestActionService implements FriendRequesterActionUse
         FriendRequest request = FriendshipBroker.propose(requesterId, receiverId, existingFriendship, existingRequest);
         requests.saveRequest(request);
         // A concurrent acceptance can delete the old request while this insert waits.
-        if (friendships.existsFriendshipForUpdate(requesterId, receiverId)) {
+        if (friendshipLocks.existsFriendshipForUpdate(requesterId, receiverId)) {
             throw new AlreadyFriendsException(requesterId, receiverId);
         }
         return FriendRequestResult.from(request, requester, receiver);
@@ -62,7 +64,7 @@ public class MySqlFriendRequestActionService implements FriendRequesterActionUse
         FriendRequest request = findForUpdate(receiverId, counterpartId);
         request.updateStatus(receiverId, status);
         if (request.isAccepted()) {
-            boolean existingFriendship = friendships.existsFriendshipForUpdate(request.getRequesterId(), request.getReceiverId());
+            boolean existingFriendship = friendshipLocks.existsFriendshipForUpdate(request.getRequesterId(), request.getReceiverId());
             Friendship friendship = FriendshipBroker.createFrom(request, existingFriendship);
             friendships.create(friendship);
             requests.deleteById(request.getId());

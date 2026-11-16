@@ -6,7 +6,7 @@ import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,7 +39,7 @@ class FriendshipScoreServiceTest {
     private static final Long USER_2 = 2L;
 
     @InjectMocks private FriendshipScoreService interactionScoreService;
-    @Mock private FriendshipRepository friendshipRepository;
+    @Mock private FriendshipScoreRepository friendshipRepository;
 
     @Test
     @DisplayName("수정용으로 불러온 관계를 계산한 뒤 쓴다")

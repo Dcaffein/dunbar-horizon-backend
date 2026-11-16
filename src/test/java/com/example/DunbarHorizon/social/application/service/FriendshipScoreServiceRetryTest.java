@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.social.application.service;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -56,7 +56,7 @@ class FriendshipScoreServiceRetryTest {
 
     @Autowired private FriendshipScoreService interactionScoreService;
     @Autowired private PlatformTransactionManager transactionManager;
-    @MockitoBean private FriendshipRepository friendshipRepository;
+    @MockitoBean private FriendshipScoreRepository friendshipRepository;
     @MockitoBean private FriendshipDecayPolicy decayPolicy;
 
     @BeforeEach

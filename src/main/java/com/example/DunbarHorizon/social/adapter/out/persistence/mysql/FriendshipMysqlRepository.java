@@ -1,5 +1,8 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
+import com.example.DunbarHorizon.social.application.port.out.FriendshipIdRepository;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepository;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
@@ -25,7 +28,8 @@ import java.util.StringJoiner;
 
 @Repository
 @RequiredArgsConstructor
-public class FriendshipMysqlRepository implements FriendshipRepository {
+public class FriendshipMysqlRepository
+        implements FriendshipRepository, FriendshipScoreRepository, FriendshipLockRepository, FriendshipIdRepository {
 
     private static final String ACTIVE_PAIR = """
             EXISTS (SELECT 1 FROM users WHERE user_id = low_user_id AND status = 'ACTIVE')

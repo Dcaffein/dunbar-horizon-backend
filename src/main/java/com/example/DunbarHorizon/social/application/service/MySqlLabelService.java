@@ -5,10 +5,10 @@ import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.application.port.in.LabelCommandUseCase;
 import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepository;
 import com.example.DunbarHorizon.social.application.port.out.LabelMembershipRepository;
 import com.example.DunbarHorizon.social.application.port.out.SocialUserProfileReader;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelFactory;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
@@ -32,7 +32,7 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
 
     private final LabelMembershipRepository labels;
     private final LabelFactory labelFactory;
-    private final FriendshipRepository friendships;
+    private final FriendshipLockRepository friendships;
     private final SocialUserProfileReader users;
 
     @Override
