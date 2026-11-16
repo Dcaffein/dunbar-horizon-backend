@@ -4,13 +4,11 @@ import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepo
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ArchivedFriendshipRepositoryAdapter;
 import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.service.FriendshipScoreService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipArchivePolicy;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
@@ -28,7 +26,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -39,8 +36,7 @@ import static org.assertj.core.api.Assertions.within;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendshipMysqlRepository.class, SocialUserMysqlRepository.class, LabelMysqlRepository.class,
-        FriendshipScoreService.class, FriendshipCommandService.class, FriendshipDecayPolicy.class,
-        FriendshipArchivePolicy.class, ArchivedFriendshipRepositoryAdapter.class})
+        FriendshipScoreService.class, FriendshipCommandService.class, FriendshipDecayPolicy.class})
 class FriendshipMysqlScoreTest {
 
     private static final LocalDate CREATED_AT = LocalDate.of(2026, 1, 1);
@@ -181,8 +177,7 @@ class FriendshipMysqlScoreTest {
         var decayed = assertScores(low, middle, 1, 42);
         assertThat(decayed.getLower().getLastInteractedAt()).isEqualTo(OLD_INTERACTION);
         assertScores(middle, high, 0.5, 2);
-        assertThat(friendships.findArchivableForUpdate(FriendRecognition.normalize(1.0)))
-                .extracting(Friendship::getUserIds).contains(Set.of(low, high));
+        assertScores(low, high, 1, 1);
     }
 
     @Test

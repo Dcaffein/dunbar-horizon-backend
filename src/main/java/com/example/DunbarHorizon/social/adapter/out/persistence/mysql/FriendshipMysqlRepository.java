@@ -120,16 +120,6 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
     }
 
     @Override
-    public List<Friendship> findArchivableForUpdate(double intimacyThreshold) {
-        List<UserPairKey> candidates = jdbc.query("""
-                SELECT low_user_id, high_user_id FROM friendships
-                WHERE intimacy <= :threshold AND
-                """ + ACTIVE_PAIR, Map.of("threshold", intimacyThreshold),
-                (row, index) -> new UserPairKey(row.getLong("low_user_id"), row.getLong("high_user_id")));
-        return lockPairs(candidates);
-    }
-
-    @Override
     public boolean existsFriendshipBetween(Long userId, Long targetId) {
         var key = UserPairKey.of(userId, targetId);
         return Boolean.TRUE.equals(jdbc.queryForObject(

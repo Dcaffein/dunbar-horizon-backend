@@ -19,8 +19,6 @@ public interface FriendshipRepository {
 
     List<Friendship> findAllAmongForUpdate(Collection<Long> userIds);
 
-    List<Friendship> findArchivableForUpdate(double intimacyThreshold);
-
     boolean existsFriendshipBetween(Long userId, Long friendId);
 
     boolean existsFriendshipForUpdate(Long userId, Long friendId);

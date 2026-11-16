@@ -278,25 +278,6 @@ class FriendshipMysqlRepositoryTest {
     }
 
     @Test
-    @DisplayName("아카이브 대상 잠금 조회는 친밀도 열이 기준 이하인 관계만 돌려준다")
-    void findArchivableForUpdate_ReturnsRelationshipsAtOrBelowThreshold() {
-        // given
-        User third = createUser("third");
-        repository.create(friendship(low, high));
-        repository.create(Friendship.restore(CREATED_AT,
-                FriendRecognition.restore(high.getId(), null, 0.5, INTERACTED_AT, false, true),
-                FriendRecognition.restore(third.getId(), null, 0.5, INTERACTED_AT, false, true)));
-
-        // when
-        var locked = repository.findArchivableForUpdate(0.02);
-
-        // then
-        assertThat(locked).singleElement()
-                .satisfies(friendship -> assertThat(friendship.getUserIds())
-                        .containsExactlyInAnyOrder(high.getId(), third.getId()));
-    }
-
-    @Test
     @DisplayName("관계를 삭제하면 어느 방향에서도 조회되지 않는다")
     void deleteAll_RemovesPair_FromBothDirections() {
         // given

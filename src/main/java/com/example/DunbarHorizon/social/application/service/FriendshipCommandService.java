@@ -4,9 +4,7 @@ import com.example.DunbarHorizon.social.application.port.in.FriendshipCommandUse
 import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.application.port.out.LabelMembershipRepository;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipArchivePolicy;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
-import com.example.DunbarHorizon.social.domain.friend.repository.ArchivedFriendshipRepository;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,8 +19,6 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
 
     private final FriendshipRepository friendships;
     private final LabelMembershipRepository labels;
-    private final ArchivedFriendshipRepository archives;
-    private final FriendshipArchivePolicy archivePolicy;
 
     @Override
     @Transactional(transactionManager = "transactionManager", isolation = Isolation.READ_COMMITTED)
@@ -39,20 +35,6 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
         Friendship locked = friendships.findBetweenForUpdate(currentUserId, friendId)
                 .orElseThrow(() -> new FriendshipNotFoundException(currentUserId, friendId));
         removeFriendships(List.of(locked));
-    }
-
-    @Transactional(transactionManager = "transactionManager", isolation = Isolation.READ_COMMITTED)
-    public void archiveFriendships() {
-        double threshold = archivePolicy.archiveThreshold();
-        List<Friendship> eligible = friendships.findArchivableForUpdate(threshold).stream()
-                .filter(friendship -> friendship.getIntimacy() <= threshold)
-                .toList();
-        if (eligible.isEmpty()) {
-            return;
-        }
-
-        archives.archive(eligible);
-        removeFriendships(eligible);
     }
 
     private void removeFriendships(List<Friendship> locked) {
