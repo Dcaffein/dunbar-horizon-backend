@@ -4,8 +4,10 @@ import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -43,7 +45,6 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
                 :lowAlias, :lowScore, :lowInteractedAt, :lowMuted, :lowRoutable,
                 :highAlias, :highScore, :highInteractedAt, :highMuted, :highRoutable
             )
-            ON DUPLICATE KEY UPDATE low_user_id = :low
             """;
     private static final String SELECT_FRIENDSHIPS = """
             SELECT * FROM friendships WHERE low_user_id = :userId
@@ -79,7 +80,11 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
                 .addValue("intimacy", friendship.getIntimacy());
         bindRecognition(parameters, "low", low);
         bindRecognition(parameters, "high", high);
-        jdbc.update(INSERT, parameters);
+        try {
+            jdbc.update(INSERT, parameters);
+        } catch (DuplicateKeyException e) {
+            throw new AlreadyFriendsException(low.getUserId(), high.getUserId());
+        }
     }
 
     @Override

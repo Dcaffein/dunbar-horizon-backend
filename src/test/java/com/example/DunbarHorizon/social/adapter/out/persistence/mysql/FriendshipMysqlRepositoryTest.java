@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,20 +79,22 @@ class FriendshipMysqlRepositoryTest {
     }
 
     @Test
-    @DisplayName("같은 관계를 다시 생성해도 한 행만 남고 저장된 값이 바뀌지 않는다")
-    void create_PreservesExistingRow_DuplicatePair() {
+    @DisplayName("이미 친구인 쌍을 다시 생성하면 친구 중복 예외로 끝나고 기존 행의 설정과 점수는 그대로다")
+    void create_ThrowsAlreadyFriends_DuplicatePair() {
         // given
-        Friendship original = friendship(low, high);
-        Friendship duplicate = friendship(low, high);
-        duplicate.updateUserFields(low.getId(), "overwritten", null, null);
+        repository.create(friendship(low, high));
+        Friendship duplicate = friendship(high, low);
+        duplicate.updateUserFields(low.getId(), "overwritten", false, true);
+        duplicate.adjustMutualInterestScore(10);
 
-        // when
-        repository.create(original);
-        repository.create(duplicate);
-
-        // then
-        assertThat(repository.findByUserId(low.getId())).singleElement()
-                .satisfies(friendship -> assertThat(friendship.getFriendAlias(low.getId())).isEqualTo("from low"));
+        // when & then
+        assertThatThrownBy(() -> repository.create(duplicate)).isInstanceOf(AlreadyFriendsException.class);
+        assertThat(repository.findByUserId(low.getId())).singleElement().satisfies(friendship -> {
+            assertThat(friendship.getFriendAlias(low.getId())).isEqualTo("from low");
+            assertThat(friendship.isMuted(low.getId())).isTrue();
+            assertThat(friendship.getMyInterestScore(low.getId())).isEqualTo(51.0);
+            assertThat(friendship.getMyInterestScore(high.getId())).isEqualTo(32.0);
+        });
     }
 
     @Test

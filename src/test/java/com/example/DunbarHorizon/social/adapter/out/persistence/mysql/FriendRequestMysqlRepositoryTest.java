@@ -4,8 +4,10 @@ import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepo
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.application.service.MySqlFriendRequestActionService;
 import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
+import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
+import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
 import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
 import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -35,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -44,7 +48,7 @@ import static org.mockito.Mockito.doAnswer;
 class FriendRequestMysqlRepositoryTest {
 
     @Autowired private MySqlFriendRequestActionService actions;
-    @Autowired private FriendshipMysqlRepository friendships;
+    @MockitoSpyBean private FriendshipMysqlRepository friendships;
     @Autowired private UserJpaRepository users;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private AcceptedEvents acceptedEvents;
@@ -144,6 +148,26 @@ class FriendRequestMysqlRepositoryTest {
         assertThat(requests.findById(requestId)).get().extracting(FriendRequest::getStatus)
                 .isEqualTo(FriendRequestStatus.PENDING);
         assertThat(acceptedEvents.events).isEmpty();
+    }
+
+    @Test
+    @DisplayName("관계 확인을 지나쳐도 중복 관계로 수락이 실패하면 요청이 남고 수락 이벤트가 없다")
+    void accept_KeepsRequest_DuplicateFriendshipKey() {
+        // given
+        actions.sendRequest(low, high);
+        friendships.create(Friendship.restore(LocalDate.of(2026, 1, 1), 0.3,
+                FriendRecognition.restore(low, "기존", 21.4, null, false, true),
+                FriendRecognition.restore(high, null, 21.4, null, false, true)));
+        doReturn(false).when(friendships).existsFriendshipForUpdate(low, high);
+
+        // when & then
+        assertThatThrownBy(() -> actions.updateStatus(high, low, FriendRequestStatus.ACCEPTED))
+                .isInstanceOf(AlreadyFriendsException.class);
+        assertThat(requests.findById(requestId)).get().extracting(FriendRequest::getStatus)
+                .isEqualTo(FriendRequestStatus.PENDING);
+        assertThat(acceptedEvents.events).isEmpty();
+        assertThat(friendships.findBetween(low, high)).get()
+                .extracting(friendship -> friendship.getFriendAlias(low)).isEqualTo("기존");
     }
 
     @Test
