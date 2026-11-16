@@ -36,8 +36,8 @@ public class Friendship {
     private Friendship(LocalDate createdAt, double intimacy, FriendRecognition first, FriendRecognition second) {
         this.createdAt = createdAt;
         this.intimacy = intimacy;
-        this.lower = first.getUserId() < second.getUserId() ? first : second;
-        this.higher = first.getUserId() < second.getUserId() ? second : first;
+        this.lower = first.getOwnerId() < second.getOwnerId() ? first : second;
+        this.higher = first.getOwnerId() < second.getOwnerId() ? second : first;
     }
 
     public static Friendship restore(LocalDate createdAt, double intimacy,
@@ -45,7 +45,7 @@ public class Friendship {
         if (first == null || second == null) {
             throw new FriendshipInvalidException("missing recognition");
         }
-        validateUserIds(first.getUserId(), second.getUserId());
+        validateUserIds(first.getOwnerId(), second.getOwnerId());
         return new Friendship(createdAt, intimacy, first, second);
     }
 
@@ -56,8 +56,8 @@ public class Friendship {
     }
 
     private FriendRecognition getSelfRecognition(Long userId) {
-        if (lower.getUserId().equals(userId)) return lower;
-        if (higher.getUserId().equals(userId)) return higher;
+        if (lower.getOwnerId().equals(userId)) return lower;
+        if (higher.getOwnerId().equals(userId)) return higher;
         throw new FriendshipAuthorizationException(userId);
     }
 
@@ -66,7 +66,7 @@ public class Friendship {
     }
 
     public Set<Long> getUserIds() {
-        return Set.of(lower.getUserId(), higher.getUserId());
+        return Set.of(lower.getOwnerId(), higher.getOwnerId());
     }
 
     public String getFriendAlias(Long myId) {
@@ -82,7 +82,7 @@ public class Friendship {
     }
 
     public Long getFriendId(Long myId) {
-        return getFriendRecognition(myId).getUserId();
+        return getFriendRecognition(myId).getOwnerId();
     }
 
     public void adjustInterestScore(Long userId, double scoreDelta) {

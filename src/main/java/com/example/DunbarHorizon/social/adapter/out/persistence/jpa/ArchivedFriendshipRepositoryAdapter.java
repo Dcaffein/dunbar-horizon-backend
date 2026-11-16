@@ -19,8 +19,8 @@ public class ArchivedFriendshipRepositoryAdapter implements ArchivedFriendshipRe
     }
 
     private static ArchivedFriendship toRecord(Friendship friendship) {
-        Long low = friendship.getLower().getUserId();
-        Long high = friendship.getHigher().getUserId();
+        Long low = friendship.getLower().getOwnerId();
+        Long high = friendship.getHigher().getOwnerId();
         return new ArchivedFriendship(low + "_" + high, low, high, friendship.getCreatedAt());
     }
 }

@@ -12,7 +12,7 @@ public class FriendRecognition {
 
     public static final double INITIAL_RAW_SCORE = 21.4;
 
-    private final Long userId;
+    private final Long ownerId;
 
     private String friendAlias;
 
@@ -24,16 +24,16 @@ public class FriendRecognition {
 
     private boolean isRoutable = true;
 
-    public FriendRecognition(Long userId) {
-        this.userId = userId;
+    public FriendRecognition(Long ownerId) {
+        this.ownerId = ownerId;
         this.friendAlias = null;
         this.interestScore = INITIAL_RAW_SCORE;
         this.lastInteractedAt = LocalDateTime.now();
     }
 
-    private FriendRecognition(Long userId, String friendAlias, Double interestScore,
+    private FriendRecognition(Long ownerId, String friendAlias, Double interestScore,
                               LocalDateTime lastInteractedAt, boolean isMuted, boolean isRoutable) {
-        this.userId = userId;
+        this.ownerId = ownerId;
         this.friendAlias = friendAlias;
         this.interestScore = interestScore;
         this.lastInteractedAt = lastInteractedAt;
@@ -41,9 +41,9 @@ public class FriendRecognition {
         this.isRoutable = isRoutable;
     }
 
-    public static FriendRecognition restore(Long userId, String friendAlias, Double interestScore,
+    public static FriendRecognition restore(Long ownerId, String friendAlias, Double interestScore,
                                             LocalDateTime lastInteractedAt, boolean isMuted, boolean isRoutable) {
-        return new FriendRecognition(userId, friendAlias, interestScore, lastInteractedAt, isMuted, isRoutable);
+        return new FriendRecognition(ownerId, friendAlias, interestScore, lastInteractedAt, isMuted, isRoutable);
     }
 
     public static double normalize(Double raw) {

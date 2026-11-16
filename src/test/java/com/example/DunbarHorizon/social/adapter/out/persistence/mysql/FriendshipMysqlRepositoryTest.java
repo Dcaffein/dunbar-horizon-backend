@@ -271,8 +271,8 @@ class FriendshipMysqlRepositoryTest {
         var locked = repository.findAllAmongForUpdate(List.of(third.getId(), low.getId(), high.getId(), low.getId()));
 
         // then
-        assertThat(locked).extracting(friendship -> friendship.getLower().getUserId() + "_"
-                        + friendship.getHigher().getUserId())
+        assertThat(locked).extracting(friendship -> friendship.getLower().getOwnerId() + "_"
+                        + friendship.getHigher().getOwnerId())
                 .containsExactly(low.getId() + "_" + high.getId(), high.getId() + "_" + third.getId());
     }
 

@@ -137,8 +137,8 @@ class FlagConclusionScoreAfterCommitIntegrationTest {
     }
 
     private void assertBothSides(Friendship created, double expected) {
-        Friendship friendship = friendshipRepository.findBetween(created.getLower().getUserId(),
-                created.getHigher().getUserId()).orElseThrow();
+        Friendship friendship = friendshipRepository.findBetween(created.getLower().getOwnerId(),
+                created.getHigher().getOwnerId()).orElseThrow();
         for (Long memberId : MEMBER_IDS) {
             if (friendship.getUserIds().contains(memberId)) {
                 assertThat(friendship.getMyInterestScore(memberId))

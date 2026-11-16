@@ -74,8 +74,8 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
         FriendRecognition low = friendship.getLower();
         FriendRecognition high = friendship.getHigher();
         var parameters = new MapSqlParameterSource()
-                .addValue("low", low.getUserId())
-                .addValue("high", high.getUserId())
+                .addValue("low", low.getOwnerId())
+                .addValue("high", high.getOwnerId())
                 .addValue("createdAt", friendship.getCreatedAt(), Types.DATE)
                 .addValue("intimacy", friendship.getIntimacy());
         bindRecognition(parameters, "low", low);
@@ -83,7 +83,7 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
         try {
             jdbc.update(INSERT, parameters);
         } catch (DuplicateKeyException e) {
-            throw new AlreadyFriendsException(low.getUserId(), high.getUserId());
+            throw new AlreadyFriendsException(low.getOwnerId(), high.getOwnerId());
         }
     }
 
@@ -211,8 +211,8 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
                     ROW(:low%1$s, :high%1$s, :lowScore%1$s, :highScore%1$s,
                         CAST(:lowTime%1$s AS DATETIME(6)), CAST(:highTime%1$s AS DATETIME(6)), :intimacy%1$s)
                     """.formatted(suffix));
-            parameters.addValue("low" + suffix, low.getUserId())
-                    .addValue("high" + suffix, high.getUserId())
+            parameters.addValue("low" + suffix, low.getOwnerId())
+                    .addValue("high" + suffix, high.getOwnerId())
                     .addValue("lowScore" + suffix, low.getInterestScore())
                     .addValue("highScore" + suffix, high.getInterestScore())
                     .addValue("lowTime" + suffix, low.getLastInteractedAt(), Types.TIMESTAMP)
@@ -254,7 +254,7 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
     @Override
     public void deleteAll(Collection<Friendship> friendships) {
         List<Object[]> pairs = pairParameters(friendships.stream()
-                .map(friendship -> new UserPairKey(friendship.getLower().getUserId(), friendship.getHigher().getUserId()))
+                .map(friendship -> new UserPairKey(friendship.getLower().getOwnerId(), friendship.getHigher().getOwnerId()))
                 .toList());
         if (!pairs.isEmpty()) {
             jdbc.update("""

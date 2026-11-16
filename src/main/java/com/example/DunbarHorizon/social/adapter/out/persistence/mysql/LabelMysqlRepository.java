@@ -112,8 +112,8 @@ public class LabelMysqlRepository implements LabelMembershipRepository {
     public void removeMembersForEndedFriendships(Collection<Friendship> friendships) {
         List<Object[]> directions = friendships.stream()
                 .flatMap(friendship -> {
-                    Long low = friendship.getLower().getUserId();
-                    Long high = friendship.getHigher().getUserId();
+                    Long low = friendship.getLower().getOwnerId();
+                    Long high = friendship.getHigher().getOwnerId();
                     return Stream.of(new Object[]{low, high}, new Object[]{high, low});
                 })
                 .toList();

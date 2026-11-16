@@ -22,8 +22,8 @@ class FriendshipTest {
         Friendship friendship = new Friendship(2L, 1L);
 
         // then
-        assertThat(friendship.getLower().getUserId()).isEqualTo(1L);
-        assertThat(friendship.getHigher().getUserId()).isEqualTo(2L);
+        assertThat(friendship.getLower().getOwnerId()).isEqualTo(1L);
+        assertThat(friendship.getHigher().getOwnerId()).isEqualTo(2L);
         assertThat(friendship.getFriendId(1L)).isEqualTo(2L);
         assertThat(friendship.getFriendId(2L)).isEqualTo(1L);
     }
