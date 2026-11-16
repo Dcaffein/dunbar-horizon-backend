@@ -35,21 +35,18 @@ public class FriendRequestQueryService implements FriendRequestQueryUseCase {
                 throw new FriendRequestInvalidException(SocialErrorCode.FRIEND_REQUEST_STATUS_NOT_ALLOWED_FOR_SENT,
                         ErrorContext.of("status", status));
             }
-            return findSentRequests(userId);
+            return toResults(userId, friendRequestRepository.findAllByRequesterId(userId));
         }
 
-        return toResults(friendRequestRepository.findAllByReceiverIdAndStatus(userId, queryStatus));
+        return toResults(userId, friendRequestRepository.findAllByReceiverIdAndStatus(userId, queryStatus));
     }
 
-    private List<FriendRequestResult> findSentRequests(Long userId) {
-        return toResults(friendRequestRepository.findAllByRequesterIdAndStatus(userId, FriendRequestStatus.PENDING));
-    }
-    private List<FriendRequestResult> toResults(List<FriendRequest> requests) {
+    private List<FriendRequestResult> toResults(Long viewerId, List<FriendRequest> requests) {
         var ids = requests.stream().flatMap(request -> Stream.of(request.getRequesterId(), request.getReceiverId()))
                 .filter(Objects::nonNull).distinct().toList();
         var users = profiles.findActiveProfiles(ids);
         return requests.stream()
-                .map(request -> FriendRequestResult.from(request,
+                .map(request -> FriendRequestResult.from(request, viewerId,
                         request.getRequesterId() == null ? null : users.get(request.getRequesterId()),
                         request.getReceiverId() == null ? null : users.get(request.getReceiverId())))
                 .toList();

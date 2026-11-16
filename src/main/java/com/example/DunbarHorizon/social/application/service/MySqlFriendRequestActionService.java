@@ -47,7 +47,7 @@ public class MySqlFriendRequestActionService implements FriendRequesterActionUse
         if (friendships.existsFriendshipBetween(requesterId, receiverId)) {
             throw new AlreadyFriendsException(requesterId, receiverId);
         }
-        return FriendRequestResult.from(request, requester, receiver);
+        return FriendRequestResult.from(request, requesterId, requester, receiver);
     }
 
     @Override

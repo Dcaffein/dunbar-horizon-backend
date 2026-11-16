@@ -13,13 +13,14 @@ public record FriendRequestResult(
         FriendRequestStatus status,
         LocalDateTime createdAt
 ) {
-    public static FriendRequestResult from(FriendRequest friendRequest, SocialUserProfile requester, SocialUserProfile receiver) {
+    public static FriendRequestResult from(FriendRequest friendRequest, Long viewerId,
+                                           SocialUserProfile requester, SocialUserProfile receiver) {
         return new FriendRequestResult(
                 Math.min(friendRequest.getRequesterId(), friendRequest.getReceiverId()) + "_"
                         + Math.max(friendRequest.getRequesterId(), friendRequest.getReceiverId()),
                 requester != null ? FriendResult.from(requester) : null,
                 receiver != null ? FriendResult.from(receiver) : null,
-                friendRequest.getStatus(),
+                friendRequest.getStatusFor(viewerId),
                 friendRequest.getCreatedAt()
         );
     }

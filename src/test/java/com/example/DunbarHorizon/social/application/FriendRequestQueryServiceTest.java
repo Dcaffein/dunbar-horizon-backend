@@ -92,7 +92,8 @@ class FriendRequestQueryServiceTest {
                 userId, FriendRequestDirection.RECEIVED, FriendRequestStatus.HIDDEN);
 
         // then
-        assertThat(result).hasSize(1);
+        assertThat(result).singleElement().extracting(FriendRequestResult::status)
+                .isEqualTo(FriendRequestStatus.HIDDEN);
     }
 
     @Test
@@ -102,15 +103,34 @@ class FriendRequestQueryServiceTest {
         Long userId = 1L;
         FriendRequest request = FriendTestFactory.createRequest(1L, 2L);
 
-        given(friendRequestRepository.findAllByRequesterIdAndStatus(userId, FriendRequestStatus.PENDING))
-                .willReturn(List.of(request));
+        given(friendRequestRepository.findAllByRequesterId(userId)).willReturn(List.of(request));
 
         // when
         List<FriendRequestResult> result = queryService.getRequests(
                 userId, FriendRequestDirection.SENT, null);
 
         // then
-        assertThat(result).hasSize(1);
+        assertThat(result).singleElement().extracting(FriendRequestResult::status)
+                .isEqualTo(FriendRequestStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("보낸 요청 목록에서 수신자가 숨긴 요청은 PENDING으로 보인다")
+    void getSentRequests_ShowsHiddenAsPending() {
+        // given
+        Long userId = 1L;
+        FriendRequest request = FriendTestFactory.createRequest(1L, 2L);
+        request.updateStatus(2L, FriendRequestStatus.HIDDEN);
+
+        given(friendRequestRepository.findAllByRequesterId(userId)).willReturn(List.of(request));
+
+        // when
+        List<FriendRequestResult> result = queryService.getRequests(
+                userId, FriendRequestDirection.SENT, null);
+
+        // then
+        assertThat(result).singleElement().extracting(FriendRequestResult::status)
+                .isEqualTo(FriendRequestStatus.PENDING);
     }
 
     @Test
