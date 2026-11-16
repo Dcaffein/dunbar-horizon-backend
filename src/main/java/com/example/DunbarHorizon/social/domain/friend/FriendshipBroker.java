@@ -20,7 +20,7 @@ public class FriendshipBroker {
 
     public static Friendship createFrom(FriendRequest friendRequest, boolean existingFriendship) {
         if (!friendRequest.isAccepted()) {
-            throw new FriendRequestNotAcceptedException(friendRequest.getId());
+            throw new FriendRequestNotAcceptedException(friendRequest.getRequesterId(), friendRequest.getReceiverId());
         }
 
         if (existingFriendship) {

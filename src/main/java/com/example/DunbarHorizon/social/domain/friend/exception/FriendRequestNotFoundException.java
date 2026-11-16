@@ -6,7 +6,7 @@ import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;
 
 public class FriendRequestNotFoundException extends FriendException {
 
-    public FriendRequestNotFoundException(String requestId) {
-        super(SocialErrorCode.FRIEND_REQUEST_NOT_FOUND, ErrorContext.of("requestId", requestId));
+    public FriendRequestNotFoundException(Long userId, Long counterpartId) {
+        super(SocialErrorCode.FRIEND_REQUEST_NOT_FOUND, ErrorContext.of("userId", userId).and("counterpartId", counterpartId));
     }
 }
