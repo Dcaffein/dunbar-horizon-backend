@@ -12,5 +12,5 @@ public interface FriendRequestRepository {
     boolean existsBetween(Long userId, Long counterpartId);
     void delete(FriendRequest request);
     List<FriendRequest> findAllByReceiverIdAndStatus(Long receiverId, FriendRequestStatus status);
-    List<FriendRequest> findAllByRequesterIdAndStatus(Long requesterId, FriendRequestStatus status);
+    List<FriendRequest> findAllByRequesterId(Long requesterId);
 }

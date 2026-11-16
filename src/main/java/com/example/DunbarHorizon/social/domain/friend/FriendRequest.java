@@ -57,6 +57,13 @@ public class FriendRequest {
         this.status.cancel(this, userId);
     }
 
+    public FriendRequestStatus getStatusFor(Long viewerId) {
+        if (status == FriendRequestStatus.HIDDEN && requesterId.equals(viewerId)) {
+            return FriendRequestStatus.PENDING;
+        }
+        return status;
+    }
+
     public boolean isAccepted() {
         return this.status == FriendRequestStatus.ACCEPTED;
     }

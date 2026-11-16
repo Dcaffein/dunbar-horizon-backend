@@ -116,14 +116,48 @@ class FriendRequestTest {
     }
 
     @Test
-    @DisplayName("HIDDEN 상태의 요청을 취소하려 하면 예외가 발생한다")
-    void cancel_WhenHidden_Fail() {
+    @DisplayName("요청자는 수신자가 숨긴 요청도 취소할 수 있다")
+    void cancel_ByRequester_Success_WhenHidden() {
         // given
         FriendRequest request = new FriendRequest(requester, receiver);
-        ReflectionTestUtils.setField(request, "status", FriendRequestStatus.HIDDEN);
+        request.updateStatus(receiver, FriendRequestStatus.HIDDEN);
 
         // when & then
-        assertThatThrownBy(() -> request.cancel(1L))
-                .isInstanceOf(FriendRequestInvalidException.class);
+        assertThatNoException().isThrownBy(() -> request.cancel(requester));
+    }
+
+    @Test
+    @DisplayName("수신자는 자신이 숨긴 요청을 취소할 수 없다")
+    void cancel_ByReceiver_Fail_WhenHidden() {
+        // given
+        FriendRequest request = new FriendRequest(requester, receiver);
+        request.updateStatus(receiver, FriendRequestStatus.HIDDEN);
+
+        // when & then
+        assertThatThrownBy(() -> request.cancel(receiver))
+                .isInstanceOf(FriendRequestAuthorizationException.class);
+    }
+
+    @Test
+    @DisplayName("숨긴 요청은 요청자에게 PENDING으로, 수신자에게 HIDDEN으로 보인다")
+    void getStatusFor_HidesHiddenFromRequester() {
+        // given
+        FriendRequest request = new FriendRequest(requester, receiver);
+        request.updateStatus(receiver, FriendRequestStatus.HIDDEN);
+
+        // when & then
+        assertThat(request.getStatusFor(requester)).isEqualTo(FriendRequestStatus.PENDING);
+        assertThat(request.getStatusFor(receiver)).isEqualTo(FriendRequestStatus.HIDDEN);
+    }
+
+    @Test
+    @DisplayName("대기 중인 요청은 요청자와 수신자 모두에게 PENDING으로 보인다")
+    void getStatusFor_ReturnsPending_ForBoth() {
+        // given
+        FriendRequest request = new FriendRequest(requester, receiver);
+
+        // when & then
+        assertThat(request.getStatusFor(requester)).isEqualTo(FriendRequestStatus.PENDING);
+        assertThat(request.getStatusFor(receiver)).isEqualTo(FriendRequestStatus.PENDING);
     }
 }

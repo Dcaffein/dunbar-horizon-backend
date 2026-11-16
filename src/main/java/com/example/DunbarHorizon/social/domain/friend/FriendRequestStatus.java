@@ -43,6 +43,11 @@ public enum FriendRequestStatus {
             validateReceiver(request, userId);
             return this;
         }
+
+        @Override
+        public void cancel(FriendRequest request, Long userId) {
+            validateRequester(request, userId);
+        }
     };
 
     public FriendRequestStatus update(FriendRequest request, Long userId) {
