@@ -23,8 +23,8 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
     public void updateFriendship(Long currentUserId, Long friendId, FriendshipUpdateCommand command) {
         Friendship friendship = friendships.findBetween(currentUserId, friendId)
                 .orElseThrow(() -> new FriendshipNotFoundException(currentUserId, friendId));
-        friendship.updateUserFields(currentUserId, command.friendAlias(), command.isMuted(), command.isRoutable());
-        friendships.updateUserFields(friendship, currentUserId);
+        friendship.updateSettings(currentUserId, command.friendAlias(), command.isMuted(), command.isRoutable());
+        friendships.saveSettings(friendship, currentUserId);
     }
 
     @Override

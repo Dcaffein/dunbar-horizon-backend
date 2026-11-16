@@ -83,20 +83,20 @@ class FriendshipTest {
         assertThatThrownBy(() -> friendship.getFriendId(3L)).isInstanceOf(FriendshipAuthorizationException.class);
         assertThatThrownBy(() -> friendship.getFriendAlias(3L)).isInstanceOf(FriendshipAuthorizationException.class);
         assertThatThrownBy(() -> friendship.adjustInterestScore(3L, 10)).isInstanceOf(FriendshipAuthorizationException.class);
-        assertThatThrownBy(() -> friendship.updateUserFields(3L, "alias", true, false))
+        assertThatThrownBy(() -> friendship.updateSettings(3L, "alias", true, false))
                 .isInstanceOf(FriendshipAuthorizationException.class);
         assertThat(friendship.getIntimacy()).isEqualTo(intimacy);
     }
 
     @Test
     @DisplayName("높은 ID 사용자의 설정 변경은 낮은 ID 사용자의 설정과 점수를 바꾸지 않는다")
-    void updateUserFields_PreservesOtherSide_HigherUser() {
+    void updateSettings_PreservesOtherSide_HigherUser() {
         // given
         Friendship friendship = new Friendship(2L, 1L);
         double intimacy = friendship.getIntimacy();
 
         // when
-        friendship.updateUserFields(2L, "alias", true, false);
+        friendship.updateSettings(2L, "alias", true, false);
 
         // then
         assertThat(friendship.getFriendAlias(2L)).isEqualTo("alias");
@@ -178,12 +178,12 @@ class FriendshipTest {
 
     @Test
     @DisplayName("별명에 비어있지 않은 값을 전달하면 해당 값으로 설정된다")
-    void updateUserFields_withAlias_setsAlias() {
+    void updateSettings_withAlias_setsAlias() {
         // given
         Friendship friendship = new Friendship(1L, 2L);
 
         // when
-        friendship.updateUserFields(1L, "동기", null, null);
+        friendship.updateSettings(1L, "동기", null, null);
 
         // then
         assertThat(friendship.getFriendAlias(1L)).isEqualTo("동기");
@@ -191,13 +191,13 @@ class FriendshipTest {
 
     @Test
     @DisplayName("별명에 빈 문자열을 전달하면 alias가 삭제되어 빈 문자열로 반환된다")
-    void updateUserFields_withEmptyAlias_clearsAlias() {
+    void updateSettings_withEmptyAlias_clearsAlias() {
         // given
         Friendship friendship = new Friendship(1L, 2L);
-        friendship.updateUserFields(1L, "동기", null, null);
+        friendship.updateSettings(1L, "동기", null, null);
 
         // when
-        friendship.updateUserFields(1L, "", null, null);
+        friendship.updateSettings(1L, "", null, null);
 
         // then
         assertThat(friendship.getFriendAlias(1L)).isEqualTo(""); // null 저장 → getFriendAlias는 "" 반환
@@ -205,13 +205,13 @@ class FriendshipTest {
 
     @Test
     @DisplayName("별명에 null을 전달하면 기존 alias가 변경되지 않는다")
-    void updateUserFields_withNullAlias_doesNotChangeAlias() {
+    void updateSettings_withNullAlias_doesNotChangeAlias() {
         // given
         Friendship friendship = new Friendship(1L, 2L);
-        friendship.updateUserFields(1L, "동기", null, null);
+        friendship.updateSettings(1L, "동기", null, null);
 
         // when
-        friendship.updateUserFields(1L, null, null, null);
+        friendship.updateSettings(1L, null, null, null);
 
         // then
         assertThat(friendship.getFriendAlias(1L)).isEqualTo("동기");
@@ -219,11 +219,11 @@ class FriendshipTest {
 
     @Test
     @DisplayName("별명이 20자를 초과하면 InvalidFriendAliasException이 발생한다")
-    void updateUserFields_withTooLongAlias_throws() {
+    void updateSettings_withTooLongAlias_throws() {
         Friendship friendship = new Friendship(1L, 2L);
         String tooLong = "가".repeat(Friendship.ALIAS_MAX_LENGTH + 1);
 
-        assertThatThrownBy(() -> friendship.updateUserFields(1L, tooLong, null, null))
+        assertThatThrownBy(() -> friendship.updateSettings(1L, tooLong, null, null))
                 .isInstanceOf(InvalidFriendAliasException.class);
     }
 

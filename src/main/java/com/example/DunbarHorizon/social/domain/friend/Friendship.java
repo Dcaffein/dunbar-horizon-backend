@@ -105,8 +105,8 @@ public class Friendship {
         return getSelfRecognition(myId).isRoutable();
     }
 
-    public void updateUserFields(Long userId, String alias, Boolean isMuted, Boolean isRoutable) {
-        FriendRecognition rec = getSelfRecognition(userId);
+    public void updateSettings(Long ownerId, String alias, Boolean isMuted, Boolean isRoutable) {
+        FriendRecognition rec = getSelfRecognition(ownerId);
         if (alias != null)      rec.updateFriendAlias(alias.isEmpty() ? null : alias);
         if (isMuted != null)    rec.updateMuteStatus(isMuted);
         if (isRoutable != null) rec.updateRoutableStatus(isRoutable);

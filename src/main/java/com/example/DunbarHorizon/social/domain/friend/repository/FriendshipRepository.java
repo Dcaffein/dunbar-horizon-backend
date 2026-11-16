@@ -29,7 +29,7 @@ public interface FriendshipRepository {
 
     Set<Long> filterFriendIdsAmong(Long userId, Collection<Long> candidateIds);
 
-    void updateUserFields(Friendship friendship, Long userId);
+    void saveSettings(Friendship friendship, Long ownerId);
 
     void saveInterestScores(Collection<Friendship> friendships);
 

@@ -155,20 +155,20 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
     }
 
     @Override
-    public void updateUserFields(Friendship friendship, Long userId) {
-        Long friendId = friendship.getFriendId(userId);
-        String side = userId < friendId ? "low" : "high";
-        var parameters = new MapSqlParameterSource(UserPairKey.of(userId, friendId).parameters())
-                .addValue("alias", storedAlias(friendship.getFriendAlias(userId)), Types.VARCHAR)
-                .addValue("muted", friendship.isMuted(userId))
-                .addValue("routable", friendship.isRoutable(userId));
+    public void saveSettings(Friendship friendship, Long ownerId) {
+        Long friendId = friendship.getFriendId(ownerId);
+        String side = ownerId < friendId ? "low" : "high";
+        var parameters = new MapSqlParameterSource(UserPairKey.of(ownerId, friendId).parameters())
+                .addValue("alias", storedAlias(friendship.getFriendAlias(ownerId)), Types.VARCHAR)
+                .addValue("muted", friendship.isMuted(ownerId))
+                .addValue("routable", friendship.isRoutable(ownerId));
         int updated = jdbc.update("""
                 UPDATE friendships
                 SET %1$s_friend_alias = :alias, %1$s_is_muted = :muted, %1$s_is_routable = :routable
                 WHERE %2$s AND %3$s
                 """.formatted(side, PAIR, ACTIVE_PAIR), parameters);
         if (updated == 0) {
-            throw new FriendshipNotFoundException(userId, friendId);
+            throw new FriendshipNotFoundException(ownerId, friendId);
         }
     }
 

@@ -85,7 +85,7 @@ class FriendshipMysqlRepositoryTest {
         // given
         repository.create(friendship(low, high));
         Friendship duplicate = friendship(high, low);
-        duplicate.updateUserFields(low.getId(), "overwritten", false, true);
+        duplicate.updateSettings(low.getId(), "overwritten", false, true);
         duplicate.adjustMutualInterestScore(10);
 
         // when & then
@@ -115,7 +115,7 @@ class FriendshipMysqlRepositoryTest {
 
     @Test
     @DisplayName("친구 설정 저장은 본인 쪽 설정 열만 쓰고 로드 뒤 바뀐 상대 설정과 점수를 보존한다")
-    void updateUserFields_WritesOnlyOwnSettings_OtherColumnsChangedAfterLoad() {
+    void saveSettings_WritesOnlyOwnSettings_OtherColumnsChangedAfterLoad() {
         // given
         Friendship original = friendship(low, high);
         repository.create(original);
@@ -125,10 +125,10 @@ class FriendshipMysqlRepositoryTest {
                     low_interest_score = 60, high_interest_score = 40
                 WHERE low_user_id = ? AND high_user_id = ?
                 """, low.getId(), high.getId());
-        loaded.updateUserFields(high.getId(), "", true, false);
+        loaded.updateSettings(high.getId(), "", true, false);
 
         // when
-        repository.updateUserFields(loaded, high.getId());
+        repository.saveSettings(loaded, high.getId());
 
         // then
         Friendship updated = repository.findBetween(low.getId(), high.getId()).orElseThrow();
@@ -148,14 +148,14 @@ class FriendshipMysqlRepositoryTest {
 
     @Test
     @DisplayName("바뀐 설정이 없어도 존재하는 관계의 설정 저장은 성공한다")
-    void updateUserFields_Succeeds_UnchangedSettings() {
+    void saveSettings_Succeeds_UnchangedSettings() {
         // given
         Friendship original = friendship(low, high);
         repository.create(original);
         Friendship loaded = repository.findBetween(low.getId(), high.getId()).orElseThrow();
 
         // when
-        repository.updateUserFields(loaded, low.getId());
+        repository.saveSettings(loaded, low.getId());
 
         // then
         assertThat(repository.findBetween(low.getId(), high.getId()).orElseThrow().getFriendAlias(low.getId()))
@@ -164,7 +164,7 @@ class FriendshipMysqlRepositoryTest {
 
     @Test
     @DisplayName("로드한 뒤 관계가 삭제되면 설정 저장은 관계 없음 예외로 끝난다")
-    void updateUserFields_ThrowsNotFound_DeletedAfterLoad() {
+    void saveSettings_ThrowsNotFound_DeletedAfterLoad() {
         // given
         Friendship original = friendship(low, high);
         repository.create(original);
@@ -172,7 +172,7 @@ class FriendshipMysqlRepositoryTest {
         repository.deleteBetween(low.getId(), high.getId());
 
         // when & then
-        assertThatThrownBy(() -> repository.updateUserFields(loaded, low.getId()))
+        assertThatThrownBy(() -> repository.saveSettings(loaded, low.getId()))
                 .isInstanceOf(FriendshipNotFoundException.class);
     }
 
