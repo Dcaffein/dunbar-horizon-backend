@@ -38,8 +38,10 @@ public class MySqlFriendRequestActionService implements FriendRequesterActionUse
         Map<Long, SocialUserProfile> profiles = userProfiles.findActiveProfiles(List.of(requesterId, receiverId));
         SocialUserProfile requester = requireActiveProfile(profiles, requesterId);
         SocialUserProfile receiver = requireActiveProfile(profiles, receiverId);
-        FriendRequest request = FriendshipBroker.propose(requesterId, receiverId, friendships::existsFriendshipBetween,
-                requests::existsRequestBetween);
+        boolean existingFriendship = friendships.existsFriendshipBetween(requesterId, receiverId);
+        boolean existingRequest = !existingFriendship && (requests.existsRequestBetween(requesterId, receiverId)
+                || requests.existsRequestBetween(receiverId, requesterId));
+        FriendRequest request = FriendshipBroker.propose(requesterId, receiverId, existingFriendship, existingRequest);
         requests.saveRequest(request);
         // A concurrent acceptance can delete the old request while this insert waits.
         if (friendships.existsFriendshipForUpdate(requesterId, receiverId)) {
@@ -60,7 +62,8 @@ public class MySqlFriendRequestActionService implements FriendRequesterActionUse
         FriendRequest request = findForUpdate(receiverId, counterpartId);
         request.updateStatus(receiverId, status);
         if (request.isAccepted()) {
-            Friendship friendship = FriendshipBroker.createFrom(request, friendships::existsFriendshipForUpdate);
+            boolean existingFriendship = friendships.existsFriendshipForUpdate(request.getRequesterId(), request.getReceiverId());
+            Friendship friendship = FriendshipBroker.createFrom(request, existingFriendship);
             friendships.create(friendship);
             requests.deleteById(request.getId());
             var receiver = requireActiveProfile(userProfiles.findActiveProfiles(List.of(receiverId)), receiverId);

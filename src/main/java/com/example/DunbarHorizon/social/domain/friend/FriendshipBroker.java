@@ -2,32 +2,28 @@ package com.example.DunbarHorizon.social.domain.friend;
 
 import com.example.DunbarHorizon.social.domain.friend.exception.*;
 
-import java.util.function.BiPredicate;
-
 public class FriendshipBroker {
     private FriendshipBroker() {}
 
     public static FriendRequest propose(Long requesterId, Long receiverId,
-                                        BiPredicate<Long, Long> areFriends, BiPredicate<Long, Long> requestExists) {
-        if (areFriends.test(requesterId, receiverId)) {
+                                        boolean existingFriendship, boolean existingRequest) {
+        if (existingFriendship) {
             throw new AlreadyFriendsException(requesterId, receiverId);
         }
 
-        if (requestExists.test(requesterId, receiverId) || requestExists.test(receiverId, requesterId)) {
+        if (existingRequest) {
             throw new DuplicateFriendRequestException(requesterId, receiverId);
         }
 
         return new FriendRequest(requesterId, receiverId);
     }
 
-    public static Friendship createFrom(FriendRequest friendRequest, BiPredicate<Long, Long> areFriends) {
+    public static Friendship createFrom(FriendRequest friendRequest, boolean existingFriendship) {
         if (!friendRequest.isAccepted()) {
             throw new FriendRequestNotAcceptedException(friendRequest.getId());
         }
 
-        if (areFriends.test(
-                friendRequest.getRequesterId(),
-                friendRequest.getReceiverId())) {
+        if (existingFriendship) {
             throw new AlreadyFriendsException(friendRequest.getRequesterId(), friendRequest.getReceiverId());
         }
 
