@@ -37,11 +37,11 @@ public class FriendshipMysqlRepository
 
     private static final String INSERT = """
             INSERT INTO friendships (
-                low_user_id, high_user_id, created_at, intimacy,
+                low_user_id, high_user_id, created_at,
                 low_friend_alias, low_interest_score, low_last_interacted_at, low_is_muted, low_is_routable,
                 high_friend_alias, high_interest_score, high_last_interacted_at, high_is_muted, high_is_routable
             ) VALUES (
-                :low, :high, :createdAt, :intimacy,
+                :low, :high, :createdAt,
                 :lowAlias, :lowScore, :lowInteractedAt, :lowMuted, :lowRoutable,
                 :highAlias, :highScore, :highInteractedAt, :highMuted, :highRoutable
             )
@@ -107,7 +107,6 @@ public class FriendshipMysqlRepository
               AND %s
             """.formatted(ACTIVE_PAIR);
 
-    // In a single-table MySQL UPDATE, intimacy reads the scores assigned above it.
     private static final String APPLY_DECAY = """
             UPDATE friendships FORCE INDEX (PRIMARY)
             SET low_interest_score = CASE
@@ -115,9 +114,7 @@ public class FriendshipMysqlRepository
                     THEN GREATEST(low_interest_score * :rate, :threshold) ELSE low_interest_score END,
                 high_interest_score = CASE
                     WHEN high_last_interacted_at <= :decayTime AND high_interest_score > :threshold
-                    THEN GREATEST(high_interest_score * :rate, :threshold) ELSE high_interest_score END,
-                intimacy = SQRT((low_interest_score / (low_interest_score + :convergence))
-                              * (high_interest_score / (high_interest_score + :convergence)))
+                    THEN GREATEST(high_interest_score * :rate, :threshold) ELSE high_interest_score END
             WHERE (low_last_interacted_at <= :decayTime OR high_last_interacted_at <= :decayTime)
               AND %s
             ORDER BY low_user_id, high_user_id
@@ -229,32 +226,29 @@ public class FriendshipMysqlRepository
             String suffix = Integer.toString(index++);
             rows.add("""
                     ROW(:low%1$s, :high%1$s, :lowScore%1$s, :highScore%1$s,
-                        CAST(:lowTime%1$s AS DATETIME(6)), CAST(:highTime%1$s AS DATETIME(6)), :intimacy%1$s)
+                        CAST(:lowTime%1$s AS DATETIME(6)), CAST(:highTime%1$s AS DATETIME(6)))
                     """.formatted(suffix));
             parameters.addValue("low" + suffix, low.getOwnerId())
                     .addValue("high" + suffix, high.getOwnerId())
                     .addValue("lowScore" + suffix, low.getInterestScore())
                     .addValue("highScore" + suffix, high.getInterestScore())
                     .addValue("lowTime" + suffix, low.getLastInteractedAt(), Types.TIMESTAMP)
-                    .addValue("highTime" + suffix, high.getLastInteractedAt(), Types.TIMESTAMP)
-                    .addValue("intimacy" + suffix, friendship.getIntimacy());
+                    .addValue("highTime" + suffix, high.getLastInteractedAt(), Types.TIMESTAMP);
         }
         jdbc.update("""
                 UPDATE friendships f
-                JOIN (VALUES %s) AS scores (low_id, high_id, low_score, high_score, low_time, high_time, intimacy)
+                JOIN (VALUES %s) AS scores (low_id, high_id, low_score, high_score, low_time, high_time)
                   ON f.low_user_id = scores.low_id AND f.high_user_id = scores.high_id
                 SET f.low_interest_score = scores.low_score,
                     f.high_interest_score = scores.high_score,
                     f.low_last_interacted_at = scores.low_time,
-                    f.high_last_interacted_at = scores.high_time,
-                    f.intimacy = scores.intimacy
+                    f.high_last_interacted_at = scores.high_time
                 """.formatted(rows), parameters);
     }
 
     @Override
     public void applyDecay(double rate, double threshold, LocalDateTime decayTime) {
-        jdbc.update(APPLY_DECAY, Map.of("rate", rate, "threshold", threshold, "decayTime", decayTime,
-                "convergence", FriendRecognition.CONVERGENCE_K));
+        jdbc.update(APPLY_DECAY, Map.of("rate", rate, "threshold", threshold, "decayTime", decayTime));
     }
 
     @Override

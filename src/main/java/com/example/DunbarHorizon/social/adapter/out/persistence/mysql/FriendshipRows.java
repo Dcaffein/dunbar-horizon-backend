@@ -22,8 +22,7 @@ final class FriendshipRows {
 
     static MapSqlParameterSource insertParameters(Friendship friendship) {
         var parameters = new MapSqlParameterSource()
-                .addValue("createdAt", friendship.getCreatedAt(), Types.DATE)
-                .addValue("intimacy", friendship.getIntimacy());
+                .addValue("createdAt", friendship.getCreatedAt(), Types.DATE);
         bindRecognition(parameters, "low", friendship.getLower());
         bindRecognition(parameters, "high", friendship.getHigher());
         return parameters;

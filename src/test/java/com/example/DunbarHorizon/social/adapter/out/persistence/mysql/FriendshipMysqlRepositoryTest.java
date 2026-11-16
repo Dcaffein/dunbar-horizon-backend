@@ -104,10 +104,10 @@ class FriendshipMysqlRepositoryTest {
         // when & then
         assertThatThrownBy(() -> jdbc.update("""
                 INSERT INTO friendships (
-                    low_user_id, high_user_id, intimacy,
+                    low_user_id, high_user_id,
                     low_interest_score, low_is_muted, low_is_routable,
                     high_interest_score, high_is_muted, high_is_routable
-                ) VALUES (?, ?, 0.45, 51, TRUE, FALSE, 32, FALSE, TRUE)
+                ) VALUES (?, ?, 51, TRUE, FALSE, 32, FALSE, TRUE)
                 """, high.getId(), low.getId()))
                 .isInstanceOf(DataAccessException.class)
                 .hasMessageContaining("chk_friendships_user_order");

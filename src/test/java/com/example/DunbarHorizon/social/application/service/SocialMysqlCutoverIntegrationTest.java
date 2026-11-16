@@ -137,11 +137,11 @@ class SocialMysqlCutoverIntegrationTest {
 
     private void insertFriendship(long low, long high, double intimacy) {
         jdbc.update("""
-                INSERT INTO friendships (low_user_id, high_user_id, created_at, intimacy,
+                INSERT INTO friendships (low_user_id, high_user_id, created_at,
                     low_interest_score, low_is_muted, low_is_routable,
                     high_interest_score, high_is_muted, high_is_routable)
-                VALUES (?, ?, CURRENT_DATE, ?, ?, FALSE, TRUE, ?, FALSE, TRUE)
-                """, low, high, intimacy, scoreFor(intimacy), scoreFor(intimacy));
+                VALUES (?, ?, CURRENT_DATE, ?, FALSE, TRUE, ?, FALSE, TRUE)
+                """, low, high, scoreFor(intimacy), scoreFor(intimacy));
     }
 
     private static double scoreFor(double intimacy) {

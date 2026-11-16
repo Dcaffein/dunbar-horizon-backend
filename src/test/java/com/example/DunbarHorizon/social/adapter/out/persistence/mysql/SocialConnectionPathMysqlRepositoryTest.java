@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult.IntermediaryResult;
 import com.example.DunbarHorizon.social.application.service.SocialConnectionPathQueryService;
+import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -116,11 +117,16 @@ class SocialConnectionPathMysqlRepositoryTest {
         boolean fromIsLow = from.getId() < to.getId();
         jdbc.update("""
                 INSERT INTO friendships (
-                    low_user_id, high_user_id, intimacy, low_interest_score, high_interest_score,
+                    low_user_id, high_user_id, low_interest_score, high_interest_score,
                     low_is_muted, high_is_muted, low_is_routable, high_is_routable
-                ) VALUES (?, ?, ?, 50, 50, FALSE, FALSE, ?, ?)
-                """, Math.min(from.getId(), to.getId()), Math.max(from.getId(), to.getId()), intimacy,
+                ) VALUES (?, ?, ?, ?, FALSE, FALSE, ?, ?)
+                """, Math.min(from.getId(), to.getId()), Math.max(from.getId(), to.getId()),
+                scoreFor(intimacy), scoreFor(intimacy),
                 fromIsLow ? fromRoutable : toRoutable, fromIsLow ? toRoutable : fromRoutable);
+    }
+
+    private static double scoreFor(double intimacy) {
+        return FriendRecognition.CONVERGENCE_K * intimacy / (1 - intimacy);
     }
 
     private static IntermediaryResult result(User user) {
