@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
-import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -84,7 +83,7 @@ class FriendshipMysqlRepositoryTest {
         // given
         Friendship original = friendship(low, high);
         Friendship duplicate = friendship(low, high);
-        duplicate.updateFriendAlias(low.getId(), "overwritten");
+        duplicate.updateUserFields(low.getId(), "overwritten", null, null);
 
         // when
         repository.create(original);
@@ -111,39 +110,48 @@ class FriendshipMysqlRepositoryTest {
     }
 
     @Test
-    @DisplayName("친구 설정 갱신은 요청한 쪽만 바꾸고 점수와 친밀도를 유지한다")
-    void updateUserFields_PreservesOtherSideAndScores_HighUser() {
+    @DisplayName("친구 설정 저장은 본인 쪽 설정 열만 쓰고 로드 뒤 바뀐 상대 설정과 점수를 보존한다")
+    void updateUserFields_WritesOnlyOwnSettings_OtherColumnsChangedAfterLoad() {
         // given
         Friendship original = friendship(low, high);
         repository.create(original);
+        Friendship loaded = repository.findById(original.getId()).orElseThrow();
+        jdbc.update("""
+                UPDATE friendships SET low_friend_alias = 'changed by low', low_is_muted = FALSE,
+                    low_interest_score = 60, high_interest_score = 40
+                WHERE low_user_id = ? AND high_user_id = ?
+                """, low.getId(), high.getId());
+        loaded.updateUserFields(high.getId(), "", true, false);
+
         // when
-        repository.updateUserFields(high.getId(), low.getId(), "", true, false);
+        repository.updateUserFields(loaded, high.getId());
 
         // then
         Friendship updated = repository.findById(original.getId()).orElseThrow();
         assertThat(updated.getFriendAlias(high.getId())).isEmpty();
         assertThat(updated.isMuted(high.getId())).isTrue();
         assertThat(updated.isRoutable(high.getId())).isFalse();
-        assertThat(updated.getFriendAlias(low.getId())).isEqualTo("from low");
-        assertThat(updated.isMuted(low.getId())).isTrue();
+        assertThat(updated.getFriendAlias(low.getId())).isEqualTo("changed by low");
+        assertThat(updated.isMuted(low.getId())).isFalse();
         assertThat(updated.isRoutable(low.getId())).isFalse();
-        assertThat(updated.getIntimacy()).isEqualTo(INTIMACY);
         assertThat(List.of(updated.getLower(), updated.getHigher())).extracting(FriendRecognition::getInterestScore)
-                .containsExactly(51.0, 32.0);
+                .containsExactly(60.0, 40.0);
         assertThat(List.of(updated.getLower(), updated.getHigher())).extracting(FriendRecognition::getLastInteractedAt)
                 .containsExactly(INTERACTED_AT, INTERACTED_AT.plusDays(1));
+        assertThat(jdbc.queryForObject("SELECT high_friend_alias FROM friendships WHERE low_user_id = ?",
+                String.class, low.getId())).isNull();
     }
 
     @Test
-    @DisplayName("동일 값을 다시 보내거나 수정 필드가 없어도 존재하는 관계의 요청은 성공한다")
-    void updateUserFields_AllowsUnchangedSettings_ExistingRelationship() {
+    @DisplayName("바뀐 설정이 없어도 존재하는 관계의 설정 저장은 성공한다")
+    void updateUserFields_Succeeds_UnchangedSettings() {
         // given
         Friendship original = friendship(low, high);
         repository.create(original);
+        Friendship loaded = repository.findById(original.getId()).orElseThrow();
 
         // when
-        repository.updateUserFields(low.getId(), high.getId(), "from low", null, null);
-        repository.updateUserFields(high.getId(), low.getId(), null, null, null);
+        repository.updateUserFields(loaded, low.getId());
 
         // then
         assertThat(repository.findById(original.getId()).orElseThrow().getFriendAlias(low.getId()))
@@ -151,26 +159,36 @@ class FriendshipMysqlRepositoryTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 관계에 설정 변경이나 빈 요청을 보내면 기존 예외가 발생한다")
-    void updateUserFields_ThrowsNotFound_MissingRelationship() {
-        assertThatThrownBy(() -> repository.updateUserFields(low.getId(), high.getId(), null, false, null))
-                .isInstanceOf(FriendshipNotFoundException.class);
-        assertThatThrownBy(() -> repository.updateUserFields(low.getId(), high.getId(), null, null, null))
+    @DisplayName("로드한 뒤 관계가 삭제되면 설정 저장은 관계 없음 예외로 끝난다")
+    void updateUserFields_ThrowsNotFound_DeletedAfterLoad() {
+        // given
+        Friendship original = friendship(low, high);
+        repository.create(original);
+        Friendship loaded = repository.findById(original.getId()).orElseThrow();
+        repository.delete(original.getId());
+
+        // when & then
+        assertThatThrownBy(() -> repository.updateUserFields(loaded, low.getId()))
                 .isInstanceOf(FriendshipNotFoundException.class);
     }
 
     @Test
-    @DisplayName("별명 검증에 실패하면 함께 요청한 다른 설정도 바뀌지 않는다")
-    void updateUserFields_RejectsEntireUpdate_InvalidAlias() {
+    @DisplayName("별명이 없는 관계는 별명 열을 NULL로 저장한다")
+    void create_StoresNullAlias_EmptyAlias() {
         // given
-        Friendship original = friendship(low, high);
-        repository.create(original);
+        Friendship friendship = Friendship.restore(CREATED_AT, INTIMACY,
+                FriendRecognition.restore(low.getId(), null, 21.4, INTERACTED_AT, false, true),
+                FriendRecognition.restore(high.getId(), "", 21.4, INTERACTED_AT, false, true));
 
-        // when & then
-        assertThatThrownBy(() -> repository.updateUserFields(high.getId(), low.getId(),
-                "a".repeat(Friendship.ALIAS_MAX_LENGTH + 1), true, null))
-                .isInstanceOf(InvalidFriendAliasException.class);
-        assertThat(repository.findById(original.getId()).orElseThrow().isMuted(high.getId())).isFalse();
+        // when
+        repository.create(friendship);
+
+        // then
+        assertThat(jdbc.queryForList("""
+                SELECT low_friend_alias FROM friendships WHERE low_user_id = ?
+                UNION ALL
+                SELECT high_friend_alias FROM friendships WHERE low_user_id = ?
+                """, String.class, low.getId(), low.getId())).containsExactly(null, null);
     }
 
     @Test

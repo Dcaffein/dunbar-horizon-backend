@@ -12,6 +12,7 @@ import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipArchivePolicy;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
+import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
 import com.example.DunbarHorizon.social.domain.label.LabelFactory;
 import com.example.DunbarHorizon.social.domain.label.LabelNamePolicy;
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
@@ -242,6 +243,49 @@ class FriendshipLifecycleMysqlTest {
             call.callRealMethod();
             throw new IllegalStateException("interrupted after relationship deletion");
         }).when(friendships).deleteAllByIds(List.of(pairId));
+    }
+
+    @Test
+    @DisplayName("관계가 없거나 같은 사용자를 지정하면 설정 변경은 관계 없음 예외로 끝난다")
+    void updateFriendship_ThrowsNotFound_MissingRelationship() {
+        assertThatThrownBy(() -> lifecycle.updateFriendship(first, second,
+                new FriendshipUpdateCommand(first, second, null, true, null)))
+                .isInstanceOf(FriendshipNotFoundException.class);
+        assertThatThrownBy(() -> lifecycle.updateFriendship(first, first,
+                new FriendshipUpdateCommand(first, first, null, null, null)))
+                .isInstanceOf(FriendshipNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("별명 검증에 실패하면 함께 요청한 다른 설정도 바뀌지 않는다")
+    void updateFriendship_RejectsEntireUpdate_InvalidAlias() {
+        // given
+        connect(0.3);
+
+        // when & then
+        assertThatThrownBy(() -> lifecycle.updateFriendship(second, first, new FriendshipUpdateCommand(second, first,
+                "a".repeat(Friendship.ALIAS_MAX_LENGTH + 1), true, null)))
+                .isInstanceOf(InvalidFriendAliasException.class);
+        assertThat(friendships.findById(pairId).orElseThrow().isMuted(second)).isFalse();
+    }
+
+    @Test
+    @DisplayName("설정 변경은 요청한 필드만 바꾸고 빈 별명은 별명을 지운다")
+    void updateFriendship_ChangesRequestedFields_ClearsEmptyAlias() {
+        // given
+        connect(0.3);
+        lifecycle.updateFriendship(first, second, new FriendshipUpdateCommand(first, second, "친구", true, null));
+
+        // when
+        lifecycle.updateFriendship(first, second, new FriendshipUpdateCommand(first, second, "", null, false));
+
+        // then
+        Friendship updated = friendships.findById(pairId).orElseThrow();
+        assertThat(updated.getFriendAlias(first)).isEmpty();
+        assertThat(updated.isMuted(first)).isTrue();
+        assertThat(updated.isRoutable(first)).isFalse();
+        assertThat(updated.isMuted(second)).isFalse();
+        assertThat(updated.isRoutable(second)).isTrue();
     }
 
     private void connect(double intimacy) {

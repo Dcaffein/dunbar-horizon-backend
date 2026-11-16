@@ -2,10 +2,10 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
 import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipCreationRepository;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipLifecycleRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -29,7 +29,7 @@ import java.util.stream.Stream;
 
 @Repository
 @RequiredArgsConstructor
-public class FriendshipMysqlRepository implements FriendshipLifecycleRepository, FriendshipCreationRepository {
+public class FriendshipMysqlRepository implements FriendshipRepository, FriendshipCreationRepository {
 
     private static final String PAIR = "low_user_id = :low AND high_user_id = :high";
     private static final String SELECT_PAIR = "SELECT * FROM friendships WHERE " + PAIR;
@@ -123,36 +123,18 @@ public class FriendshipMysqlRepository implements FriendshipLifecycleRepository,
 
     @Override
     public void updateUserFields(Friendship friendship, Long userId) {
-        updateUserFields(userId, friendship.getFriendId(userId), friendship.getFriendAlias(userId),
-                friendship.isMuted(userId), friendship.isRoutable(userId));
-    }
-
-    @Override
-    public void updateUserFields(Long userId, Long friendId, String alias, Boolean muted, Boolean routable) {
-        FriendRecognition.validateFriendAlias(alias);
-        var pair = UserPairKey.of(userId, friendId);
-        var parameters = new MapSqlParameterSource(pair.parameters());
+        Long friendId = friendship.getFriendId(userId);
         String side = userId < friendId ? "low" : "high";
-        var changes = new StringJoiner(", ");
-        if (alias != null) {
-            changes.add(side + "_friend_alias = :alias");
-            parameters.addValue("alias", alias.isEmpty() ? null : alias, Types.VARCHAR);
-        }
-        if (muted != null) {
-            changes.add(side + "_is_muted = :muted");
-            parameters.addValue("muted", muted);
-        }
-        if (routable != null) {
-            changes.add(side + "_is_routable = :routable");
-            parameters.addValue("routable", routable);
-        }
-
-        String where = " WHERE " + PAIR + " AND " + ACTIVE_PAIR;
-        boolean found = changes.length() == 0
-                ? Boolean.TRUE.equals(jdbc.queryForObject(
-                        "SELECT EXISTS (SELECT 1 FROM friendships" + where + ")", parameters, Boolean.class))
-                : jdbc.update("UPDATE friendships SET " + changes + where, parameters) > 0;
-        if (!found) {
+        var parameters = new MapSqlParameterSource(UserPairKey.of(userId, friendId).parameters())
+                .addValue("alias", storedAlias(friendship.getFriendAlias(userId)), Types.VARCHAR)
+                .addValue("muted", friendship.isMuted(userId))
+                .addValue("routable", friendship.isRoutable(userId));
+        int updated = jdbc.update("""
+                UPDATE friendships
+                SET %1$s_friend_alias = :alias, %1$s_is_muted = :muted, %1$s_is_routable = :routable
+                WHERE %2$s AND %3$s
+                """.formatted(side, PAIR, ACTIVE_PAIR), parameters);
+        if (updated == 0) {
             throw new FriendshipNotFoundException(userId, friendId);
         }
     }
@@ -265,11 +247,15 @@ public class FriendshipMysqlRepository implements FriendshipLifecycleRepository,
     }
 
     private static void bindRecognition(MapSqlParameterSource parameters, String side, FriendRecognition recognition) {
-        parameters.addValue(side + "Alias", recognition.getFriendAlias(), Types.VARCHAR)
+        parameters.addValue(side + "Alias", storedAlias(recognition.getFriendAlias()), Types.VARCHAR)
                 .addValue(side + "Score", recognition.getInterestScore())
                 .addValue(side + "InteractedAt", recognition.getLastInteractedAt(), Types.TIMESTAMP)
                 .addValue(side + "Muted", recognition.isMuted())
                 .addValue(side + "Routable", recognition.isRoutable());
+    }
+
+    private static String storedAlias(String alias) {
+        return alias.isEmpty() ? null : alias;
     }
 
     private List<Friendship> restore(List<FriendshipRow> rows) {

@@ -2,13 +2,13 @@ package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.port.in.FriendshipCommandUseCase;
 import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipLifecycleRepository;
 import com.example.DunbarHorizon.social.application.port.out.LabelMembershipRepository;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipArchiveCandidate;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipArchivePolicy;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.repository.ArchivedFriendshipRepository;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -20,15 +20,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FriendshipCommandService implements FriendshipCommandUseCase {
 
-    private final FriendshipLifecycleRepository friendships;
+    private final FriendshipRepository friendships;
     private final LabelMembershipRepository labels;
     private final ArchivedFriendshipRepository archives;
     private final FriendshipArchivePolicy archivePolicy;
 
     @Override
+    @Transactional(transactionManager = "transactionManager", isolation = Isolation.READ_COMMITTED)
     public void updateFriendship(Long currentUserId, Long friendId, FriendshipUpdateCommand command) {
-        friendships.updateUserFields(currentUserId, friendId, command.friendAlias(), command.isMuted(),
-                command.isRoutable());
+        Friendship friendship = friendships.findById(Friendship.generateCompositeId(currentUserId, friendId))
+                .orElseThrow(() -> new FriendshipNotFoundException(currentUserId, friendId));
+        friendship.updateUserFields(currentUserId, command.friendAlias(), command.isMuted(), command.isRoutable());
+        friendships.updateUserFields(friendship, currentUserId);
     }
 
     @Override

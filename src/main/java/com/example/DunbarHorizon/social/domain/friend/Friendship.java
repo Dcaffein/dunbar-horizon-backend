@@ -95,10 +95,6 @@ public class Friendship {
         return getFriendRecognition(myId).getUserId();
     }
 
-    public void updateFriendAlias(Long myId, String alias) {
-        getSelfRecognition(myId).updateFriendAlias(alias);
-    }
-
     public void adjustInterestScore(Long userId, double scoreDelta) {
         getSelfRecognition(userId).adjustInterestScore(scoreDelta);
         recalculateIntimacy();
@@ -118,14 +114,6 @@ public class Friendship {
         lower.decay(rate, minThreshold, thresholdTime);
         higher.decay(rate, minThreshold, thresholdTime);
         recalculateIntimacy();
-    }
-
-    public void updateMuteStatus(Long myId, boolean isMuted) {
-        getSelfRecognition(myId).updateMuteStatus(isMuted);
-    }
-
-    public void updateRoutableStatus(Long myId, boolean isRoutable) {
-        getSelfRecognition(myId).updateRoutableStatus(isRoutable);
     }
 
     private void recalculateIntimacy() {

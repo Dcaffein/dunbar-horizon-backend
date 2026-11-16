@@ -4,9 +4,13 @@ import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepo
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ArchivedFriendshipRepositoryAdapter;
+import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
+import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.service.FriendshipScoreService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.FriendshipArchivePolicy;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
@@ -32,8 +36,9 @@ import static org.assertj.core.api.Assertions.within;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipMysqlRepository.class, SocialUserMysqlRepository.class,
-        FriendshipScoreService.class, FriendshipDecayPolicy.class})
+@Import({FriendshipMysqlRepository.class, SocialUserMysqlRepository.class, LabelMysqlRepository.class,
+        FriendshipScoreService.class, FriendshipCommandService.class, FriendshipDecayPolicy.class,
+        FriendshipArchivePolicy.class, ArchivedFriendshipRepositoryAdapter.class})
 class FriendshipMysqlScoreTest {
 
     private static final LocalDate CREATED_AT = LocalDate.of(2026, 1, 1);
@@ -43,6 +48,7 @@ class FriendshipMysqlScoreTest {
     @Autowired private UserJpaRepository users;
     @Autowired private FriendshipMysqlRepository friendships;
     @Autowired private FriendshipScoreService scores;
+    @Autowired private FriendshipCommandService commands;
     @Autowired private PlatformTransactionManager transactionManager;
 
     private Long low;
@@ -121,32 +127,28 @@ class FriendshipMysqlScoreTest {
     }
 
     @Test
-    @DisplayName("같은 행에 대한 양쪽 설정 변경과 점수 쓰기가 겹쳐도 요청한 필드의 변경이 모두 남는다")
-    void updateUserFields_PreservesIndependentChanges_OnSameRow() throws Exception {
+    @DisplayName("같은 행에서 양쪽 사용자의 설정 변경과 점수 쓰기가 겹쳐도 서로의 변경을 잃지 않는다")
+    void updateFriendship_PreservesBothSidesAndScores_OnSameRow() throws Exception {
         // given
         create(low, high, 21.4, 30, OLD_INTERACTION, OLD_INTERACTION);
         CountDownLatch start = new CountDownLatch(1);
 
         // when
-        try (var workers = Executors.newFixedThreadPool(4)) {
-            var alias = workers.submit(() -> {
+        try (var workers = Executors.newFixedThreadPool(3)) {
+            var lowSettings = workers.submit(() -> {
                 await(start);
-                friendships.updateUserFields(low, high, "친구", null, null);
+                commands.updateFriendship(low, high, new FriendshipUpdateCommand(low, high, "친구", true, null));
             });
-            var muted = workers.submit(() -> {
+            var highSettings = workers.submit(() -> {
                 await(start);
-                friendships.updateUserFields(low, high, null, true, null);
-            });
-            var routable = workers.submit(() -> {
-                await(start);
-                friendships.updateUserFields(high, low, null, null, false);
+                commands.updateFriendship(high, low, new FriendshipUpdateCommand(high, low, null, null, false));
             });
             var score = workers.submit(() -> {
                 await(start);
                 scores.applyInteraction(high, low, InteractionType.VISIT);
             });
             start.countDown();
-            for (var update : List.of(alias, muted, routable, score)) {
+            for (var update : List.of(lowSettings, highSettings, score)) {
                 update.get(15, TimeUnit.SECONDS);
             }
         }
