@@ -29,7 +29,8 @@ class FriendshipMysqlRepositoryTest {
 
     private static final LocalDate CREATED_AT = LocalDate.of(2026, 9, 14);
     private static final LocalDateTime INTERACTED_AT = CREATED_AT.atTime(12, 30);
-    private static final double INTIMACY = 0.45;
+    private static final double INTIMACY =
+            Math.sqrt(FriendRecognition.normalize(51.0) * FriendRecognition.normalize(32.0));
 
     @Autowired private FriendshipMysqlRepository repository;
     @Autowired private TestEntityManager em;
@@ -179,7 +180,7 @@ class FriendshipMysqlRepositoryTest {
     @DisplayName("별명이 없는 관계는 별명 열을 NULL로 저장한다")
     void create_StoresNullAlias_EmptyAlias() {
         // given
-        Friendship friendship = Friendship.restore(CREATED_AT, INTIMACY,
+        Friendship friendship = Friendship.restore(CREATED_AT,
                 FriendRecognition.restore(low.getId(), null, 21.4, INTERACTED_AT, false, true),
                 FriendRecognition.restore(high.getId(), "", 21.4, INTERACTED_AT, false, true));
 
@@ -282,7 +283,7 @@ class FriendshipMysqlRepositoryTest {
         // given
         User third = createUser("third");
         repository.create(friendship(low, high));
-        repository.create(Friendship.restore(CREATED_AT, 0.01,
+        repository.create(Friendship.restore(CREATED_AT,
                 FriendRecognition.restore(high.getId(), null, 0.5, INTERACTED_AT, false, true),
                 FriendRecognition.restore(third.getId(), null, 0.5, INTERACTED_AT, false, true)));
 
@@ -321,7 +322,7 @@ class FriendshipMysqlRepositoryTest {
     }
 
     private static Friendship friendship(User low, User high) {
-        return Friendship.restore(CREATED_AT, INTIMACY,
+        return Friendship.restore(CREATED_AT,
                 FriendRecognition.restore(high.getId(), "from high", 32.0,
                         INTERACTED_AT.plusDays(1), false, true),
                 FriendRecognition.restore(low.getId(), "from low", 51.0,

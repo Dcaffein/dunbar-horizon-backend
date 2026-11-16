@@ -307,16 +307,15 @@ public class FriendshipMysqlRepository implements FriendshipRepository {
         return ids.stream().filter(profiles::containsKey).collect(Collectors.toSet());
     }
 
-    private record FriendshipRow(UserPairKey key, LocalDate createdAt, double intimacy,
-                                 RecognitionRow low, RecognitionRow high) {
+    private record FriendshipRow(UserPairKey key, LocalDate createdAt, RecognitionRow low, RecognitionRow high) {
         static FriendshipRow read(ResultSet rs, int rowNumber) throws SQLException {
             var key = new UserPairKey(rs.getLong("low_user_id"), rs.getLong("high_user_id"));
-            return new FriendshipRow(key, rs.getObject("created_at", LocalDate.class), rs.getDouble("intimacy"),
+            return new FriendshipRow(key, rs.getObject("created_at", LocalDate.class),
                     RecognitionRow.read(rs, "low"), RecognitionRow.read(rs, "high"));
         }
 
         Friendship toFriendship() {
-            return Friendship.restore(createdAt, intimacy, low.toRecognition(key.low()), high.toRecognition(key.high()));
+            return Friendship.restore(createdAt, low.toRecognition(key.low()), high.toRecognition(key.high()));
         }
     }
 

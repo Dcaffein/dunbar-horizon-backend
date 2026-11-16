@@ -127,7 +127,7 @@ class SocialMysqlCutoverIntegrationTest {
         transactions.executeWithoutResult(status -> app.publishEvent(new BatchMutualInteractionEvent(
                 148L, List.of(FRIEND), ME, InteractionType.FLAG_ENDED, ScoreDirection.GRANT)));
         assertThat(friendships.getFriend(ME, FRIEND).myInterestScore())
-                .isEqualTo(FriendRecognition.normalize(50.0 + InteractionScorePolicy.scoreOf(InteractionType.FLAG_ENDED)));
+                .isEqualTo(FriendRecognition.normalize(scoreFor(0.6) + InteractionScorePolicy.scoreOf(InteractionType.FLAG_ENDED)));
 
         assertThat(labels.getMemberIdsByLabels(ANCHOR, List.of(LABEL_ID))).containsExactlyInAnyOrder(ME, TARGET);
         friendshipChanges.brokeUpWith(ME, ANCHOR);
@@ -140,7 +140,11 @@ class SocialMysqlCutoverIntegrationTest {
                 INSERT INTO friendships (low_user_id, high_user_id, created_at, intimacy,
                     low_interest_score, low_is_muted, low_is_routable,
                     high_interest_score, high_is_muted, high_is_routable)
-                VALUES (?, ?, CURRENT_DATE, ?, 50, FALSE, TRUE, 50, FALSE, TRUE)
-                """, low, high, intimacy);
+                VALUES (?, ?, CURRENT_DATE, ?, ?, FALSE, TRUE, ?, FALSE, TRUE)
+                """, low, high, intimacy, scoreFor(intimacy), scoreFor(intimacy));
+    }
+
+    private static double scoreFor(double intimacy) {
+        return FriendRecognition.CONVERGENCE_K * intimacy / (1 - intimacy);
     }
 }

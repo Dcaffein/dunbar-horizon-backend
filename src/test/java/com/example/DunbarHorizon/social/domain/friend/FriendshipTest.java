@@ -37,21 +37,21 @@ class FriendshipTest {
     }
 
     @Test
-    @DisplayName("복원 시 입력 순서를 정규화하면서 사용자별 설정과 저장된 친밀도를 보존한다")
+    @DisplayName("복원 시 입력 순서를 정규화하면서 사용자별 설정을 보존하고 친밀도는 두 관심도로 계산한다")
     void restore_PreservesState_ReversedRecognitions() {
         // given
         FriendRecognition high = FriendRecognition.restore(2L, "high alias", 40.0, RECENT, true, false);
         FriendRecognition low = FriendRecognition.restore(1L, "low alias", 20.0, STALE, false, true);
 
         // when
-        Friendship friendship = Friendship.restore(LocalDate.of(2026, 1, 1), 0.7, high, low);
+        Friendship friendship = Friendship.restore(LocalDate.of(2026, 1, 1), high, low);
 
         // then
         assertThat(friendship.getLower()).isSameAs(low);
         assertThat(friendship.getHigher()).isSameAs(high);
         assertThat(friendship.getFriendAlias(1L)).isEqualTo("low alias");
         assertThat(friendship.getFriendAlias(2L)).isEqualTo("high alias");
-        assertThat(friendship.getIntimacy()).isEqualTo(0.7);
+        assertThat(friendship.getIntimacy()).isCloseTo(intimacyOf(20.0, 40.0), within(1e-12));
     }
 
     @Test
@@ -62,13 +62,13 @@ class FriendshipTest {
         LocalDate date = LocalDate.of(2026, 1, 1);
 
         // when & then
-        assertThatThrownBy(() -> Friendship.restore(date, 0.3, null, one))
+        assertThatThrownBy(() -> Friendship.restore(date, null, one))
                 .isInstanceOf(FriendshipInvalidException.class);
-        assertThatThrownBy(() -> Friendship.restore(date, 0.3, one, null))
+        assertThatThrownBy(() -> Friendship.restore(date, one, null))
                 .isInstanceOf(FriendshipInvalidException.class);
-        assertThatThrownBy(() -> Friendship.restore(date, 0.3, one, new FriendRecognition(1L)))
+        assertThatThrownBy(() -> Friendship.restore(date, one, new FriendRecognition(1L)))
                 .isInstanceOf(FriendshipInvalidException.class);
-        assertThatThrownBy(() -> Friendship.restore(date, 0.3, one, new FriendRecognition(null)))
+        assertThatThrownBy(() -> Friendship.restore(date, one, new FriendRecognition(null)))
                 .isInstanceOf(FriendshipInvalidException.class);
     }
 
@@ -236,9 +236,7 @@ class FriendshipTest {
     private static Friendship friendshipOf(double lowScore, LocalDateTime lowAt, double highScore, LocalDateTime highAt) {
         FriendRecognition low = FriendRecognition.restore(1L, null, lowScore, lowAt, false, true);
         FriendRecognition high = FriendRecognition.restore(2L, null, highScore, highAt, false, true);
-        double intimacy = Math.sqrt(FriendRecognition.normalize(lowScore) * FriendRecognition.normalize(highScore));
-        return Friendship.restore(LocalDate.of(2026, 1, 1), intimacy,
-                low, high);
+        return Friendship.restore(LocalDate.of(2026, 1, 1), low, high);
     }
 
     private static double intimacyOf(double a, double b) {
@@ -303,11 +301,10 @@ class FriendshipTest {
     }
 
     @Test
-    @DisplayName("이미 하한 이하인 관심도는 바뀌지 않지만 대상 관계라 친밀도는 다시 계산한다")
-    void decay_alreadyAtOrBelowThreshold_keepsScoreAndRecalculatesIntimacy() {
+    @DisplayName("이미 하한 이하인 관심도는 바뀌지 않고 친밀도도 그대로다")
+    void decay_alreadyAtOrBelowThreshold_keepsScoreAndIntimacy() {
         // given
-        Friendship friendship = Friendship.restore(LocalDate.of(2026, 1, 1), 0.9,
-
+        Friendship friendship = Friendship.restore(LocalDate.of(2026, 1, 1),
                 FriendRecognition.restore(1L, null, 0.5, STALE, false, true),
                 FriendRecognition.restore(2L, null, THRESHOLD, STALE, false, true));
 
@@ -324,8 +321,7 @@ class FriendshipTest {
     @DisplayName("양쪽 모두 최근에 교류했으면 관심도와 친밀도가 바뀌지 않는다")
     void decay_bothRecent_changesNothing() {
         // given
-        Friendship friendship = Friendship.restore(LocalDate.of(2026, 1, 1), 0.9,
-
+        Friendship friendship = Friendship.restore(LocalDate.of(2026, 1, 1),
                 FriendRecognition.restore(1L, null, 40.0, RECENT, false, true),
                 FriendRecognition.restore(2L, null, 20.0, RECENT, false, true));
 
@@ -335,7 +331,7 @@ class FriendshipTest {
         // then
         assertThat(friendship.getMyInterestScore(1L)).isEqualTo(40.0);
         assertThat(friendship.getMyInterestScore(2L)).isEqualTo(20.0);
-        assertThat(friendship.getIntimacy()).isEqualTo(0.9);
+        assertThat(friendship.getIntimacy()).isCloseTo(intimacyOf(40.0, 20.0), within(1e-12));
     }
 
     @Test
@@ -363,5 +359,21 @@ class FriendshipTest {
         // then
         assertThat(friendship.getLower().getLastInteractedAt()).isEqualTo(STALE);
         assertThat(friendship.getHigher().getLastInteractedAt()).isEqualTo(RECENT);
+    }
+
+    @Test
+    @DisplayName("감쇠는 관심도를 깎고 친밀도는 깎인 관심도에서 다시 계산된다")
+    void decay_LowersIntimacy_ThroughInterestScores() {
+        // given
+        Friendship friendship = friendshipOf(40.0, STALE, 20.0, STALE);
+        double before = friendship.getIntimacy();
+
+        // when
+        friendship.decay(RATE, THRESHOLD, DECAY_TIME);
+
+        // then
+        assertThat(friendship.getIntimacy()).isLessThan(before);
+        assertThat(friendship.getIntimacy()).isEqualTo(intimacyOf(friendship.getMyInterestScore(1L),
+                friendship.getMyInterestScore(2L)));
     }
 }

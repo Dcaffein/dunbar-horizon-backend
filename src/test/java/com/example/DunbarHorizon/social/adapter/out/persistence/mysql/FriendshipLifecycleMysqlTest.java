@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -58,7 +59,7 @@ class FriendshipLifecycleMysqlTest {
     @Autowired private FriendshipCommandService lifecycle;
     @Autowired private MySqlLabelService labelService;
     @Autowired private LabelMysqlRepository labels;
-    @Autowired private FriendshipArchivePolicy archivePolicy;
+    @Autowired private FriendshipDecayPolicy decayPolicy;
     @Autowired private JdbcTemplate jdbc;
     @MockitoSpyBean private FriendshipMysqlRepository friendships;
     @MockitoSpyBean private NamedParameterJdbcTemplate namedJdbc;
@@ -92,7 +93,7 @@ class FriendshipLifecycleMysqlTest {
     @DisplayName("친구 관계를 끊으면 양쪽 라벨에서 서로 제거되고 별도 아카이브는 남지 않는다")
     void brokeUpWith_RemovesBothMemberships_WithFriendship() {
         // given
-        connectWithBothMemberships(0.3);
+        connectWithBothMemberships(FriendRecognition.INITIAL_RAW_SCORE);
         lifecycle.updateFriendship(second, first, new FriendshipUpdateCommand(second, first, "친구", null, null));
         assertThat(friendships.findBetween(first, second).orElseThrow().getFriendAlias(second)).isEqualTo("친구");
 
@@ -109,7 +110,7 @@ class FriendshipLifecycleMysqlTest {
     @DisplayName("친구 끊기에서 쓰기 중 실패하면 관계와 양쪽 라벨 멤버십이 복원된다")
     void brokeUpWith_RollsBackBothMemberships_OnFailure() {
         // given
-        connectWithBothMemberships(0.3);
+        connectWithBothMemberships(FriendRecognition.INITIAL_RAW_SCORE);
         failAfterDeletion();
 
         // when & then
@@ -121,7 +122,7 @@ class FriendshipLifecycleMysqlTest {
     @DisplayName("멤버 추가가 먼저 관계를 잠그면 뒤따르는 친구 끊기가 새 멤버십도 삭제한다")
     void brokeUpWith_RemovesJustAddedMembership_WhenAdditionLocksFirst() throws Exception {
         // given
-        connect(0.3);
+        connect(FriendRecognition.INITIAL_RAW_SCORE);
         var additionLocked = new CountDownLatch(1);
         var resumeAddition = new CountDownLatch(1);
         var breakupStarted = new CountDownLatch(1);
@@ -158,7 +159,7 @@ class FriendshipLifecycleMysqlTest {
     @DisplayName("친구 끊기가 먼저 관계를 잠그면 뒤따르는 멤버 교체는 관계가 없음을 확인한다")
     void replaceMembers_RejectsEndedFriend_WhenBreakupLocksFirst() throws Exception {
         // given
-        connectWithBothMemberships(0.3);
+        connectWithBothMemberships(FriendRecognition.INITIAL_RAW_SCORE);
         var beforeDelete = new CountDownLatch(1);
         var finishBreakup = new CountDownLatch(1);
         var replacementStarted = new CountDownLatch(1);
@@ -195,7 +196,7 @@ class FriendshipLifecycleMysqlTest {
     @DisplayName("하한에 도달한 관계의 아카이브 기록과 양쪽 라벨 정리를 함께 커밋한다")
     void archiveFriendships_CommitsRecordAndCleanup_AtThreshold() {
         // given
-        connectWithBothMemberships(archivePolicy.archiveThreshold());
+        connectWithBothMemberships(decayPolicy.getMinThreshold());
 
         // when
         lifecycle.archiveFriendships();
@@ -213,7 +214,7 @@ class FriendshipLifecycleMysqlTest {
     @DisplayName("아카이브 중 쓰기가 실패하면 신규 기록과 관계·멤버십 정리도 함께 롤백된다")
     void archiveFriendships_RollsBackRecordAndCleanup_OnFailure() {
         // given
-        connectWithBothMemberships(archivePolicy.archiveThreshold());
+        connectWithBothMemberships(decayPolicy.getMinThreshold());
         failAfterDeletion();
 
         // when & then
@@ -226,8 +227,7 @@ class FriendshipLifecycleMysqlTest {
     @DisplayName("후보 조회 뒤 친밀도가 회복하면 잠금 조회에서 확인하고 아카이브하지 않는다")
     void archiveFriendships_PreservesRelationship_WhenIntimacyRecovered() {
         // given
-        double threshold = archivePolicy.archiveThreshold();
-        connectWithBothMemberships(threshold);
+        connectWithBothMemberships(decayPolicy.getMinThreshold());
         doAnswer(call -> {
             Object candidates = call.callRealMethod();
             try (var worker = Executors.newSingleThreadExecutor()) {
@@ -270,7 +270,7 @@ class FriendshipLifecycleMysqlTest {
     @DisplayName("별명 검증에 실패하면 함께 요청한 다른 설정도 바뀌지 않는다")
     void updateFriendship_RejectsEntireUpdate_InvalidAlias() {
         // given
-        connect(0.3);
+        connect(FriendRecognition.INITIAL_RAW_SCORE);
 
         // when & then
         assertThatThrownBy(() -> lifecycle.updateFriendship(second, first, new FriendshipUpdateCommand(second, first,
@@ -283,7 +283,7 @@ class FriendshipLifecycleMysqlTest {
     @DisplayName("설정 변경은 요청한 필드만 바꾸고 빈 별명은 별명을 지운다")
     void updateFriendship_ChangesRequestedFields_ClearsEmptyAlias() {
         // given
-        connect(0.3);
+        connect(FriendRecognition.INITIAL_RAW_SCORE);
         lifecycle.updateFriendship(first, second, new FriendshipUpdateCommand(first, second, "친구", true, null));
 
         // when
@@ -298,14 +298,14 @@ class FriendshipLifecycleMysqlTest {
         assertThat(updated.isRoutable(second)).isTrue();
     }
 
-    private void connect(double intimacy) {
-        friendships.create(Friendship.restore(FRIENDS_SINCE, intimacy,
-                new FriendRecognition(first),
-                new FriendRecognition(second)));
+    private void connect(double interestScore) {
+        friendships.create(Friendship.restore(FRIENDS_SINCE,
+                FriendRecognition.restore(first, null, interestScore, LocalDateTime.now(), false, true),
+                FriendRecognition.restore(second, null, interestScore, LocalDateTime.now(), false, true)));
     }
 
-    private void connectWithBothMemberships(double intimacy) {
-        connect(intimacy);
+    private void connectWithBothMemberships(double interestScore) {
+        connect(interestScore);
         labelService.addMemberToLabel(first, firstLabel, second);
         labelService.addMemberToLabel(second, secondLabel, first);
     }

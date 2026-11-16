@@ -155,7 +155,7 @@ class FriendRequestMysqlRepositoryTest {
     void accept_KeepsRequest_DuplicateFriendshipKey() {
         // given
         actions.sendRequest(low, high);
-        friendships.create(Friendship.restore(LocalDate.of(2026, 1, 1), 0.3,
+        friendships.create(Friendship.restore(LocalDate.of(2026, 1, 1),
                 FriendRecognition.restore(low, "기존", 21.4, null, false, true),
                 FriendRecognition.restore(high, null, 21.4, null, false, true)));
         doReturn(false).when(friendships).existsFriendshipForUpdate(low, high);

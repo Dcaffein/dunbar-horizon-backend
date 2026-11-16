@@ -16,7 +16,7 @@ public class FriendRecognition {
 
     private String friendAlias;
 
-    private Double interestScore = 0.0;
+    private double interestScore;
 
     private LocalDateTime lastInteractedAt;
 
@@ -24,14 +24,14 @@ public class FriendRecognition {
 
     private boolean isRoutable = true;
 
-    public FriendRecognition(Long ownerId) {
+    FriendRecognition(Long ownerId) {
         this.ownerId = ownerId;
         this.friendAlias = null;
         this.interestScore = INITIAL_RAW_SCORE;
         this.lastInteractedAt = LocalDateTime.now();
     }
 
-    private FriendRecognition(Long ownerId, String friendAlias, Double interestScore,
+    private FriendRecognition(Long ownerId, String friendAlias, double interestScore,
                               LocalDateTime lastInteractedAt, boolean isMuted, boolean isRoutable) {
         this.ownerId = ownerId;
         this.friendAlias = friendAlias;
@@ -41,13 +41,13 @@ public class FriendRecognition {
         this.isRoutable = isRoutable;
     }
 
-    public static FriendRecognition restore(Long ownerId, String friendAlias, Double interestScore,
+    public static FriendRecognition restore(Long ownerId, String friendAlias, double interestScore,
                                             LocalDateTime lastInteractedAt, boolean isMuted, boolean isRoutable) {
         return new FriendRecognition(ownerId, friendAlias, interestScore, lastInteractedAt, isMuted, isRoutable);
     }
 
-    public static double normalize(Double raw) {
-        if (raw == null || raw <= 0) return 0.0;
+    public static double normalize(double raw) {
+        if (raw <= 0) return 0.0;
         return raw / (raw + CONVERGENCE_K);
     }
 
@@ -56,28 +56,18 @@ public class FriendRecognition {
     }
 
     void adjustInterestScore(double delta) {
-        if (this.interestScore == null) {
-            this.interestScore = 0.0;
-        }
-
-        this.interestScore += delta;
+        this.interestScore = Math.max(0.0, interestScore + delta);
         this.lastInteractedAt = LocalDateTime.now();
-
-        if (this.interestScore < 0.0) {
-            this.interestScore = 0.0;
-        }
-    }
-
-    boolean isDecayTarget(LocalDateTime thresholdTime) {
-        return lastInteractedAt != null && !lastInteractedAt.isAfter(thresholdTime);
     }
 
     void decay(double rate, double minThreshold, LocalDateTime thresholdTime) {
-        double score = getInterestScore();
-        if (isDecayTarget(thresholdTime) && score > minThreshold) {
-            score = Math.max(score * rate, minThreshold);
+        if (isDecayTarget(thresholdTime) && interestScore > minThreshold) {
+            this.interestScore = Math.max(interestScore * rate, minThreshold);
         }
-        this.interestScore = score;
+    }
+
+    private boolean isDecayTarget(LocalDateTime thresholdTime) {
+        return lastInteractedAt != null && !lastInteractedAt.isAfter(thresholdTime);
     }
 
     void updateFriendAlias(String newAlias) {
@@ -93,10 +83,6 @@ public class FriendRecognition {
 
     public String getFriendAlias() {
         return friendAlias == null ? "" : friendAlias;
-    }
-
-    public Double getInterestScore() {
-        return this.interestScore == null ? 0.0 : this.interestScore;
     }
 
     void updateMuteStatus(boolean isMuted) {

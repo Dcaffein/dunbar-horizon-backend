@@ -17,9 +17,6 @@ public class Friendship {
     private final LocalDate createdAt;
 
     @Getter
-    private double intimacy;
-
-    @Getter
     private final FriendRecognition lower;
 
     @Getter
@@ -30,23 +27,20 @@ public class Friendship {
         this.lower = new FriendRecognition(Math.min(userA, userB));
         this.higher = new FriendRecognition(Math.max(userA, userB));
         this.createdAt = LocalDate.now();
-        recalculateIntimacy();
     }
 
-    private Friendship(LocalDate createdAt, double intimacy, FriendRecognition first, FriendRecognition second) {
+    private Friendship(LocalDate createdAt, FriendRecognition first, FriendRecognition second) {
         this.createdAt = createdAt;
-        this.intimacy = intimacy;
         this.lower = first.getOwnerId() < second.getOwnerId() ? first : second;
         this.higher = first.getOwnerId() < second.getOwnerId() ? second : first;
     }
 
-    public static Friendship restore(LocalDate createdAt, double intimacy,
-                                     FriendRecognition first, FriendRecognition second) {
+    public static Friendship restore(LocalDate createdAt, FriendRecognition first, FriendRecognition second) {
         if (first == null || second == null) {
             throw new FriendshipInvalidException("missing recognition");
         }
         validateUserIds(first.getOwnerId(), second.getOwnerId());
-        return new Friendship(createdAt, intimacy, first, second);
+        return new Friendship(createdAt, first, second);
     }
 
     private static void validateUserIds(Long first, Long second) {
@@ -73,7 +67,11 @@ public class Friendship {
         return getSelfRecognition(myId).getFriendAlias();
     }
 
-    public Double getMyInterestScore(Long myId) {
+    public double getIntimacy() {
+        return Math.sqrt(lower.getNormalizedScore() * higher.getNormalizedScore());
+    }
+
+    public double getMyInterestScore(Long myId) {
         return getSelfRecognition(myId).getInterestScore();
     }
 
@@ -87,29 +85,16 @@ public class Friendship {
 
     public void adjustInterestScore(Long userId, double scoreDelta) {
         getSelfRecognition(userId).adjustInterestScore(scoreDelta);
-        recalculateIntimacy();
     }
 
     public void adjustMutualInterestScore(double scoreDelta) {
         lower.adjustInterestScore(scoreDelta);
         higher.adjustInterestScore(scoreDelta);
-        recalculateIntimacy();
     }
 
     public void decay(double rate, double minThreshold, LocalDateTime thresholdTime) {
-        boolean isTarget = lower.isDecayTarget(thresholdTime) || higher.isDecayTarget(thresholdTime);
-        if (!isTarget) {
-            return;
-        }
         lower.decay(rate, minThreshold, thresholdTime);
         higher.decay(rate, minThreshold, thresholdTime);
-        recalculateIntimacy();
-    }
-
-    private void recalculateIntimacy() {
-        double a = Math.max(0, lower.getNormalizedScore());
-        double b = Math.max(0, higher.getNormalizedScore());
-        this.intimacy = Math.sqrt(a * b);
     }
 
     public boolean isMuted(Long myId) {

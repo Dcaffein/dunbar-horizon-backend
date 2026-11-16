@@ -27,6 +27,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -183,10 +184,11 @@ class LabelMysqlRepositoryTest {
     }
 
     private void connect(User one, User two) {
-        friendships.create(Friendship.restore(LocalDate.of(2026, 1, 1), 0.3, recognition(one), recognition(two)));
+        friendships.create(Friendship.restore(LocalDate.of(2026, 1, 1), recognition(one), recognition(two)));
     }
 
     private static FriendRecognition recognition(User user) {
-        return new FriendRecognition(user.getId());
+        return FriendRecognition.restore(user.getId(), null, FriendRecognition.INITIAL_RAW_SCORE,
+                LocalDateTime.now(), false, true);
     }
 }

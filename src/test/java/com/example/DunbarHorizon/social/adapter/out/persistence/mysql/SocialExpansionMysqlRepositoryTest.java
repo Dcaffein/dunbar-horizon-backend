@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 
+import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.buzz.adapter.out.social.AnchorRecipientStrategyAdapter;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
@@ -131,9 +132,14 @@ class SocialExpansionMysqlRepositoryTest {
                 INSERT INTO friendships (
                     low_user_id, high_user_id, intimacy, low_interest_score, high_interest_score,
                     low_is_muted, high_is_muted, low_is_routable, high_is_routable
-                ) VALUES (?, ?, ?, 50, 50, FALSE, FALSE, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, FALSE, FALSE, ?, ?)
                 """, Math.min(from.getId(), to.getId()), Math.max(from.getId(), to.getId()), intimacy,
+                scoreFor(intimacy), scoreFor(intimacy),
                 fromIsLow ? fromRoutable : toRoutable, fromIsLow ? toRoutable : fromRoutable);
+    }
+
+    private static double scoreFor(double intimacy) {
+        return FriendRecognition.CONVERGENCE_K * intimacy / (1 - intimacy);
     }
 
     private void label(String id, User owner, User... members) {

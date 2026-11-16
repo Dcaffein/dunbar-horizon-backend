@@ -19,6 +19,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +52,7 @@ class FriendshipMysqlScoreTest {
     @Autowired private FriendshipScoreService scores;
     @Autowired private FriendshipCommandService commands;
     @Autowired private PlatformTransactionManager transactionManager;
+    @Autowired private JdbcTemplate jdbc;
 
     private Long low;
     private Long middle;
@@ -184,6 +186,48 @@ class FriendshipMysqlScoreTest {
     }
 
     @Test
+    @DisplayName("같은 입력에서 SQL 일괄 감쇠와 도메인 감쇠는 같은 관심도와 친밀도를 낸다")
+    void applyDecay_MatchesDomainDecay_SameInput() {
+        // given
+        FriendshipDecayPolicy policy = new FriendshipDecayPolicy();
+        double rate = policy.getDecayRate();
+        double floor = policy.getMinThreshold();
+        LocalDateTime decayTime = OLD_INTERACTION.plusDays(30);
+        List<Friendship> inputs = List.of(
+                Friendship.restore(CREATED_AT, recognition(low, 40, OLD_INTERACTION),
+                        recognition(middle, 20, decayTime.plusSeconds(1))),
+                Friendship.restore(CREATED_AT, recognition(middle, floor + 0.01, OLD_INTERACTION),
+                        recognition(high, 0.5, OLD_INTERACTION)),
+                Friendship.restore(CREATED_AT, recognition(low, floor, decayTime),
+                        recognition(high, 63.2, decayTime)));
+        inputs.forEach(friendships::create);
+        List<Friendship> expected = List.of(
+                Friendship.restore(CREATED_AT, recognition(low, 40, OLD_INTERACTION),
+                        recognition(middle, 20, decayTime.plusSeconds(1))),
+                Friendship.restore(CREATED_AT, recognition(middle, floor + 0.01, OLD_INTERACTION),
+                        recognition(high, 0.5, OLD_INTERACTION)),
+                Friendship.restore(CREATED_AT, recognition(low, floor, decayTime),
+                        recognition(high, 63.2, decayTime)));
+        expected.forEach(friendship -> friendship.decay(rate, floor, decayTime));
+        var transactions = new TransactionTemplate(transactionManager);
+
+        // when
+        transactions.executeWithoutResult(status -> friendships.applyDecay(rate, floor, decayTime));
+
+        // then
+        for (Friendship domain : expected) {
+            Long lowerId = domain.getLower().getOwnerId();
+            Long higherId = domain.getHigher().getOwnerId();
+            Friendship stored = friendships.findBetween(lowerId, higherId).orElseThrow();
+            assertThat(stored.getMyInterestScore(lowerId))
+                    .isCloseTo(domain.getMyInterestScore(lowerId), within(1e-9));
+            assertThat(stored.getMyInterestScore(higherId))
+                    .isCloseTo(domain.getMyInterestScore(higherId), within(1e-9));
+            assertThat(intimacyColumn(lowerId, higherId)).isCloseTo(domain.getIntimacy(), within(1e-9));
+        }
+    }
+
+    @Test
     @DisplayName("감쇠와 상호작용이 겹쳐도 새 교류 시각과 양쪽 점수가 보존된다")
     void processDecay_SerializesWithInteraction_OnSameRow() throws Exception {
         // given
@@ -230,7 +274,7 @@ class FriendshipMysqlScoreTest {
 
     private void create(Long first, Long second, double firstScore, double secondScore,
                         LocalDateTime firstTime, LocalDateTime secondTime) {
-        friendships.create(Friendship.restore(CREATED_AT, intimacy(firstScore, secondScore),
+        friendships.create(Friendship.restore(CREATED_AT,
                 recognition(first, firstScore, firstTime), recognition(second, secondScore, secondTime)));
     }
 
@@ -244,7 +288,13 @@ class FriendshipMysqlScoreTest {
         assertThat(friendship.getMyInterestScore(first)).isCloseTo(firstScore, within(1e-9));
         assertThat(friendship.getMyInterestScore(second)).isCloseTo(secondScore, within(1e-9));
         assertThat(friendship.getIntimacy()).isCloseTo(intimacy(firstScore, secondScore), within(1e-9));
+        assertThat(intimacyColumn(first, second)).isCloseTo(friendship.getIntimacy(), within(1e-9));
         return friendship;
+    }
+
+    private double intimacyColumn(Long first, Long second) {
+        return jdbc.queryForObject("SELECT intimacy FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
+                Double.class, Math.min(first, second), Math.max(first, second));
     }
 
     private static double intimacy(double firstScore, double secondScore) {
