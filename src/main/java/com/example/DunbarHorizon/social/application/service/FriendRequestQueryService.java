@@ -38,11 +38,11 @@ public class FriendRequestQueryService implements FriendRequestQueryUseCase {
             return findSentRequests(userId);
         }
 
-        return toResults(friendRequestRepository.findAllByReceiver_IdAndStatus(userId, queryStatus));
+        return toResults(friendRequestRepository.findAllByReceiverIdAndStatus(userId, queryStatus));
     }
 
     private List<FriendRequestResult> findSentRequests(Long userId) {
-        return toResults(friendRequestRepository.findAllByRequester_IdAndStatus(userId, FriendRequestStatus.PENDING));
+        return toResults(friendRequestRepository.findAllByRequesterIdAndStatus(userId, FriendRequestStatus.PENDING));
     }
     private List<FriendRequestResult> toResults(List<FriendRequest> requests) {
         var ids = requests.stream().flatMap(request -> Stream.of(request.getRequesterId(), request.getReceiverId()))

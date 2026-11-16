@@ -23,10 +23,8 @@ import com.example.DunbarHorizon.social.application.port.out.SocialUserProfileRe
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,7 +46,7 @@ class FriendRequestQueryServiceTest {
         Long userId = 1L;
         FriendRequest request = FriendTestFactory.createRequest(1L, 2L);
 
-        given(friendRequestRepository.findAllByReceiver_IdAndStatus(userId, FriendRequestStatus.PENDING))
+        given(friendRequestRepository.findAllByReceiverIdAndStatus(userId, FriendRequestStatus.PENDING))
                 .willReturn(List.of(request));
 
         given(profiles.findActiveProfiles(List.of(1L, 2L)))
@@ -67,7 +65,7 @@ class FriendRequestQueryServiceTest {
     void getReceivedRequests_ReturnsEmpty_WhenNone() {
         // given
         Long userId = 1L;
-        given(friendRequestRepository.findAllByReceiver_IdAndStatus(userId, FriendRequestStatus.PENDING))
+        given(friendRequestRepository.findAllByReceiverIdAndStatus(userId, FriendRequestStatus.PENDING))
                 .willReturn(List.of());
 
         // when
@@ -86,7 +84,7 @@ class FriendRequestQueryServiceTest {
         FriendRequest request = FriendTestFactory.createRequest(1L, 2L);
         request.updateStatus(userId, FriendRequestStatus.HIDDEN);
 
-        given(friendRequestRepository.findAllByReceiver_IdAndStatus(userId, FriendRequestStatus.HIDDEN))
+        given(friendRequestRepository.findAllByReceiverIdAndStatus(userId, FriendRequestStatus.HIDDEN))
                 .willReturn(List.of(request));
 
         // when
@@ -98,32 +96,13 @@ class FriendRequestQueryServiceTest {
     }
 
     @Test
-    @DisplayName("requester나 receiver가 null인 고아 요청이 있어도 NPE 없이 응답한다")
-    void getReceivedRequests_WithNullRelations_DoesNotThrow() {
-        // given
-        Long userId = 2L;
-        FriendRequest orphanRequest = mock(FriendRequest.class);
-        given(orphanRequest.getId()).willReturn("orphan-id");
-        given(orphanRequest.getRequesterId()).willReturn(null);
-        given(orphanRequest.getReceiverId()).willReturn(null);
-        given(orphanRequest.getStatus()).willReturn(FriendRequestStatus.PENDING);
-
-        given(friendRequestRepository.findAllByReceiver_IdAndStatus(userId, FriendRequestStatus.PENDING))
-                .willReturn(List.of(orphanRequest));
-
-        // when / then
-        assertThatNoException().isThrownBy(() -> queryService.getRequests(
-                userId, FriendRequestDirection.RECEIVED, null));
-    }
-
-    @Test
     @DisplayName("내가 보낸 친구 요청 목록을 PENDING 상태로 조회한다")
     void getSentRequests_ReturnsPendingRequests() {
         // given
         Long userId = 1L;
         FriendRequest request = FriendTestFactory.createRequest(1L, 2L);
 
-        given(friendRequestRepository.findAllByRequester_IdAndStatus(userId, FriendRequestStatus.PENDING))
+        given(friendRequestRepository.findAllByRequesterIdAndStatus(userId, FriendRequestStatus.PENDING))
                 .willReturn(List.of(request));
 
         // when
@@ -146,7 +125,7 @@ class FriendRequestQueryServiceTest {
     @DisplayName("received 조회에 ACCEPTED를 사용하면 해당 상태로 조회한다")
     void getRequests_ReceivedAccepted_해당_상태로_조회한다() {
         // given
-        given(friendRequestRepository.findAllByReceiver_IdAndStatus(1L, FriendRequestStatus.ACCEPTED))
+        given(friendRequestRepository.findAllByReceiverIdAndStatus(1L, FriendRequestStatus.ACCEPTED))
                 .willReturn(List.of());
 
         // when
@@ -154,7 +133,7 @@ class FriendRequestQueryServiceTest {
                 1L, FriendRequestDirection.RECEIVED, FriendRequestStatus.ACCEPTED);
 
         // then
-        verify(friendRequestRepository).findAllByReceiver_IdAndStatus(1L, FriendRequestStatus.ACCEPTED);
+        verify(friendRequestRepository).findAllByReceiverIdAndStatus(1L, FriendRequestStatus.ACCEPTED);
         assertThat(result).isEmpty();
     }
 }

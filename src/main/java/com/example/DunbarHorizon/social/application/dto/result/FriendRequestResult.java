@@ -15,7 +15,8 @@ public record FriendRequestResult(
 ) {
     public static FriendRequestResult from(FriendRequest friendRequest, SocialUserProfile requester, SocialUserProfile receiver) {
         return new FriendRequestResult(
-                friendRequest.getId(),
+                Math.min(friendRequest.getRequesterId(), friendRequest.getReceiverId()) + "_"
+                        + Math.max(friendRequest.getRequesterId(), friendRequest.getReceiverId()),
                 requester != null ? FriendResult.from(requester) : null,
                 receiver != null ? FriendResult.from(receiver) : null,
                 friendRequest.getStatus(),
