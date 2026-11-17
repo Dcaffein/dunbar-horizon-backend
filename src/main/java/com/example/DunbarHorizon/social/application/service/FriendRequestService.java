@@ -15,7 +15,6 @@ import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestInv
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
-import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -37,14 +36,12 @@ public class FriendRequestService implements FriendRequestUseCase {
 
     @Override
     public FriendRequestResult sendRequest(Long currentUserId, Long counterpartId) {
-        Map<Long, SocialUserProfile> profiles = userProfileRepository.findActiveProfiles(List.of(currentUserId, counterpartId));
-        SocialUserProfile requester = requireActiveProfile(profiles, currentUserId);
-        SocialUserProfile receiver = requireActiveProfile(profiles, counterpartId);
         boolean existingFriendship = friendshipRepository.existsFriendshipBetween(currentUserId, counterpartId);
         boolean existingRequest = friendRequestRepository.existsBetween(currentUserId, counterpartId);
         FriendRequest request = FriendshipBroker.propose(currentUserId, counterpartId, existingFriendship, existingRequest);
         friendRequestRepository.create(request);
-        return FriendRequestResult.from(request, currentUserId, requester, receiver);
+        Map<Long, SocialUserProfile> profiles = userProfileRepository.findActiveProfiles(List.of(currentUserId, counterpartId));
+        return FriendRequestResult.from(request, currentUserId, profiles.get(currentUserId), profiles.get(counterpartId));
     }
 
     @Override
@@ -67,18 +64,10 @@ public class FriendRequestService implements FriendRequestUseCase {
         friendRequestRepository.delete(request);
         boolean existingFriendship = friendshipRepository.existsFriendshipBetween(request.getRequesterId(), request.getReceiverId());
         friendshipRepository.create(FriendshipBroker.createFrom(request, existingFriendship));
-        SocialUserProfile receiver = requireActiveProfile(
-                userProfileRepository.findActiveProfiles(List.of(request.getReceiverId())), request.getReceiverId());
+        SocialUserProfile receiver = userProfileRepository.findActiveProfiles(List.of(request.getReceiverId()))
+                .get(request.getReceiverId());
         applicationEventPublisher.publishEvent(
                 new FriendRequestAcceptedEvent(request.getRequesterId(), request.getReceiverId(), receiver.nickname()));
-    }
-
-    private static SocialUserProfile requireActiveProfile(Map<Long, SocialUserProfile> profiles, Long id) {
-        SocialUserProfile profile = profiles.get(id);
-        if (profile == null) {
-            throw new UserReferenceNotFoundException(id);
-        }
-        return profile;
     }
 
     @Override

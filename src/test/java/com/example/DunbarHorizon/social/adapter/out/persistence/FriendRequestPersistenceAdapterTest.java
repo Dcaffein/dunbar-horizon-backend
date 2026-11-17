@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
+import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import jakarta.persistence.OptimisticLockException;
 import org.junit.jupiter.api.BeforeEach;
@@ -90,6 +91,20 @@ class FriendRequestPersistenceAdapterTest {
         assertThat(friendRequestPersistenceAdapter.findAllByReceiverIdAndStatus(high.getId(), FriendRequestStatus.PENDING)).isEmpty();
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM friend_requests WHERE requester_id = ?",
                 Integer.class, low.getId())).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("수신자가 비활성이면 요청 저장은 사용자 없음으로 끝나고 행이 생기지 않는다")
+    void create_Fails_InactiveReceiver() {
+        // given
+        high.deactivate();
+        testEntityManager.flush();
+
+        // when & then
+        assertThatThrownBy(() -> friendRequestPersistenceAdapter.create(FriendTestFactory.createRequest(low.getId(), high.getId())))
+                .isInstanceOf(UserReferenceNotFoundException.class);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM friend_requests WHERE requester_id = ?",
+                Integer.class, low.getId())).isZero();
     }
 
     @Test

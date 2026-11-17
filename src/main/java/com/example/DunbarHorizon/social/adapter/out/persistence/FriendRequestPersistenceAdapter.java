@@ -1,11 +1,13 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence;
 
+import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUserJpaRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendRequestJpaRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestId;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
+import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
@@ -20,10 +22,16 @@ import java.util.Optional;
 public class FriendRequestPersistenceAdapter implements FriendRequestRepository {
 
     private final FriendRequestJpaRepository friendRequestJpaRepository;
+    private final ActiveUserJpaRepository activeUserJpaRepository;
     private final EntityManager entityManager;
 
     @Override
     public void create(FriendRequest request) {
+        for (Long userId : List.of(request.getRequesterId(), request.getReceiverId())) {
+            if (!activeUserJpaRepository.existsById(userId)) {
+                throw new UserReferenceNotFoundException(userId);
+            }
+        }
         try {
             entityManager.persist(request);
             entityManager.flush();
