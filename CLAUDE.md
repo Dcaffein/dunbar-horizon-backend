@@ -25,10 +25,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | 문서 | 경로 | 참조 시점 |
 |------|------|---------|
-| 작업 파이프라인 | `harness/WORKFLOW.md` | 모든 작업 시작 전 — 계획(PLAN.md) 작성, 승인, 브랜치, 구현, 커밋 순서 |
+| 작업 파이프라인 | `harness/WORKFLOW.md` | 모든 작업 시작 전 — Issue 확인, 계획·승인, 구현·커밋, 병합·완료 절차 |
 | 아키텍처 & 코딩 컨벤션 | `harness/ARCHITECTURE.md` | 새 파일·기능 추가 시 — 계층 분리, DDD/Hexagonal 규칙, 도메인 간 통신 방식 |
 | 테스트 프로토콜 | `harness/TESTING-GUIDE.md` | 테스트 코드 작성 시 — Base 클래스, Given-When-Then, Edge Case 검증 |
-| 태스크 문서 규칙 | `harness/TASK-SPEC-GUIDE.md` | 새 태스크 문서 작성 시 — 섹션 구성과 각 섹션에 쓸 것 |
+| Issue 작성 규칙 | `harness/ISSUE-GUIDE.md` | Issue 작성·갱신 시 — 요구사항, 설계 결정과 맥락, 완료 조건 |
+| 실행 계획 규칙 | `harness/PLAN-GUIDE.md` | PLAN 작성·갱신 시 — 커밋 단위 변경, 검증과 부작용 |
 
 ## Project Shape
 

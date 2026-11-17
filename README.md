@@ -182,5 +182,5 @@ Windows에서는 `.\gradlew.bat bootRun`을 사용합니다. 기본 HTTP 포트�
 ## 설계 배경과 작업 기록
 
 - [기술 문서](https://valiant-vest-6c8.notion.site/DunbarHorizon-3776b857043480998e6fdebaba6ba662): 관계망 모델, 쿼리 실행 계획과 캐시 성능 실험, 대안 비교. 성능 실험은 k6 합성 부하이며 조건과 측정 근거를 함께 기록했습니다.
-- 연결 중개인 조회의 범위와 응답은 [설계 문서](harness/done/task-105-connection-path-scope.md)에 있습니다. 상한·정렬·노출 정책은 [MySQL 통합 테스트](src/test/java/com/example/DunbarHorizon/social/adapter/out/persistence/mysql/SocialConnectionPathMysqlRepositoryTest.java)에서 검증합니다.
-- AI 에이전트와의 작업 규칙: [작업 절차](harness/WORKFLOW.md), [아키텍처 규칙](harness/ARCHITECTURE.md), [테스트 규칙](harness/TESTING-GUIDE.md), [발주 문서 규칙](harness/TASK-SPEC-GUIDE.md). 제품 목적·제약을 태스크에 남기고, 코드 탐색을 거친 계획을 검토하는 방식입니다.
+- 연결 중개인 조회의 범위와 응답은 [설계 문서](https://github.com/Dcaffein/dunbar-horizon-backend/blob/5b47eac255f2873471d313f08989457f9291a532/harness/done/task-105-connection-path-scope.md)에 있습니다. 상한·정렬·노출 정책은 [MySQL 통합 테스트](src/test/java/com/example/DunbarHorizon/social/adapter/out/persistence/mysql/SocialConnectionPathMysqlRepositoryTest.java)에서 검증합니다.
+- AI 에이전트 작업은 [작업 절차](harness/WORKFLOW.md), [아키텍처 규칙](harness/ARCHITECTURE.md), [테스트 규칙](harness/TESTING-GUIDE.md), [Issue 작성 규칙](harness/ISSUE-GUIDE.md)을 따릅니다.
