@@ -66,9 +66,7 @@ public abstract class BaseControllerTest {
     @MockitoBean protected FlagMemorialCommandUseCase flagMemorialCommandUseCase;
     @MockitoBean protected FlagMemorialQueryUseCase flagMemorialQueryUseCase;
 
-    @MockitoBean protected FriendRequesterActionUseCase friendRequesterActionUseCase;
-    @MockitoBean protected FriendRequestReceiverActionUseCase friendRequestReceiverActionUseCase;
-    @MockitoBean protected FriendRequestQueryUseCase friendRequestQueryUseCase;
+    @MockitoBean protected FriendRequestUseCase friendRequestUseCase;
 
     @MockitoBean protected FriendshipCommandUseCase friendshipCommandUseCase;
     @MockitoBean protected FriendshipQueryUseCase friendshipQueryUseCase;

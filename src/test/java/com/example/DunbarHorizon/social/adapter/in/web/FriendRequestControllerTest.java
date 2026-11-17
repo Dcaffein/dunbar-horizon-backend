@@ -33,7 +33,7 @@ class FriendRequestControllerTest extends BaseControllerTest {
         var result = new FriendRequestResult("newRequest", new FriendResult(1L, "요청자"),
                 new FriendResult(receiverId, "수신자"), FriendRequestStatus.PENDING, null);
 
-        given(friendRequesterActionUseCase.sendRequest(eq(1L), eq(receiverId)))
+        given(friendRequestUseCase.sendRequest(eq(1L), eq(receiverId)))
                 .willReturn(result);
 
         mockMvc.perform(post("/api/v1/friend-requests")
@@ -56,7 +56,7 @@ class FriendRequestControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNoContent());
 
-        verify(friendRequestReceiverActionUseCase)
+        verify(friendRequestUseCase)
                 .updateStatus(eq(1L), eq(counterpartId), eq(FriendRequestStatus.ACCEPTED));
     }
 
@@ -72,7 +72,7 @@ class FriendRequestControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNoContent());
 
-        verify(friendRequestReceiverActionUseCase)
+        verify(friendRequestUseCase)
                 .updateStatus(eq(1L), eq(counterpartId), eq(FriendRequestStatus.HIDDEN));
     }
 
@@ -88,7 +88,7 @@ class FriendRequestControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNoContent());
 
-        verify(friendRequestReceiverActionUseCase)
+        verify(friendRequestUseCase)
                 .updateStatus(eq(1L), eq(counterpartId), eq(FriendRequestStatus.PENDING));
     }
 
@@ -100,7 +100,7 @@ class FriendRequestControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/friend-requests/{counterpartId}", counterpartId))
                 .andExpect(status().isNoContent());
 
-        verify(friendRequesterActionUseCase).cancelRequest(eq(counterpartId), eq(1L));
+        verify(friendRequestUseCase).cancelRequest(eq(1L), eq(counterpartId));
     }
 
     @Test
@@ -115,7 +115,7 @@ class FriendRequestControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("숨김 처리된 친구 요청 목록을 조회한다")
     void getHiddenRequests_Success() throws Exception {
-        given(friendRequestQueryUseCase.getRequests(eq(1L), eq(FriendRequestDirection.RECEIVED),
+        given(friendRequestUseCase.getRequests(eq(1L), eq(FriendRequestDirection.RECEIVED),
                 eq(FriendRequestStatus.HIDDEN))).willReturn(List.of());
 
         mockMvc.perform(get("/api/v1/friend-requests")
@@ -128,7 +128,7 @@ class FriendRequestControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("received 조회에서 status를 생략하면 PENDING으로 조회한다")
     void getReceivedRequests_DefaultStatus() throws Exception {
-        given(friendRequestQueryUseCase.getRequests(eq(1L), eq(FriendRequestDirection.RECEIVED), isNull()))
+        given(friendRequestUseCase.getRequests(eq(1L), eq(FriendRequestDirection.RECEIVED), isNull()))
                 .willReturn(List.of());
 
         mockMvc.perform(get("/api/v1/friend-requests")
@@ -140,7 +140,7 @@ class FriendRequestControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("내가 보낸 친구 요청 목록을 조회한다")
     void getSentRequests_Success() throws Exception {
-        given(friendRequestQueryUseCase.getRequests(eq(1L), eq(FriendRequestDirection.SENT), isNull()))
+        given(friendRequestUseCase.getRequests(eq(1L), eq(FriendRequestDirection.SENT), isNull()))
                 .willReturn(List.of());
 
         mockMvc.perform(get("/api/v1/friend-requests")

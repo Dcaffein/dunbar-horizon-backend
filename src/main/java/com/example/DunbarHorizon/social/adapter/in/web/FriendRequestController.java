@@ -5,9 +5,7 @@ import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendRequestCreateRe
 import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendRequestStatusUpdateRequest;
 import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
 import com.example.DunbarHorizon.social.application.dto.FriendRequestDirection;
-import com.example.DunbarHorizon.social.application.port.in.FriendRequestReceiverActionUseCase;
-import com.example.DunbarHorizon.social.application.port.in.FriendRequestQueryUseCase;
-import com.example.DunbarHorizon.social.application.port.in.FriendRequesterActionUseCase;
+import com.example.DunbarHorizon.social.application.port.in.FriendRequestUseCase;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FriendRequestController {
 
-    private final FriendRequesterActionUseCase requesterActionUseCase;
-    private final FriendRequestReceiverActionUseCase receiverActionUseCase;
-    private final FriendRequestQueryUseCase queryUseCase;
+    private final FriendRequestUseCase friendRequestUseCase;
 
     @GetMapping
     public ResponseEntity<List<FriendRequestResult>> getRequests(
@@ -32,7 +28,7 @@ public class FriendRequestController {
             @RequestParam String direction,
             @RequestParam(required = false) FriendRequestStatus status) {
 
-        return ResponseEntity.ok(queryUseCase.getRequests(
+        return ResponseEntity.ok(friendRequestUseCase.getRequests(
                 currentUserId, FriendRequestDirection.from(direction), status));
     }
 
@@ -41,7 +37,7 @@ public class FriendRequestController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid FriendRequestCreateRequest request) {
 
-        FriendRequestResult response = requesterActionUseCase.sendRequest(currentUserId, request.receiverId());
+        FriendRequestResult response = friendRequestUseCase.sendRequest(currentUserId, request.receiverId());
 
         return ResponseEntity
                 .created(URI.create(
@@ -54,7 +50,7 @@ public class FriendRequestController {
             @CurrentUserId Long currentUserId,
             @PathVariable Long counterpartId) {
 
-        requesterActionUseCase.cancelRequest(counterpartId, currentUserId);
+        friendRequestUseCase.cancelRequest(currentUserId, counterpartId);
         return ResponseEntity.noContent().build();
     }
 
@@ -64,7 +60,7 @@ public class FriendRequestController {
             @PathVariable Long counterpartId,
             @RequestBody @Valid FriendRequestStatusUpdateRequest request) {
 
-        receiverActionUseCase.updateStatus(currentUserId, counterpartId, request.status());
+        friendRequestUseCase.updateStatus(currentUserId, counterpartId, request.status());
         return ResponseEntity.noContent().build();
     }
 }
