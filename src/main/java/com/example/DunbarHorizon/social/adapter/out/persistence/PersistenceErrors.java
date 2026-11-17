@@ -1,18 +1,17 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence;
 
-import java.sql.SQLException;
+import org.hibernate.exception.ConstraintViolationException;
 
 final class PersistenceErrors {
-
-    private static final int MYSQL_DUPLICATE_KEY = 1062;
 
     private PersistenceErrors() {
     }
 
-    static boolean isDuplicateKey(Throwable e) {
+    static boolean violates(Throwable e, String constraintName) {
         for (Throwable cause = e; cause != null; cause = cause.getCause()) {
-            if (cause instanceof SQLException sql && sql.getErrorCode() == MYSQL_DUPLICATE_KEY) {
-                return true;
+            if (cause instanceof ConstraintViolationException violation && violation.getConstraintName() != null) {
+                String violated = violation.getConstraintName();
+                return violated.substring(violated.lastIndexOf('.') + 1).equals(constraintName);
             }
         }
         return false;

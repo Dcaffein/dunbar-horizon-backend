@@ -22,6 +22,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class FriendRequestPersistenceAdapter implements FriendRequestRepository {
 
+    private static final String SAME_DIRECTION_KEY = "PRIMARY";
+    private static final String EITHER_DIRECTION_KEY = "uk_friend_requests_pair";
+
     private final FriendRequestJpaRepository friendRequestJpaRepository;
     private final ActiveUserJpaRepository activeUserJpaRepository;
     private final EntityManager entityManager;
@@ -37,7 +40,9 @@ public class FriendRequestPersistenceAdapter implements FriendRequestRepository 
             entityManager.persist(request);
             entityManager.flush();
         } catch (PersistenceException e) {
-            if (e instanceof EntityExistsException || PersistenceErrors.isDuplicateKey(e)) {
+            if (e instanceof EntityExistsException
+                    || PersistenceErrors.violates(e, SAME_DIRECTION_KEY)
+                    || PersistenceErrors.violates(e, EITHER_DIRECTION_KEY)) {
                 throw new DuplicateFriendRequestException(request.getRequesterId(), request.getReceiverId());
             }
             throw e;

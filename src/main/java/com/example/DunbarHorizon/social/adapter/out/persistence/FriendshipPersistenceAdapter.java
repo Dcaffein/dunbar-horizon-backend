@@ -31,6 +31,8 @@ import java.util.Set;
 public class FriendshipPersistenceAdapter
         implements FriendshipRepository, FriendshipScoreRepository, FriendshipLockRepository, FriendshipIdRepository {
 
+    private static final String PAIR_KEY = "PRIMARY";
+
     private final FriendshipJpaRepository friendshipJpaRepository;
     private final FriendshipJdbcRepository friendshipJdbcRepository;
     private final ActiveUserJpaRepository activeUserJpaRepository;
@@ -42,7 +44,7 @@ public class FriendshipPersistenceAdapter
             entityManager.persist(friendship);
             entityManager.flush();
         } catch (PersistenceException e) {
-            if (e instanceof EntityExistsException || PersistenceErrors.isDuplicateKey(e)) {
+            if (e instanceof EntityExistsException || PersistenceErrors.violates(e, PAIR_KEY)) {
                 throw new AlreadyFriendsException(friendship.getLower().getOwnerId(), friendship.getHigher().getOwnerId());
             }
             throw e;
