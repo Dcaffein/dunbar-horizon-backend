@@ -233,8 +233,8 @@ class FriendshipLifecycleMysqlTest {
     }
 
     @Test
-    @DisplayName("설정을 바꾸려고 읽은 관계가 커밋 전에 끊기면 설정 변경은 동시 수정 실패로 끝난다")
-    void updateFriendship_FailsConcurrentModification_DeletedAfterLoad() {
+    @DisplayName("설정을 바꾸려고 읽은 관계가 저장 전에 끊기면 설정 저장이 0건이라 충돌로 끝난다")
+    void updateFriendship_ConflictsOnZeroRowUpdate_DeletedAfterLoad() {
         // given
         connect(FriendRecognition.INITIAL_RAW_SCORE);
         doAnswer(call -> {

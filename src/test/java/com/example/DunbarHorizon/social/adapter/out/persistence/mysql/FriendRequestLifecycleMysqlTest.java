@@ -140,8 +140,8 @@ class FriendRequestLifecycleMysqlTest {
     }
 
     @Test
-    @DisplayName("관계 확인을 지나쳐도 중복 관계로 수락이 실패하면 요청이 남고 수락 이벤트가 없다")
-    void accept_KeepsRequest_DuplicateFriendshipKey() {
+    @DisplayName("관계 확인을 지나친 수락은 친구 관계 PK에 막혀 중복 친구로 끝나고, 요청은 남고 수락 이벤트는 없다")
+    void accept_BlockedByFriendshipPrimaryKey_SkippedFriendshipCheck() {
         // given
         friendRequestService.sendRequest(low, high);
         new TransactionTemplate(transactionManager).executeWithoutResult(status ->
@@ -161,8 +161,8 @@ class FriendRequestLifecycleMysqlTest {
     }
 
     @Test
-    @DisplayName("두 방향이 사전 검사를 함께 통과해도 한 요청만 생성된다")
-    void sendRequest_AllowsOnlyOne_OppositeDirectionsRace() throws Exception {
+    @DisplayName("반대 방향 요청이 함께 사전 검사를 통과해도 쌍 유니크 제약이 하나만 남긴다")
+    void sendRequest_PairUniqueKeyKeepsOne_OppositeDirectionsRace() throws Exception {
         // given
         CountDownLatch beforeInsert = new CountDownLatch(2);
         doAnswer(invocation -> {
@@ -184,8 +184,8 @@ class FriendRequestLifecycleMysqlTest {
     }
 
     @Test
-    @DisplayName("취소가 먼저 커밋되면 뒤따른 수락은 동시 수정으로 실패하고 관계도 남지 않는다")
-    void accept_FailsAndRollsBack_CancelCommittedFirst() throws Exception {
+    @DisplayName("취소가 먼저 커밋되면 뒤따른 수락은 요청 삭제가 0건이라 충돌로 끝나고 관계도 남지 않는다")
+    void accept_ConflictsOnZeroRowDelete_CancelCommittedFirst() throws Exception {
         // given
         friendRequestService.sendRequest(low, high);
         CountDownLatch beforeDelete = new CountDownLatch(1);
@@ -221,8 +221,8 @@ class FriendRequestLifecycleMysqlTest {
     }
 
     @Test
-    @DisplayName("수락이 먼저 커밋되면 뒤따른 취소는 동시 수정으로 실패하고 관계는 남는다")
-    void cancel_FailsConcurrentModification_AcceptanceCommittedFirst() throws Exception {
+    @DisplayName("수락이 먼저 커밋되면 뒤따른 취소는 요청 삭제가 0건이라 충돌로 끝나고 관계는 남는다")
+    void cancel_ConflictsOnZeroRowDelete_AcceptanceCommittedFirst() throws Exception {
         // given
         friendRequestService.sendRequest(low, high);
         CountDownLatch cancelLoaded = new CountDownLatch(1);
@@ -257,8 +257,8 @@ class FriendRequestLifecycleMysqlTest {
     }
 
     @Test
-    @DisplayName("같은 요청을 동시에 두 번 수락하면 한 번만 성공한다")
-    void accept_SucceedsOnce_ConcurrentAcceptances() throws Exception {
+    @DisplayName("같은 요청을 동시에 두 번 수락하면 뒤쪽은 요청 행 잠금을 기다린 뒤 삭제가 0건이라 충돌로 끝난다")
+    void accept_SecondConflictsOnZeroRowDelete_ConcurrentAcceptances() throws Exception {
         // given
         friendRequestService.sendRequest(low, high);
         CountDownLatch beforeDelete = new CountDownLatch(2);
@@ -283,10 +283,42 @@ class FriendRequestLifecycleMysqlTest {
         // then
         assertThat(outcomes).filteredOn(Void.class::equals).hasSize(1);
         assertThat(outcomes).filteredOn(outcome -> !Void.class.equals(outcome)).singleElement()
-                .isIn(AlreadyFriendsException.class, FriendRequestConflictException.class);
+                .isEqualTo(FriendRequestConflictException.class);
         assertThat(friendshipPersistenceAdapter.existsFriendshipBetween(low, high)).isTrue();
         assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).isEmpty();
         assertThat(acceptedEvents.events).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("취소가 먼저 커밋되면 뒤따른 숨김은 상태 저장이 0건이라 충돌로 끝난다")
+    void hide_ConflictsOnZeroRowUpdate_CancelCommittedFirst() throws Exception {
+        // given
+        friendRequestService.sendRequest(low, high);
+        CountDownLatch beforeSave = new CountDownLatch(1);
+        CountDownLatch resume = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            beforeSave.countDown();
+            await(resume);
+            return invocation.callRealMethod();
+        }).when(friendRequestPersistenceAdapter).saveStatus(any(FriendRequest.class));
+
+        // when
+        try (var workers = Executors.newSingleThreadExecutor()) {
+            var hide = workers.submit(outcome(() -> {
+                friendRequestService.updateStatus(high, low, FriendRequestStatus.HIDDEN);
+                return null;
+            }));
+            try {
+                await(beforeSave);
+                friendRequestService.cancelRequest(low, high);
+            } finally {
+                resume.countDown();
+            }
+
+            // then
+            assertThat(hide.get(10, TimeUnit.SECONDS)).isEqualTo(FriendRequestConflictException.class);
+        }
+        assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).isEmpty();
     }
 
     private static Callable<Class<?>> outcome(Callable<?> operation) {
