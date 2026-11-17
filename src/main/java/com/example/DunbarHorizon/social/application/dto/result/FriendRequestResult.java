@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.application.dto.result;
 
-import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
+import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 
@@ -14,7 +14,7 @@ public record FriendRequestResult(
         LocalDateTime createdAt
 ) {
     public static FriendRequestResult from(FriendRequest friendRequest, Long viewerId,
-                                           SocialUserProfile requester, SocialUserProfile receiver) {
+                                           UserProfile requester, UserProfile receiver) {
         return new FriendRequestResult(
                 Math.min(friendRequest.getRequesterId(), friendRequest.getReceiverId()) + "_"
                         + Math.max(friendRequest.getRequesterId(), friendRequest.getReceiverId()),

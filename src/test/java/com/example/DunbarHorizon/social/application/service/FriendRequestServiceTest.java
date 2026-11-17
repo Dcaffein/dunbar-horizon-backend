@@ -18,7 +18,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 import java.util.Map;
-import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
+import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
 
 import org.springframework.test.util.ReflectionTestUtils;
@@ -57,7 +57,7 @@ class FriendRequestServiceTest {
                 .willReturn(List.of(request));
 
         given(userProfileRepository.findActiveProfiles(List.of(1L, 2L)))
-                .willReturn(Map.of(2L, new SocialUserProfile(2L, "receiver", null)));
+                .willReturn(Map.of(2L, new UserProfile(2L, "receiver", null)));
 
         // when
         List<FriendRequestResult> result = service.getRequests(

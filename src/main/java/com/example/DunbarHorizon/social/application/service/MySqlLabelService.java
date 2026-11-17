@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.application.service;
 
-import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
+import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.application.port.in.LabelCommandUseCase;
@@ -133,7 +133,7 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
         }
     }
 
-    private SocialUserProfile activeProfile(Long id) {
+    private UserProfile activeProfile(Long id) {
         return Optional.ofNullable(userProfileRepository.findActiveProfiles(List.of(id)).get(id))
                 .orElseThrow(() -> new UserReferenceNotFoundException(id));
     }

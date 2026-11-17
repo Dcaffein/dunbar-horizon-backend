@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.application.service;
 
-import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
+import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.application.dto.result.SocialProfileResult;
 import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPort;
 import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
@@ -33,7 +33,7 @@ class AccountSocialUserQueryServiceTest {
         String imageUrl = "https://example.com/profile.png";
         String imageKey = "profiles/friend";
         given(userProfileRepository.findActiveProfiles(List.of(2L)))
-                .willReturn(Map.of(2L, new SocialUserProfile(2L, "친구", imageKey)));
+                .willReturn(Map.of(2L, new UserProfile(2L, "친구", imageKey)));
         given(images.resolveUrl(imageKey)).willReturn(imageUrl);
 
         // when
@@ -48,7 +48,7 @@ class AccountSocialUserQueryServiceTest {
     void getSocialProfile_ReturnsNullImageUrl_NoProfileImage() {
         // given
         given(userProfileRepository.findActiveProfiles(List.of(2L)))
-                .willReturn(Map.of(2L, new SocialUserProfile(2L, "친구", null)));
+                .willReturn(Map.of(2L, new UserProfile(2L, "친구", null)));
 
         // when
         SocialProfileResult result = service.getSocialProfile(2L);

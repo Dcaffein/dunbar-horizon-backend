@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.global.exception.ErrorContext;
 import com.example.DunbarHorizon.social.application.dto.FriendRequestDirection;
-import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
+import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
 import com.example.DunbarHorizon.social.application.port.in.FriendRequestUseCase;
 import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
@@ -40,7 +40,7 @@ public class FriendRequestService implements FriendRequestUseCase {
         boolean existingRequest = friendRequestRepository.existsBetween(currentUserId, counterpartId);
         FriendRequest request = FriendshipBroker.propose(currentUserId, counterpartId, existingFriendship, existingRequest);
         friendRequestRepository.create(request);
-        Map<Long, SocialUserProfile> profiles = userProfileRepository.findActiveProfiles(List.of(currentUserId, counterpartId));
+        Map<Long, UserProfile> profiles = userProfileRepository.findActiveProfiles(List.of(currentUserId, counterpartId));
         return FriendRequestResult.from(request, currentUserId, profiles.get(currentUserId), profiles.get(counterpartId));
     }
 
@@ -64,7 +64,7 @@ public class FriendRequestService implements FriendRequestUseCase {
         friendRequestRepository.delete(request);
         boolean existingFriendship = friendshipRepository.existsFriendshipBetween(request.getRequesterId(), request.getReceiverId());
         friendshipRepository.create(FriendshipBroker.createFrom(request, existingFriendship));
-        SocialUserProfile receiver = userProfileRepository.findActiveProfiles(List.of(request.getReceiverId()))
+        UserProfile receiver = userProfileRepository.findActiveProfiles(List.of(request.getReceiverId()))
                 .get(request.getReceiverId());
         applicationEventPublisher.publishEvent(
                 new FriendRequestAcceptedEvent(request.getRequesterId(), request.getReceiverId(), receiver.nickname()));

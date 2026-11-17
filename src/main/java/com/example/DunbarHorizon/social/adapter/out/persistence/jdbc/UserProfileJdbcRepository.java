@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.jdbc;
 
-import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
+import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -18,7 +18,7 @@ public class UserProfileJdbcRepository implements UserProfileRepository {
     private final NamedParameterJdbcTemplate jdbc;
 
     @Override
-    public Map<Long, SocialUserProfile> findActiveProfiles(Collection<Long> ids) {
+    public Map<Long, UserProfile> findActiveProfiles(Collection<Long> ids) {
         if (ids.isEmpty()) {
             return Map.of();
         }
@@ -26,9 +26,9 @@ public class UserProfileJdbcRepository implements UserProfileRepository {
                 SELECT user_id, nickname, profile_image
                 FROM users
                 WHERE user_id IN (:ids) AND status = 'ACTIVE'
-                """, Map.of("ids", ids), (row, index) -> new SocialUserProfile(
+                """, Map.of("ids", ids), (row, index) -> new UserProfile(
                         row.getLong("user_id"), row.getString("nickname"), row.getString("profile_image")))
                 .stream()
-                .collect(Collectors.toMap(SocialUserProfile::id, Function.identity()));
+                .collect(Collectors.toMap(UserProfile::id, Function.identity()));
     }
 }
