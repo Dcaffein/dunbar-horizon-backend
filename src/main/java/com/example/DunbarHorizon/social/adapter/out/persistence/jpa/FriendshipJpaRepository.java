@@ -7,13 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
-
 public interface FriendshipJpaRepository extends JpaRepository<Friendship, FriendshipId> {
-
-    List<Friendship> findByLowUserId(Long lowUserId);
-
-    List<Friendship> findByHighUserId(Long highUserId);
 
     @Modifying
     @Query("DELETE FROM Friendship f WHERE f.lowUserId = :low AND f.highUserId = :high")

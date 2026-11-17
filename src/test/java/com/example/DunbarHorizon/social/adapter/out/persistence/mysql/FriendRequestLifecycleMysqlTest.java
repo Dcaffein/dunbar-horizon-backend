@@ -118,8 +118,7 @@ class FriendRequestLifecycleMysqlTest {
 
         // then
         assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).isEmpty();
-        assertThat(friendshipPersistenceAdapter.findByUserId(low)).hasSize(1);
-        assertThat(friendshipPersistenceAdapter.findByUserId(high)).hasSize(1);
+        assertThat(friendshipPersistenceAdapter.existsFriendshipBetween(low, high)).isTrue();
         assertThat(acceptedEvents.events).containsExactly(new FriendRequestAcceptedEvent(high, low, "low"));
     }
 

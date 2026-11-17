@@ -57,13 +57,6 @@ public class FriendshipPersistenceAdapter
     }
 
     @Override
-    public List<Friendship> findByUserId(Long userId) {
-        List<Friendship> friendships = new ArrayList<>(friendshipJpaRepository.findByLowUserId(userId));
-        friendships.addAll(friendshipJpaRepository.findByHighUserId(userId));
-        return friendships;
-    }
-
-    @Override
     public boolean existsFriendshipBetween(Long userId, Long friendId) {
         if (!activeUserJpaRepository.areActive(userId, friendId)) {
             return false;
