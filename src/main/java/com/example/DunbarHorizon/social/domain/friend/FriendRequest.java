@@ -62,10 +62,7 @@ public class FriendRequest {
     }
 
     public FriendRequestStatus getStatusFor(Long viewerId) {
-        if (status == FriendRequestStatus.HIDDEN && requesterId.equals(viewerId)) {
-            return FriendRequestStatus.PENDING;
-        }
-        return status;
+        return status.visibleTo(requesterId, viewerId);
     }
 
     public boolean isAccepted() {

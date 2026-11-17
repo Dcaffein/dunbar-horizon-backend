@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUserJp
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendRequestJpaRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestId;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
@@ -64,15 +63,5 @@ public class FriendRequestPersistenceAdapter implements FriendRequestRepository 
     @Override
     public void delete(FriendRequest request) {
         entityManager.remove(request);
-    }
-
-    @Override
-    public List<FriendRequest> findAllByReceiverIdAndStatus(Long receiverId, FriendRequestStatus status) {
-        return friendRequestJpaRepository.findAllByReceiverIdAndStatus(receiverId, status);
-    }
-
-    @Override
-    public List<FriendRequest> findAllByRequesterId(Long requesterId) {
-        return friendRequestJpaRepository.findAllByRequesterId(requesterId);
     }
 }

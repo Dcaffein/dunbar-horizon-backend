@@ -58,6 +58,13 @@ public enum FriendRequestStatus {
         throwCancelNotAllowed(this);
     }
 
+    public FriendRequestStatus visibleTo(Long requesterId, Long viewerId) {
+        if (this == HIDDEN && requesterId.equals(viewerId)) {
+            return PENDING;
+        }
+        return this;
+    }
+
     protected void validateReceiver(FriendRequest request, Long userId) {
         if (!request.getReceiverId().equals(userId)) {
             throw new FriendRequestAuthorizationException(request.getRequesterId(), request.getReceiverId(), userId);

@@ -2,9 +2,11 @@ package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.global.exception.ErrorContext;
 import com.example.DunbarHorizon.social.application.dto.FriendRequestDirection;
+import com.example.DunbarHorizon.social.application.dto.FriendRequestView;
 import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
 import com.example.DunbarHorizon.social.application.port.in.FriendRequestUseCase;
+import com.example.DunbarHorizon.social.application.port.out.FriendRequestViewRepository;
 import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
 import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
@@ -22,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +32,7 @@ public class FriendRequestService implements FriendRequestUseCase {
 
     private final FriendRequestRepository friendRequestRepository;
     private final FriendshipRepository friendshipRepository;
+    private final FriendRequestViewRepository friendRequestViewRepository;
     private final UserProfileRepository userProfileRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
 
@@ -79,19 +81,13 @@ public class FriendRequestService implements FriendRequestUseCase {
                 throw new FriendRequestInvalidException(SocialErrorCode.FRIEND_REQUEST_STATUS_NOT_ALLOWED_FOR_SENT,
                         ErrorContext.of("status", status));
             }
-            return toResults(currentUserId, friendRequestRepository.findAllByRequesterId(currentUserId));
+            return toResults(currentUserId, friendRequestViewRepository.findSent(currentUserId));
         }
         FriendRequestStatus receivedStatus = status == null ? FriendRequestStatus.PENDING : status;
-        return toResults(currentUserId, friendRequestRepository.findAllByReceiverIdAndStatus(currentUserId, receivedStatus));
+        return toResults(currentUserId, friendRequestViewRepository.findReceived(currentUserId, receivedStatus));
     }
 
-    private List<FriendRequestResult> toResults(Long viewerId, List<FriendRequest> found) {
-        var ids = found.stream().flatMap(request -> Stream.of(request.getRequesterId(), request.getReceiverId()))
-                .distinct().toList();
-        var users = userProfileRepository.findActiveProfiles(ids);
-        return found.stream()
-                .map(request -> FriendRequestResult.from(request, viewerId,
-                        users.get(request.getRequesterId()), users.get(request.getReceiverId())))
-                .toList();
+    private static List<FriendRequestResult> toResults(Long viewerId, List<FriendRequestView> found) {
+        return found.stream().map(request -> FriendRequestResult.from(request, viewerId)).toList();
     }
 }

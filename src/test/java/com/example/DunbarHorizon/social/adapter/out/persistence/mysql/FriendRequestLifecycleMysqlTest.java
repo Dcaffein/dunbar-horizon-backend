@@ -4,8 +4,10 @@ import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepo
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.FriendRequestPersistenceAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipPersistenceAdapter;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendRequestViewJdbcRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
+import com.example.DunbarHorizon.social.application.dto.FriendRequestDirection;
 import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
 import com.example.DunbarHorizon.social.application.service.FriendRequestService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
@@ -53,7 +55,7 @@ import static org.mockito.Mockito.doReturn;
 @ImportAutoConfiguration(PersistenceExceptionTranslationAutoConfiguration.class)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendRequestPersistenceAdapter.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class,
-        FriendRequestService.class,
+        FriendRequestService.class, FriendRequestViewJdbcRepository.class,
         UserProfileJdbcRepository.class,
         FriendRequestLifecycleMysqlTest.AcceptedEvents.class})
 class FriendRequestLifecycleMysqlTest {
@@ -93,15 +95,15 @@ class FriendRequestLifecycleMysqlTest {
         friendRequestService.updateStatus(low, high, FriendRequestStatus.HIDDEN);
 
         // then
-        assertThat(friendRequestPersistenceAdapter.findAllByRequesterId(high)).singleElement()
+        assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).get()
                 .extracting(FriendRequest::getStatus).isEqualTo(FriendRequestStatus.HIDDEN);
-        assertThat(friendRequestPersistenceAdapter.findAllByReceiverIdAndStatus(low, FriendRequestStatus.HIDDEN)).singleElement()
-                .satisfies(request -> {
-                    assertThat(request.getRequesterId()).isEqualTo(high);
-                    assertThat(request.getReceiverId()).isEqualTo(low);
+        assertThat(friendRequestService.getRequests(low, FriendRequestDirection.RECEIVED, FriendRequestStatus.HIDDEN))
+                .singleElement().satisfies(request -> {
+                    assertThat(request.requester().id()).isEqualTo(high);
+                    assertThat(request.receiver().id()).isEqualTo(low);
                 });
         friendRequestService.updateStatus(low, high, FriendRequestStatus.PENDING);
-        assertThat(friendRequestPersistenceAdapter.findAllByRequesterId(high)).singleElement()
+        assertThat(friendRequestPersistenceAdapter.findBetween(high, low)).get()
                 .extracting(FriendRequest::getStatus).isEqualTo(FriendRequestStatus.PENDING);
         friendRequestService.cancelRequest(high, low);
         assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).isEmpty();

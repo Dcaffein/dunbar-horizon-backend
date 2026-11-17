@@ -52,9 +52,6 @@ class FriendRequestPersistenceAdapterTest {
             assertThat(found.getStatus()).isEqualTo(FriendRequestStatus.PENDING);
         }
         assertThat(friendRequestPersistenceAdapter.existsBetween(low.getId(), high.getId())).isTrue();
-        assertThat(friendRequestPersistenceAdapter.findAllByRequesterId(high.getId())).hasSize(1);
-        assertThat(friendRequestPersistenceAdapter.findAllByReceiverIdAndStatus(low.getId(), FriendRequestStatus.PENDING)).hasSize(1);
-        assertThat(friendRequestPersistenceAdapter.findAllByReceiverIdAndStatus(high.getId(), FriendRequestStatus.PENDING)).isEmpty();
     }
 
     @Test
@@ -87,8 +84,6 @@ class FriendRequestPersistenceAdapterTest {
         // when & then
         assertThat(friendRequestPersistenceAdapter.findBetween(low.getId(), high.getId())).isEmpty();
         assertThat(friendRequestPersistenceAdapter.existsBetween(low.getId(), high.getId())).isFalse();
-        assertThat(friendRequestPersistenceAdapter.findAllByRequesterId(low.getId())).isEmpty();
-        assertThat(friendRequestPersistenceAdapter.findAllByReceiverIdAndStatus(high.getId(), FriendRequestStatus.PENDING)).isEmpty();
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM friend_requests WHERE requester_id = ?",
                 Integer.class, low.getId())).isEqualTo(1);
     }
@@ -135,8 +130,8 @@ class FriendRequestPersistenceAdapterTest {
         testEntityManager.clear();
 
         // then
-        assertThat(friendRequestPersistenceAdapter.findAllByReceiverIdAndStatus(high.getId(), FriendRequestStatus.HIDDEN)).hasSize(1);
         FriendRequest hidden = friendRequestPersistenceAdapter.findBetween(low.getId(), high.getId()).orElseThrow();
+        assertThat(hidden.getStatus()).isEqualTo(FriendRequestStatus.HIDDEN);
         jdbcTemplate.update("DELETE FROM friend_requests WHERE requester_id = ?", low.getId());
         hidden.updateStatus(high.getId(), FriendRequestStatus.PENDING);
         assertThatThrownBy(testEntityManager::flush).isInstanceOf(OptimisticLockException.class);
