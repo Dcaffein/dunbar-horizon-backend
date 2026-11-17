@@ -22,10 +22,14 @@ import com.example.DunbarHorizon.flag.application.service.memorial.FlagMemorialQ
 import com.example.DunbarHorizon.global.security.JwtAuthenticationFilter;
 import com.example.DunbarHorizon.global.security.JwtTokenProvider;
 import com.example.DunbarHorizon.global.security.AuthCookieManager;
-import com.example.DunbarHorizon.social.application.port.in.*;
-import com.example.DunbarHorizon.social.application.port.in.LabelCommandUseCase;
-import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
-import com.example.DunbarHorizon.notification.application.NotificationService;
+import com.example.DunbarHorizon.social.application.service.AccountSocialUserQueryService;
+import com.example.DunbarHorizon.social.application.service.FriendRequestService;
+import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
+import com.example.DunbarHorizon.social.application.service.FriendshipQueryService;
+import com.example.DunbarHorizon.social.application.service.MySqlLabelService;
+import com.example.DunbarHorizon.social.application.service.SocialConnectionPathQueryService;
+import com.example.DunbarHorizon.social.application.service.SocialExpansionQueryService;
+import com.example.DunbarHorizon.social.application.service.SocialNetworkQueryService;
 import com.example.DunbarHorizon.trace.application.TraceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,22 +78,20 @@ public abstract class BaseControllerTest {
     @MockitoBean protected FlagMemorialCommandService flagMemorialCommandService;
     @MockitoBean protected FlagMemorialQueryService flagMemorialQueryService;
 
-    @MockitoBean protected FriendRequestUseCase friendRequestUseCase;
+    @MockitoBean protected FriendRequestService friendRequestService;
 
-    @MockitoBean protected FriendshipCommandUseCase friendshipCommandUseCase;
-    @MockitoBean protected FriendshipQueryUseCase friendshipQueryUseCase;
+    @MockitoBean protected FriendshipCommandService friendshipCommandService;
+    @MockitoBean protected FriendshipQueryService friendshipQueryService;
 
-    @MockitoBean protected LabelCommandUseCase labelCommandUseCase;
-    @MockitoBean protected LabelQueryUseCase labelQueryUseCase;
+    @MockitoBean protected MySqlLabelService mySqlLabelService;
 
-    @MockitoBean protected SocialExpansionQueryUseCase socialExpansionQueryUseCase;
-    @MockitoBean protected SocialNetworkQueryUseCase socialNetworkQueryUseCase;
-    @MockitoBean protected SocialConnectionPathQueryUseCase socialConnectionPathQueryUseCase;
-    @MockitoBean protected com.example.DunbarHorizon.social.application.port.in.SocialUserQueryUseCase socialUserQueryUseCase;
+    @MockitoBean protected SocialExpansionQueryService socialExpansionQueryService;
+    @MockitoBean protected SocialNetworkQueryService socialNetworkQueryService;
+    @MockitoBean protected SocialConnectionPathQueryService socialConnectionPathQueryService;
+    @MockitoBean protected AccountSocialUserQueryService accountSocialUserQueryService;
 
     @MockitoBean protected TraceService traceService;
 
-    // TODO: NotificationController가 구체 서비스를 직접 주입받음 — 포트 인터페이스 분리 필요 (별도 task)
     @MockitoBean protected NotificationService notificationService;
 
 }

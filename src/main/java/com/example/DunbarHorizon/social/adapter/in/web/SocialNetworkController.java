@@ -5,9 +5,9 @@ import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionRe
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
-import com.example.DunbarHorizon.social.application.port.in.SocialConnectionPathQueryUseCase;
-import com.example.DunbarHorizon.social.application.port.in.SocialExpansionQueryUseCase;
-import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
+import com.example.DunbarHorizon.social.application.service.SocialConnectionPathQueryService;
+import com.example.DunbarHorizon.social.application.service.SocialExpansionQueryService;
+import com.example.DunbarHorizon.social.application.service.SocialNetworkQueryService;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,9 +20,9 @@ import java.util.List;
 @RequestMapping("/api/v1/network")
 public class SocialNetworkController {
 
-    private final SocialExpansionQueryUseCase expansionQueryUseCase;
-    private final SocialNetworkQueryUseCase networkQueryUseCase;
-    private final SocialConnectionPathQueryUseCase connectionPathQueryUseCase;
+    private final SocialExpansionQueryService socialExpansionQueryService;
+    private final SocialNetworkQueryService socialNetworkQueryService;
+    private final SocialConnectionPathQueryService socialConnectionPathQueryService;
 
     /**
      * 메인 홈 네트워크 (Soft Morphing 적용으로 1개의 API로 통합)
@@ -33,7 +33,7 @@ public class SocialNetworkController {
             @CurrentUserId Long currentUserId,
             @RequestParam(defaultValue = "DUNBAR") DunbarCircle circleSize
     ) {
-        return ResponseEntity.ok(networkQueryUseCase.getFriendsNetwork(currentUserId, circleSize));
+        return ResponseEntity.ok(socialNetworkQueryService.getFriendsNetwork(currentUserId, circleSize));
     }
 
     /**
@@ -45,7 +45,7 @@ public class SocialNetworkController {
             @CurrentUserId Long currentUserId,
             @PathVariable String labelId
     ) {
-        return ResponseEntity.ok(networkQueryUseCase.getLabelNetwork(currentUserId, labelId));
+        return ResponseEntity.ok(socialNetworkQueryService.getLabelNetwork(currentUserId, labelId));
     }
 
     /**
@@ -58,7 +58,7 @@ public class SocialNetworkController {
             @RequestParam Long targetId,
             @RequestParam List<Long> baseNetworkFriendIds
     ) {
-        return ResponseEntity.ok(networkQueryUseCase.getNetworkEdges(currentUserId, targetId, baseNetworkFriendIds));
+        return ResponseEntity.ok(socialNetworkQueryService.getNetworkEdges(currentUserId, targetId, baseNetworkFriendIds));
     }
 
     /**
@@ -70,7 +70,7 @@ public class SocialNetworkController {
             @CurrentUserId Long currentUserId,
             @RequestParam Long anchorId
     ) {
-        return ResponseEntity.ok(expansionQueryUseCase.getRecommendationsByAnchor(currentUserId, anchorId));
+        return ResponseEntity.ok(socialExpansionQueryService.getRecommendationsByAnchor(currentUserId, anchorId));
     }
 
     @GetMapping("/path")
@@ -78,6 +78,6 @@ public class SocialNetworkController {
             @CurrentUserId Long currentUserId,
             @RequestParam Long targetId
     ) {
-        return ResponseEntity.ok(connectionPathQueryUseCase.getConnectionPath(currentUserId, targetId));
+        return ResponseEntity.ok(socialConnectionPathQueryService.getConnectionPath(currentUserId, targetId));
     }
 }

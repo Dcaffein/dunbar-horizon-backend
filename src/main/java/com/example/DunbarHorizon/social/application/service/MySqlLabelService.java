@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.social.application.service;
 import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
-import com.example.DunbarHorizon.social.application.port.in.LabelCommandUseCase;
 import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepository;
 import com.example.DunbarHorizon.social.application.port.out.LabelMembershipRepository;
@@ -28,14 +27,13 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(isolation = Isolation.READ_COMMITTED)
-public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase {
+public class MySqlLabelService implements LabelQueryUseCase {
 
     private final LabelMembershipRepository labels;
     private final LabelFactory labelFactory;
     private final FriendshipLockRepository friendships;
     private final UserProfileRepository userProfileRepository;
 
-    @Override
     public Label createLabel(Long ownerId, String name) {
         activeProfile(ownerId);
         Label label = labelFactory.create(ownerId, name);
@@ -43,7 +41,6 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
         return label;
     }
 
-    @Override
     public void updateLabel(String labelId, Long ownerId, String labelName) {
         requireOwner(labels.lockOwnerId(labelId), labelId, ownerId);
         if (labelName != null) {
@@ -52,13 +49,11 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
         }
     }
 
-    @Override
     public void deleteLabel(Long ownerId, String labelId) {
         requireOwner(labels.lockOwnerId(labelId), labelId, ownerId);
         labels.delete(labelId);
     }
 
-    @Override
     public void addMemberToLabel(Long ownerId, String labelId, Long memberId) {
         requireOwner(labels.findOwnerId(labelId), labelId, ownerId);
         activeProfile(memberId);
@@ -69,7 +64,6 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
         labels.addMember(labelId, memberId);
     }
 
-    @Override
     public void replaceLabelMembers(Long ownerId, String labelId, List<Long> memberIds) {
         requireOwner(labels.findOwnerId(labelId), labelId, ownerId);
         List<Long> requested = memberIds == null ? List.of() : memberIds.stream().distinct().toList();
@@ -84,7 +78,6 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
         labels.replaceMembers(labelId, requested);
     }
 
-    @Override
     public void removeMemberFromLabel(Long ownerId, String labelId, Long memberId) {
         requireOwner(labels.lockOwnerId(labelId), labelId, ownerId);
         labels.removeMember(labelId, memberId);
@@ -96,25 +89,21 @@ public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase
         return labels.findMemberIdsByOwnerAndLabelIds(ownerId, labelIds);
     }
 
-    @Override
     @Transactional(readOnly = true)
     public List<LabelResult> getAllLabels(Long ownerId) {
         return labels.findAllByOwner_Id(ownerId).stream().map(LabelResult::from).toList();
     }
 
-    @Override
     @Transactional(readOnly = true)
     public List<LabelResult> getLabelsByMember(Long ownerId, Long memberId) {
         return labels.findLabelsByOwnerAndMember(ownerId, memberId).stream().map(LabelResult::from).toList();
     }
 
-    @Override
     @Transactional(readOnly = true)
     public LabelResult getLabelById(Long ownerId, String labelId) {
         return LabelResult.from(ownedLabel(ownerId, labelId));
     }
 
-    @Override
     @Transactional(readOnly = true)
     public List<LabelMemberResult> getLabelMembers(Long ownerId, String labelId) {
         var profiles = userProfileRepository.findActiveProfiles(ownedLabel(ownerId, labelId).getMemberIds());

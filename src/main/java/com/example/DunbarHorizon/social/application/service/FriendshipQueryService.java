@@ -25,7 +25,6 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
     private final FriendViewRepository friendViewRepository;
     private final ImageUrlResolverPort imageUrlResolverPort;
 
-    @Override
     public List<FriendshipDetailResult> getDetailedFriendships(Long userId) {
         return friendViewRepository.findFriends(userId).stream()
                 .map(friend -> FriendshipDetailResult.from(friend, imageUrlResolverPort))
@@ -37,7 +36,6 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
         return friendshipRepository.existsFriendshipBetween(userId, targetId);
     }
 
-    @Override
     public FriendshipDetailResult getFriend(Long userId, Long targetId) {
         return friendViewRepository.findFriend(userId, targetId)
                 .map(friend -> FriendshipDetailResult.from(friend, imageUrlResolverPort))

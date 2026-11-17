@@ -24,7 +24,7 @@ class SocialNetworkControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("메인 홈 네트워크를 기본 크기(DUNBAR)로 조회한다")
     void getFriendsNetwork_DefaultCircleSize() throws Exception {
-        given(socialNetworkQueryUseCase.getFriendsNetwork(eq(1L), eq(DunbarCircle.DUNBAR)))
+        given(socialNetworkQueryService.getFriendsNetwork(eq(1L), eq(DunbarCircle.DUNBAR)))
                 .willReturn(List.of());
 
         mockMvc.perform(get("/api/v1/network"))
@@ -36,7 +36,7 @@ class SocialNetworkControllerTest extends BaseControllerTest {
     @DisplayName("라벨 네트워크를 조회한다")
     void getLabelNetwork_Success() throws Exception {
         String labelId = "label-1";
-        given(socialNetworkQueryUseCase.getLabelNetwork(eq(1L), eq(labelId)))
+        given(socialNetworkQueryService.getLabelNetwork(eq(1L), eq(labelId)))
                 .willReturn(List.of());
 
         mockMvc.perform(get("/api/v1/network/labels/{labelId}", labelId))
@@ -48,7 +48,7 @@ class SocialNetworkControllerTest extends BaseControllerTest {
     @DisplayName("네트워크 응답은 노드 관심도만 제공하고 엣지 관심도는 제공하지 않는다")
     void getFriendsNetwork_노드에만_관심도를_반환한다() throws Exception {
         // given
-        given(socialNetworkQueryUseCase.getFriendsNetwork(eq(1L), eq(DunbarCircle.DUNBAR)))
+        given(socialNetworkQueryService.getFriendsNetwork(eq(1L), eq(DunbarCircle.DUNBAR)))
                 .willReturn(List.of(new NodeGraphResult(2L, 0.7, List.of(new NodeEdgeResult(3L, 0.6)))));
 
         // when & then
@@ -65,7 +65,7 @@ class SocialNetworkControllerTest extends BaseControllerTest {
     @DisplayName("앵커의 intimacy 기반으로 동적 파라미터를 적용한 추천 목록을 조회한다")
     void getAnchorRecommendation_Success() throws Exception {
         Long anchorId = 2L;
-        given(socialExpansionQueryUseCase.getRecommendationsByAnchor(eq(1L), eq(anchorId))).willReturn(List.of());
+        given(socialExpansionQueryService.getRecommendationsByAnchor(eq(1L), eq(anchorId))).willReturn(List.of());
 
         mockMvc.perform(get("/api/v1/network/recommendations")
                         .param("anchorId", String.valueOf(anchorId)))
@@ -77,7 +77,7 @@ class SocialNetworkControllerTest extends BaseControllerTest {
     @DisplayName("추천 결과는 사용자 식별 및 프로필 정보만 반환한다")
     void getAnchorRecommendation_ResponseShape() throws Exception {
         Long anchorId = 2L;
-        given(socialExpansionQueryUseCase.getRecommendationsByAnchor(eq(1L), eq(anchorId)))
+        given(socialExpansionQueryService.getRecommendationsByAnchor(eq(1L), eq(anchorId)))
                 .willReturn(List.of(new AnchorExpansionResult(3L, "추천 사용자")));
 
         mockMvc.perform(get("/api/v1/network/recommendations")
@@ -94,7 +94,7 @@ class SocialNetworkControllerTest extends BaseControllerTest {
     @DisplayName("연결 중개인 조회는 상위 3명과 전체 수를 내려주고 score는 포함하지 않는다")
     void getConnectionPath_Success() throws Exception {
         Long targetId = 99L;
-        given(socialConnectionPathQueryUseCase.getConnectionPath(eq(1L), eq(targetId)))
+        given(socialConnectionPathQueryService.getConnectionPath(eq(1L), eq(targetId)))
                 .willReturn(new ConnectionPathResult(false, 12, List.of(
                         new ConnectionPathResult.IntermediaryResult(2L, "중개인2"),
                         new ConnectionPathResult.IntermediaryResult(3L, "중개인3"),
@@ -115,7 +115,7 @@ class SocialNetworkControllerTest extends BaseControllerTest {
     @DisplayName("edges 경로로 직접 친구와 2-hop 엣지를 통합 조회한다")
     void getNetworkEdges_Success() throws Exception {
         Long targetId = 2L;
-        given(socialNetworkQueryUseCase.getNetworkEdges(eq(1L), eq(targetId), eq(List.of(3L, 4L))))
+        given(socialNetworkQueryService.getNetworkEdges(eq(1L), eq(targetId), eq(List.of(3L, 4L))))
                 .willReturn(List.of(new MutualFriendEdgeResult(targetId, 3L, null)));
 
         mockMvc.perform(get("/api/v1/network/edges")

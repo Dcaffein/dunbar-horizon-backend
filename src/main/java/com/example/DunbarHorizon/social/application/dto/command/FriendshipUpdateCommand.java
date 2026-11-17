@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.social.application.port.in.command;
+package com.example.DunbarHorizon.social.application.dto.command;
 
 import lombok.Builder;
 

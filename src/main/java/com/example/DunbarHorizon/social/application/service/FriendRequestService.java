@@ -5,7 +5,6 @@ import com.example.DunbarHorizon.social.application.dto.FriendRequestDirection;
 import com.example.DunbarHorizon.social.application.dto.FriendRequestView;
 import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
-import com.example.DunbarHorizon.social.application.port.in.FriendRequestUseCase;
 import com.example.DunbarHorizon.social.application.port.out.FriendRequestViewRepository;
 import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
 import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;
@@ -28,7 +27,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class FriendRequestService implements FriendRequestUseCase {
+public class FriendRequestService {
 
     private final FriendRequestRepository friendRequestRepository;
     private final FriendshipRepository friendshipRepository;
@@ -36,7 +35,6 @@ public class FriendRequestService implements FriendRequestUseCase {
     private final UserProfileRepository userProfileRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
 
-    @Override
     public FriendRequestResult sendRequest(Long currentUserId, Long counterpartId) {
         boolean existingFriendship = friendshipRepository.existsFriendshipBetween(currentUserId, counterpartId);
         boolean existingRequest = friendRequestRepository.existsBetween(currentUserId, counterpartId);
@@ -46,7 +44,6 @@ public class FriendRequestService implements FriendRequestUseCase {
         return FriendRequestResult.from(request, currentUserId, profiles.get(currentUserId), profiles.get(counterpartId));
     }
 
-    @Override
     public void cancelRequest(Long currentUserId, Long counterpartId) {
         FriendRequest request = friendRequestRepository.findBetween(currentUserId, counterpartId)
                 .orElseThrow(() -> new FriendRequestNotFoundException(currentUserId, counterpartId));
@@ -54,7 +51,6 @@ public class FriendRequestService implements FriendRequestUseCase {
         friendRequestRepository.delete(request);
     }
 
-    @Override
     public void updateStatus(Long currentUserId, Long counterpartId, FriendRequestStatus status) {
         FriendRequest request = friendRequestRepository.findBetween(currentUserId, counterpartId)
                 .orElseThrow(() -> new FriendRequestNotFoundException(currentUserId, counterpartId));
@@ -73,7 +69,6 @@ public class FriendRequestService implements FriendRequestUseCase {
                 new FriendRequestAcceptedEvent(request.getRequesterId(), request.getReceiverId(), receiver.nickname()));
     }
 
-    @Override
     @Transactional(readOnly = true)
     public List<FriendRequestResult> getRequests(Long currentUserId, FriendRequestDirection direction,
                                                  FriendRequestStatus status) {

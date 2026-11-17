@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.SocialProfileResult;
-import com.example.DunbarHorizon.social.application.port.in.SocialUserQueryUseCase;
 import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPort;
 import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
@@ -13,12 +12,11 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class AccountSocialUserQueryService implements SocialUserQueryUseCase {
+public class AccountSocialUserQueryService {
 
     private final UserProfileRepository userProfileRepository;
     private final ImageUrlResolverPort images;
 
-    @Override
     public SocialProfileResult getSocialProfile(Long userId) {
         UserProfile profile = userProfileRepository.findActiveProfiles(List.of(userId)).get(userId);
         if (profile == null) {

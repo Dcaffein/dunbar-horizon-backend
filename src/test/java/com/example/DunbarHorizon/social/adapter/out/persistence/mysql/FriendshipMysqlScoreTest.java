@@ -7,7 +7,7 @@ import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
 import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipPersistenceAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
-import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
+import com.example.DunbarHorizon.social.application.dto.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.service.FriendshipScoreService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;

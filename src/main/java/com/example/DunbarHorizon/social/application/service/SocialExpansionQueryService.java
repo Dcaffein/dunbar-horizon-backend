@@ -43,7 +43,6 @@ public class SocialExpansionQueryService implements SocialExpansionQueryUseCase 
         return socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorFriendId, threshold, limit);
     }
 
-    @Override
     public List<AnchorExpansionResult> getRecommendationsByAnchor(Long userId, Long anchorFriendId) {
         double intimacy = friendshipRepository
                 .findBetween(userId, anchorFriendId)

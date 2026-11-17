@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.in.web;
 
 import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
-import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
+import com.example.DunbarHorizon.social.application.service.SocialNetworkQueryService;
 
 import java.util.List;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
@@ -16,13 +16,13 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/perf/networks")
 public class PerfNetworkController {
 
-    private final SocialNetworkQueryUseCase networkQueryUseCase;
+    private final SocialNetworkQueryService socialNetworkQueryService;
 
     @GetMapping("/{userId}")
     public ResponseEntity<List<NodeGraphResult>> getFriendsNetwork(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "DUNBAR") DunbarCircle circleSize
     ) {
-        return ResponseEntity.ok(networkQueryUseCase.getFriendsNetwork(userId, circleSize));
+        return ResponseEntity.ok(socialNetworkQueryService.getFriendsNetwork(userId, circleSize));
     }
 }

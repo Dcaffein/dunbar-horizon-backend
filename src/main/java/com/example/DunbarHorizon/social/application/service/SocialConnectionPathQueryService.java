@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.social.application.service;
 
 import org.springframework.transaction.annotation.Transactional;
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult;
-import com.example.DunbarHorizon.social.application.port.in.SocialConnectionPathQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.SocialConnectionPathRepository;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,14 +12,13 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class SocialConnectionPathQueryService implements SocialConnectionPathQueryUseCase {
+public class SocialConnectionPathQueryService {
 
     private static final int INTERMEDIARY_LIMIT = 3;
 
     private final SocialConnectionPathRepository connectionPathRepository;
     private final FriendshipRepository friendshipRepository;
 
-    @Override
     public ConnectionPathResult getConnectionPath(Long myId, Long targetId) {
         if (myId.equals(targetId)) {
             return new ConnectionPathResult(false, 0, List.of());
