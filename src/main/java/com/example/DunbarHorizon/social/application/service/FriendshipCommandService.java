@@ -19,7 +19,7 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
     private final LabelMembershipRepository labels;
 
     @Override
-    @Transactional(transactionManager = "transactionManager")
+    @Transactional
     public void updateFriendship(Long currentUserId, Long friendId, FriendshipUpdateCommand command) {
         Friendship friendship = friendships.findBetween(currentUserId, friendId)
                 .orElseThrow(() -> new FriendshipNotFoundException(currentUserId, friendId));
@@ -28,7 +28,7 @@ public class FriendshipCommandService implements FriendshipCommandUseCase {
     }
 
     @Override
-    @Transactional(transactionManager = "transactionManager", isolation = Isolation.READ_COMMITTED)
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void brokeUpWith(Long currentUserId, Long friendId) {
         if (!friendships.deleteBetween(currentUserId, friendId)) {
             throw new FriendshipNotFoundException(currentUserId, friendId);

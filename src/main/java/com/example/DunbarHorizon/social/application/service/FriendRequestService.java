@@ -27,7 +27,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(transactionManager = "transactionManager")
+@Transactional
 public class FriendRequestService implements FriendRequestUseCase {
 
     private final FriendRequestRepository friendRequestRepository;
@@ -74,7 +74,7 @@ public class FriendRequestService implements FriendRequestUseCase {
     }
 
     @Override
-    @Transactional(transactionManager = "transactionManager", readOnly = true)
+    @Transactional(readOnly = true)
     public List<FriendRequestResult> getRequests(Long currentUserId, FriendRequestDirection direction,
                                                  FriendRequestStatus status) {
         if (direction == FriendRequestDirection.SENT) {

@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(transactionManager = "transactionManager", isolation = Isolation.READ_COMMITTED)
+@Transactional(isolation = Isolation.READ_COMMITTED)
 public class MySqlLabelService implements LabelCommandUseCase, LabelQueryUseCase {
 
     private final LabelMembershipRepository labels;
