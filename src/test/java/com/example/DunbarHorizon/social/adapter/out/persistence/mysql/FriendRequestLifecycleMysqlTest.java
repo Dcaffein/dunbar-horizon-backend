@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.FriendRequestPersistenceAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipPersistenceAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
 import com.example.DunbarHorizon.social.application.service.FriendRequestService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
@@ -53,7 +54,7 @@ import static org.mockito.Mockito.doReturn;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendRequestPersistenceAdapter.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class,
         FriendRequestService.class,
-        SocialUserMysqlRepository.class,
+        UserProfileJdbcRepository.class,
         FriendRequestLifecycleMysqlTest.AcceptedEvents.class})
 class FriendRequestLifecycleMysqlTest {
 

@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipPersistenceAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult.IntermediaryResult;
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.service.SocialConnectionPathQueryService;
@@ -21,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
 @Import({SocialConnectionPathMysqlRepository.class, SocialConnectionPathQueryService.class,
-        SocialUserMysqlRepository.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class})
+        UserProfileJdbcRepository.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class})
 class SocialConnectionPathMysqlRepositoryTest {
 
     @Autowired private SocialConnectionPathMysqlRepository repository;

@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
+package com.example.DunbarHorizon.social.adapter.out.persistence.jdbc;
 
 import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
 import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
-public class SocialUserMysqlRepository implements UserProfileRepository {
+public class UserProfileJdbcRepository implements UserProfileRepository {
 
     private final NamedParameterJdbcTemplate jdbc;
 
