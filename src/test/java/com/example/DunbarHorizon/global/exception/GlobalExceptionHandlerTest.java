@@ -30,7 +30,7 @@ class GlobalExceptionHandlerTest extends BaseControllerTest {
     void domainException_ReturnsErrorCode() throws Exception {
         // given
         willThrow(new FlagFullCapacityException(1L, 8, 8))
-                .given(flagParticipationUseCase).participateInFlag(anyLong(), anyLong());
+                .given(flagParticipationService).participateInFlag(anyLong(), anyLong());
 
         // when & then
         mockMvc.perform(post("/api/v1/flags/1/participants"))
@@ -44,7 +44,7 @@ class GlobalExceptionHandlerTest extends BaseControllerTest {
     void domainException_DoesNotExposeClassName() throws Exception {
         // given
         willThrow(new FlagNotFoundException(331L))
-                .given(flagParticipationUseCase).participateInFlag(anyLong(), anyLong());
+                .given(flagParticipationService).participateInFlag(anyLong(), anyLong());
 
         // when & then
         mockMvc.perform(post("/api/v1/flags/1/participants"))

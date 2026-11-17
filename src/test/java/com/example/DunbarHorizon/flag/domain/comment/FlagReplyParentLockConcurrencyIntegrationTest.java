@@ -2,9 +2,9 @@ package com.example.DunbarHorizon.flag.domain.comment;
 
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagCommentJpaRepository;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagJpaRepository;
-import com.example.DunbarHorizon.flag.application.port.in.FlagCommentCommandUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
+import com.example.DunbarHorizon.flag.application.service.comment.FlagCommentCommandService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagHostCommand;
 import com.example.DunbarHorizon.flag.domain.comment.exception.FlagCommentNotFoundException;
 import com.example.DunbarHorizon.flag.domain.comment.repository.FlagCommentRepository;
 import com.example.DunbarHorizon.support.TestContainerConfig;
@@ -44,8 +44,8 @@ class FlagReplyParentLockConcurrencyIntegrationTest {
     private static final Long REPLIER_ID = 13202L;
     private static final long WAIT_SECONDS = 5;
 
-    @Autowired private FlagHostUseCase flagHostUseCase;
-    @Autowired private FlagCommentCommandUseCase commentCommandUseCase;
+    @Autowired private FlagHostService flagHostService;
+    @Autowired private FlagCommentCommandService flagCommentCommandService;
     @Autowired private FlagJpaRepository flagJpaRepository;
     @Autowired private FlagCommentJpaRepository commentJpaRepository;
     @Autowired private PlatformTransactionManager transactionManager;
@@ -72,7 +72,7 @@ class FlagReplyParentLockConcurrencyIntegrationTest {
     void replyReadsParentFirst_deletionWaitsAndRemovesReply() throws InterruptedException {
         // given
         Long flagId = hostFlag();
-        Long parentId = commentCommandUseCase.createRootComment(flagId, HOST_ID, "부모 댓글", false);
+        Long parentId = flagCommentCommandService.createRootComment(flagId, HOST_ID, "부모 댓글", false);
         CountDownLatch parentRead = new CountDownLatch(1);
         CountDownLatch continueReply = new CountDownLatch(1);
         CountDownLatch replyFinished = new CountDownLatch(1);
@@ -83,13 +83,13 @@ class FlagReplyParentLockConcurrencyIntegrationTest {
         pauseOnceAfterParentRead(parentId, parentRead, continueReply);
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        submit(executor, () -> commentCommandUseCase.createReply(flagId, parentId, REPLIER_ID, "답글", false),
+        submit(executor, () -> flagCommentCommandService.createReply(flagId, parentId, REPLIER_ID, "답글", false),
                 replyFailure, replyFinished);
 
         try {
             // when
             assertThat(parentRead.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-            submit(executor, () -> commentCommandUseCase.deleteComment(flagId, parentId, HOST_ID),
+            submit(executor, () -> flagCommentCommandService.deleteComment(flagId, parentId, HOST_ID),
                     deletionFailure, deletionFinished);
             awaitFinishedOrLockWait(deletionFinished, "부모 댓글 삭제");
             continueReply.countDown();
@@ -111,7 +111,7 @@ class FlagReplyParentLockConcurrencyIntegrationTest {
     void deletionLocksParentFirst_replyFailsWithNotFound() throws InterruptedException {
         // given
         Long flagId = hostFlag();
-        Long parentId = commentCommandUseCase.createRootComment(flagId, HOST_ID, "부모 댓글", false);
+        Long parentId = flagCommentCommandService.createRootComment(flagId, HOST_ID, "부모 댓글", false);
         CountDownLatch parentLocked = new CountDownLatch(1);
         CountDownLatch continueDeletion = new CountDownLatch(1);
         CountDownLatch deletionFinished = new CountDownLatch(1);
@@ -130,13 +130,13 @@ class FlagReplyParentLockConcurrencyIntegrationTest {
         }).when(commentRepository).findByIdForUpdate(parentId);
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        submit(executor, () -> commentCommandUseCase.deleteComment(flagId, parentId, HOST_ID),
+        submit(executor, () -> flagCommentCommandService.deleteComment(flagId, parentId, HOST_ID),
                 deletionFailure, deletionFinished);
 
         try {
             // when
             assertThat(parentLocked.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-            submit(executor, () -> commentCommandUseCase.createReply(flagId, parentId, REPLIER_ID, "답글", false),
+            submit(executor, () -> flagCommentCommandService.createReply(flagId, parentId, REPLIER_ID, "답글", false),
                     replyFailure, replyFinished);
             awaitFinishedOrLockWait(replyFinished, "답글 작성");
             continueDeletion.countDown();
@@ -158,7 +158,7 @@ class FlagReplyParentLockConcurrencyIntegrationTest {
     void twoRepliesOnSameParent_bothSucceed() throws InterruptedException {
         // given
         Long flagId = hostFlag();
-        Long parentId = commentCommandUseCase.createRootComment(flagId, HOST_ID, "부모 댓글", false);
+        Long parentId = flagCommentCommandService.createRootComment(flagId, HOST_ID, "부모 댓글", false);
         CyclicBarrier bothRead = new CyclicBarrier(2);
         CountDownLatch finished = new CountDownLatch(2);
         AtomicReference<Throwable> firstFailure = new AtomicReference<>();
@@ -171,9 +171,9 @@ class FlagReplyParentLockConcurrencyIntegrationTest {
         }).when(commentRepository).findByIdForShare(parentId);
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        submit(executor, () -> commentCommandUseCase.createReply(flagId, parentId, REPLIER_ID, "첫 답글", false),
+        submit(executor, () -> flagCommentCommandService.createReply(flagId, parentId, REPLIER_ID, "첫 답글", false),
                 firstFailure, finished);
-        submit(executor, () -> commentCommandUseCase.createReply(flagId, parentId, HOST_ID, "둘째 답글", false),
+        submit(executor, () -> flagCommentCommandService.createReply(flagId, parentId, HOST_ID, "둘째 답글", false),
                 secondFailure, finished);
 
         try {
@@ -205,7 +205,7 @@ class FlagReplyParentLockConcurrencyIntegrationTest {
 
     private Long hostFlag() {
         LocalDateTime base = LocalDateTime.now().withNano(0);
-        Long flagId = flagHostUseCase.hostFlag(new FlagHostCommand(
+        Long flagId = flagHostService.hostFlag(new FlagHostCommand(
                 HOST_ID, "답글 잠금 테스트", "설명", 5,
                 base.plusHours(1), base.plusHours(2), base.plusHours(3)));
         createdFlagIds.add(flagId);

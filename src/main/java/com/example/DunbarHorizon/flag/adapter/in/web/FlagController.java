@@ -3,8 +3,13 @@ package com.example.DunbarHorizon.flag.adapter.in.web;
 import com.example.DunbarHorizon.flag.adapter.in.web.dto.*;
 import com.example.DunbarHorizon.flag.application.dto.result.FlagDetailResult;
 import com.example.DunbarHorizon.flag.application.dto.result.FlagResult;
-import com.example.DunbarHorizon.flag.application.port.in.*;
-import com.example.DunbarHorizon.flag.application.port.in.command.*;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagModificationService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagParticipationService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagQueryService;
+import com.example.DunbarHorizon.flag.application.service.invitation.FlagInvitationCommandService;
+import com.example.DunbarHorizon.flag.application.dto.FlagRole;
+import com.example.DunbarHorizon.flag.application.dto.command.*;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,11 +29,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FlagController {
 
-    private final FlagHostUseCase flagHostUseCase;
-    private final FlagModificationUseCase flagModificationUseCase;
-    private final FlagParticipationUseCase flagParticipationUseCase;
-    private final FlagInvitationUseCase flagInvitationUseCase;
-    private final FlagQueryUseCase flagQueryUseCase;
+    private final FlagHostService flagHostService;
+    private final FlagModificationService flagModificationService;
+    private final FlagParticipationService flagParticipationService;
+    private final FlagInvitationCommandService flagInvitationCommandService;
+    private final FlagQueryService flagQueryService;
 
     @PostMapping
     public ResponseEntity<Long> createFlag(
@@ -40,7 +45,7 @@ public class FlagController {
                     request.parentFlagId(), currentUserId,
                     request.deadline(), request.startDateTime(), request.endDateTime()
             );
-            return ResponseEntity.status(HttpStatus.CREATED).body(flagHostUseCase.encoreFlag(command));
+            return ResponseEntity.status(HttpStatus.CREATED).body(flagHostService.encoreFlag(command));
         }
 
         FlagHostCommand command = new FlagHostCommand(
@@ -48,7 +53,7 @@ public class FlagController {
                 request.capacity(), request.deadline(),
                 request.startDateTime(), request.endDateTime()
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(flagHostUseCase.hostFlag(command));
+        return ResponseEntity.status(HttpStatus.CREATED).body(flagHostService.hostFlag(command));
     }
 
     @PatchMapping("/{flagId}/details")
@@ -57,7 +62,7 @@ public class FlagController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid FlagDetailsUpdateRequest request
     ) {
-        flagModificationUseCase.modifyFlagDetails(new FlagDetailsUpdateCommand(
+        flagModificationService.modifyFlagDetails(new FlagDetailsUpdateCommand(
                 flagId, currentUserId, request.title(), request.description()
         ));
         return ResponseEntity.ok().build();
@@ -69,7 +74,7 @@ public class FlagController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid FlagCapacityUpdateRequest request
     ) {
-        flagModificationUseCase.modifyFlagCapacity(new FlagCapacityUpdateCommand(
+        flagModificationService.modifyFlagCapacity(new FlagCapacityUpdateCommand(
                 flagId, currentUserId, request.capacity()
         ));
         return ResponseEntity.ok().build();
@@ -81,7 +86,7 @@ public class FlagController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid FlagScheduleUpdateRequest request
     ) {
-        flagModificationUseCase.reschedule(new FlagScheduleUpdateCommand(
+        flagModificationService.reschedule(new FlagScheduleUpdateCommand(
                 flagId, currentUserId, request.deadline(), request.startDateTime(), request.endDateTime()
         ));
         return ResponseEntity.ok().build();
@@ -92,7 +97,7 @@ public class FlagController {
             @PathVariable Long flagId,
             @CurrentUserId Long currentUserId
     ) {
-        flagModificationUseCase.closeRecruitment(flagId, currentUserId);
+        flagModificationService.closeRecruitment(flagId, currentUserId);
         return ResponseEntity.ok().build();
     }
 
@@ -101,7 +106,7 @@ public class FlagController {
             @PathVariable Long flagId,
             @CurrentUserId Long currentUserId
     ) {
-        flagModificationUseCase.closeFlag(flagId, currentUserId);
+        flagModificationService.closeFlag(flagId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 
@@ -110,7 +115,7 @@ public class FlagController {
             @PathVariable Long flagId,
             @CurrentUserId Long currentUserId
     ) {
-        flagParticipationUseCase.participateInFlag(flagId, currentUserId);
+        flagParticipationService.participateInFlag(flagId, currentUserId);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -119,7 +124,7 @@ public class FlagController {
             @PathVariable Long flagId,
             @CurrentUserId Long currentUserId
     ) {
-        flagParticipationUseCase.leaveFlag(flagId, currentUserId);
+        flagParticipationService.leaveFlag(flagId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 
@@ -130,7 +135,7 @@ public class FlagController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid FlagInvitePermissionRequest request
     ) {
-        flagInvitationUseCase.updateInvitePermission(flagId, currentUserId, participantId, request.canInvite());
+        flagInvitationCommandService.updateInvitePermission(flagId, currentUserId, participantId, request.canInvite());
         return ResponseEntity.ok().build();
     }
 
@@ -141,7 +146,7 @@ public class FlagController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) throws ServletRequestBindingException {
-        return ResponseEntity.ok(flagQueryUseCase.getFlagsByRole(currentUserId, role, pageable(page, size)));
+        return ResponseEntity.ok(flagQueryService.getFlagsByRole(currentUserId, role, pageable(page, size)));
     }
 
     @GetMapping("/feed")
@@ -150,14 +155,14 @@ public class FlagController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) throws ServletRequestBindingException {
-        return ResponseEntity.ok(flagQueryUseCase.getFeedFlags(currentUserId, pageable(page, size)));
+        return ResponseEntity.ok(flagQueryService.getFeedFlags(currentUserId, pageable(page, size)));
     }
 
     @GetMapping("/profile")
     public ResponseEntity<List<FlagResult>> getProfileFlags(
             @RequestParam Long userId
     ) {
-        return ResponseEntity.ok(flagQueryUseCase.getProfileFlags(userId));
+        return ResponseEntity.ok(flagQueryService.getProfileFlags(userId));
     }
 
     @GetMapping("/{flagId}")
@@ -165,7 +170,7 @@ public class FlagController {
             @PathVariable Long flagId,
             @CurrentUserId Long currentUserId
     ) {
-        return ResponseEntity.ok(flagQueryUseCase.getFlagDetail(flagId, currentUserId));
+        return ResponseEntity.ok(flagQueryService.getFlagDetail(flagId, currentUserId));
     }
 
     private Pageable pageable(int page, int size) throws ServletRequestBindingException {

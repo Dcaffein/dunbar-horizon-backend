@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagCapacityUpdateCommand;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagDetailsUpdateCommand;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagScheduleUpdateCommand;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagCapacityUpdateCommand;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagDetailsUpdateCommand;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagScheduleUpdateCommand;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagAuthorizationException;

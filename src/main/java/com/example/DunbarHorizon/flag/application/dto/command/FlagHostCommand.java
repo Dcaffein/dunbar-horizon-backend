@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.flag.application.port.in.command;
+package com.example.DunbarHorizon.flag.application.dto.command;
 
 
 import java.time.LocalDateTime;

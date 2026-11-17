@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.flag.application.service.memorial;
 
-import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialCommandUseCase;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
@@ -14,12 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class FlagMemorialCommandService implements FlagMemorialCommandUseCase {
+public class FlagMemorialCommandService {
 
     private final FlagRepository flagRepository;
     private final FlagMemorialRepository memorialRepository;
 
-    @Override
     public Long createMemorial(Long flagId, Long userId, String content) {
         Flag flag = flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
@@ -30,7 +28,6 @@ public class FlagMemorialCommandService implements FlagMemorialCommandUseCase {
         return memorial.getId();
     }
 
-    @Override
     public void updateMemorial(Long flagId, Long memorialId, Long requesterId, String content) {
         FlagMemorial memorial = memorialRepository.findById(memorialId)
                 .orElseThrow(() -> new FlagMemorialNotFoundException(memorialId));
@@ -40,7 +37,6 @@ public class FlagMemorialCommandService implements FlagMemorialCommandUseCase {
         memorialRepository.save(memorial);
     }
 
-    @Override
     public void deleteMemorial(Long flagId, Long memorialId, Long requesterId) {
         FlagMemorial memorial = memorialRepository.findById(memorialId)
                 .filter(found -> flagId.equals(found.getFlagId()))

@@ -2,8 +2,7 @@ package com.example.DunbarHorizon.flag.application.service.memorial;
 
 
 
-import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialQueryUseCase;
-import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
+import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 import com.example.DunbarHorizon.flag.application.dto.result.MemorialListResult;
 import com.example.DunbarHorizon.flag.application.dto.result.MemorialResult;
 import com.example.DunbarHorizon.flag.application.port.out.FlagUserPort;
@@ -22,13 +21,12 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class FlagMemorialQueryService implements FlagMemorialQueryUseCase {
+public class FlagMemorialQueryService {
 
     private final FlagMemorialRepository memorialRepository;
     private final FlagRepository flagRepository;
     private final FlagUserPort flagUserPort;
 
-    @Override
     public MemorialListResult getMemorials(Long flagId, Long viewerId) {
         Long hostId = flagRepository.findHostIdById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
@@ -61,7 +59,6 @@ public class FlagMemorialQueryService implements FlagMemorialQueryUseCase {
         );
     }
 
-    @Override
     public long getMemorialCount(Long flagId) {
         return memorialRepository.countByFlagId(flagId);
     }

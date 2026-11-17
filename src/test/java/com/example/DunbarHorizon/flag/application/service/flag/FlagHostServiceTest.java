@@ -16,8 +16,8 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagEncoreCommand;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagEncoreCommand;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagHostCommand;
 import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataIntegrityViolationException;
 

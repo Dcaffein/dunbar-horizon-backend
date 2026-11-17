@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
-import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialCommandUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
+import com.example.DunbarHorizon.flag.application.service.memorial.FlagMemorialCommandService;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagHostCommand;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagJpaRepository;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagConcludedEvent;
 import com.example.DunbarHorizon.support.TestContainerConfig;
@@ -53,8 +53,8 @@ class FlagConclusionEventIntegrationTest {
         }
     }
 
-    @Autowired private FlagHostUseCase flagHostUseCase;
-    @Autowired private FlagMemorialCommandUseCase memorialCommandUseCase;
+    @Autowired private FlagHostService flagHostService;
+    @Autowired private FlagMemorialCommandService flagMemorialCommandService;
     @Autowired private FlagJpaRepository flagJpaRepository;
     @Autowired private ConclusionRecorder recorder;
 
@@ -66,7 +66,7 @@ class FlagConclusionEventIntegrationTest {
     void setUp() {
         recorder.clear();
         LocalDateTime base = LocalDateTime.now().withNano(0);
-        endedFlagId = flagHostUseCase.hostFlag(new FlagHostCommand(
+        endedFlagId = flagHostService.hostFlag(new FlagHostCommand(
                 HOST_ID, "종료된 모임", "설명", 10,
                 base.minusHours(4), base.minusHours(3), base.minusHours(1)));
     }
@@ -75,9 +75,9 @@ class FlagConclusionEventIntegrationTest {
     @DisplayName("후기를 쓰고 지워도 결말 이벤트가 나가지 않고 보존 필드가 바뀌지 않는다")
     void memorialWriteAndDelete_concludesNothing() {
         // when
-        Long memorialId = memorialCommandUseCase.createMemorial(endedFlagId, HOST_ID, "후기");
+        Long memorialId = flagMemorialCommandService.createMemorial(endedFlagId, HOST_ID, "후기");
         boolean preservedAfterWrite = flagJpaRepository.findById(endedFlagId).orElseThrow().isPreserved();
-        memorialCommandUseCase.deleteMemorial(endedFlagId, memorialId, HOST_ID);
+        flagMemorialCommandService.deleteMemorial(endedFlagId, memorialId, HOST_ID);
 
         // then
         assertThat(recorder.received()).isEmpty();

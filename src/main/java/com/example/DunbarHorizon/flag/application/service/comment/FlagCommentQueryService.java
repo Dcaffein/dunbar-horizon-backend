@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.flag.application.service.comment;
 
-import com.example.DunbarHorizon.flag.application.port.in.FlagCommentQueryUseCase;
 import com.example.DunbarHorizon.flag.application.dto.result.CommentResult;
 import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 import com.example.DunbarHorizon.flag.application.port.out.FlagUserPort;
@@ -19,13 +18,12 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class FlagCommentQueryService implements FlagCommentQueryUseCase {
+public class FlagCommentQueryService {
 
     private final FlagCommentRepository commentRepository;
     private final FlagRepository flagRepository;
     private final FlagUserPort flagUserPort;
 
-    @Override
     public List<CommentResult> getCommentTree(Long flagId, Long viewerId) {
         Flag flag = flagRepository.findById(flagId).orElseThrow(() -> new FlagNotFoundException(flagId));
 
@@ -47,7 +45,6 @@ public class FlagCommentQueryService implements FlagCommentQueryUseCase {
                 .toList();
     }
 
-    @Override
     public Long getCommentCount(Long flagId) {
         return commentRepository.countByFlagId(flagId);
     }

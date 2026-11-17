@@ -9,7 +9,16 @@ import com.example.DunbarHorizon.account.application.port.out.ProfileImageStorag
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.notification.application.NotificationService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzService;
-import com.example.DunbarHorizon.flag.application.port.in.*;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagModificationService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagParticipationService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagQueryService;
+import com.example.DunbarHorizon.flag.application.service.invitation.FlagInvitationCommandService;
+import com.example.DunbarHorizon.flag.application.service.invitation.FlagInvitationQueryService;
+import com.example.DunbarHorizon.flag.application.service.comment.FlagCommentCommandService;
+import com.example.DunbarHorizon.flag.application.service.comment.FlagCommentQueryService;
+import com.example.DunbarHorizon.flag.application.service.memorial.FlagMemorialCommandService;
+import com.example.DunbarHorizon.flag.application.service.memorial.FlagMemorialQueryService;
 import com.example.DunbarHorizon.global.security.JwtAuthenticationFilter;
 import com.example.DunbarHorizon.global.security.JwtTokenProvider;
 import com.example.DunbarHorizon.global.security.AuthCookieManager;
@@ -52,18 +61,18 @@ public abstract class BaseControllerTest {
 
     @MockitoBean protected BuzzService buzzService;
 
-    @MockitoBean protected FlagHostUseCase flagHostUseCase;
-    @MockitoBean protected FlagModificationUseCase flagModificationUseCase;
-    @MockitoBean protected FlagParticipationUseCase flagParticipationUseCase;
-    @MockitoBean protected FlagQueryUseCase flagQueryUseCase;
-    @MockitoBean protected FlagInvitationUseCase flagInvitationUseCase;
-    @MockitoBean protected FlagInvitationQueryUseCase flagInvitationQueryUseCase;
+    @MockitoBean protected FlagHostService flagHostService;
+    @MockitoBean protected FlagModificationService flagModificationService;
+    @MockitoBean protected FlagParticipationService flagParticipationService;
+    @MockitoBean protected FlagQueryService flagQueryService;
+    @MockitoBean protected FlagInvitationCommandService flagInvitationCommandService;
+    @MockitoBean protected FlagInvitationQueryService flagInvitationQueryService;
 
-    @MockitoBean protected FlagCommentCommandUseCase flagCommentCommandUseCase;
-    @MockitoBean protected FlagCommentQueryUseCase flagCommentQueryUseCase;
+    @MockitoBean protected FlagCommentCommandService flagCommentCommandService;
+    @MockitoBean protected FlagCommentQueryService flagCommentQueryService;
 
-    @MockitoBean protected FlagMemorialCommandUseCase flagMemorialCommandUseCase;
-    @MockitoBean protected FlagMemorialQueryUseCase flagMemorialQueryUseCase;
+    @MockitoBean protected FlagMemorialCommandService flagMemorialCommandService;
+    @MockitoBean protected FlagMemorialQueryService flagMemorialQueryService;
 
     @MockitoBean protected FriendRequestUseCase friendRequestUseCase;
 

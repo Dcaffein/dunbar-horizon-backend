@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.flag.adapter.in.web;
 import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;
 import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 import com.example.DunbarHorizon.flag.application.dto.result.FlagDetailResult;
-import com.example.DunbarHorizon.flag.application.port.in.FlagRole;
+import com.example.DunbarHorizon.flag.application.dto.FlagRole;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
@@ -38,7 +38,7 @@ class FlagControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("일반 플래그 생성 시 201을 반환하고 hostFlag()를 호출한다")
     void createFlag_Normal_Returns201() throws Exception {
-        given(flagHostUseCase.hostFlag(any())).willReturn(1L);
+        given(flagHostService.hostFlag(any())).willReturn(1L);
         String body = """
                 {
                   "title": "테스트 플래그",
@@ -54,7 +54,7 @@ class FlagControllerTest extends BaseControllerTest {
                         .content(body))
                 .andExpect(status().isCreated());
 
-        verify(flagHostUseCase).hostFlag(any());
+        verify(flagHostService).hostFlag(any());
     }
 
     @Test
@@ -81,7 +81,7 @@ class FlagControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("제목이 정확히 20자이면 201을 반환한다")
     void createFlag_TitleAtMaxLength_Returns201() throws Exception {
-        given(flagHostUseCase.hostFlag(any())).willReturn(1L);
+        given(flagHostService.hostFlag(any())).willReturn(1L);
         String maxTitle = "가".repeat(Flag.TITLE_MAX_LENGTH);
         String body = """
                 {
@@ -123,7 +123,7 @@ class FlagControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("parentFlagId가 있으면 encoreFlag()를 호출한다")
     void createFlag_Encore_CallsEncoreFlag() throws Exception {
-        given(flagHostUseCase.encoreFlag(any())).willReturn(2L);
+        given(flagHostService.encoreFlag(any())).willReturn(2L);
         String body = """
                 {
                   "parentFlagId": 1,
@@ -140,7 +140,7 @@ class FlagControllerTest extends BaseControllerTest {
                         .content(body))
                 .andExpect(status().isCreated());
 
-        verify(flagHostUseCase).encoreFlag(any());
+        verify(flagHostService).encoreFlag(any());
     }
 
     @Test
@@ -155,7 +155,7 @@ class FlagControllerTest extends BaseControllerTest {
                         .content(body))
                 .andExpect(status().isOk());
 
-        verify(flagModificationUseCase).modifyFlagDetails(any());
+        verify(flagModificationService).modifyFlagDetails(any());
     }
 
     @Test
@@ -170,7 +170,7 @@ class FlagControllerTest extends BaseControllerTest {
                         .content(body))
                 .andExpect(status().isOk());
 
-        verify(flagModificationUseCase).modifyFlagCapacity(any());
+        verify(flagModificationService).modifyFlagCapacity(any());
     }
 
     @Test
@@ -188,7 +188,7 @@ class FlagControllerTest extends BaseControllerTest {
                         .content(body))
                 .andExpect(status().isOk());
 
-        verify(flagModificationUseCase).reschedule(any());
+        verify(flagModificationService).reschedule(any());
     }
 
     @Test
@@ -197,7 +197,7 @@ class FlagControllerTest extends BaseControllerTest {
         mockMvc.perform(patch("/api/v1/flags/1/schedule/deadline"))
                 .andExpect(status().isOk());
 
-        verify(flagModificationUseCase).closeRecruitment(1L, CURRENT_USER_ID);
+        verify(flagModificationService).closeRecruitment(1L, CURRENT_USER_ID);
     }
 
     @Test
@@ -206,7 +206,7 @@ class FlagControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/flags/1"))
                 .andExpect(status().isNoContent());
 
-        verify(flagModificationUseCase).closeFlag(1L, CURRENT_USER_ID);
+        verify(flagModificationService).closeFlag(1L, CURRENT_USER_ID);
     }
 
     @Test
@@ -215,7 +215,7 @@ class FlagControllerTest extends BaseControllerTest {
         mockMvc.perform(post("/api/v1/flags/1/participants"))
                 .andExpect(status().isCreated());
 
-        verify(flagParticipationUseCase).participateInFlag(1L, CURRENT_USER_ID);
+        verify(flagParticipationService).participateInFlag(1L, CURRENT_USER_ID);
     }
 
     @Test
@@ -224,7 +224,7 @@ class FlagControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/flags/1/participants/me"))
                 .andExpect(status().isNoContent());
 
-        verify(flagParticipationUseCase).leaveFlag(1L, CURRENT_USER_ID);
+        verify(flagParticipationService).leaveFlag(1L, CURRENT_USER_ID);
     }
 
     @Test
@@ -246,7 +246,7 @@ class FlagControllerTest extends BaseControllerTest {
                         .content(body))
                 .andExpect(status().isOk());
 
-        verify(flagInvitationUseCase).updateInvitePermission(1L, CURRENT_USER_ID, 2L, true);
+        verify(flagInvitationCommandService).updateInvitePermission(1L, CURRENT_USER_ID, 2L, true);
     }
 
     @Test
@@ -280,7 +280,7 @@ class FlagControllerTest extends BaseControllerTest {
         FlagDetailResult detail = FlagDetailResult.of(
                 flag, new FlagUserInfo(CURRENT_USER_ID, "호스트", null), null, List.of(), true
         );
-        given(flagQueryUseCase.getFlagDetail(1L, CURRENT_USER_ID)).willReturn(detail);
+        given(flagQueryService.getFlagDetail(1L, CURRENT_USER_ID)).willReturn(detail);
 
         // when & then
         mockMvc.perform(get("/api/v1/flags/1"))
@@ -288,14 +288,14 @@ class FlagControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.isHost").value(true));
 
-        verify(flagQueryUseCase).getFlagDetail(1L, CURRENT_USER_ID);
+        verify(flagQueryService).getFlagDetail(1L, CURRENT_USER_ID);
     }
 
     @Test
     @DisplayName("존재하지 않는 플래그 상세 조회 시 404를 반환한다")
     void getFlagDetail_NotFound_Returns404() throws Exception {
         // given
-        given(flagQueryUseCase.getFlagDetail(999L, CURRENT_USER_ID))
+        given(flagQueryService.getFlagDetail(999L, CURRENT_USER_ID))
                 .willThrow(new FlagNotFoundException(999L));
 
         // when & then
@@ -307,20 +307,20 @@ class FlagControllerTest extends BaseControllerTest {
     @DisplayName("친구 플래그 조회 시 200을 반환하고 getFriendFlags()를 호출한다")
     void getFeedFlags_UsesDefaultPage() throws Exception {
         Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
-        given(flagQueryUseCase.getFeedFlags(CURRENT_USER_ID, pageable))
+        given(flagQueryService.getFeedFlags(CURRENT_USER_ID, pageable))
                 .willReturn(new SliceImpl<>(List.of(), pageable, false));
 
         mockMvc.perform(get("/api/v1/flags/feed"))
                 .andExpect(status().isOk());
 
-        verify(flagQueryUseCase).getFeedFlags(CURRENT_USER_ID, pageable);
+        verify(flagQueryService).getFeedFlags(CURRENT_USER_ID, pageable);
     }
 
     @Test
     @DisplayName("내 플래그 조회(HOST) 시 200을 반환하고 getFlagsByRole()를 호출한다")
     void getMyFlags_PassesCurrentUserRoleAndPage() throws Exception {
         Pageable pageable = PageRequest.of(2, 5, Sort.by(Sort.Direction.DESC, "createdAt"));
-        given(flagQueryUseCase.getFlagsByRole(CURRENT_USER_ID, FlagRole.HOST, pageable))
+        given(flagQueryService.getFlagsByRole(CURRENT_USER_ID, FlagRole.HOST, pageable))
                 .willReturn(new SliceImpl<>(List.of(), pageable, false));
 
         mockMvc.perform(get("/api/v1/flags")
@@ -329,33 +329,33 @@ class FlagControllerTest extends BaseControllerTest {
                         .param("size", "5"))
                 .andExpect(status().isOk());
 
-        verify(flagQueryUseCase).getFlagsByRole(CURRENT_USER_ID, FlagRole.HOST, pageable);
+        verify(flagQueryService).getFlagsByRole(CURRENT_USER_ID, FlagRole.HOST, pageable);
     }
 
     @Test
     @DisplayName("특정 유저 최근 플래그 조회 시 200을 반환하고 getRecentFlags()를 호출한다")
     void getProfileFlags_PassesTargetUserId() throws Exception {
         Long targetUserId = 2L;
-        given(flagQueryUseCase.getProfileFlags(targetUserId)).willReturn(List.of());
+        given(flagQueryService.getProfileFlags(targetUserId)).willReturn(List.of());
 
         mockMvc.perform(get("/api/v1/flags/profile").param("userId", String.valueOf(targetUserId)))
                 .andExpect(status().isOk());
 
-        verify(flagQueryUseCase).getProfileFlags(targetUserId);
+        verify(flagQueryService).getProfileFlags(targetUserId);
     }
 
     @Test
     @DisplayName("특정 유저 플래그 조회(PARTICIPANT) 시 200을 반환하고 getFlagsByRole()를 호출한다")
     void getMyFlags_ParticipantRole_UsesDefaultPage() throws Exception {
         Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
-        given(flagQueryUseCase.getFlagsByRole(CURRENT_USER_ID, FlagRole.PARTICIPANT, pageable))
+        given(flagQueryService.getFlagsByRole(CURRENT_USER_ID, FlagRole.PARTICIPANT, pageable))
                 .willReturn(new SliceImpl<>(List.of(), pageable, false));
 
         mockMvc.perform(get("/api/v1/flags")
                         .param("role", "PARTICIPANT"))
                 .andExpect(status().isOk());
 
-        verify(flagQueryUseCase).getFlagsByRole(CURRENT_USER_ID, FlagRole.PARTICIPANT, pageable);
+        verify(flagQueryService).getFlagsByRole(CURRENT_USER_ID, FlagRole.PARTICIPANT, pageable);
     }
 
     @Test
@@ -379,7 +379,7 @@ class FlagControllerTest extends BaseControllerTest {
     @DisplayName("모집 종료 후 탈퇴하면 409를 반환한다")
     void leave_AfterRecruitmentClosed_Returns409() throws Exception {
         willThrow(new FlagInvalidStatusException(FlagErrorCode.FLAG_RECRUITMENT_CLOSED))
-                .given(flagParticipationUseCase).leaveFlag(1L, CURRENT_USER_ID);
+                .given(flagParticipationService).leaveFlag(1L, CURRENT_USER_ID);
 
         mockMvc.perform(delete("/api/v1/flags/1/participants/me"))
                 .andExpect(status().isConflict());

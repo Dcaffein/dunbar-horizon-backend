@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.flag.application.service.invitation;
 
-import com.example.DunbarHorizon.flag.application.port.in.FlagInvitationUseCase;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
@@ -22,14 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class FlagInvitationCommandService implements FlagInvitationUseCase {
+public class FlagInvitationCommandService {
 
     private final FlagParticipationManager participationManager;
     private final FlagInvitationRepository invitationRepository;
     private final FlagRepository flagRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Override
     public void updateInvitePermission(Long flagId, Long requesterId, Long participantUserId, boolean canInvite) {
         Flag flag = flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
@@ -43,7 +41,6 @@ public class FlagInvitationCommandService implements FlagInvitationUseCase {
         flagRepository.saveParticipant(participant);
     }
 
-    @Override
     public Long invite(Long flagId, Long inviterId, Long inviteeId) {
         Flag flag = flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
@@ -62,7 +59,6 @@ public class FlagInvitationCommandService implements FlagInvitationUseCase {
         return saved.getId();
     }
 
-    @Override
     // 초대 조회가 만든 read view와 무관하게, Flag 락 뒤 최신 참여자 수로 정원을 확인해야 한다.
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void accept(Long invitationId, Long requesterId) {
@@ -74,7 +70,6 @@ public class FlagInvitationCommandService implements FlagInvitationUseCase {
         invitationRepository.deleteById(invitationId);
     }
 
-    @Override
     public void delete(Long invitationId, Long requesterId) {
         FlagInvitation invitation = invitationRepository.findById(invitationId)
                 .orElseThrow(() -> new FlagInvitationNotFoundException(invitationId));

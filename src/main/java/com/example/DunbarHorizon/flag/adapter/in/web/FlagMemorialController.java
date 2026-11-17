@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.flag.adapter.in.web;
 
 import com.example.DunbarHorizon.flag.adapter.in.web.dto.MemorialCreateRequest;
-import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialCommandUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.FlagMemorialQueryUseCase;
+import com.example.DunbarHorizon.flag.application.service.memorial.FlagMemorialCommandService;
+import com.example.DunbarHorizon.flag.application.service.memorial.FlagMemorialQueryService;
 import com.example.DunbarHorizon.flag.application.dto.result.MemorialListResult;
 import com.example.DunbarHorizon.flag.adapter.in.web.dto.MemorialUpdateRequest;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class FlagMemorialController {
 
-    private final FlagMemorialCommandUseCase memorialCommandUseCase;
-    private final FlagMemorialQueryUseCase memorialQueryUseCase;
+    private final FlagMemorialCommandService flagMemorialCommandService;
+    private final FlagMemorialQueryService flagMemorialQueryService;
 
     @PostMapping
     public ResponseEntity<Long> createMemorial(
@@ -26,7 +26,7 @@ public class FlagMemorialController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid MemorialCreateRequest request
     ) {
-        Long memorialId = memorialCommandUseCase.createMemorial(
+        Long memorialId = flagMemorialCommandService.createMemorial(
                 flagId, currentUserId, request.content()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(memorialId);
@@ -37,12 +37,12 @@ public class FlagMemorialController {
             @PathVariable Long flagId,
             @CurrentUserId Long currentUserId
     ) {
-        return ResponseEntity.ok(memorialQueryUseCase.getMemorials(flagId, currentUserId));
+        return ResponseEntity.ok(flagMemorialQueryService.getMemorials(flagId, currentUserId));
     }
 
     @GetMapping("/count")
     public ResponseEntity<Long> getMemorialCount(@PathVariable Long flagId) {
-        return ResponseEntity.ok(memorialQueryUseCase.getMemorialCount(flagId));
+        return ResponseEntity.ok(flagMemorialQueryService.getMemorialCount(flagId));
     }
 
     @PatchMapping("/{memorialId}")
@@ -52,7 +52,7 @@ public class FlagMemorialController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid MemorialUpdateRequest request
     ) {
-        memorialCommandUseCase.updateMemorial(flagId, memorialId, currentUserId, request.content());
+        flagMemorialCommandService.updateMemorial(flagId, memorialId, currentUserId, request.content());
         return ResponseEntity.ok().build();
     }
 
@@ -62,7 +62,7 @@ public class FlagMemorialController {
             @PathVariable Long memorialId,
             @CurrentUserId Long currentUserId
     ) {
-        memorialCommandUseCase.deleteMemorial(flagId, memorialId, currentUserId);
+        flagMemorialCommandService.deleteMemorial(flagId, memorialId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 }
