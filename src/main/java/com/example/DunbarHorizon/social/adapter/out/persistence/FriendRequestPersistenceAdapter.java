@@ -5,10 +5,12 @@ import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendReques
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestId;
 import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestConflictException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.OptimisticLockException;
 import jakarta.persistence.PersistenceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -61,7 +63,21 @@ public class FriendRequestPersistenceAdapter implements FriendRequestRepository 
     }
 
     @Override
+    public void saveStatus(FriendRequest request) {
+        flushOrConflict(request);
+    }
+
+    @Override
     public void delete(FriendRequest request) {
         entityManager.remove(request);
+        flushOrConflict(request);
+    }
+
+    private void flushOrConflict(FriendRequest request) {
+        try {
+            entityManager.flush();
+        } catch (OptimisticLockException e) {
+            throw new FriendRequestConflictException(request.getRequesterId(), request.getReceiverId());
+        }
     }
 }

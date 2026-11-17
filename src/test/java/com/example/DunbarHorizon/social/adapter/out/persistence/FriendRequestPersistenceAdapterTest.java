@@ -5,9 +5,9 @@ import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
 import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestConflictException;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
-import jakarta.persistence.OptimisticLockException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -103,8 +103,8 @@ class FriendRequestPersistenceAdapterTest {
     }
 
     @Test
-    @DisplayName("읽은 뒤 요청이 지워졌으면 삭제와 상태 변경은 낙관적 잠금 실패로 끝난다")
-    void deleteAndUpdate_FailOptimistically_DeletedAfterLoad() {
+    @DisplayName("읽은 뒤 요청이 지워졌으면 삭제는 영향 행 0건으로 요청 충돌이 된다")
+    void delete_ThrowsConflict_DeletedAfterLoad() {
         // given
         friendRequestPersistenceAdapter.create(FriendTestFactory.createRequest(low.getId(), high.getId()));
         testEntityManager.clear();
@@ -112,13 +112,13 @@ class FriendRequestPersistenceAdapterTest {
         jdbcTemplate.update("DELETE FROM friend_requests WHERE requester_id = ?", low.getId());
 
         // when & then
-        friendRequestPersistenceAdapter.delete(toDelete);
-        assertThatThrownBy(testEntityManager::flush).isInstanceOf(OptimisticLockException.class);
+        assertThatThrownBy(() -> friendRequestPersistenceAdapter.delete(toDelete))
+                .isInstanceOf(FriendRequestConflictException.class);
     }
 
     @Test
-    @DisplayName("상태 변경은 더티 체킹으로 저장되고, 읽은 뒤 지워졌으면 낙관적 잠금 실패로 끝난다")
-    void updateStatus_PersistsOrFailsOptimistically() {
+    @DisplayName("상태 변경은 saveStatus로 저장되고, 읽은 뒤 지워졌으면 영향 행 0건으로 요청 충돌이 된다")
+    void saveStatus_PersistsOrThrowsConflict() {
         // given
         friendRequestPersistenceAdapter.create(FriendTestFactory.createRequest(low.getId(), high.getId()));
         testEntityManager.clear();
@@ -126,7 +126,7 @@ class FriendRequestPersistenceAdapterTest {
 
         // when
         loaded.updateStatus(high.getId(), FriendRequestStatus.HIDDEN);
-        testEntityManager.flush();
+        friendRequestPersistenceAdapter.saveStatus(loaded);
         testEntityManager.clear();
 
         // then
@@ -134,7 +134,8 @@ class FriendRequestPersistenceAdapterTest {
         assertThat(hidden.getStatus()).isEqualTo(FriendRequestStatus.HIDDEN);
         jdbcTemplate.update("DELETE FROM friend_requests WHERE requester_id = ?", low.getId());
         hidden.updateStatus(high.getId(), FriendRequestStatus.PENDING);
-        assertThatThrownBy(testEntityManager::flush).isInstanceOf(OptimisticLockException.class);
+        assertThatThrownBy(() -> friendRequestPersistenceAdapter.saveStatus(hidden))
+                .isInstanceOf(FriendRequestConflictException.class);
     }
 
     private User createUser(String nickname) {

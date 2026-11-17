@@ -60,6 +60,7 @@ public class FriendRequestService implements FriendRequestUseCase {
                 .orElseThrow(() -> new FriendRequestNotFoundException(currentUserId, counterpartId));
         request.updateStatus(currentUserId, status);
         if (!request.isAccepted()) {
+            friendRequestRepository.saveStatus(request);
             return;
         }
 

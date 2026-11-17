@@ -10,6 +10,7 @@ import com.example.DunbarHorizon.social.application.service.FriendshipCommandSer
 import com.example.DunbarHorizon.social.application.service.MySqlLabelService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipConflictException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
 import com.example.DunbarHorizon.social.domain.label.LabelFactory;
@@ -22,7 +23,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
-import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -247,7 +247,7 @@ class FriendshipLifecycleMysqlTest {
         // when & then
         assertThatThrownBy(() -> lifecycle.updateFriendship(first, second,
                 new FriendshipUpdateCommand(first, second, "친구", null, null)))
-                .isInstanceOf(OptimisticLockingFailureException.class);
+                .isInstanceOf(FriendshipConflictException.class);
     }
 
     private void connect(double interestScore) {

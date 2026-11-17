@@ -17,18 +17,15 @@ import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
 import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
 import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestConflictException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
-import org.springframework.boot.autoconfigure.dao.PersistenceExceptionTranslationAutoConfiguration;
 import org.springframework.context.annotation.Import;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
@@ -52,7 +49,6 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 
 @JpaRepositoryTest
-@ImportAutoConfiguration(PersistenceExceptionTranslationAutoConfiguration.class)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendRequestPersistenceAdapter.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class,
         FriendRequestService.class, FriendRequestViewJdbcRepository.class,
@@ -136,8 +132,7 @@ class FriendRequestLifecycleMysqlTest {
 
         // when & then
         assertThatThrownBy(() -> friendRequestService.updateStatus(high, low, FriendRequestStatus.ACCEPTED))
-                .isInstanceOf(InvalidDataAccessApiUsageException.class)
-                .hasCauseInstanceOf(IllegalStateException.class);
+                .isInstanceOf(IllegalStateException.class);
         assertThat(friendshipPersistenceAdapter.existsFriendshipBetween(low, high)).isFalse();
         assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).get().extracting(FriendRequest::getStatus)
                 .isEqualTo(FriendRequestStatus.PENDING);
@@ -218,7 +213,7 @@ class FriendRequestLifecycleMysqlTest {
             }
 
             // then
-            assertThat(accept.get(10, TimeUnit.SECONDS)).isEqualTo(ObjectOptimisticLockingFailureException.class);
+            assertThat(accept.get(10, TimeUnit.SECONDS)).isEqualTo(FriendRequestConflictException.class);
         }
         assertThat(friendshipPersistenceAdapter.existsFriendshipBetween(low, high)).isFalse();
         assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).isEmpty();
@@ -234,12 +229,11 @@ class FriendRequestLifecycleMysqlTest {
         CountDownLatch resume = new CountDownLatch(1);
         AtomicBoolean firstDelete = new AtomicBoolean(true);
         doAnswer(invocation -> {
-            Object result = invocation.callRealMethod();
             if (firstDelete.getAndSet(false)) {
                 cancelLoaded.countDown();
                 await(resume);
             }
-            return result;
+            return invocation.callRealMethod();
         }).when(friendRequestPersistenceAdapter).delete(any(FriendRequest.class));
 
         // when
@@ -256,7 +250,7 @@ class FriendRequestLifecycleMysqlTest {
             }
 
             // then
-            assertThat(cancel.get(10, TimeUnit.SECONDS)).isEqualTo(ObjectOptimisticLockingFailureException.class);
+            assertThat(cancel.get(10, TimeUnit.SECONDS)).isEqualTo(FriendRequestConflictException.class);
         }
         assertThat(friendshipPersistenceAdapter.existsFriendshipBetween(low, high)).isTrue();
         assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).isEmpty();
@@ -289,7 +283,7 @@ class FriendRequestLifecycleMysqlTest {
         // then
         assertThat(outcomes).filteredOn(Void.class::equals).hasSize(1);
         assertThat(outcomes).filteredOn(outcome -> !Void.class.equals(outcome)).singleElement()
-                .isIn(AlreadyFriendsException.class, ObjectOptimisticLockingFailureException.class);
+                .isIn(AlreadyFriendsException.class, FriendRequestConflictException.class);
         assertThat(friendshipPersistenceAdapter.existsFriendshipBetween(low, high)).isTrue();
         assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).isEmpty();
         assertThat(acceptedEvents.events).hasSize(1);

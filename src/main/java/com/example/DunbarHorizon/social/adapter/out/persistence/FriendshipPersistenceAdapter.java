@@ -9,9 +9,11 @@ import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepo
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipId;
 import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipConflictException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.OptimisticLockException;
 import jakarta.persistence.PersistenceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -54,6 +56,15 @@ public class FriendshipPersistenceAdapter
         }
         var key = FriendshipKey.of(userId, friendId);
         return friendshipJpaRepository.findById(new FriendshipId(key.low(), key.high()));
+    }
+
+    @Override
+    public void saveSettings(Friendship friendship) {
+        try {
+            entityManager.flush();
+        } catch (OptimisticLockException e) {
+            throw new FriendshipConflictException(friendship.getLower().getOwnerId(), friendship.getHigher().getOwnerId());
+        }
     }
 
     @Override
