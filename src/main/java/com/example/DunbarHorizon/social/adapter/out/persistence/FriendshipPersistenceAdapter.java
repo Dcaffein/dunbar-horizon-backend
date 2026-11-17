@@ -14,7 +14,6 @@ import jakarta.persistence.PersistenceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,8 +27,6 @@ import java.util.Set;
 public class FriendshipPersistenceAdapter
         implements FriendshipRepository, FriendshipScoreRepository, FriendshipLockRepository, FriendshipIdRepository {
 
-    private static final int MYSQL_DUPLICATE_KEY = 1062;
-
     private final FriendshipJpaRepository jpa;
     private final FriendshipJdbcRepository jdbc;
     private final EntityManager entityManager;
@@ -40,7 +37,7 @@ public class FriendshipPersistenceAdapter
             entityManager.persist(friendship);
             entityManager.flush();
         } catch (PersistenceException e) {
-            if (e instanceof EntityExistsException || isDuplicateKey(e)) {
+            if (e instanceof EntityExistsException || PersistenceErrors.isDuplicateKey(e)) {
                 throw new AlreadyFriendsException(friendship.getLower().getOwnerId(), friendship.getHigher().getOwnerId());
             }
             throw e;
@@ -119,14 +116,5 @@ public class FriendshipPersistenceAdapter
 
     private static List<FriendshipKey> pairs(Collection<FriendshipKey> keys) {
         return keys.stream().filter(FriendshipKey::isPair).distinct().toList();
-    }
-
-    private static boolean isDuplicateKey(Throwable e) {
-        for (Throwable cause = e; cause != null; cause = cause.getCause()) {
-            if (cause instanceof SQLException sql && sql.getErrorCode() == MYSQL_DUPLICATE_KEY) {
-                return true;
-            }
-        }
-        return false;
     }
 }

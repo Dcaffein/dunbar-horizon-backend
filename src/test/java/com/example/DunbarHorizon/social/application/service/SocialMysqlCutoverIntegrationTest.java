@@ -97,9 +97,9 @@ class SocialMysqlCutoverIntegrationTest {
         jdbc.update("INSERT INTO labels (id, owner_id, name) VALUES (?, ?, '동네')", LABEL_ID, ANCHOR);
         jdbc.update("INSERT INTO label_members (label_id, member_id) VALUES (?, ?), (?, ?)", LABEL_ID, ME, LABEL_ID, TARGET);
         jdbc.update("""
-                INSERT INTO friend_requests (low_user_id, high_user_id, requester_id, receiver_id, created_at, status)
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'PENDING')
-                """, ME, REQUESTER, REQUESTER, ME);
+                INSERT INTO friend_requests (requester_id, receiver_id, created_at, status)
+                VALUES (?, ?, CURRENT_TIMESTAMP, 'PENDING')
+                """, REQUESTER, ME);
 
         // when & then
         assertThat(app.containsBean("neo4jDriver")).isFalse();
