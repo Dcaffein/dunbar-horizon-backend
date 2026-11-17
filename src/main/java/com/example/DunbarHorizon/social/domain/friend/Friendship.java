@@ -14,7 +14,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.DynamicUpdate;
-import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,9 +21,6 @@ import java.util.Set;
 
 @Entity
 @DynamicUpdate
-@SQLRestriction("""
-        EXISTS (SELECT 1 FROM users u WHERE u.user_id = low_user_id AND u.status = 'ACTIVE')
-        AND EXISTS (SELECT 1 FROM users u WHERE u.user_id = high_user_id AND u.status = 'ACTIVE')""")
 @Table(name = "friendships")
 @IdClass(FriendshipId.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
