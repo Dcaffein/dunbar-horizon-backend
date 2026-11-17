@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.buzz.application.port.in.command;
+package com.example.DunbarHorizon.buzz.application.dto.command;
 
 import com.example.DunbarHorizon.buzz.application.dto.info.RecipientSpec;
 

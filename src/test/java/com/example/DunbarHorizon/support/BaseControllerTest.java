@@ -8,8 +8,7 @@ import com.example.DunbarHorizon.account.application.service.VerificationService
 import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.notification.application.NotificationService;
-import com.example.DunbarHorizon.buzz.application.port.in.BuzzCommandUseCase;
-import com.example.DunbarHorizon.buzz.application.port.in.BuzzQueryUseCase;
+import com.example.DunbarHorizon.buzz.application.service.BuzzService;
 import com.example.DunbarHorizon.flag.application.port.in.*;
 import com.example.DunbarHorizon.global.security.JwtAuthenticationFilter;
 import com.example.DunbarHorizon.global.security.JwtTokenProvider;
@@ -51,8 +50,7 @@ public abstract class BaseControllerTest {
     @MockitoBean protected ProfileImageStoragePort profileImageStoragePort;
     @MockitoBean protected ImageStoragePort imageStoragePort;
 
-    @MockitoBean protected BuzzCommandUseCase buzzCommandUseCase;
-    @MockitoBean protected BuzzQueryUseCase buzzQueryUseCase;
+    @MockitoBean protected BuzzService buzzService;
 
     @MockitoBean protected FlagHostUseCase flagHostUseCase;
     @MockitoBean protected FlagModificationUseCase flagModificationUseCase;
