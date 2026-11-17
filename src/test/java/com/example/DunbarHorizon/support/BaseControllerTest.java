@@ -18,7 +18,7 @@ import com.example.DunbarHorizon.social.application.port.in.*;
 import com.example.DunbarHorizon.social.application.port.in.LabelCommandUseCase;
 import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
 import com.example.DunbarHorizon.notification.application.NotificationService;
-import com.example.DunbarHorizon.trace.application.port.in.TraceCommandUseCase;
+import com.example.DunbarHorizon.trace.application.TraceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -80,7 +80,7 @@ public abstract class BaseControllerTest {
     @MockitoBean protected SocialConnectionPathQueryUseCase socialConnectionPathQueryUseCase;
     @MockitoBean protected com.example.DunbarHorizon.social.application.port.in.SocialUserQueryUseCase socialUserQueryUseCase;
 
-    @MockitoBean protected TraceCommandUseCase traceCommandUseCase;
+    @MockitoBean protected TraceService traceService;
 
     // TODO: NotificationController가 구체 서비스를 직접 주입받음 — 포트 인터페이스 분리 필요 (별도 task)
     @MockitoBean protected NotificationService notificationService;
