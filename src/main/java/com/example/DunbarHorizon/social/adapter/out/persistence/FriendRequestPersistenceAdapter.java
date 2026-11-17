@@ -45,12 +45,18 @@ public class FriendRequestPersistenceAdapter implements FriendRequestRepository 
 
     @Override
     public Optional<FriendRequest> findBetween(Long userId, Long counterpartId) {
+        if (!activeUserJpaRepository.areActive(userId, counterpartId)) {
+            return Optional.empty();
+        }
         return friendRequestJpaRepository.findById(new FriendRequestId(userId, counterpartId))
                 .or(() -> friendRequestJpaRepository.findById(new FriendRequestId(counterpartId, userId)));
     }
 
     @Override
     public boolean existsBetween(Long userId, Long counterpartId) {
+        if (!activeUserJpaRepository.areActive(userId, counterpartId)) {
+            return false;
+        }
         return friendRequestJpaRepository.existsById(new FriendRequestId(userId, counterpartId))
                 || friendRequestJpaRepository.existsById(new FriendRequestId(counterpartId, userId));
     }

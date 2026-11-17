@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUserJpaRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendshipJpaRepository;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipIdRepository;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepository;
@@ -30,6 +31,7 @@ public class FriendshipPersistenceAdapter
 
     private final FriendshipJpaRepository friendshipJpaRepository;
     private final FriendshipJdbcRepository friendshipJdbcRepository;
+    private final ActiveUserJpaRepository activeUserJpaRepository;
     private final EntityManager entityManager;
 
     @Override
@@ -47,6 +49,9 @@ public class FriendshipPersistenceAdapter
 
     @Override
     public Optional<Friendship> findBetween(Long userId, Long friendId) {
+        if (!activeUserJpaRepository.areActive(userId, friendId)) {
+            return Optional.empty();
+        }
         var key = FriendshipKey.of(userId, friendId);
         return friendshipJpaRepository.findById(new FriendshipId(key.low(), key.high()));
     }
@@ -60,12 +65,18 @@ public class FriendshipPersistenceAdapter
 
     @Override
     public boolean existsFriendshipBetween(Long userId, Long friendId) {
+        if (!activeUserJpaRepository.areActive(userId, friendId)) {
+            return false;
+        }
         var key = FriendshipKey.of(userId, friendId);
         return friendshipJpaRepository.existsById(new FriendshipId(key.low(), key.high()));
     }
 
     @Override
     public boolean deleteBetween(Long userId, Long friendId) {
+        if (!activeUserJpaRepository.areActive(userId, friendId)) {
+            return false;
+        }
         var key = FriendshipKey.of(userId, friendId);
         return friendshipJpaRepository.deleteBetween(key.low(), key.high()) > 0;
     }
