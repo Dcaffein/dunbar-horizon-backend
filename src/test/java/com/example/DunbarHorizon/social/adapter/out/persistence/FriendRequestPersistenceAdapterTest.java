@@ -87,6 +87,7 @@ class FriendRequestPersistenceAdapterTest {
         assertThat(friendRequestPersistenceAdapter.findBetween(low.getId(), high.getId())).isEmpty();
         assertThat(friendRequestPersistenceAdapter.existsBetween(low.getId(), high.getId())).isFalse();
         assertThat(friendRequestPersistenceAdapter.findAllByRequesterId(low.getId())).isEmpty();
+        assertThat(friendRequestPersistenceAdapter.findAllByReceiverIdAndStatus(high.getId(), FriendRequestStatus.PENDING)).isEmpty();
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM friend_requests WHERE requester_id = ?",
                 Integer.class, low.getId())).isEqualTo(1);
     }

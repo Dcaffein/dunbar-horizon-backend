@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendRequestJpaRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
+import com.example.DunbarHorizon.social.domain.friend.FriendRequestId;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
@@ -36,12 +37,14 @@ public class FriendRequestPersistenceAdapter implements FriendRequestRepository 
 
     @Override
     public Optional<FriendRequest> findBetween(Long userId, Long counterpartId) {
-        return friendRequestJpaRepository.findBetween(userId, counterpartId);
+        return friendRequestJpaRepository.findById(new FriendRequestId(userId, counterpartId))
+                .or(() -> friendRequestJpaRepository.findById(new FriendRequestId(counterpartId, userId)));
     }
 
     @Override
     public boolean existsBetween(Long userId, Long counterpartId) {
-        return friendRequestJpaRepository.countBetween(userId, counterpartId) > 0;
+        return friendRequestJpaRepository.existsById(new FriendRequestId(userId, counterpartId))
+                || friendRequestJpaRepository.existsById(new FriendRequestId(counterpartId, userId));
     }
 
     @Override
@@ -51,7 +54,7 @@ public class FriendRequestPersistenceAdapter implements FriendRequestRepository 
 
     @Override
     public List<FriendRequest> findAllByReceiverIdAndStatus(Long receiverId, FriendRequestStatus status) {
-        return friendRequestJpaRepository.findAllByReceiverIdAndStatus(receiverId, status.name());
+        return friendRequestJpaRepository.findAllByReceiverIdAndStatus(receiverId, status);
     }
 
     @Override
