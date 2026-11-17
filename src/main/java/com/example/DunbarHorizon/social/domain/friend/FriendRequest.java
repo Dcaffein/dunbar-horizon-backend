@@ -13,10 +13,14 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 
 @Entity
+@SQLRestriction("""
+        EXISTS (SELECT 1 FROM users u WHERE u.user_id = requester_id AND u.status = 'ACTIVE')
+        AND EXISTS (SELECT 1 FROM users u WHERE u.user_id = receiver_id AND u.status = 'ACTIVE')""")
 @Table(name = "friend_requests")
 @IdClass(FriendRequestId.class)
 @Getter
