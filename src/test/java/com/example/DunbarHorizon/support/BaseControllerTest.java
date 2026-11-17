@@ -1,9 +1,10 @@
 package com.example.DunbarHorizon.support;
 
-import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
-import com.example.DunbarHorizon.account.application.port.in.SignupUseCase;
-import com.example.DunbarHorizon.account.application.port.in.UserProfileUpdateUseCase;
-import com.example.DunbarHorizon.account.application.port.in.VerificationUseCase;
+import com.example.DunbarHorizon.account.application.service.LoginService;
+import com.example.DunbarHorizon.account.application.service.SignupService;
+import com.example.DunbarHorizon.account.application.service.UserProfileUpdateService;
+import com.example.DunbarHorizon.account.application.service.UserQueryService;
+import com.example.DunbarHorizon.account.application.service.VerificationService;
 import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.notification.application.NotificationService;
@@ -41,11 +42,11 @@ public abstract class BaseControllerTest {
     @MockitoBean protected JwtAuthenticationFilter jwtAuthenticationFilter;
     @MockitoBean protected AuthCookieManager authCookieManager;
 
-    @MockitoBean protected SignupUseCase signupUseCase;
-    @MockitoBean protected LoginUseCase loginUseCase;
-    @MockitoBean protected VerificationUseCase verificationUseCase;
-    @MockitoBean protected UserProfileUpdateUseCase userProfileUpdateUseCase;
-    @MockitoBean protected com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase userQueryUseCase;
+    @MockitoBean protected SignupService signupService;
+    @MockitoBean protected LoginService loginService;
+    @MockitoBean protected VerificationService verificationService;
+    @MockitoBean protected UserProfileUpdateService userProfileUpdateService;
+    @MockitoBean protected UserQueryService userQueryService;
 
     @MockitoBean protected ProfileImageStoragePort profileImageStoragePort;
     @MockitoBean protected ImageStoragePort imageStoragePort;

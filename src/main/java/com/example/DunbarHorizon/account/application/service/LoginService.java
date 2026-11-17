@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.account.application.service;
 
-import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
 import com.example.DunbarHorizon.account.domain.exception.RefreshTokenNotFoundException;
 import com.example.DunbarHorizon.global.event.DeviceTokenDeregisteredEvent;
 import com.example.DunbarHorizon.global.security.AuthPrincipal;
@@ -29,7 +28,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class LoginService implements LoginUseCase {
+public class LoginService {
     private final UserRepository userRepository;
     private final AuthRepository authRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -42,7 +41,6 @@ public class LoginService implements LoginUseCase {
      * 응답이 갈리면 비밀번호를 몰라도 상태코드만으로 가입 여부를 판별할 수 있기 때문이다.
      * 사유는 로그로만 남긴다.
      */
-    @Override
     @Transactional
     public AuthTokenResult login(String email, String password) {
         User user = userRepository.findByEmail(email)
@@ -65,7 +63,6 @@ public class LoginService implements LoginUseCase {
         return issueTokens(user);
     }
 
-    @Override
     public AuthTokenResult issueTokens(User user) {
         AuthPrincipal principal = new AuthPrincipal(user.getId(), user.getRole().getKey());
         String accessToken = authTokenProvider.createAccessToken(principal);
@@ -84,7 +81,6 @@ public class LoginService implements LoginUseCase {
         return new AuthTokenResult(accessToken, refreshTokenValue);
     }
 
-    @Override
     public AuthTokenResult reissue(String oldRefreshTokenValue) {
         // 쿠키 부재는 토큰 파싱까지 가기 전에 걸러낸다. 그대로 넘기면 파싱 단계에서
         // InvalidTokenException으로 뭉뚱그려져 "만료"와 "애초에 로그인 상태가 아님"이 구분되지 않는다.
@@ -117,7 +113,6 @@ public class LoginService implements LoginUseCase {
         return new AuthTokenResult(newAccessToken, newRefreshToken);
     }
 
-    @Override
     public void logout(String refreshTokenValue, String fcmToken) {
         if (refreshTokenValue != null && !refreshTokenValue.isBlank()) {
             refreshTokenRepository.deleteByTokenValue(refreshTokenValue);

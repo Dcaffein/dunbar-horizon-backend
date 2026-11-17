@@ -33,7 +33,7 @@ class AccountControllerTest extends BaseControllerTest {
     @DisplayName("회원가입 완료 시 쿠키를 설정하고 201 Created를 반환한다")
     void signup_Success() throws Exception {
         SignupRequestDto request = new SignupRequestDto("valid-token", "tester", "Pw123!@#");
-        given(signupUseCase.signup(anyString(), anyString(), anyString()))
+        given(signupService.signup(anyString(), anyString(), anyString()))
                 .willReturn(new AuthTokenResult("access-token", "refresh-token"));
 
         mockMvc.perform(post("/api/v1/auth/users")
@@ -42,7 +42,7 @@ class AccountControllerTest extends BaseControllerTest {
                 .andExpect(status().isCreated());
 
         // 이메일은 받지 않는다 — 토큰이 가리키는 값을 서버가 쓴다
-        verify(signupUseCase).signup(eq("valid-token"), eq("Pw123!@#"), eq("tester"));
+        verify(signupService).signup(eq("valid-token"), eq("Pw123!@#"), eq("tester"));
         verify(authCookieManager).addAccessTokenCookie(any(), eq("access-token"));
         verify(authCookieManager).addRefreshTokenCookie(any(), eq("refresh-token"));
     }
@@ -51,7 +51,7 @@ class AccountControllerTest extends BaseControllerTest {
     @DisplayName("만료된 토큰으로 회원가입 완료 시 410을 반환하고 쿠키를 설정하지 않는다")
     void signup_ExpiredToken() throws Exception {
         SignupRequestDto request = new SignupRequestDto("expired-token", "tester", "Pw123!@#");
-        given(signupUseCase.signup(anyString(), anyString(), anyString()))
+        given(signupService.signup(anyString(), anyString(), anyString()))
                 .willThrow(new InvalidVerificationTokenException());
 
         mockMvc.perform(post("/api/v1/auth/users")
@@ -67,7 +67,7 @@ class AccountControllerTest extends BaseControllerTest {
     @DisplayName("로그인 실패 시 401과 사유를 드러내지 않는 메시지를 반환한다")
     void login_Failure_Returns401() throws Exception {
         LoginRequestDto request = new LoginRequestDto("test@test.com", "wrong-password");
-        given(loginUseCase.login(anyString(), anyString()))
+        given(loginService.login(anyString(), anyString()))
                 .willThrow(new InvalidCredentialsException("user@example.com"));
 
         mockMvc.perform(post("/api/v1/auth/tokens")
@@ -84,7 +84,7 @@ class AccountControllerTest extends BaseControllerTest {
         LoginRequestDto request = new LoginRequestDto("test@test.com", "password123");
         AuthTokenResult result = new AuthTokenResult("access-token", "refresh-token");
 
-        given(loginUseCase.login(anyString(), anyString())).willReturn(result);
+        given(loginService.login(anyString(), anyString())).willReturn(result);
 
         mockMvc.perform(post("/api/v1/auth/tokens")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -102,7 +102,7 @@ class AccountControllerTest extends BaseControllerTest {
                         .cookie(new Cookie("refresh_token", "some-rt")))
                 .andExpect(status().isNoContent());
 
-        verify(loginUseCase).logout(eq("some-rt"), isNull());
+        verify(loginService).logout(eq("some-rt"), isNull());
         verify(authCookieManager).addExpiredTokenCookie(any());
     }
 
@@ -112,7 +112,7 @@ class AccountControllerTest extends BaseControllerTest {
         String oldRt = "old-rt";
         AuthTokenResult newResult = new AuthTokenResult("new-at", "new-rt");
 
-        given(loginUseCase.reissue(oldRt)).willReturn(newResult);
+        given(loginService.reissue(oldRt)).willReturn(newResult);
 
         mockMvc.perform(patch("/api/v1/auth/tokens")
                         .cookie(new Cookie("refresh_token", oldRt)))
@@ -128,7 +128,7 @@ class AccountControllerTest extends BaseControllerTest {
         // given - 전 사용자가 7일마다 겪는 정상 흐름이다. 과거에는 500이 나가
         //         프론트의 401 재로그인 분기를 비껴갔다.
         String oldRt = "expired-rt";
-        given(loginUseCase.reissue(oldRt)).willThrow(new ExpiredTokenException());
+        given(loginService.reissue(oldRt)).willThrow(new ExpiredTokenException());
 
         // when & then
         mockMvc.perform(patch("/api/v1/auth/tokens")
@@ -143,7 +143,7 @@ class AccountControllerTest extends BaseControllerTest {
     void reissue_Invalid_Returns401() throws Exception {
         // given
         String forgedRt = "forged-rt";
-        given(loginUseCase.reissue(forgedRt)).willThrow(new InvalidTokenException());
+        given(loginService.reissue(forgedRt)).willThrow(new InvalidTokenException());
 
         // when & then
         mockMvc.perform(patch("/api/v1/auth/tokens")
@@ -156,7 +156,7 @@ class AccountControllerTest extends BaseControllerTest {
     @DisplayName("재발급 시 refresh_token 쿠키가 없으면 401과 RefreshTokenNotFoundException을 반환한다")
     void reissue_NoCookie_Returns401() throws Exception {
         // given - @CookieValue(required = false)이므로 null이 그대로 유스케이스에 전달된다
-        given(loginUseCase.reissue(null)).willThrow(new RefreshTokenNotFoundException());
+        given(loginService.reissue(null)).willThrow(new RefreshTokenNotFoundException());
 
         // when & then
         mockMvc.perform(patch("/api/v1/auth/tokens"))
@@ -169,7 +169,7 @@ class AccountControllerTest extends BaseControllerTest {
     void reissue_TokenTheft_Returns403() throws Exception {
         // given - 만료·위조(401)와 달리 재사용 탐지는 방어 동작이므로 403을 유지한다
         String stolenRt = "stolen-rt";
-        given(loginUseCase.reissue(stolenRt)).willThrow(new TokenTheftDetectedException(1L));
+        given(loginService.reissue(stolenRt)).willThrow(new TokenTheftDetectedException(1L));
 
         // when & then
         mockMvc.perform(patch("/api/v1/auth/tokens")
@@ -188,13 +188,13 @@ class AccountControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
 
-        verify(verificationUseCase).requestVerification(eq("test@test.com"));
+        verify(verificationService).requestVerification(eq("test@test.com"));
     }
 
     @Test
     @DisplayName("토큰 유효성 확인 시 대상 이메일을 반환한다")
     void resolveVerification_Success() throws Exception {
-        given(verificationUseCase.resolveEmail("valid-token")).willReturn("test@test.com");
+        given(verificationService.resolveEmail("valid-token")).willReturn("test@test.com");
 
         mockMvc.perform(get("/api/v1/auth/verifications/{token}", "valid-token"))
                 .andExpect(status().isOk())
@@ -204,7 +204,7 @@ class AccountControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("만료된 토큰으로 유효성 확인 시 410과 InvalidVerificationTokenException을 반환한다")
     void resolveVerification_ExpiredToken() throws Exception {
-        given(verificationUseCase.resolveEmail("expired-token"))
+        given(verificationService.resolveEmail("expired-token"))
                 .willThrow(new InvalidVerificationTokenException());
 
         mockMvc.perform(get("/api/v1/auth/verifications/{token}", "expired-token"))

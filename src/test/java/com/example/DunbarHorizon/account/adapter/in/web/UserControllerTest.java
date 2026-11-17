@@ -32,7 +32,7 @@ class UserControllerTest extends BaseControllerTest {
     void getMyProfile_Success() throws Exception {
         // given
         MyProfileResult profile = new MyProfileResult(1L, "me@test.com", "나", "https://img.com/me.png");
-        given(userQueryUseCase.getMyProfile(1L)).willReturn(profile);
+        given(userQueryService.getMyProfile(1L)).willReturn(profile);
 
         // when & then
         mockMvc.perform(get("/api/v1/users/me"))
@@ -47,7 +47,7 @@ class UserControllerTest extends BaseControllerTest {
     @DisplayName("로그인한 유저가 존재하지 않으면 404를 반환한다")
     void getMyProfile_UserNotFound_Returns404() throws Exception {
         // given
-        given(userQueryUseCase.getMyProfile(1L))
+        given(userQueryService.getMyProfile(1L))
                 .willThrow(new UserNotFoundException("사용자를 찾을 수 없습니다."));
 
         // when & then
@@ -67,7 +67,7 @@ class UserControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
 
-        verify(userProfileUpdateUseCase).updateProfile(any(), eq("새닉네임"), eq("profiles/uuid-photo"));
+        verify(userProfileUpdateService).updateProfile(any(), eq("새닉네임"), eq("profiles/uuid-photo"));
     }
 
     @Test
@@ -82,7 +82,7 @@ class UserControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
 
-        verify(userProfileUpdateUseCase).updateProfile(any(), eq("새닉네임"), isNull());
+        verify(userProfileUpdateService).updateProfile(any(), eq("새닉네임"), isNull());
     }
 
     @Test
@@ -108,7 +108,7 @@ class UserControllerTest extends BaseControllerTest {
         // given
         String email = "found@test.com";
         UserProfileInfo profile = new UserProfileInfo(1L, "tester", null);
-        given(userQueryUseCase.findActiveUserByEmail(email)).willReturn(Optional.of(profile));
+        given(userQueryService.findActiveUserByEmail(email)).willReturn(Optional.of(profile));
 
         // when & then
         mockMvc.perform(get("/api/v1/users/search").param("email", email))
@@ -122,7 +122,7 @@ class UserControllerTest extends BaseControllerTest {
     void searchByEmail_UserNotFound_Returns404() throws Exception {
         // given
         String email = "notfound@test.com";
-        given(userQueryUseCase.findActiveUserByEmail(email)).willReturn(Optional.empty());
+        given(userQueryService.findActiveUserByEmail(email)).willReturn(Optional.empty());
 
         // when & then
         mockMvc.perform(get("/api/v1/users/search").param("email", email))

@@ -3,8 +3,8 @@ package com.example.DunbarHorizon.account.adapter.in.web;
 import com.example.DunbarHorizon.account.application.dto.MyProfileResult;
 import com.example.DunbarHorizon.account.application.dto.UserProfileInfo;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.UserProfileUpdateRequest;
-import com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase;
-import com.example.DunbarHorizon.account.application.port.in.UserProfileUpdateUseCase;
+import com.example.DunbarHorizon.account.application.service.UserQueryService;
+import com.example.DunbarHorizon.account.application.service.UserProfileUpdateService;
 import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
 import com.example.DunbarHorizon.account.domain.exception.UserNotFoundException;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
@@ -25,20 +25,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserQueryUseCase userQueryUseCase;
-    private final UserProfileUpdateUseCase userProfileUpdateUseCase;
+    private final UserQueryService userQueryService;
+    private final UserProfileUpdateService userProfileUpdateService;
     private final ProfileImageStoragePort profileImageStoragePort;
 
     @GetMapping("/me")
     public ResponseEntity<MyProfileResult> getMyProfile(@CurrentUserId Long currentUserId) {
-        return ResponseEntity.ok(userQueryUseCase.getMyProfile(currentUserId));
+        return ResponseEntity.ok(userQueryService.getMyProfile(currentUserId));
     }
 
     @PatchMapping("/me")
     public ResponseEntity<Void> updateProfile(
             @CurrentUserId Long userId,
             @RequestBody @Valid UserProfileUpdateRequest request) {
-        userProfileUpdateUseCase.updateProfile(userId, request.nickname(), request.profileImageKey());
+        userProfileUpdateService.updateProfile(userId, request.nickname(), request.profileImageKey());
         return ResponseEntity.ok().build();
     }
 
@@ -54,7 +54,7 @@ public class UserController {
             @CurrentUserId Long currentUserId,
             @RequestParam String email) {
 
-        UserProfileInfo result = userQueryUseCase.findActiveUserByEmail(email)
+        UserProfileInfo result = userQueryService.findActiveUserByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("해당 이메일로 등록된 사용자를 찾을 수 없습니다."));
         return ResponseEntity.ok(result);
     }

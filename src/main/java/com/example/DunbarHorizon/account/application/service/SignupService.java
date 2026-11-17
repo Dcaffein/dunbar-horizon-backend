@@ -1,8 +1,6 @@
 package com.example.DunbarHorizon.account.application.service;
 
 import com.example.DunbarHorizon.account.application.dto.AuthTokenResult;
-import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
-import com.example.DunbarHorizon.account.application.port.in.SignupUseCase;
 import com.example.DunbarHorizon.account.application.port.out.PasswordHasher;
 import com.example.DunbarHorizon.account.domain.Auth;
 import com.example.DunbarHorizon.account.domain.AuthProvider;
@@ -19,14 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class SignupService implements SignupUseCase {
+public class SignupService {
     private final UserRepository userRepository;
     private final AuthRepository authRepository;
     private final PendingSignupRepository pendingSignupRepository;
     private final PasswordHasher passwordHasher;
-    private final LoginUseCase loginUseCase;
+    private final LoginService loginService;
 
-    @Override
     public AuthTokenResult signup(String token, String password, String nickname) {
         // 조회와 삭제가 한 연산(GETDEL)이라 동시 요청이 같은 토큰으로 두 번 계정을 만들 수 없다.
         String email = pendingSignupRepository.consumeEmailByToken(token)
@@ -42,10 +39,9 @@ public class SignupService implements SignupUseCase {
         authRepository.save(Auth.createLocalAuth(user.getId(), passwordHasher.hash(password)));
 
 
-        return loginUseCase.issueTokens(user);
+        return loginService.issueTokens(user);
     }
 
-    @Override
     public User registerOAuthUser(String email, String nickname, AuthProvider provider, String providerId) {
         User user = userRepository.findByEmail(email)
                 .orElseGet(() -> userRepository.save(User.createActive(email, nickname)));

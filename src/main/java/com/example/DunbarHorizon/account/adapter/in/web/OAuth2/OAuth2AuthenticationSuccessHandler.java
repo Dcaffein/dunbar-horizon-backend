@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.account.adapter.in.web.OAuth2;
 
 import com.example.DunbarHorizon.global.security.AuthCookieManager;
-import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
+import com.example.DunbarHorizon.account.application.service.LoginService;
 import com.example.DunbarHorizon.account.application.dto.AuthTokenResult;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,7 +17,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final LoginUseCase loginUseCase;
+    private final LoginService loginService;
     private final AuthCookieManager authCookieManager;
 
     @Value("${app.frontend.base-url}")
@@ -27,7 +27,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
         CustomOAuth2User userDetails = (CustomOAuth2User) authentication.getPrincipal();
 
-        AuthTokenResult tokenResult = loginUseCase.issueTokens(userDetails.getUser());
+        AuthTokenResult tokenResult = loginService.issueTokens(userDetails.getUser());
 
         authCookieManager.addAccessTokenCookie(response, tokenResult.accessToken());
         authCookieManager.addRefreshTokenCookie(response, tokenResult.refreshToken());

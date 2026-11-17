@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.account.application;
 
-import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
+import com.example.DunbarHorizon.account.application.service.LoginService;
 import com.example.DunbarHorizon.account.application.port.out.PasswordHasher;
 import com.example.DunbarHorizon.account.application.service.SignupService;
 import com.example.DunbarHorizon.account.domain.Auth;
@@ -39,7 +39,7 @@ class SignupServiceTest {
     @Mock private AuthRepository authRepository;
     @Mock private PendingSignupRepository pendingSignupRepository;
     @Mock private PasswordHasher passwordHasher;
-    @Mock private LoginUseCase loginUseCase;
+    @Mock private LoginService loginService;
 
     private void givenUserIsAssignedId(long id) {
         given(userRepository.save(any(User.class))).willAnswer(inv -> {
@@ -71,7 +71,7 @@ class SignupServiceTest {
         assertThat(userCaptor.getValue().getStatus()).isEqualTo(UserStatus.ACTIVE);
 
         verify(authRepository).save(any(Auth.class));
-        verify(loginUseCase).issueTokens(any(User.class));
+        verify(loginService).issueTokens(any(User.class));
     }
 
     @Test
