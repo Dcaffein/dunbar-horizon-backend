@@ -1,8 +1,10 @@
 # Task-122: Label의 멤버 컬렉션을 읽기 전용으로 닫는다
 
+> 취소 · Neo4j 컬렉션 매핑을 전제로 한 작업이다. 라벨을 MySQL로 옮길 때도 조회한 컬렉션을 통해 멤버십을 변경할 수 없어야 한다.
+
 ## Background
 
-`Label`은 `Set<UserReference> members`를 `@Relationship(ATTACHED_TO)`으로 들고 있다. 그런데 멤버 추가와 교체는 `LabelMemberEnroller`가 `LabelRepository.addMember`, `replaceMembers` 같은 id 기반 명령으로 처리하고 이 컬렉션을 거치지 않는다. task-118에서 라벨 쓰기를 id 기반 Cypher로 옮긴 뒤로 쓰기 경로와 컬렉션은 완전히 분리됐다.
+`Label`은 `Set<UserReference> members`를 `@Relationship(ATTACHED_TO)`으로 들고 있다. 멤버 추가와 교체는 `LabelMemberEnroller`가 `LabelRepository.addMember`, `replaceMembers` 같은 id 기반 명령으로 처리한다.
 
 그런데 `Label`은 클래스 레벨 `@Getter`라 내부 `Set`이 그대로 노출된다. 호출부에서 `getMembers().add(...)`가 가능하다. 같은 도메인의 `Friendship`은 `getRecognitions()`에서 `List.copyOf`로 막아뒀으므로 두 기준이 공존하고 있다.
 
@@ -26,7 +28,7 @@ Label 바깥에서 멤버 컬렉션을 바꿀 수 없게 만들어, 멤버 변�
 
 ### 멤버를 조작하는 메서드를 Label에 추가하지 않는다
 
-쓰기는 id 기반 명령이 맡는다는 task-118의 결정을 유지한다. 컬렉션을 닫는 것이 목적이지 Label에 쓰기 책임을 되돌리는 것이 아니다.
+멤버 변경은 저장소의 ID 기반 명령이 맡는다.
 
 ## Out of Scope
 
