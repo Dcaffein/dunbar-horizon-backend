@@ -305,6 +305,34 @@ class LabelPersistenceAdapterTest {
         assertThat(versionOf(labelId)).isEqualTo(2);
     }
 
+    @Test
+    @DisplayName("새 라벨은 사전 조회 없이 넘긴 객체 그대로 영속 상태가 된다")
+    void save_PersistsGivenInstance_NewLabel() {
+        // given
+        Label label = LabelTestFactory.createLabel(owner.getId(), "친구");
+
+        // when
+        labelRepository.save(label);
+
+        // then
+        assertThat(em.getEntityManager().contains(label)).isTrue();
+        assertThat(versionOf(label.getId())).isZero();
+    }
+
+    @Test
+    @DisplayName("저장 시점의 멤버 기본 키 위반을 멤버 중복 예외로 변환한다")
+    void save_TranslatesPrimaryKeyViolation_DuplicateMember() {
+        // given
+        String labelId = service.createLabel(owner.getId(), "친구").getId();
+        connect(owner, first);
+        assertThat(labelRepository.findById(labelId).orElseThrow().getMemberIds()).isEmpty();
+        jdbc.update("INSERT INTO label_members (label_id, member_id) VALUES (?, ?)", labelId, first.getId());
+
+        // when & then
+        assertThatThrownBy(() -> service.addMemberToLabel(owner.getId(), labelId, first.getId()))
+                .isInstanceOf(DuplicateLabelMemberException.class);
+    }
+
     private long versionOf(String labelId) {
         return jdbc.queryForObject("SELECT version FROM labels WHERE id = ?", Long.class, labelId);
     }

@@ -8,12 +8,20 @@ final class PersistenceErrors {
     }
 
     static boolean violates(Throwable e, String constraintName) {
+        String violated = violatedConstraint(e);
+        return violated != null && violated.substring(violated.lastIndexOf('.') + 1).equals(constraintName);
+    }
+
+    static boolean violatesPrimaryKey(Throwable e, String tableName) {
+        return (tableName + ".PRIMARY").equals(violatedConstraint(e));
+    }
+
+    private static String violatedConstraint(Throwable e) {
         for (Throwable cause = e; cause != null; cause = cause.getCause()) {
             if (cause instanceof ConstraintViolationException violation && violation.getConstraintName() != null) {
-                String violated = violation.getConstraintName();
-                return violated.substring(violated.lastIndexOf('.') + 1).equals(constraintName);
+                return violation.getConstraintName();
             }
         }
-        return false;
+        return null;
     }
 }

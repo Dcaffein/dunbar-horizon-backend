@@ -4,8 +4,11 @@ import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.LabelJpaRepo
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUserJpaRepository;
 import com.example.DunbarHorizon.social.application.port.out.LabelRepository;
 import com.example.DunbarHorizon.social.domain.label.Label;
+import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelNameException;
+import com.example.DunbarHorizon.social.domain.label.exception.LabelConflictException;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.OptimisticLockException;
 import jakarta.persistence.PersistenceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -22,27 +25,25 @@ public class LabelPersistenceAdapter implements LabelRepository {
     private final EntityManager entityManager;
 
     @Override
+    public void save(Label label) {
+        labelJpaRepository.save(label);
+        flush(label);
+    }
+
+    @Override
     public void create(Label label) {
-        entityManager.persist(label);
-        saveChanges(label);
+        save(label);
     }
 
     @Override
     public void saveChanges(Label label) {
-        try {
-            entityManager.flush();
-        } catch (PersistenceException exception) {
-            if (PersistenceErrors.violates(exception, "uq_labels_owner_name")) {
-                throw new DuplicateLabelNameException(label.getOwnerId(), label.getLabelName());
-            }
-            throw exception;
-        }
+        save(label);
     }
 
     @Override
     public void delete(Label label) {
         entityManager.remove(label);
-        entityManager.flush();
+        flush(label);
     }
 
     @Override
@@ -59,5 +60,21 @@ public class LabelPersistenceAdapter implements LabelRepository {
     @Override
     public Set<String> findNamesByOwner(Long ownerId, String excludedLabelId) {
         return labelJpaRepository.findNamesByOwner(ownerId, excludedLabelId);
+    }
+
+    private void flush(Label label) {
+        try {
+            entityManager.flush();
+        } catch (OptimisticLockException exception) {
+            throw new LabelConflictException(label.getId());
+        } catch (PersistenceException exception) {
+            if (PersistenceErrors.violates(exception, "uq_labels_owner_name")) {
+                throw new DuplicateLabelNameException(label.getOwnerId(), label.getLabelName());
+            }
+            if (PersistenceErrors.violatesPrimaryKey(exception, "label_members")) {
+                throw new DuplicateLabelMemberException(label.getId());
+            }
+            throw exception;
+        }
     }
 }
