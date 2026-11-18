@@ -11,6 +11,7 @@ import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -44,6 +45,10 @@ public class Label {
             foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     @Column(name = "member_id", nullable = false)
     private Set<Long> memberIds = new HashSet<>();
+
+    @Version
+    @Getter(AccessLevel.NONE)
+    private Long version;
 
     private Label(Long ownerId, LabelName name) {
         this.id = UuidUtil.createV7().toString();

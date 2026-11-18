@@ -286,6 +286,29 @@ class LabelPersistenceAdapterTest {
         assertThat(labelJdbcRepository.findMembers(labelId)).isEmpty();
     }
 
+    @Test
+    @DisplayName("새 라벨은 버전 0으로 저장되고 이름 변경과 멤버 추가가 각각 버전을 올린다")
+    void save_IncrementsVersion_RenameAndMemberChange() {
+        // given
+        String labelId = service.createLabel(owner.getId(), "친구").getId();
+        connect(owner, first);
+        long created = versionOf(labelId);
+
+        // when
+        service.updateLabel(labelId, owner.getId(), "동료");
+        long renamed = versionOf(labelId);
+        service.addMemberToLabel(owner.getId(), labelId, first.getId());
+
+        // then
+        assertThat(created).isZero();
+        assertThat(renamed).isEqualTo(1);
+        assertThat(versionOf(labelId)).isEqualTo(2);
+    }
+
+    private long versionOf(String labelId) {
+        return jdbc.queryForObject("SELECT version FROM labels WHERE id = ?", Long.class, labelId);
+    }
+
     private User createUser(String name) {
         return em.persistAndFlush(User.createActive(name + "@mysql-labels.test", name));
     }
