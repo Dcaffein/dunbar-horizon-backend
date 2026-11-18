@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
+package com.example.DunbarHorizon.social.adapter.out.persistence.jdbc;
 
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeEdgeResult;
@@ -18,7 +18,7 @@ import java.util.Map;
 
 @Repository
 @RequiredArgsConstructor
-public class SocialNetworkMysqlRepository implements SocialNetworkRepository {
+public class SocialNetworkJdbcRepository implements SocialNetworkRepository {
 
     private static final String NETWORK_GRAPH = """
             WITH my_friends AS (
