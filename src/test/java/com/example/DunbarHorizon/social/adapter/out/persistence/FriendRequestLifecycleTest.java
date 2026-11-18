@@ -2,10 +2,14 @@ package com.example.DunbarHorizon.social.adapter.out.persistence;
 
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendRequestViewJdbcRepository;
+import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
+import com.example.DunbarHorizon.global.event.notification.NotificationType;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendRequestQueryJdbcRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipQueryJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.FriendRequestDirection;
+import com.example.DunbarHorizon.social.application.dto.result.FriendResult;
+import com.example.DunbarHorizon.social.application.eventListener.FriendshipNotificationEventListener;
 import com.example.DunbarHorizon.social.application.service.FriendRequestService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
@@ -19,12 +23,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -37,8 +43,8 @@ import static org.mockito.Mockito.doAnswer;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendRequestPersistenceAdapter.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class,
-        FriendRequestService.class, FriendshipBroker.class, FriendRequestViewJdbcRepository.class,
-        UserProfileJdbcRepository.class,
+        FriendRequestService.class, FriendshipBroker.class, FriendRequestQueryJdbcRepository.class,
+        FriendshipQueryJdbcRepository.class, FriendshipNotificationEventListener.class,
         FriendRequestLifecycleTest.AcceptedEvents.class})
 class FriendRequestLifecycleTest {
 
@@ -58,6 +64,7 @@ class FriendRequestLifecycleTest {
         low = userJpaRepository.save(User.createActive("low@mysql-requests.test", "low")).getId();
         high = userJpaRepository.save(User.createActive("high@mysql-requests.test", "high")).getId();
         acceptedEvents.events.clear();
+        acceptedEvents.notifications.clear();
     }
 
     @AfterEach
@@ -71,7 +78,10 @@ class FriendRequestLifecycleTest {
     @DisplayName("높은 ID에서 낮은 ID로 보낸 요청의 방향, 상태, 조회와 취소를 유지한다")
     void changeRequest_PreservesDirectionAndState_HighRequester() {
         // given
-        friendRequestService.sendRequest(high, low);
+        var sent = friendRequestService.sendRequest(high, low);
+        assertThat(sent.id()).isEqualTo(low + "_" + high);
+        assertThat(sent.requester()).isEqualTo(new FriendResult(high, "high"));
+        assertThat(sent.receiver()).isEqualTo(new FriendResult(low, "low"));
 
         // when
         friendRequestService.updateStatus(low, high, FriendRequestStatus.HIDDEN);
@@ -92,18 +102,26 @@ class FriendRequestLifecycleTest {
     }
 
     @Test
-    @DisplayName("수락이 커밋되면 요청이 사라지고 양방향 친구 관계와 수락 이벤트가 생긴다")
+    @DisplayName("수락이 커밋된 뒤에만 새 친구를 조회해 요청자에게 알림을 발행한다")
     void accept_CommitsFriendshipAndRemoval_PendingRequest() {
         // given
         friendRequestService.sendRequest(high, low);
 
         // when
-        friendRequestService.updateStatus(low, high, FriendRequestStatus.ACCEPTED);
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            friendRequestService.updateStatus(low, high, FriendRequestStatus.ACCEPTED);
+            assertThat(acceptedEvents.notifications).isEmpty();
+        });
 
         // then
         assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).isEmpty();
         assertThat(friendshipPersistenceAdapter.existsBetween(low, high)).isTrue();
-        assertThat(acceptedEvents.events).containsExactly(new FriendRequestAcceptedEvent(high, low, "low"));
+        assertThat(acceptedEvents.events).containsExactly(new FriendRequestAcceptedEvent(high, low));
+        assertThat(acceptedEvents.notifications).singleElement().satisfies(notification -> {
+            assertThat(notification.type()).isEqualTo(NotificationType.FRIEND_REQUEST_ACCEPT);
+            assertThat(notification.receiverIds()).containsExactly(high);
+            assertThat(notification.metadata()).containsEntry("friendId", low).containsEntry("friendName", "low");
+        });
     }
 
     @Test
@@ -125,12 +143,38 @@ class FriendRequestLifecycleTest {
         assertThat(acceptedEvents.events).isEmpty();
     }
 
+    @Test
+    @DisplayName("수락 이벤트 발행 뒤 트랜잭션이 롤백되면 알림을 발행하지 않는다")
+    void accept_SkipsNotification_RollbackAfterEventPublished() {
+        // given
+        friendRequestService.sendRequest(low, high);
+
+        // when
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            friendRequestService.updateStatus(high, low, FriendRequestStatus.ACCEPTED);
+            assertThat(friendshipPersistenceAdapter.existsBetween(low, high)).isTrue();
+            status.setRollbackOnly();
+        });
+
+        // then
+        assertThat(friendshipPersistenceAdapter.existsBetween(low, high)).isFalse();
+        assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).isPresent();
+        assertThat(acceptedEvents.events).isEmpty();
+        assertThat(acceptedEvents.notifications).isEmpty();
+    }
+
     static class AcceptedEvents {
         private final ConcurrentLinkedQueue<FriendRequestAcceptedEvent> events = new ConcurrentLinkedQueue<>();
+        private final ConcurrentLinkedQueue<NotificationEvent> notifications = new ConcurrentLinkedQueue<>();
 
         @TransactionalEventListener
         void record(FriendRequestAcceptedEvent event) {
             events.add(event);
+        }
+
+        @EventListener
+        void recordNotification(NotificationEvent notification) {
+            notifications.add(notification);
         }
     }
 }

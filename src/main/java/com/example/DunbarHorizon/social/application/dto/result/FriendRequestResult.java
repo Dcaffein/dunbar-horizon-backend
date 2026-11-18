@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.application.dto.result;
 
 import com.example.DunbarHorizon.social.application.dto.FriendRequestView;
-import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 
@@ -14,14 +13,13 @@ public record FriendRequestResult(
         FriendRequestStatus status,
         LocalDateTime createdAt
 ) {
-    public static FriendRequestResult from(FriendRequest friendRequest, Long viewerId,
-                                           UserProfile requester, UserProfile receiver) {
+    public static FriendRequestResult fromSentRequest(FriendRequest request, FriendRequestView view) {
         return new FriendRequestResult(
-                pairId(friendRequest.getRequesterId(), friendRequest.getReceiverId()),
-                requester != null ? FriendResult.from(requester) : null,
-                receiver != null ? FriendResult.from(receiver) : null,
-                friendRequest.getStatusFor(viewerId),
-                friendRequest.getCreatedAt()
+                pairId(request.getRequesterId(), request.getReceiverId()),
+                view.requesterNickname() != null ? new FriendResult(view.requesterId(), view.requesterNickname()) : null,
+                view.receiverNickname() != null ? new FriendResult(view.receiverId(), view.receiverNickname()) : null,
+                request.getStatusFor(request.getRequesterId()),
+                request.getCreatedAt()
         );
     }
 

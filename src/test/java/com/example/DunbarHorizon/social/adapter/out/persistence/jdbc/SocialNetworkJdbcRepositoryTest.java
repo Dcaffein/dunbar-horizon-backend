@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
 @Import({SocialNetworkJdbcRepository.class, SocialNetworkQueryService.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class,
-        UserProfileJdbcRepository.class, SocialNetworkExposurePolicy.class})
+        SocialNetworkExposurePolicy.class})
 class SocialNetworkJdbcRepositoryTest {
 
     @Autowired private SocialNetworkJdbcRepository repository;

@@ -6,7 +6,6 @@ import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.application.eventListener.LabelMembershipEventListener;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
@@ -42,7 +41,7 @@ import static org.assertj.core.api.Assertions.within;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, UserProfileJdbcRepository.class, LabelJdbcRepository.class,
+@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelJdbcRepository.class,
         FriendshipScoreService.class, FriendshipCommandService.class, FriendshipDecayPolicy.class,
         LabelPersistenceAdapter.class, ActiveUserPersistenceAdapter.class, LabelCommandService.class,
         LabelNamer.class, LabelMemberRegistrar.class, LabelMembershipEventListener.class})

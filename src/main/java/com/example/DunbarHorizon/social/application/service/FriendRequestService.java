@@ -3,10 +3,8 @@ package com.example.DunbarHorizon.social.application.service;
 import com.example.DunbarHorizon.global.exception.ErrorContext;
 import com.example.DunbarHorizon.social.application.dto.FriendRequestDirection;
 import com.example.DunbarHorizon.social.application.dto.FriendRequestView;
-import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
-import com.example.DunbarHorizon.social.application.port.out.FriendRequestViewRepository;
-import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
+import com.example.DunbarHorizon.social.application.port.out.FriendRequestQueryRepository;
 import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
@@ -22,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -32,8 +29,7 @@ public class FriendRequestService {
     private final FriendRequestRepository friendRequestRepository;
     private final FriendshipRepository friendshipRepository;
     private final FriendshipBroker friendshipBroker;
-    private final FriendRequestViewRepository friendRequestViewRepository;
-    private final UserProfileRepository userProfileRepository;
+    private final FriendRequestQueryRepository friendRequestQueryRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     public FriendRequestResult sendRequest(Long currentUserId, Long counterpartId) {
@@ -41,8 +37,9 @@ public class FriendRequestService {
         boolean existingRequest = friendRequestRepository.existsBetween(currentUserId, counterpartId);
         FriendRequest request = friendshipBroker.propose(currentUserId, counterpartId, existingFriendship, existingRequest);
         friendRequestRepository.create(request);
-        Map<Long, UserProfile> profiles = userProfileRepository.findActiveProfiles(List.of(currentUserId, counterpartId));
-        return FriendRequestResult.from(request, currentUserId, profiles.get(currentUserId), profiles.get(counterpartId));
+        FriendRequestView sent = friendRequestQueryRepository.findSentTo(request.getRequesterId(), request.getReceiverId())
+                .orElseThrow(() -> new IllegalStateException("Created friend request could not be read"));
+        return FriendRequestResult.fromSentRequest(request, sent);
     }
 
     public void cancelRequest(Long currentUserId, Long counterpartId) {
@@ -64,10 +61,8 @@ public class FriendRequestService {
         friendRequestRepository.delete(request);
         boolean existingFriendship = friendshipRepository.existsBetween(request.getRequesterId(), request.getReceiverId());
         friendshipRepository.create(friendshipBroker.createFrom(request, existingFriendship));
-        UserProfile receiver = userProfileRepository.findActiveProfiles(List.of(request.getReceiverId()))
-                .get(request.getReceiverId());
         applicationEventPublisher.publishEvent(
-                new FriendRequestAcceptedEvent(request.getRequesterId(), request.getReceiverId(), receiver.nickname()));
+                new FriendRequestAcceptedEvent(request.getRequesterId(), request.getReceiverId()));
     }
 
     @Transactional(readOnly = true)
@@ -78,10 +73,10 @@ public class FriendRequestService {
                 throw new FriendRequestInvalidException(SocialErrorCode.FRIEND_REQUEST_STATUS_NOT_ALLOWED_FOR_SENT,
                         ErrorContext.of("status", status));
             }
-            return toResults(currentUserId, friendRequestViewRepository.findSent(currentUserId));
+            return toResults(currentUserId, friendRequestQueryRepository.findSent(currentUserId));
         }
         FriendRequestStatus receivedStatus = status == null ? FriendRequestStatus.PENDING : status;
-        return toResults(currentUserId, friendRequestViewRepository.findReceived(currentUserId, receivedStatus));
+        return toResults(currentUserId, friendRequestQueryRepository.findReceived(currentUserId, receivedStatus));
     }
 
     private static List<FriendRequestResult> toResults(Long viewerId, List<FriendRequestView> found) {

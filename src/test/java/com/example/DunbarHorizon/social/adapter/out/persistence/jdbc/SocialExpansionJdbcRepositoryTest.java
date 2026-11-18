@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
 @Import({SocialExpansionJdbcRepository.class, SocialExpansionQueryService.class,
-        UserProfileJdbcRepository.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, AnchorRecipientStrategyAdapter.class})
+        FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, AnchorRecipientStrategyAdapter.class})
 class SocialExpansionJdbcRepositoryTest {
 
     @Autowired private SocialExpansionJdbcRepository repository;

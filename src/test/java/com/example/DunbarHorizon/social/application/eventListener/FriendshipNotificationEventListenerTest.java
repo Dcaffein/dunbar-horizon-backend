@@ -2,6 +2,8 @@ package com.example.DunbarHorizon.social.application.eventListener;
 
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
+import com.example.DunbarHorizon.social.application.dto.FriendView;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipQueryRepository;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,8 +14,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class FriendshipNotificationEventListenerTest {
@@ -24,11 +30,16 @@ class FriendshipNotificationEventListenerTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private FriendshipQueryRepository friendshipQueryRepository;
+
     @Test
     @DisplayName("친구 요청 수락 이벤트 수신 시 요청자에게 NotificationEvent를 발행한다")
     void onFriendRequestAccepted_PublishesNotificationToRequester() {
         // given
-        FriendRequestAcceptedEvent event = new FriendRequestAcceptedEvent(1L, 2L, "수락자닉네임");
+        FriendRequestAcceptedEvent event = new FriendRequestAcceptedEvent(1L, 2L);
+        given(friendshipQueryRepository.findFriend(1L, 2L)).willReturn(Optional.of(
+                new FriendView(2L, "수락자닉네임", null, "별명", 0.5, 0.5, false, true)));
 
         // when
         listener.onFriendRequestAccepted(event);
@@ -44,5 +55,18 @@ class FriendshipNotificationEventListenerTest {
         assertThat(published.type()).isEqualTo(NotificationType.FRIEND_REQUEST_ACCEPT);
         assertThat(published.metadata()).containsEntry("friendId", 2L);
         assertThat(published.metadata()).containsEntry("friendName", "수락자닉네임");
+    }
+
+    @Test
+    @DisplayName("알림을 준비할 때 활성 친구 관계를 조회할 수 없으면 발행을 건너뛴다")
+    void onFriendRequestAccepted_SkipsNotification_NoActiveFriendship() {
+        // given
+        given(friendshipQueryRepository.findFriend(1L, 2L)).willReturn(Optional.empty());
+
+        // when
+        listener.onFriendRequestAccepted(new FriendRequestAcceptedEvent(1L, 2L));
+
+        // then
+        verifyNoInteractions(eventPublisher);
     }
 }
