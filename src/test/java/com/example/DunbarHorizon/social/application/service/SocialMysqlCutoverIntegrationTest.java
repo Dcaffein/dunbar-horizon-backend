@@ -14,7 +14,6 @@ import com.example.DunbarHorizon.social.application.service.LabelQueryService;
 import com.example.DunbarHorizon.social.application.service.SocialConnectionPathQueryService;
 import com.example.DunbarHorizon.social.application.service.SocialExpansionQueryService;
 import com.example.DunbarHorizon.social.application.service.SocialNetworkQueryService;
-import com.example.DunbarHorizon.social.application.service.AccountSocialUserQueryService;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
@@ -71,7 +70,6 @@ class SocialMysqlCutoverIntegrationTest {
     @Autowired private SocialExpansionQueryService socialExpansionQueryService;
     @Autowired private SocialConnectionPathQueryService socialConnectionPathQueryService;
     @Autowired private LabelQueryService labelQueryService;
-    @Autowired private AccountSocialUserQueryService accountSocialUserQueryService;
 
     @AfterEach
     void cleanUp() {
@@ -117,7 +115,7 @@ class SocialMysqlCutoverIntegrationTest {
         assertThat(friendshipQueryService.getListenableFriendIds(ME)).containsExactlyInAnyOrder(ANCHOR, FRIEND);
 
         jdbc.update("UPDATE users SET nickname = 'renamed' WHERE user_id = ?", TARGET);
-        assertThat(accountSocialUserQueryService.getSocialProfile(TARGET).nickname()).isEqualTo("renamed");
+        assertThat(friendshipQueryService.getSocialProfile(TARGET).nickname()).isEqualTo("renamed");
         assertThat(labelQueryService.getLabelMembers(ANCHOR, LABEL_ID)).contains(new LabelMemberResult(TARGET, "renamed"));
         jdbc.update("UPDATE users SET status = 'DORMANT' WHERE user_id = ?", TARGET);
         assertThat(socialExpansionQueryService.getRecommendationsByAnchor(ME, ANCHOR)).isEmpty();

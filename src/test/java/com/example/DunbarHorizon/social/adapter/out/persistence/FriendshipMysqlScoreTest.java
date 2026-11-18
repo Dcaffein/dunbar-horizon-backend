@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.within;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelJdbcRepository.class,
         FriendshipScoreService.class, FriendshipCommandService.class, FriendshipDecayPolicy.class,
-        LabelPersistenceAdapter.class, ActiveUserPersistenceAdapter.class, LabelCommandService.class,
+        LabelPersistenceAdapter.class, LabelCommandService.class,
         LabelNamer.class, LabelMemberRegistrar.class, LabelMembershipEventListener.class})
 class FriendshipMysqlScoreTest {
 

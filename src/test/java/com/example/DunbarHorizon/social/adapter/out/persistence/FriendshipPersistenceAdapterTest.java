@@ -227,7 +227,9 @@ class FriendshipPersistenceAdapterTest {
         assertThat(repository.findBetween(me, friend)).isEmpty();
         assertThat(repository.existsBetween(me, friend)).isFalse();
         assertThat(repository.findBetweenForUpdate(me, friend)).isEmpty();
-        assertThat(repository.findFriendIdsWithSharedLock(me, List.of(friend))).isEmpty();
+        var candidates = repository.findCandidatesWithSharedLock(me, List.of(friend));
+        assertThat(candidates.activeCandidateIds()).isEmpty();
+        assertThat(candidates.lockedFriendIds()).isEmpty();
         assertThat(repository.findAllAmongForUpdate(List.of(me, friend))).isEmpty();
         assertThat(repository.deleteBetween(me, friend)).isFalse();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
@@ -245,7 +247,7 @@ class FriendshipPersistenceAdapterTest {
         assertThat(repository.findBetween(self, self)).isEmpty();
         assertThat(repository.existsBetween(self, self)).isFalse();
         assertThat(repository.findBetweenForUpdate(self, self)).isEmpty();
-        assertThat(repository.findFriendIdsWithSharedLock(self, List.of(self))).isEmpty();
+        assertThat(repository.findCandidatesWithSharedLock(self, List.of(self)).lockedFriendIds()).isEmpty();
         assertThat(repository.findAllAmongForUpdate(List.of(self, self))).isEmpty();
         assertThat(repository.deleteBetween(self, self)).isFalse();
     }
@@ -269,21 +271,23 @@ class FriendshipPersistenceAdapterTest {
 
     @Test
     @DisplayName("한 사람과 여러 사람 사이의 잠금 조회는 실제 친구 관계만 돌려준다")
-    void findFriendIdsWithSharedLock_ReturnsExistingFriendships_MixedCandidates() {
+    void findCandidatesWithSharedLock_ReturnsExistingFriendships_MixedCandidates() {
         // given
         User third = createUser("third");
         repository.create(friendship(low, high));
 
         // when
-        var locked = repository.findFriendIdsWithSharedLock(high.getId(), List.of(low.getId(), third.getId(), high.getId()));
+        var candidates = repository.findCandidatesWithSharedLock(
+                high.getId(), List.of(low.getId(), third.getId(), high.getId()));
 
         // then
-        assertThat(locked).containsExactly(low.getId());
+        assertThat(candidates.activeCandidateIds()).containsExactlyInAnyOrder(low.getId(), third.getId(), high.getId());
+        assertThat(candidates.lockedFriendIds()).containsExactly(low.getId());
     }
 
     @Test
-    @DisplayName("공유 잠금 조회는 양쪽 방향의 활성 친구만 반환하고 중복·본인·비활성 후보를 제외한다")
-    void findFriendIdsWithSharedLock_FiltersCandidates_BothDirections() {
+    @DisplayName("공유 잠금 조회는 활성 후보와 실제로 잠근 친구를 구분한다")
+    void findCandidatesWithSharedLock_FiltersCandidates_BothDirections() {
         // given
         User third = createUser("third");
         User inactive = createUser("inactive");
@@ -295,11 +299,12 @@ class FriendshipPersistenceAdapterTest {
         em.clear();
 
         // when
-        var friendIds = repository.findFriendIdsWithSharedLock(high.getId(),
+        var candidates = repository.findCandidatesWithSharedLock(high.getId(),
                 List.of(third.getId(), low.getId(), inactive.getId(), high.getId(), third.getId(), Long.MAX_VALUE));
 
         // then
-        assertThat(friendIds).containsExactlyInAnyOrder(low.getId(), third.getId());
+        assertThat(candidates.activeCandidateIds()).containsExactlyInAnyOrder(low.getId(), third.getId(), high.getId());
+        assertThat(candidates.lockedFriendIds()).containsExactlyInAnyOrder(low.getId(), third.getId());
     }
 
     @Test

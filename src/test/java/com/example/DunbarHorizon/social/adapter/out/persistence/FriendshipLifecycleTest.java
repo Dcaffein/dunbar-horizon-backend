@@ -42,7 +42,7 @@ import static org.mockito.Mockito.doAnswer;
 @JpaRepositoryTest
 @RecordApplicationEvents
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class, LabelJdbcRepository.class, ActiveUserPersistenceAdapter.class,
+@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class, LabelJdbcRepository.class,
         FriendshipCommandService.class, LabelCommandService.class, LabelNamer.class, LabelMemberRegistrar.class,
         LabelMembershipEventListener.class})
 class FriendshipLifecycleTest {

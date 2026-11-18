@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.social.application.service;
 
-import com.example.DunbarHorizon.social.application.port.out.ActiveUserLookup;
 import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup;
 import com.example.DunbarHorizon.social.application.port.out.LabelMembershipCleanup;
 import com.example.DunbarHorizon.social.application.port.out.LabelRepository;
@@ -29,11 +28,9 @@ public class LabelCommandService {
     private final LabelNamer labelNamer;
     private final LabelMemberRegistrar labelMemberRegistrar;
     private final LabelMemberFriendshipLookup labelMemberFriendshipLookup;
-    private final ActiveUserLookup activeUserLookup;
 
     public Label createLabel(Long ownerId, String name) {
-        requireActiveUser(ownerId);
-        LabelName assignedName = labelNamer.assign(name, labelRepository.findNamesByOwner(ownerId, null));
+        LabelName assignedName = assignName(ownerId, name, null);
         Label label = Label.create(ownerId, assignedName);
         labelRepository.save(label);
         return label;
@@ -42,7 +39,7 @@ public class LabelCommandService {
     public void updateLabel(String labelId, Long ownerId, String name) {
         Label label = ownedLabel(ownerId, labelId);
         if (name != null) {
-            LabelName assignedName = labelNamer.assign(name, labelRepository.findNamesByOwner(ownerId, labelId));
+            LabelName assignedName = assignName(ownerId, name, labelId);
             label.rename(assignedName);
             labelRepository.save(label);
         }
@@ -55,17 +52,19 @@ public class LabelCommandService {
 
     public void addMemberToLabel(Long ownerId, String labelId, Long memberId) {
         Label label = ownedLabel(ownerId, labelId);
-        requireActiveUser(memberId);
-        Set<Long> friendIds = labelMemberFriendshipLookup.findFriendIdsWithSharedLock(ownerId, List.of(memberId));
-        labelMemberRegistrar.addMember(label, memberId, friendIds);
+        var candidates = labelMemberFriendshipLookup.findCandidatesWithSharedLock(ownerId, List.of(memberId));
+        if (!candidates.activeCandidateIds().contains(memberId)) {
+            throw new UserReferenceNotFoundException(memberId);
+        }
+        labelMemberRegistrar.addMember(label, memberId, candidates.lockedFriendIds());
         labelRepository.save(label);
     }
 
     public void replaceLabelMembers(Long ownerId, String labelId, List<Long> memberIds) {
         Label label = ownedLabel(ownerId, labelId);
         List<Long> requestedMemberIds = memberIds == null ? List.of() : memberIds.stream().distinct().toList();
-        Set<Long> friendIds = labelMemberFriendshipLookup.findFriendIdsWithSharedLock(ownerId, requestedMemberIds);
-        labelMemberRegistrar.replaceMembers(label, requestedMemberIds, friendIds);
+        var candidates = labelMemberFriendshipLookup.findCandidatesWithSharedLock(ownerId, requestedMemberIds);
+        labelMemberRegistrar.replaceMembers(label, requestedMemberIds, candidates.lockedFriendIds());
         labelRepository.save(label);
     }
 
@@ -88,9 +87,9 @@ public class LabelCommandService {
         return label;
     }
 
-    private void requireActiveUser(Long userId) {
-        if (!activeUserLookup.isActive(userId)) {
-            throw new UserReferenceNotFoundException(userId);
-        }
+    private LabelName assignName(Long ownerId, String name, String excludedLabelId) {
+        Set<String> occupiedNames = labelRepository.findNamesOfActiveOwner(ownerId, excludedLabelId)
+                .orElseThrow(() -> new UserReferenceNotFoundException(ownerId));
+        return labelNamer.assign(name, occupiedNames);
     }
 }

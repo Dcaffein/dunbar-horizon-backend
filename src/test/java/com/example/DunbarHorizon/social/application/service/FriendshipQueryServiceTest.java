@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.application.dto.result.SocialProfileResult;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipQueryRepository;
 import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPort;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,9 +20,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
-class AccountSocialUserQueryServiceTest {
+class FriendshipQueryServiceTest {
 
-    @InjectMocks private AccountSocialUserQueryService service;
+    @InjectMocks private FriendshipQueryService service;
+    @Mock private FriendshipRepository friendshipRepository;
     @Mock private FriendshipQueryRepository friendshipQueryRepository;
     @Mock private ImageUrlResolverPort images;
 

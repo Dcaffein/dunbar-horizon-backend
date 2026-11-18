@@ -20,7 +20,7 @@ class SocialUserControllerTest extends BaseControllerTest {
     void getSocialProfile_Success() throws Exception {
         // given
         SocialProfileResult profile = new SocialProfileResult(2L, "친구", "https://img.com/friend.png");
-        given(accountSocialUserQueryService.getSocialProfile(2L)).willReturn(profile);
+        given(friendshipQueryService.getSocialProfile(2L)).willReturn(profile);
 
         // when & then
         mockMvc.perform(get("/api/v1/social/profiles/2"))
@@ -34,7 +34,7 @@ class SocialUserControllerTest extends BaseControllerTest {
     @DisplayName("존재하지 않는 유저 ID로 소셜 프로필을 조회하면 404를 반환한다")
     void getSocialProfile_UserNotFound_Returns404() throws Exception {
         // given
-        given(accountSocialUserQueryService.getSocialProfile(999L))
+        given(friendshipQueryService.getSocialProfile(999L))
                 .willThrow(new UserReferenceNotFoundException(999L));
 
         // when & then

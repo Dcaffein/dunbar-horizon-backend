@@ -22,7 +22,6 @@ import com.example.DunbarHorizon.flag.application.service.memorial.FlagMemorialQ
 import com.example.DunbarHorizon.global.security.JwtAuthenticationFilter;
 import com.example.DunbarHorizon.global.security.JwtTokenProvider;
 import com.example.DunbarHorizon.global.security.AuthCookieManager;
-import com.example.DunbarHorizon.social.application.service.AccountSocialUserQueryService;
 import com.example.DunbarHorizon.social.application.service.FriendRequestService;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.service.FriendshipQueryService;
@@ -90,7 +89,6 @@ public abstract class BaseControllerTest {
     @MockitoBean protected SocialExpansionQueryService socialExpansionQueryService;
     @MockitoBean protected SocialNetworkQueryService socialNetworkQueryService;
     @MockitoBean protected SocialConnectionPathQueryService socialConnectionPathQueryService;
-    @MockitoBean protected AccountSocialUserQueryService accountSocialUserQueryService;
 
     @MockitoBean protected TraceService traceService;
 

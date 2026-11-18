@@ -31,7 +31,7 @@ import static org.mockito.Mockito.doAnswer;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({LabelCommandService.class, LabelPersistenceAdapter.class, LabelJdbcRepository.class,
-        ActiveUserPersistenceAdapter.class, LabelNamer.class, LabelMemberRegistrar.class})
+        LabelNamer.class, LabelMemberRegistrar.class})
 class LabelDeletionTest {
 
     @Autowired private UserJpaRepository userJpaRepository;

@@ -9,5 +9,9 @@ public interface LabelRepository {
     void save(Label label);
     void delete(Label label);
     Optional<Label> findById(String labelId);
-    Set<String> findNamesByOwner(Long ownerId, String excludedLabelId);
+
+    /**
+     * Returns empty for a missing or inactive owner, and an empty set for an active owner with no matching labels.
+     */
+    Optional<Set<String>> findNamesOfActiveOwner(Long ownerId, String excludedLabelId);
 }

@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepo
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
 import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup;
+import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup.Candidates;
 import com.example.DunbarHorizon.social.application.service.LabelCommandService;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
@@ -46,7 +47,7 @@ import static org.mockito.Mockito.doAnswer;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({LabelCommandService.class, LabelPersistenceAdapter.class, LabelJdbcRepository.class,
-        ActiveUserPersistenceAdapter.class, LabelNamer.class, LabelMemberRegistrar.class})
+        LabelNamer.class, LabelMemberRegistrar.class})
 class LabelMembershipConcurrencyTest {
 
     @Autowired private UserJpaRepository userJpaRepository;
@@ -67,8 +68,11 @@ class LabelMembershipConcurrencyTest {
         first = createUser("first");
         second = createUser("second");
         third = createUser("third");
-        given(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(anyLong(), anyCollection()))
-                .willAnswer(call -> Set.copyOf(call.<Collection<Long>>getArgument(1)));
+        given(labelMemberFriendshipLookup.findCandidatesWithSharedLock(anyLong(), anyCollection()))
+                .willAnswer(call -> {
+                    Set<Long> ids = Set.copyOf(call.<Collection<Long>>getArgument(1));
+                    return new Candidates(ids, ids);
+                });
         labelId = service.createLabel(owner.getId(), "친구").getId();
     }
 

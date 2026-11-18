@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.application.service;
 
-import com.example.DunbarHorizon.social.application.port.out.ActiveUserLookup;
 import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup;
+import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup.Candidates;
 import com.example.DunbarHorizon.social.application.port.out.LabelMembershipCleanup;
 import com.example.DunbarHorizon.social.application.port.out.LabelRepository;
 import com.example.DunbarHorizon.social.domain.label.Label;
@@ -36,7 +36,6 @@ class LabelCommandServiceTest {
     @Mock private LabelRepository labelRepository;
     @Mock private LabelMembershipCleanup labelMembershipCleanup;
     @Mock private LabelMemberFriendshipLookup labelMemberFriendshipLookup;
-    @Mock private ActiveUserLookup activeUserLookup;
 
     private LabelCommandService service;
     private final Label label = LabelTestFactory.createLabel(1L, "친구");
@@ -46,15 +45,14 @@ class LabelCommandServiceTest {
         var registrar = new LabelMemberRegistrar();
         registrar.addMember(label, 2L, Set.of(2L));
         service = new LabelCommandService(labelRepository, labelMembershipCleanup, new LabelNamer(), registrar,
-                labelMemberFriendshipLookup, activeUserLookup);
+                labelMemberFriendshipLookup);
     }
 
     @Test
     @DisplayName("소유자의 기존 이름을 사용해 빈 번호를 선택하고 저장한다")
     void createLabel_SavesAvailableName_WhenRequestedNameIsOccupied() {
         // given
-        given(activeUserLookup.isActive(1L)).willReturn(true);
-        given(labelRepository.findNamesByOwner(1L, null)).willReturn(Set.of("친구", "친구 (3)"));
+        given(labelRepository.findNamesOfActiveOwner(1L, null)).willReturn(Optional.of(Set.of("친구", "친구 (3)")));
 
         // when
         Label created = service.createLabel(1L, "친구");
@@ -65,20 +63,22 @@ class LabelCommandServiceTest {
     }
 
     @Test
-    @DisplayName("활성 owner가 없으면 이름 중복 조회와 라벨 생성을 수행하지 않는다")
+    @DisplayName("이름 조회에서 활성 소유자를 찾지 못하면 사용자 없음으로 끝나고 라벨을 저장하지 않는다")
     void createLabel_Rejects_InactiveOwner() {
+        // given
+        given(labelRepository.findNamesOfActiveOwner(1L, null)).willReturn(Optional.empty());
+
         // when & then
         assertThatThrownBy(() -> service.createLabel(1L, "친구"))
                 .isInstanceOf(UserReferenceNotFoundException.class);
-        verify(activeUserLookup).isActive(1L);
-        verifyNoInteractions(labelRepository);
+        verify(labelRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("이름 변경은 자기 라벨을 제외한 중복 사실을 사용한다")
     void updateLabel_Succeeds_SameName() {
         given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
-        given(labelRepository.findNamesByOwner(1L, label.getId())).willReturn(Set.of("친구 (2)"));
+        given(labelRepository.findNamesOfActiveOwner(1L, label.getId())).willReturn(Optional.of(Set.of("친구 (2)")));
 
         service.updateLabel(label.getId(), 1L, "친구");
 
@@ -94,7 +94,7 @@ class LabelCommandServiceTest {
         service.updateLabel(label.getId(), 1L, null);
 
         verify(labelRepository, never()).save(any());
-        verify(labelRepository, never()).findNamesByOwner(any(), any());
+        verify(labelRepository, never()).findNamesOfActiveOwner(any(), any());
     }
 
     @Test
@@ -105,25 +105,26 @@ class LabelCommandServiceTest {
 
         assertThatThrownBy(() -> service.addMemberToLabel(1L, foreignLabel.getId(), 3L))
                 .isInstanceOf(LabelAuthorizationException.class);
-        verifyNoInteractions(activeUserLookup, labelMemberFriendshipLookup);
+        verifyNoInteractions(labelMemberFriendshipLookup);
     }
 
     @Test
-    @DisplayName("비활성 대상 추가는 친구 관계 조회 전에 사용자 없음으로 거부한다")
+    @DisplayName("조회 결과에서 활성 후보가 빠져 있으면 단건 추가를 사용자 없음으로 거부한다")
     void addMember_Rejects_InactiveUser() {
         given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
+        given(labelMemberFriendshipLookup.findCandidatesWithSharedLock(1L, List.of(3L)))
+                .willReturn(new Candidates(Set.of(), Set.of()));
 
         assertThatThrownBy(() -> service.addMemberToLabel(1L, label.getId(), 3L))
                 .isInstanceOf(UserReferenceNotFoundException.class);
-        verify(activeUserLookup).isActive(3L);
-        verifyNoInteractions(labelMemberFriendshipLookup);
         verify(labelRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("교체 대상의 실제 친구 ID를 전달하고 비친구면 기존 멤버를 저장하지 않는다")
     void replaceMembers_Rejects_NonFriend() {
-        given(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(1L, List.of(3L))).willReturn(Set.of());
+        given(labelMemberFriendshipLookup.findCandidatesWithSharedLock(1L, List.of(3L)))
+                .willReturn(new Candidates(Set.of(3L), Set.of()));
         given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
 
         assertThatThrownBy(() -> service.replaceLabelMembers(1L, label.getId(), List.of(3L, 3L)))
@@ -135,7 +136,8 @@ class LabelCommandServiceTest {
     @Test
     @DisplayName("null 교체 목록은 빈 목록으로 변환해 기존 멤버를 비운다")
     void replaceMembers_Clears_NullInput() {
-        given(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(1L, List.of())).willReturn(Set.of());
+        given(labelMemberFriendshipLookup.findCandidatesWithSharedLock(1L, List.of()))
+                .willReturn(new Candidates(Set.of(), Set.of()));
         given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
 
         service.replaceLabelMembers(1L, label.getId(), null);

@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.LabelJpaRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUserJpaRepository;
 import com.example.DunbarHorizon.social.application.port.out.LabelRepository;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
@@ -13,15 +12,16 @@ import jakarta.persistence.PersistenceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
 public class LabelPersistenceAdapter implements LabelRepository {
 
     private final LabelJpaRepository labelJpaRepository;
-    private final ActiveUserJpaRepository activeUserJpaRepository;
     private final EntityManager entityManager;
 
     @Override
@@ -38,13 +38,17 @@ public class LabelPersistenceAdapter implements LabelRepository {
 
     @Override
     public Optional<Label> findById(String labelId) {
-        return labelJpaRepository.findById(labelId)
-                .filter(label -> activeUserJpaRepository.existsById(label.getOwnerId()));
+        return labelJpaRepository.findByIdWithActiveOwner(labelId);
     }
 
     @Override
-    public Set<String> findNamesByOwner(Long ownerId, String excludedLabelId) {
-        return labelJpaRepository.findNamesByOwner(ownerId, excludedLabelId);
+    public Optional<Set<String>> findNamesOfActiveOwner(Long ownerId, String excludedLabelId) {
+        var names = labelJpaRepository.findNamesOfActiveOwner(ownerId, excludedLabelId);
+        if (names.isEmpty()) {
+            return Optional.empty();
+        }
+        // An active owner without other labels has one row with a null name.
+        return Optional.of(names.stream().filter(Objects::nonNull).collect(Collectors.toUnmodifiableSet()));
     }
 
     private void flush(Label label) {

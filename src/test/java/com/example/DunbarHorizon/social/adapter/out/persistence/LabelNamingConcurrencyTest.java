@@ -47,7 +47,7 @@ import static org.mockito.Mockito.verify;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({LabelCommandService.class, LabelPersistenceAdapter.class, LabelJdbcRepository.class,
-        ActiveUserPersistenceAdapter.class, LabelNamer.class, LabelMemberRegistrar.class})
+        LabelNamer.class, LabelMemberRegistrar.class})
 class LabelNamingConcurrencyTest {
 
     @Autowired private UserJpaRepository userJpaRepository;

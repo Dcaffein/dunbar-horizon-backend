@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.in.web;
 
 import com.example.DunbarHorizon.social.application.dto.result.SocialProfileResult;
-import com.example.DunbarHorizon.social.application.service.AccountSocialUserQueryService;
+import com.example.DunbarHorizon.social.application.service.FriendshipQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,10 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class SocialUserController {
 
-    private final AccountSocialUserQueryService accountSocialUserQueryService;
+    private final FriendshipQueryService friendshipQueryService;
 
     @GetMapping("/{userId}")
     public ResponseEntity<SocialProfileResult> getSocialProfile(@PathVariable Long userId) {
-        return ResponseEntity.ok(accountSocialUserQueryService.getSocialProfile(userId));
+        return ResponseEntity.ok(friendshipQueryService.getSocialProfile(userId));
     }
 }

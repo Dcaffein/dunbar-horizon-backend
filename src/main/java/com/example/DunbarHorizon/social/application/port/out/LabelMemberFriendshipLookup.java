@@ -5,8 +5,10 @@ import java.util.Set;
 
 public interface LabelMemberFriendshipLookup {
     /**
-     * Returns active friends among the candidates and holds shared locks on their relationships
-     * until the caller's transaction ends.
+     * Returns active candidates and the subset whose friendships with the owner are locked
+     * in shared mode until the caller's transaction ends.
      */
-    Set<Long> findFriendIdsWithSharedLock(Long ownerId, Collection<Long> candidateIds);
+    Candidates findCandidatesWithSharedLock(Long ownerId, Collection<Long> candidateIds);
+
+    record Candidates(Set<Long> activeCandidateIds, Set<Long> lockedFriendIds) {}
 }

@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUser;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUserJpaRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendshipJpaRepository;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
@@ -20,10 +19,12 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -83,25 +84,27 @@ public class FriendshipPersistenceAdapter
     }
 
     @Override
-    public Set<Long> findFriendIdsWithSharedLock(Long ownerId, Collection<Long> candidateIds) {
-        List<Long> candidates = candidateIds.stream()
-                .filter(candidateId -> !ownerId.equals(candidateId)).distinct().toList();
-        if (candidates.isEmpty()) {
-            return Set.of();
+    public Candidates findCandidatesWithSharedLock(Long ownerId, Collection<Long> candidateIds) {
+        if (candidateIds.isEmpty()) {
+            return new Candidates(Set.of(), Set.of());
         }
-        List<Long> userIds = new ArrayList<>(candidates);
+        Set<Long> requestedIds = new HashSet<>(candidateIds);
+        Set<Long> userIds = new HashSet<>(requestedIds);
         userIds.add(ownerId);
-        Set<Long> activeUserIds = Set.copyOf(activeUserJpaRepository.findAllById(userIds).stream()
-                .map(ActiveUser::getId).toList());
-        if (!activeUserIds.contains(ownerId)) {
-            return Set.of();
+        Set<Long> activeUserIds = activeUserJpaRepository.findActiveIds(userIds);
+        Set<Long> activeCandidateIds = activeUserIds.stream()
+                .filter(requestedIds::contains)
+                .collect(Collectors.toUnmodifiableSet());
+        List<Long> activeOtherIds = activeCandidateIds.stream()
+                .filter(candidateId -> !ownerId.equals(candidateId))
+                .toList();
+        if (!activeUserIds.contains(ownerId) || activeOtherIds.isEmpty()) {
+            return new Candidates(activeCandidateIds, Set.of());
         }
-        List<Long> activeCandidateIds = candidates.stream().filter(activeUserIds::contains).toList();
-        if (activeCandidateIds.isEmpty()) {
-            return Set.of();
-        }
-        return Set.copyOf(friendshipJpaRepository.findAllBetweenForShare(ownerId, activeCandidateIds).stream()
-                .map(friendship -> friendship.getFriendId(ownerId)).toList());
+        Set<Long> lockedFriendIds = friendshipJpaRepository.findAllBetweenForShare(ownerId, activeOtherIds).stream()
+                .map(friendship -> friendship.getFriendId(ownerId))
+                .collect(Collectors.toUnmodifiableSet());
+        return new Candidates(activeCandidateIds, lockedFriendIds);
     }
 
     @Override

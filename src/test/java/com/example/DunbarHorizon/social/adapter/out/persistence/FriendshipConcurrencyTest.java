@@ -47,7 +47,7 @@ import static org.mockito.Mockito.doAnswer;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class,
-        LabelJdbcRepository.class, ActiveUserPersistenceAdapter.class, FriendshipCommandService.class,
+        LabelJdbcRepository.class, FriendshipCommandService.class,
         LabelCommandService.class, LabelNamer.class, LabelMemberRegistrar.class, LabelMembershipEventListener.class})
 class FriendshipConcurrencyTest {
 
@@ -117,12 +117,12 @@ class FriendshipConcurrencyTest {
         var bothLocked = new CountDownLatch(2);
         var finishRegistrations = new CountDownLatch(1);
         doAnswer(call -> {
-            Object friendIds = call.callRealMethod();
+            Object candidates = call.callRealMethod();
             assertRepeatableRead();
             bothLocked.countDown();
             await(finishRegistrations);
-            return friendIds;
-        }).when(friendshipPersistenceAdapter).findFriendIdsWithSharedLock(anyLong(), anyCollection());
+            return candidates;
+        }).when(friendshipPersistenceAdapter).findCandidatesWithSharedLock(anyLong(), anyCollection());
 
         // when
         try (var workers = Executors.newFixedThreadPool(2)) {
@@ -166,12 +166,12 @@ class FriendshipConcurrencyTest {
         var finishRegistration = new CountDownLatch(1);
         var breakupEntered = new CountDownLatch(1);
         doAnswer(call -> {
-            Object friendIds = call.callRealMethod();
+            Object candidates = call.callRealMethod();
             assertRepeatableRead();
             registrationLocked.countDown();
             await(finishRegistration);
-            return friendIds;
-        }).when(friendshipPersistenceAdapter).findFriendIdsWithSharedLock(ownerId, List.of(friendId));
+            return candidates;
+        }).when(friendshipPersistenceAdapter).findCandidatesWithSharedLock(ownerId, List.of(friendId));
         doAnswer(call -> {
             assertRepeatableRead();
             breakupEntered.countDown();
@@ -212,7 +212,7 @@ class FriendshipConcurrencyTest {
             assertRepeatableRead();
             registrationEntered.countDown();
             return call.callRealMethod();
-        }).when(friendshipPersistenceAdapter).findFriendIdsWithSharedLock(ownerId, List.of(friendId));
+        }).when(friendshipPersistenceAdapter).findCandidatesWithSharedLock(ownerId, List.of(friendId));
 
         try (var workers = Executors.newFixedThreadPool(2)) {
             var breakup = workers.submit(() -> friendshipCommandService.endFriendship(friendId, ownerId));

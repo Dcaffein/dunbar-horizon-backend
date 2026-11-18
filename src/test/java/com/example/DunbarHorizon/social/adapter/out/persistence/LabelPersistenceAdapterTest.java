@@ -35,12 +35,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
-@Import({LabelJdbcRepository.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class, ActiveUserPersistenceAdapter.class,
+@Import({LabelJdbcRepository.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class,
         LabelCommandService.class, LabelQueryService.class, LabelNamer.class, LabelMemberRegistrar.class})
 class LabelPersistenceAdapterTest {
 
@@ -61,6 +62,25 @@ class LabelPersistenceAdapterTest {
         owner = createUser("owner");
         first = createUser("first");
         second = createUser("second");
+    }
+
+    @Test
+    @DisplayName("이름 조회는 이름이 없는 활성 소유자와 비활성 또는 없는 소유자를 구분한다")
+    void findNamesOfActiveOwner_DistinguishesEmptyNames_FromUnavailableOwner() {
+        // given
+        first.deactivate();
+        em.flush();
+
+        // when & then
+        assertThat(labelRepository.findNamesOfActiveOwner(owner.getId(), null)).contains(Set.of());
+        assertThat(labelRepository.findNamesOfActiveOwner(first.getId(), null)).isEmpty();
+        assertThat(labelRepository.findNamesOfActiveOwner(Long.MAX_VALUE, null)).isEmpty();
+        assertThatThrownBy(() -> service.createLabel(first.getId(), "친구"))
+                .isInstanceOf(UserReferenceNotFoundException.class);
+
+        Label label = service.createLabel(owner.getId(), "친구");
+        assertThat(labelRepository.findNamesOfActiveOwner(owner.getId(), null)).contains(Set.of("친구"));
+        assertThat(labelRepository.findNamesOfActiveOwner(owner.getId(), label.getId())).contains(Set.of());
     }
 
     @Test
@@ -131,6 +151,8 @@ class LabelPersistenceAdapterTest {
                 .isInstanceOf(DuplicateLabelMemberException.class);
         assertThatThrownBy(() -> service.addMemberToLabel(owner.getId(), label.getId(), second.getId()))
                 .isInstanceOf(FriendshipNotFoundException.class);
+        assertThatThrownBy(() -> service.addMemberToLabel(owner.getId(), label.getId(), owner.getId()))
+                .isInstanceOf(FriendshipNotFoundException.class);
         assertThat(labelQueryService.getLabelMembers(owner.getId(), label.getId())).hasSize(1);
         service.removeMemberFromLabel(owner.getId(), label.getId(), first.getId());
         assertThat(labelQueryService.getLabelMembers(owner.getId(), label.getId())).isEmpty();
@@ -147,6 +169,8 @@ class LabelPersistenceAdapterTest {
 
         // when & then
         assertThatThrownBy(() -> service.addMemberToLabel(owner.getId(), label.getId(), first.getId()))
+                .isInstanceOf(UserReferenceNotFoundException.class);
+        assertThatThrownBy(() -> service.addMemberToLabel(owner.getId(), label.getId(), Long.MAX_VALUE))
                 .isInstanceOf(UserReferenceNotFoundException.class);
         assertThat(labelQueryService.getLabelMembers(owner.getId(), label.getId())).isEmpty();
     }

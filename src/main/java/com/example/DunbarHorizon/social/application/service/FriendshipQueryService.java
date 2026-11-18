@@ -1,11 +1,13 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.FriendshipDetailResult;
+import com.example.DunbarHorizon.social.application.dto.result.SocialProfileResult;
 import com.example.DunbarHorizon.social.application.port.in.FriendshipQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipQueryRepository;
 import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPort;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
@@ -38,6 +40,12 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
         return friendshipQueryRepository.findFriend(userId, targetId)
                 .map(friend -> FriendshipDetailResult.from(friend, imageUrlResolverPort))
                 .orElseThrow(() -> new FriendshipNotFoundException(userId, targetId));
+    }
+
+    public SocialProfileResult getSocialProfile(Long userId) {
+        return friendshipQueryRepository.findActiveProfile(userId)
+                .map(profile -> SocialProfileResult.from(profile, imageUrlResolverPort))
+                .orElseThrow(() -> new UserReferenceNotFoundException(userId));
     }
 
     @Override
