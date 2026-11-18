@@ -7,7 +7,6 @@
 - 지정된 Issue의 본문을 읽고 목적, 요구사항, 설계 결정과 이유, 범위, 완료 조건을 파악한다. 필요한 댓글과 연결된 작업도 확인한다.
 - Issue 작성과 갱신은 [ISSUE-GUIDE.md](ISSUE-GUIDE.md)를 따른다. 중요한 합의는 댓글에만 남기지 않는다.
 - `CLAUDE.md`의 문서 지도에서 필요한 지침을 확인한다.
-- 이전한 작업의 원본과 GitHub Issue 번호는 [이전 Task 기록](#이전-task-기록)에서 찾을 수 있다.
 
 ## 2. 코드 탐색과 설계 재논의
 
@@ -54,18 +53,5 @@
 - 모든 단위를 구현한 뒤 Issue의 완료 조건을 확인하고 실제 변경·검증 결과·관련 커밋 또는 PR을 보고한다. 합의한 중요한 변경 이유가 Issue에 반영되어 있는지도 확인한다.
 - 구현과 검증이 끝나도 기본 브랜치에 병합되기 전에는 Issue를 닫지 않는다. 이 상태는 "구현 완료, 병합 대기"로 보고한다.
 - 병합은 사용자의 승인 범위에 따라 진행한다. 기본 브랜치 병합과 완료 조건 충족을 확인한 뒤 Issue를 닫는다. 일부 구현만 병합된 경우에는 닫지 않는다.
-- 닫힌 Issue는 당시 배경과 의사결정 기록으로 보존한다. 로컬 TASK를 `done/`으로 이동하는 완료 절차는 사용하지 않는다.
+- 닫힌 Issue는 당시 배경과 의사결정 기록으로 보존한다.
 - 후속 작업은 별도 Issue로 기록하고 연결한다. 구현 결과를 발주서 본문에 작업 일지로 반복하지 않는다.
-
-## 이전 Task 기록
-
-[완료 기록](https://github.com/Dcaffein/dunbar-horizon-backend/tree/5b47eac255f2873471d313f08989457f9291a532/harness/done)과 [취소 기록](https://github.com/Dcaffein/dunbar-horizon-backend/tree/5b47eac255f2873471d313f08989457f9291a532/harness/cancelled)은 Issue 전환 시점의 Git 커밋에 보관한다. 당시 미완료 작업은 아래 GitHub Issue에서 이어간다.
-
-| 보관 원본 | GitHub Issue |
-|---|---|
-| [Task-126](https://github.com/Dcaffein/dunbar-horizon-backend/blob/5b47eac255f2873471d313f08989457f9291a532/harness/tasks/task-126-buzz-presigned-url-storage.md) | [#1](https://github.com/Dcaffein/dunbar-horizon-backend/issues/1) |
-| [Task-142](https://github.com/Dcaffein/dunbar-horizon-backend/blob/5b47eac255f2873471d313f08989457f9291a532/harness/tasks/task-142-buzz-to-mysql.md) | [#2](https://github.com/Dcaffein/dunbar-horizon-backend/issues/2) |
-| [Task-143](https://github.com/Dcaffein/dunbar-horizon-backend/blob/5b47eac255f2873471d313f08989457f9291a532/harness/tasks/task-143-notification-to-mysql.md) | [#3](https://github.com/Dcaffein/dunbar-horizon-backend/issues/3) |
-| [Task-148](https://github.com/Dcaffein/dunbar-horizon-backend/blob/5b47eac255f2873471d313f08989457f9291a532/harness/tasks/task-148-social-data-cutover.md) | [#4](https://github.com/Dcaffein/dunbar-horizon-backend/issues/4) |
-| [Task-155](https://github.com/Dcaffein/dunbar-horizon-backend/blob/5b47eac255f2873471d313f08989457f9291a532/harness/tasks/task-155-domain-facts-from-application.md) | [#5](https://github.com/Dcaffein/dunbar-horizon-backend/issues/5) |
-| [Task-156](https://github.com/Dcaffein/dunbar-horizon-backend/blob/5b47eac255f2873471d313f08989457f9291a532/harness/tasks/task-156-domain-errors-http-mapping.md) | [#6](https://github.com/Dcaffein/dunbar-horizon-backend/issues/6) |
