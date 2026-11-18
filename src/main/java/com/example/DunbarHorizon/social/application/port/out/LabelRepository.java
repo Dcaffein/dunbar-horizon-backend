@@ -9,6 +9,5 @@ public interface LabelRepository {
     void save(Label label);
     void delete(Label label);
     Optional<Label> findById(String labelId);
-    Optional<Long> findOwnerId(String labelId);
     Set<String> findNamesByOwner(Long ownerId, String excludedLabelId);
 }

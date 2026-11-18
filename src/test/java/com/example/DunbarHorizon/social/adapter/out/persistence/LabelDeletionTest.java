@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence;
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepository;
+import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup;
 import com.example.DunbarHorizon.social.application.service.LabelCommandService;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
@@ -37,7 +37,7 @@ class LabelDeletionTest {
     @Autowired private UserJpaRepository userJpaRepository;
     @Autowired private LabelCommandService labelCommandService;
     @Autowired private JdbcTemplate jdbcTemplate;
-    @MockitoBean private FriendshipLockRepository friendshipLockRepository;
+    @MockitoBean private LabelMemberFriendshipLookup labelMemberFriendshipLookup;
     @MockitoSpyBean private LabelPersistenceAdapter labelPersistenceAdapter;
 
     private Long ownerId;

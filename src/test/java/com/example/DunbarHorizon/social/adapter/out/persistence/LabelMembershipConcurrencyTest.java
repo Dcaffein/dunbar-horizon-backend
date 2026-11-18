@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence;
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepository;
+import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup;
 import com.example.DunbarHorizon.social.application.service.LabelCommandService;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
@@ -52,7 +52,7 @@ class LabelMembershipConcurrencyTest {
     @Autowired private UserJpaRepository userJpaRepository;
     @Autowired private LabelCommandService service;
     @Autowired private JdbcTemplate jdbc;
-    @MockitoBean private FriendshipLockRepository friendshipLockRepository;
+    @MockitoBean private LabelMemberFriendshipLookup labelMemberFriendshipLookup;
     @MockitoSpyBean private LabelMemberRegistrar labelMemberRegistrar;
 
     private User owner;
@@ -67,7 +67,7 @@ class LabelMembershipConcurrencyTest {
         first = createUser("first");
         second = createUser("second");
         third = createUser("third");
-        given(friendshipLockRepository.findFriendIdsForShare(anyLong(), anyCollection()))
+        given(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(anyLong(), anyCollection()))
                 .willAnswer(call -> Set.copyOf(call.<Collection<Long>>getArgument(1)));
         labelId = service.createLabel(owner.getId(), "친구").getId();
     }

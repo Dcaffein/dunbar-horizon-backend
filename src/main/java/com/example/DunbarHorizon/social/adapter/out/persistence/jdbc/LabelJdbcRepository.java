@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.jdbc;
 
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
-import com.example.DunbarHorizon.social.application.port.out.LabelMembershipRepository;
+import com.example.DunbarHorizon.social.application.port.out.LabelMembershipCleanup;
 import com.example.DunbarHorizon.social.application.port.out.LabelQueryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -15,7 +15,7 @@ import java.util.Set;
 
 @Repository
 @RequiredArgsConstructor
-public class LabelJdbcRepository implements LabelQueryRepository, LabelMembershipRepository {
+public class LabelJdbcRepository implements LabelQueryRepository, LabelMembershipCleanup {
 
     private static final String SELECT_LABELS = """
             SELECT l.id, l.name, COUNT(u.user_id) AS member_count
@@ -34,8 +34,9 @@ public class LabelJdbcRepository implements LabelQueryRepository, LabelMembershi
     }
 
     @Override
-    public void removeMembersBetween(Long userId, Long friendId) {
-        List<Object[]> directions = List.of(new Object[]{userId, friendId}, new Object[]{friendId, userId});
+    public void removeMembershipsBetween(Long firstUserId, Long secondUserId) {
+        List<Object[]> directions = List.of(
+                new Object[]{firstUserId, secondUserId}, new Object[]{secondUserId, firstUserId});
 
         jdbc.update("""
                 DELETE lm FROM label_members lm
@@ -50,8 +51,18 @@ public class LabelJdbcRepository implements LabelQueryRepository, LabelMembershi
     }
 
     @Override
-    public Optional<LabelResult> findResultById(String labelId) {
+    public Optional<LabelResult> findById(String labelId) {
         return findResults("WHERE l.id = :id", Map.of("id", labelId)).stream().findFirst();
+    }
+
+    @Override
+    public Optional<Long> findOwnerId(String labelId) {
+        return jdbc.queryForList("""
+                SELECT l.owner_id
+                FROM labels l
+                JOIN users o ON o.user_id = l.owner_id AND o.status = 'ACTIVE'
+                WHERE l.id = :labelId
+                """, Map.of("labelId", labelId), Long.class).stream().findFirst();
     }
 
     @Override
@@ -79,7 +90,7 @@ public class LabelJdbcRepository implements LabelQueryRepository, LabelMembershi
     }
 
     @Override
-    public Set<Long> findMemberIdsByOwnerAndLabelIds(Long ownerId, List<String> labelIds) {
+    public Set<Long> findMemberIdsInOwnedLabels(Long ownerId, List<String> labelIds) {
         if (labelIds.isEmpty()) {
             return Set.of();
         }

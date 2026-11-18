@@ -10,7 +10,8 @@ import java.util.Set;
 public interface LabelQueryRepository {
     List<LabelResult> findAllByOwner(Long ownerId);
     List<LabelResult> findByOwnerAndMember(Long ownerId, Long memberId);
-    Optional<LabelResult> findResultById(String labelId);
+    Optional<LabelResult> findById(String labelId);
+    Optional<Long> findOwnerId(String labelId);
     List<LabelMemberResult> findMembers(String labelId);
-    Set<Long> findMemberIdsByOwnerAndLabelIds(Long ownerId, List<String> labelIds);
+    Set<Long> findMemberIdsInOwnedLabels(Long ownerId, List<String> labelIds);
 }

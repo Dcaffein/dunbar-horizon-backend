@@ -4,8 +4,8 @@ import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJ
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUser;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUserJpaRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendshipJpaRepository;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepository;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
+import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipConflictException;
@@ -28,7 +28,7 @@ import java.util.Set;
 @Repository
 @RequiredArgsConstructor
 public class FriendshipPersistenceAdapter
-        implements FriendshipRepository, FriendshipScoreRepository, FriendshipLockRepository {
+        implements FriendshipRepository, FriendshipScoreRepository, LabelMemberFriendshipLookup {
 
     private static final String PAIR_KEY = "PRIMARY";
 
@@ -83,25 +83,25 @@ public class FriendshipPersistenceAdapter
     }
 
     @Override
-    public Set<Long> findFriendIdsForShare(Long userId, Collection<Long> friendIds) {
-        List<Long> candidateIds = friendIds.stream()
-                .filter(friendId -> !userId.equals(friendId)).distinct().toList();
-        if (candidateIds.isEmpty()) {
+    public Set<Long> findFriendIdsWithSharedLock(Long ownerId, Collection<Long> candidateIds) {
+        List<Long> candidates = candidateIds.stream()
+                .filter(candidateId -> !ownerId.equals(candidateId)).distinct().toList();
+        if (candidates.isEmpty()) {
             return Set.of();
         }
-        List<Long> userIds = new ArrayList<>(candidateIds);
-        userIds.add(userId);
+        List<Long> userIds = new ArrayList<>(candidates);
+        userIds.add(ownerId);
         Set<Long> activeUserIds = Set.copyOf(activeUserJpaRepository.findAllById(userIds).stream()
                 .map(ActiveUser::getId).toList());
-        if (!activeUserIds.contains(userId)) {
+        if (!activeUserIds.contains(ownerId)) {
             return Set.of();
         }
-        List<Long> activeFriendIds = candidateIds.stream().filter(activeUserIds::contains).toList();
-        if (activeFriendIds.isEmpty()) {
+        List<Long> activeCandidateIds = candidates.stream().filter(activeUserIds::contains).toList();
+        if (activeCandidateIds.isEmpty()) {
             return Set.of();
         }
-        return Set.copyOf(friendshipJpaRepository.findAllBetweenForShare(userId, activeFriendIds).stream()
-                .map(friendship -> friendship.getFriendId(userId)).toList());
+        return Set.copyOf(friendshipJpaRepository.findAllBetweenForShare(ownerId, activeCandidateIds).stream()
+                .map(friendship -> friendship.getFriendId(ownerId)).toList());
     }
 
     @Override

@@ -14,6 +14,6 @@ public class LabelMembershipEventListener {
 
     @EventListener
     public void onFriendshipEnded(FriendshipEndedEvent event) {
-        labelCommandService.removeMembersBetween(event.firstUserId(), event.secondUserId());
+        labelCommandService.removeMembershipsBetween(event.firstUserId(), event.secondUserId());
     }
 }

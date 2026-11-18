@@ -280,9 +280,9 @@ class LabelPersistenceAdapterTest {
 
         // when & then
         assertThat(labelRepository.findById(labelId)).isEmpty();
-        assertThat(labelRepository.findOwnerId(labelId)).isEmpty();
+        assertThat(labelJdbcRepository.findOwnerId(labelId)).isEmpty();
         assertThat(labelJdbcRepository.findAllByOwner(owner.getId())).isEmpty();
-        assertThat(labelJdbcRepository.findResultById(labelId)).isEmpty();
+        assertThat(labelJdbcRepository.findById(labelId)).isEmpty();
         assertThat(labelJdbcRepository.findMembers(labelId)).isEmpty();
     }
 

@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
 import com.example.DunbarHorizon.social.application.port.out.LabelQueryRepository;
-import com.example.DunbarHorizon.social.application.port.out.LabelRepository;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +18,11 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class LabelQueryService implements LabelQueryUseCase {
 
-    private final LabelRepository labelRepository;
     private final LabelQueryRepository labelQueryRepository;
 
     @Override
-    public Set<Long> getMemberIdsByLabels(Long ownerId, List<String> labelIds) {
-        return labelQueryRepository.findMemberIdsByOwnerAndLabelIds(ownerId, labelIds);
+    public Set<Long> getMemberIdsInOwnedLabels(Long ownerId, List<String> labelIds) {
+        return labelQueryRepository.findMemberIdsInOwnedLabels(ownerId, labelIds);
     }
 
     public List<LabelResult> getAllLabels(Long ownerId) {
@@ -37,7 +35,7 @@ public class LabelQueryService implements LabelQueryUseCase {
 
     public LabelResult getLabelById(Long ownerId, String labelId) {
         requireOwner(ownerId, labelId);
-        return labelQueryRepository.findResultById(labelId)
+        return labelQueryRepository.findById(labelId)
                 .orElseThrow(() -> new LabelNotFoundException(labelId));
     }
 
@@ -47,7 +45,7 @@ public class LabelQueryService implements LabelQueryUseCase {
     }
 
     private void requireOwner(Long requesterId, String labelId) {
-        Long ownerId = labelRepository.findOwnerId(labelId)
+        Long ownerId = labelQueryRepository.findOwnerId(labelId)
                 .orElseThrow(() -> new LabelNotFoundException(labelId));
         if (!ownerId.equals(requesterId)) {
             throw new LabelAuthorizationException(requesterId);

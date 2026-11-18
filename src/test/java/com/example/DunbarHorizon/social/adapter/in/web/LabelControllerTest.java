@@ -12,6 +12,8 @@ import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFou
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelNameException;
+import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
+import com.example.DunbarHorizon.social.domain.label.exception.LabelNotFoundException;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
@@ -171,6 +173,18 @@ class LabelControllerTest extends BaseControllerTest {
     }
 
     @Test
+    @DisplayName("타인 소유 라벨 상세를 요청하면 403과 라벨 접근 거부 코드를 반환한다")
+    void getLabelById_ReturnsForbidden_ForeignOwner() throws Exception {
+        // given
+        given(labelQueryService.getLabelById(1L, labelId)).willThrow(new LabelAuthorizationException(1L));
+
+        // when & then
+        mockMvc.perform(get("/api/v1/labels/{labelId}", labelId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("LABEL_ACCESS_DENIED"));
+    }
+
+    @Test
     @DisplayName("특정 멤버가 속한 내 라벨 목록을 조회한다")
     void getAllLabels_ByMember() throws Exception {
         Long memberId = 2L;
@@ -196,6 +210,18 @@ class LabelControllerTest extends BaseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(2))
                 .andExpect(jsonPath("$[0].nickname").value("멤버닉네임"));
+    }
+
+    @Test
+    @DisplayName("없는 라벨의 멤버 목록을 요청하면 404와 라벨 없음 코드를 반환한다")
+    void getLabelMembers_ReturnsNotFound_MissingLabel() throws Exception {
+        // given
+        given(labelQueryService.getLabelMembers(1L, labelId)).willThrow(new LabelNotFoundException(labelId));
+
+        // when & then
+        mockMvc.perform(get("/api/v1/labels/{labelId}/members", labelId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("LABEL_NOT_FOUND"));
     }
 
     @Test

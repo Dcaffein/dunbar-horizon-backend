@@ -4,5 +4,5 @@ import java.util.List;
 import java.util.Set;
 
 public interface LabelQueryUseCase {
-    Set<Long> getMemberIdsByLabels(Long ownerId, List<String> labelIds);
+    Set<Long> getMemberIdsInOwnedLabels(Long ownerId, List<String> labelIds);
 }

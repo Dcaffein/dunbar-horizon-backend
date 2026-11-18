@@ -43,11 +43,6 @@ public class LabelPersistenceAdapter implements LabelRepository {
     }
 
     @Override
-    public Optional<Long> findOwnerId(String labelId) {
-        return findById(labelId).map(Label::getOwnerId);
-    }
-
-    @Override
     public Set<String> findNamesByOwner(Long ownerId, String excludedLabelId) {
         return labelJpaRepository.findNamesByOwner(ownerId, excludedLabelId);
     }

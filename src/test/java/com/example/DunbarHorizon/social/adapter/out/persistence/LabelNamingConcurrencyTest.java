@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepo
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepository;
+import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup;
 import com.example.DunbarHorizon.social.application.service.LabelCommandService;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
@@ -53,7 +53,7 @@ class LabelNamingConcurrencyTest {
     @Autowired private UserJpaRepository userJpaRepository;
     @Autowired private LabelCommandService service;
     @Autowired private JdbcTemplate jdbc;
-    @MockitoBean private FriendshipLockRepository friendshipLockRepository;
+    @MockitoBean private LabelMemberFriendshipLookup labelMemberFriendshipLookup;
     @MockitoSpyBean private LabelNamer labelNamer;
 
     private User owner;

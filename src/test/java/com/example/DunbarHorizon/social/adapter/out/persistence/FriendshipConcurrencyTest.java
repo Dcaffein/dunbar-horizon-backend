@@ -122,7 +122,7 @@ class FriendshipConcurrencyTest {
             bothLocked.countDown();
             await(finishRegistrations);
             return friendIds;
-        }).when(friendshipPersistenceAdapter).findFriendIdsForShare(anyLong(), anyCollection());
+        }).when(friendshipPersistenceAdapter).findFriendIdsWithSharedLock(anyLong(), anyCollection());
 
         // when
         try (var workers = Executors.newFixedThreadPool(2)) {
@@ -171,7 +171,7 @@ class FriendshipConcurrencyTest {
             registrationLocked.countDown();
             await(finishRegistration);
             return friendIds;
-        }).when(friendshipPersistenceAdapter).findFriendIdsForShare(ownerId, List.of(friendId));
+        }).when(friendshipPersistenceAdapter).findFriendIdsWithSharedLock(ownerId, List.of(friendId));
         doAnswer(call -> {
             assertRepeatableRead();
             breakupEntered.countDown();
@@ -212,7 +212,7 @@ class FriendshipConcurrencyTest {
             assertRepeatableRead();
             registrationEntered.countDown();
             return call.callRealMethod();
-        }).when(friendshipPersistenceAdapter).findFriendIdsForShare(ownerId, List.of(friendId));
+        }).when(friendshipPersistenceAdapter).findFriendIdsWithSharedLock(ownerId, List.of(friendId));
 
         try (var workers = Executors.newFixedThreadPool(2)) {
             var breakup = workers.submit(() -> friendshipCommandService.endFriendship(friendId, ownerId));

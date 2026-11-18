@@ -114,7 +114,7 @@ class FriendshipLifecycleTest {
         doAnswer(call -> {
             call.callRealMethod();
             throw new IllegalStateException("interrupted after label cleanup");
-        }).when(labels).removeMembersBetween(first, second);
+        }).when(labels).removeMembershipsBetween(first, second);
     }
 
     @Test

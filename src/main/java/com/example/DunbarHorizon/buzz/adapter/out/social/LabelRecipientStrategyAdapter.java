@@ -20,7 +20,7 @@ public class LabelRecipientStrategyAdapter implements RecipientStrategyPort {
     @Override
     public Set<Long> fetchRecipientIds(Long creatorId, RecipientSpec spec) {
         if (spec instanceof LabelRecipientSpec(var labelIds)) {
-            return labelQueryUseCase.getMemberIdsByLabels(creatorId, labelIds);
+            return labelQueryUseCase.getMemberIdsInOwnedLabels(creatorId, labelIds);
         }
         return Set.of();
     }
