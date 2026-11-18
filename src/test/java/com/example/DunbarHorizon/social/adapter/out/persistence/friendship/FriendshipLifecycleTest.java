@@ -9,11 +9,11 @@ import com.example.DunbarHorizon.social.application.friendship.dto.FriendshipUpd
 import com.example.DunbarHorizon.social.application.label.LabelMembershipEventListener;
 import com.example.DunbarHorizon.social.application.friendship.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.label.LabelCommandService;
-import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.event.FriendshipEndedEvent;
-import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
-import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.event.FriendshipEndedEvent;
+import com.example.DunbarHorizon.social.domain.friendship.exception.FriendshipNotFoundException;
+import com.example.DunbarHorizon.social.domain.friendship.exception.InvalidFriendAliasException;
 import com.example.DunbarHorizon.social.domain.label.LabelNamer;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;

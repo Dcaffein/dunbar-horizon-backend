@@ -4,8 +4,8 @@ import com.example.DunbarHorizon.social.application.network.dto.MutualFriendEdge
 import com.example.DunbarHorizon.social.application.network.dto.NodeEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.network.port.SocialNetworkRepository;
-import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
-import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
+import com.example.DunbarHorizon.social.domain.network.DunbarCircle;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;

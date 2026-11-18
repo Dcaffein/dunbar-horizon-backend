@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.adapter.in.web;
 
 import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendUpdateRequest;
 import com.example.DunbarHorizon.social.application.friendship.dto.FriendshipUpdateCommand;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;

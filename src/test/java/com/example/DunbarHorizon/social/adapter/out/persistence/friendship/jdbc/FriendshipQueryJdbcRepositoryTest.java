@@ -3,8 +3,8 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.friendship.jdbc
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.application.friendship.dto.FriendView;
 import com.example.DunbarHorizon.social.application.friendship.dto.UserProfile;
-import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

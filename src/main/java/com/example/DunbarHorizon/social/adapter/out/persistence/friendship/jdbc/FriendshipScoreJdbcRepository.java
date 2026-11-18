@@ -1,9 +1,9 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.friendship.jdbc;
 
 import com.example.DunbarHorizon.social.application.friendship.port.FriendshipScoreRepository;
-import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipId;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.FriendshipId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;

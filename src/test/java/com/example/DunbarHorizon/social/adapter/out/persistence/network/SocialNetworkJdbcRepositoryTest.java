@@ -6,9 +6,9 @@ import com.example.DunbarHorizon.social.application.network.dto.MutualFriendEdge
 import com.example.DunbarHorizon.social.application.network.dto.NodeEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.network.SocialNetworkQueryService;
-import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
-import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
-import com.example.DunbarHorizon.social.domain.friend.SocialNetworkExposurePolicy;
+import com.example.DunbarHorizon.social.domain.network.DunbarCircle;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
+import com.example.DunbarHorizon.social.domain.network.NetworkEdgeLimits;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
 @Import({SocialNetworkJdbcRepository.class, SocialNetworkQueryService.class, FriendshipPersistenceAdapter.class,
-        SocialNetworkExposurePolicy.class})
+        NetworkEdgeLimits.class})
 class SocialNetworkJdbcRepositoryTest {
 
     @Autowired private SocialNetworkJdbcRepository repository;

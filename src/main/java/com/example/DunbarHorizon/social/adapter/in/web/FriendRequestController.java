@@ -6,7 +6,7 @@ import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendRequestStatusUp
 import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendRequestResult;
 import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendRequestDirection;
 import com.example.DunbarHorizon.social.application.friendrequest.FriendRequestService;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRequestStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

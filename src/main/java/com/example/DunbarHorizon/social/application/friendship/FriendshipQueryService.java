@@ -5,9 +5,9 @@ import com.example.DunbarHorizon.social.application.friendship.dto.SocialProfile
 import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQueryUseCase;
 import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQueryRepository;
 import com.example.DunbarHorizon.social.application.friendship.port.ImageUrlResolverPort;
-import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
-import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
+import com.example.DunbarHorizon.social.domain.friendship.exception.FriendshipNotFoundException;
+import com.example.DunbarHorizon.social.domain.friendship.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;

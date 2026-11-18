@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathRe
 import com.example.DunbarHorizon.social.application.network.dto.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
-import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
+import com.example.DunbarHorizon.social.domain.network.DunbarCircle;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;

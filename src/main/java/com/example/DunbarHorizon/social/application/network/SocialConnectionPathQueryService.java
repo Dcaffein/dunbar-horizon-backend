@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.social.application.network;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.network.port.SocialConnectionPathRepository;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.friendship.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

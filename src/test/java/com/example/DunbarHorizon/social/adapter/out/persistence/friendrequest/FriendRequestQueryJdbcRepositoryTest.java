@@ -2,9 +2,9 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.friendrequest;
 
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendRequestView;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
-import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRequest;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRequestStatus;
+import com.example.DunbarHorizon.social.domain.friendship.FriendTestFactory;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

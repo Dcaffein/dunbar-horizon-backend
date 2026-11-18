@@ -4,10 +4,10 @@ import com.example.DunbarHorizon.social.application.network.dto.MutualFriendEdge
 import com.example.DunbarHorizon.social.application.network.dto.NodeEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.network.port.SocialNetworkRepository;
-import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.SocialNetworkExposurePolicy;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.network.DunbarCircle;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
+import com.example.DunbarHorizon.social.domain.network.NetworkEdgeLimits;
+import com.example.DunbarHorizon.social.domain.friendship.repository.FriendshipRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,7 +36,7 @@ class SocialNetworkQueryServiceTest {
     private Friendship friendship;
 
     @Mock
-    private SocialNetworkExposurePolicy exposurePolicy;
+    private NetworkEdgeLimits edgeLimits;
 
     @InjectMocks
     private SocialNetworkQueryService service;
@@ -85,12 +85,12 @@ class SocialNetworkQueryServiceTest {
         given(friendshipRepository.findBetween(1L, 10L))
                 .willReturn(Optional.of(friendship));
         given(friendship.getIntimacy()).willReturn(0.5);
-        given(exposurePolicy.directFriendEdgeLimit(0.5)).willReturn(7);
+        given(edgeLimits.directFriendEdgeLimit(0.5)).willReturn(7);
         given(socialNetworkRepository.getDirectFriendEdgesForTarget(1L, 10L, baseNetworkFriendIds, 7)).willReturn(expected);
 
         List<MutualFriendEdgeResult> result = service.getNetworkEdges(1L, 10L, baseNetworkFriendIds);
 
-        verify(exposurePolicy).directFriendEdgeLimit(0.5);
+        verify(edgeLimits).directFriendEdgeLimit(0.5);
         verify(socialNetworkRepository).getDirectFriendEdgesForTarget(1L, 10L, baseNetworkFriendIds, 7);
         assertThat(result).isEqualTo(expected);
     }
@@ -102,12 +102,12 @@ class SocialNetworkQueryServiceTest {
         List<MutualFriendEdgeResult> expected = List.of(new MutualFriendEdgeResult(10L, 20L, null));
         given(friendshipRepository.findBetween(1L, 10L))
                 .willReturn(Optional.empty());
-        given(exposurePolicy.twoHopContactEdgeLimit()).willReturn(5);
+        given(edgeLimits.twoHopContactEdgeLimit()).willReturn(5);
         given(socialNetworkRepository.getTwoHopContactEdgesForTarget(1L, 10L, baseNetworkFriendIds, 5)).willReturn(expected);
 
         List<MutualFriendEdgeResult> result = service.getNetworkEdges(1L, 10L, baseNetworkFriendIds);
 
-        verify(exposurePolicy).twoHopContactEdgeLimit();
+        verify(edgeLimits).twoHopContactEdgeLimit();
         verify(socialNetworkRepository).getTwoHopContactEdgesForTarget(1L, 10L, baseNetworkFriendIds, 5);
         assertThat(result).isEqualTo(expected);
     }

@@ -2,7 +2,9 @@ package com.example.DunbarHorizon.social.application.friendrequest.dto;
 
 
 
-import com.example.DunbarHorizon.global.exception.ErrorContext;import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestInvalidException;
+import com.example.DunbarHorizon.global.exception.ErrorContext;
+import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;
+import com.example.DunbarHorizon.social.domain.friendship.exception.FriendRequestInvalidException;
 
 import java.util.Locale;
 

@@ -2,9 +2,9 @@ package com.example.DunbarHorizon.social.application.friendship;
 
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
-import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.InterestScoreDecayParameters;
+import com.example.DunbarHorizon.social.domain.friendship.InteractionScores;
 import com.example.DunbarHorizon.social.application.friendship.port.FriendshipScoreRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,14 +24,14 @@ import java.util.Set;
 public class FriendshipScoreService {
 
     private final FriendshipScoreRepository friendships;
-    private final FriendshipDecayPolicy decayPolicy;
+    private final InterestScoreDecayParameters decayParameters;
 
     @Retryable(retryFor = TransientDataAccessException.class, maxAttempts = 3,
             backoff = @Backoff(delay = 50, maxDelay = 200, random = true))
     @Transactional(propagation = Propagation.REQUIRES_NEW,
             isolation = Isolation.READ_COMMITTED)
     public void applyInteraction(Long userAId, Long userBId, InteractionType type) {
-        double delta = InteractionScorePolicy.scoreOf(type);
+        double delta = InteractionScores.scoreOf(type);
         List<Friendship> locked = friendships.findBetweenForUpdate(userAId, userBId).stream().toList();
         for (Friendship friendship : locked) {
             if (type.isMutual()) {
@@ -48,7 +48,7 @@ public class FriendshipScoreService {
     @Transactional(propagation = Propagation.REQUIRES_NEW,
             isolation = Isolation.READ_COMMITTED)
     public void applyFlagConclusion(Long hostId, List<Long> participantIds, InteractionType type, ScoreDirection direction) {
-        double delta = direction.signed(InteractionScorePolicy.scoreOf(type));
+        double delta = direction.signed(InteractionScores.scoreOf(type));
         Set<Long> members = new LinkedHashSet<>();
         members.add(hostId);
         members.addAll(participantIds);
@@ -59,7 +59,7 @@ public class FriendshipScoreService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void processDecay() {
-        friendships.applyDecay(decayPolicy.getDecayRate(), decayPolicy.getMinThreshold(),
-                decayPolicy.getDecayThresholdTime());
+        friendships.applyDecay(decayParameters.getDecayRate(), decayParameters.getMinThreshold(),
+                decayParameters.getDecayThresholdTime());
     }
 }

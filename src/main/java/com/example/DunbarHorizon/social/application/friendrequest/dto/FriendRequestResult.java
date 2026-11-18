@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.application.friendrequest.dto;
 
-import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRequest;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRequestStatus;
 
 import java.time.LocalDateTime;
 

@@ -4,9 +4,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.DunbarHorizon.social.application.network.dto.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.network.port.SocialNetworkRepository;
-import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
-import com.example.DunbarHorizon.social.domain.friend.SocialNetworkExposurePolicy;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.network.DunbarCircle;
+import com.example.DunbarHorizon.social.domain.network.NetworkEdgeLimits;
+import com.example.DunbarHorizon.social.domain.friendship.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +21,7 @@ public class SocialNetworkQueryService {
 
     private final SocialNetworkRepository socialNetworkRepository;
     private final FriendshipRepository friendshipRepository;
-    private final SocialNetworkExposurePolicy exposurePolicy;
+    private final NetworkEdgeLimits edgeLimits;
 
     public List<NodeGraphResult> getFriendsNetwork(Long userId, DunbarCircle circleSize) {
         return socialNetworkRepository.getDefaultNetworkGraph(userId, circleSize, PRUNING_EDGE_MIN, PRUNING_EDGE_RANGE);
@@ -37,8 +37,8 @@ public class SocialNetworkQueryService {
         return friendshipRepository.findBetween(userId, targetId)
                 .map(friendship -> socialNetworkRepository.getDirectFriendEdgesForTarget(
                         userId, targetId, baseNetworkFriendIds,
-                        exposurePolicy.directFriendEdgeLimit(friendship.getIntimacy())))
+                        edgeLimits.directFriendEdgeLimit(friendship.getIntimacy())))
                 .orElseGet(() -> socialNetworkRepository.getTwoHopContactEdgesForTarget(
-                        userId, targetId, baseNetworkFriendIds, exposurePolicy.twoHopContactEdgeLimit()));
+                        userId, targetId, baseNetworkFriendIds, edgeLimits.twoHopContactEdgeLimit()));
     }
 }

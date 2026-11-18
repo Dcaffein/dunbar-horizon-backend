@@ -1,11 +1,11 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.friendrequest;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.support.PersistenceErrors;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
-import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
-import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestConflictException;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
-import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRequest;
+import com.example.DunbarHorizon.social.domain.friendship.exception.DuplicateFriendRequestException;
+import com.example.DunbarHorizon.social.domain.friendship.exception.FriendRequestConflictException;
+import com.example.DunbarHorizon.social.domain.friendship.repository.FriendRequestRepository;
+import com.example.DunbarHorizon.social.domain.exception.UserReferenceNotFoundException;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.OptimisticLockException;

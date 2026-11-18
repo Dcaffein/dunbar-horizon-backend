@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.application.label;
 
-import com.example.DunbarHorizon.social.domain.friend.event.FriendshipEndedEvent;
+import com.example.DunbarHorizon.social.domain.friendship.event.FriendshipEndedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;

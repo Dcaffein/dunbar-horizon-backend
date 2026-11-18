@@ -1,10 +1,10 @@
 package com.example.DunbarHorizon.social.application.friendship;
 
 import com.example.DunbarHorizon.social.application.friendship.dto.FriendshipUpdateCommand;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.event.FriendshipEndedEvent;
-import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.event.FriendshipEndedEvent;
+import com.example.DunbarHorizon.social.domain.friendship.exception.FriendshipNotFoundException;
+import com.example.DunbarHorizon.social.domain.friendship.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;

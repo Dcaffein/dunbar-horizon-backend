@@ -6,8 +6,8 @@ import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecip
 import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.FriendshipPersistenceAdapter;
 import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
 import com.example.DunbarHorizon.social.application.network.SocialExpansionQueryService;
-import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
-import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
+import com.example.DunbarHorizon.social.domain.friendship.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

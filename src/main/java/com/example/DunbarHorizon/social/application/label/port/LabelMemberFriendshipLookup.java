@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.application.label.port;
 
-import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
+import com.example.DunbarHorizon.social.domain.exception.UserReferenceNotFoundException;
 
 import java.util.Collection;
 import java.util.Set;

@@ -2,10 +2,10 @@ package com.example.DunbarHorizon.social.application.friendship;
 
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
-import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
-import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
+import com.example.DunbarHorizon.social.domain.friendship.FriendTestFactory;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.InteractionScores;
 import com.example.DunbarHorizon.social.application.friendship.port.FriendshipScoreRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,7 +34,7 @@ class FriendshipScoreServiceTest {
     private static final Long HOST_ID = 10L;
     private static final List<Long> PARTICIPANT_IDS = List.of(21L, 22L);
     private static final InteractionType FLAG_TYPE = InteractionType.FLAG_ENDED;
-    private static final double FLAG_DELTA = InteractionScorePolicy.scoreOf(FLAG_TYPE);
+    private static final double FLAG_DELTA = InteractionScores.scoreOf(FLAG_TYPE);
     private static final Long USER_1 = 1L;
     private static final Long USER_2 = 2L;
 
@@ -69,7 +69,7 @@ class FriendshipScoreServiceTest {
         interactionScoreService.applyInteraction(2L, 1L, type);
 
         // then
-        double expected = FriendRecognition.INITIAL_RAW_SCORE + InteractionScorePolicy.scoreOf(type);
+        double expected = FriendRecognition.INITIAL_RAW_SCORE + InteractionScores.scoreOf(type);
         assertThat(friendship.getMyInterestScore(1L)).isCloseTo(expected, within(0.0001));
         assertThat(friendship.getMyInterestScore(2L)).isCloseTo(expected, within(0.0001));
         assertThat(friendship.getIntimacy()).isCloseTo(FriendRecognition.normalize(expected), within(0.0001));
@@ -88,7 +88,7 @@ class FriendshipScoreServiceTest {
 
         // then
         assertThat(friendship.getMyInterestScore(2L))
-                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + InteractionScorePolicy.scoreOf(type), within(0.0001));
+                .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + InteractionScores.scoreOf(type), within(0.0001));
         assertThat(friendship.getMyInterestScore(1L)).isCloseTo(FriendRecognition.INITIAL_RAW_SCORE, within(0.0001));
     }
 
@@ -135,7 +135,7 @@ class FriendshipScoreServiceTest {
         interactionScoreService.applyFlagConclusion(1L, List.of(2L), type, ScoreDirection.REVOKE);
 
         // then
-        double expected = Math.max(0.0, FriendRecognition.INITIAL_RAW_SCORE - InteractionScorePolicy.scoreOf(type));
+        double expected = Math.max(0.0, FriendRecognition.INITIAL_RAW_SCORE - InteractionScores.scoreOf(type));
         assertThat(friendship.getMyInterestScore(1L)).isCloseTo(expected, within(0.0001));
         assertThat(friendship.getMyInterestScore(2L)).isCloseTo(expected, within(0.0001));
     }

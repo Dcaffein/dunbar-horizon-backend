@@ -9,7 +9,7 @@ import com.example.DunbarHorizon.social.domain.label.LabelName;
 import com.example.DunbarHorizon.social.domain.label.LabelNamer;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelNotFoundException;
-import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
+import com.example.DunbarHorizon.social.domain.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;

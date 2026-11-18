@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.social.application.friendship.dto.FriendView;
 import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQueryRepository;
-import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
+import com.example.DunbarHorizon.social.domain.friendship.event.FriendRequestAcceptedEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

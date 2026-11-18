@@ -10,9 +10,9 @@ import com.example.DunbarHorizon.social.application.label.port.LabelQueryReposit
 import com.example.DunbarHorizon.social.application.label.port.LabelRepository;
 import com.example.DunbarHorizon.social.application.label.LabelCommandService;
 import com.example.DunbarHorizon.social.application.label.LabelQueryService;
-import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelNamer;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
@@ -22,7 +22,7 @@ import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelNam
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelNotFoundException;
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
-import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
+import com.example.DunbarHorizon.social.domain.exception.UserReferenceNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

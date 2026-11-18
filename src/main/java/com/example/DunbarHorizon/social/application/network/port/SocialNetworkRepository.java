@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.application.network.port;
 
 import com.example.DunbarHorizon.social.application.network.dto.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
-import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
+import com.example.DunbarHorizon.social.domain.network.DunbarCircle;
 
 import java.util.List;
 

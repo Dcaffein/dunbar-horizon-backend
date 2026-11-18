@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.domain.exception;
 
 import com.example.DunbarHorizon.global.exception.ErrorCode;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
 import com.example.DunbarHorizon.social.domain.label.LabelName;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

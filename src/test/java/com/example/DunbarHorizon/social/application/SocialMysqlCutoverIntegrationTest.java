@@ -14,10 +14,10 @@ import com.example.DunbarHorizon.social.application.label.LabelQueryService;
 import com.example.DunbarHorizon.social.application.network.SocialConnectionPathQueryService;
 import com.example.DunbarHorizon.social.application.network.SocialExpansionQueryService;
 import com.example.DunbarHorizon.social.application.network.SocialNetworkQueryService;
-import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
-import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
-import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
+import com.example.DunbarHorizon.social.domain.network.DunbarCircle;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRequestStatus;
+import com.example.DunbarHorizon.social.domain.friendship.InteractionScores;
 import com.example.DunbarHorizon.support.MySqlTestContainerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -129,7 +129,7 @@ class SocialMysqlCutoverIntegrationTest {
         transactions.executeWithoutResult(status -> app.publishEvent(new BatchMutualInteractionEvent(
                 148L, List.of(FRIEND), ME, InteractionType.FLAG_ENDED, ScoreDirection.GRANT)));
         assertThat(friendshipQueryService.getFriend(ME, FRIEND).myInterestScore())
-                .isEqualTo(FriendRecognition.normalize(scoreFor(0.6) + InteractionScorePolicy.scoreOf(InteractionType.FLAG_ENDED)));
+                .isEqualTo(FriendRecognition.normalize(scoreFor(0.6) + InteractionScores.scoreOf(InteractionType.FLAG_ENDED)));
 
         assertThat(labelQueryService.getMemberIdsInOwnedLabels(ANCHOR, List.of(LABEL_ID))).containsExactlyInAnyOrder(ME, TARGET);
         friendshipCommandService.endFriendship(ME, ANCHOR);

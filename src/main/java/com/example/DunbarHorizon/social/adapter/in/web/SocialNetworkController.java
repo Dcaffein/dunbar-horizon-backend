@@ -8,7 +8,7 @@ import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.network.SocialConnectionPathQueryService;
 import com.example.DunbarHorizon.social.application.network.SocialExpansionQueryService;
 import com.example.DunbarHorizon.social.application.network.SocialNetworkQueryService;
-import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
+import com.example.DunbarHorizon.social.domain.network.DunbarCircle;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

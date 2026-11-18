@@ -9,7 +9,7 @@ import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
 import com.example.DunbarHorizon.flag.domain.memorial.repository.FlagMemorialRepository;
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
-import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
+import com.example.DunbarHorizon.social.domain.friendship.InteractionScores;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,8 +37,8 @@ class FlagPreservationScoreScenarioTest {
     private static final Long HOST_ID = 10L;
     private static final List<Long> PARTICIPANT_IDS = List.of(21L, 22L);
 
-    private static final double BASE = InteractionScorePolicy.scoreOf(InteractionType.FLAG_ENDED);
-    private static final double PRESERVED = InteractionScorePolicy.scoreOf(InteractionType.FLAG_PRESERVED);
+    private static final double BASE = InteractionScores.scoreOf(InteractionType.FLAG_ENDED);
+    private static final double PRESERVED = InteractionScores.scoreOf(InteractionType.FLAG_PRESERVED);
 
     private final FlagRepository flagRepository = mock(FlagRepository.class);
     private final FlagMemorialRepository memorialRepository = mock(FlagMemorialRepository.class);
@@ -160,7 +160,7 @@ class FlagPreservationScoreScenarioTest {
 
     private double netScore() {
         return published.stream()
-                .mapToDouble(event -> event.direction().signed(InteractionScorePolicy.scoreOf(event.type())))
+                .mapToDouble(event -> event.direction().signed(InteractionScores.scoreOf(event.type())))
                 .sum();
     }
 }

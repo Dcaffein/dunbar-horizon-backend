@@ -1,12 +1,12 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.friendrequest;
 
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
-import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
-import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
-import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestConflictException;
-import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRequest;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRequestStatus;
+import com.example.DunbarHorizon.social.domain.friendship.FriendTestFactory;
+import com.example.DunbarHorizon.social.domain.friendship.exception.DuplicateFriendRequestException;
+import com.example.DunbarHorizon.social.domain.friendship.exception.FriendRequestConflictException;
+import com.example.DunbarHorizon.social.domain.exception.UserReferenceNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeEach;

@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.network.SocialNetworkQueryService;
 
 import java.util.List;
-import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
+import com.example.DunbarHorizon.social.domain.network.DunbarCircle;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;

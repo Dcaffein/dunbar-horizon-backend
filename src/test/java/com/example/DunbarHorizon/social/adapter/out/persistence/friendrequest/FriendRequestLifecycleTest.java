@@ -10,11 +10,11 @@ import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendRequ
 import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendResult;
 import com.example.DunbarHorizon.social.application.friendrequest.FriendshipNotificationEventListener;
 import com.example.DunbarHorizon.social.application.friendrequest.FriendRequestService;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipBroker;
-import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRequest;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRequestStatus;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.FriendshipBroker;
+import com.example.DunbarHorizon.social.domain.friendship.event.FriendRequestAcceptedEvent;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

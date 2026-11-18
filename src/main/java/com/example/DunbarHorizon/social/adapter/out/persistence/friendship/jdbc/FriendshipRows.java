@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.friendship.jdbc;
 
-import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;

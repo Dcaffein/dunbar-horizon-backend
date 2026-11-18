@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.in.web.dto;
 
-import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRequestStatus;
 import jakarta.validation.constraints.NotNull;
 
 public record FriendRequestStatusUpdateRequest(

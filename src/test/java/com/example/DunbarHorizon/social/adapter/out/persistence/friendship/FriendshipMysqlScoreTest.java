@@ -14,9 +14,9 @@ import com.example.DunbarHorizon.social.application.friendship.port.FriendshipSc
 import com.example.DunbarHorizon.social.application.friendship.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.friendship.FriendshipScoreService;
 import com.example.DunbarHorizon.social.application.label.LabelCommandService;
-import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.InterestScoreDecayParameters;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
 import com.example.DunbarHorizon.social.domain.label.LabelNamer;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
@@ -46,7 +46,7 @@ import static org.assertj.core.api.Assertions.within;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendshipScoreJdbcRepository.class, FriendshipPersistenceAdapter.class,
         LabelMembershipCleanupJdbcAdapter.class, LabelMemberFriendshipLookupJpaAdapter.class,
-        FriendshipScoreService.class, FriendshipCommandService.class, FriendshipDecayPolicy.class,
+        FriendshipScoreService.class, FriendshipCommandService.class, InterestScoreDecayParameters.class,
         LabelPersistenceAdapter.class, LabelCommandService.class,
         LabelNamer.class, LabelMemberRegistrar.class, LabelMembershipEventListener.class})
 class FriendshipMysqlScoreTest {
@@ -197,9 +197,9 @@ class FriendshipMysqlScoreTest {
     @DisplayName("같은 입력에서 SQL 일괄 감쇠와 도메인 감쇠는 같은 관심도와 친밀도를 낸다")
     void applyDecay_MatchesDomainDecay_SameInput() {
         // given
-        FriendshipDecayPolicy policy = new FriendshipDecayPolicy();
-        double rate = policy.getDecayRate();
-        double floor = policy.getMinThreshold();
+        InterestScoreDecayParameters decayParameters = new InterestScoreDecayParameters();
+        double rate = decayParameters.getDecayRate();
+        double floor = decayParameters.getMinThreshold();
         LocalDateTime decayTime = OLD_INTERACTION.plusDays(30);
         List<Friendship> inputs = List.of(
                 Friendship.restore(CREATED_AT, recognition(low, 40, OLD_INTERACTION),
@@ -270,7 +270,7 @@ class FriendshipMysqlScoreTest {
         }
 
         // then
-        assertScores(low, high, 21.4 * new FriendshipDecayPolicy().getDecayRate(), 32);
+        assertScores(low, high, 21.4 * new InterestScoreDecayParameters().getDecayRate(), 32);
     }
 
     private void applyVisits(CountDownLatch start, Long actor, Long target) {

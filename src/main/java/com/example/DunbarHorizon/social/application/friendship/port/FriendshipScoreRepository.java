@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.application.friendship.port;
 
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
 
 import java.time.LocalDateTime;
 import java.util.Collection;

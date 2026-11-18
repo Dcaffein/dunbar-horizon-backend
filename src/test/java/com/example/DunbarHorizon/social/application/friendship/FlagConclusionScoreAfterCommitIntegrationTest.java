@@ -3,11 +3,11 @@ package com.example.DunbarHorizon.social.application.friendship;
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
-import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
-import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.InteractionScorePolicy;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
+import com.example.DunbarHorizon.social.domain.friendship.FriendTestFactory;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.InteractionScores;
+import com.example.DunbarHorizon.social.domain.friendship.repository.FriendshipRepository;
 import com.example.DunbarHorizon.support.TestContainerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +46,7 @@ class FlagConclusionScoreAfterCommitIntegrationTest {
     private static final List<Long> PARTICIPANT_IDS = List.of(9102L, 9103L);
     private static final List<Long> MEMBER_IDS = List.of(9101L, 9102L, 9103L);
     private static final InteractionType TYPE = InteractionType.FLAG_ENDED;
-    private static final double DELTA = InteractionScorePolicy.scoreOf(TYPE);
+    private static final double DELTA = InteractionScores.scoreOf(TYPE);
     private static final double TOLERANCE = 0.000001;
 
     @Autowired private ApplicationEventPublisher eventPublisher;

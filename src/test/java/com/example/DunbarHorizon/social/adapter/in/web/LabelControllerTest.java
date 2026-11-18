@@ -8,7 +8,7 @@ import com.example.DunbarHorizon.social.application.label.dto.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.label.dto.LabelResult;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelName;
-import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
+import com.example.DunbarHorizon.social.domain.friendship.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelNameException;

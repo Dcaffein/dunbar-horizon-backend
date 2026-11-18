@@ -1,11 +1,11 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.friendship;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.support.PersistenceErrors;
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipId;
-import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
-import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipConflictException;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.friendship.Friendship;
+import com.example.DunbarHorizon.social.domain.friendship.FriendshipId;
+import com.example.DunbarHorizon.social.domain.friendship.exception.AlreadyFriendsException;
+import com.example.DunbarHorizon.social.domain.friendship.exception.FriendshipConflictException;
+import com.example.DunbarHorizon.social.domain.friendship.repository.FriendshipRepository;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.OptimisticLockException;

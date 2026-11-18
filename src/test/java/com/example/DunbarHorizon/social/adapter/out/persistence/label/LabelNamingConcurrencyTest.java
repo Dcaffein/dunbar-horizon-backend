@@ -12,7 +12,7 @@ import com.example.DunbarHorizon.social.domain.label.LabelNamer;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelNameException;
 import com.example.DunbarHorizon.social.domain.label.exception.InvalidLabelNameException;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelNotFoundException;
-import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
+import com.example.DunbarHorizon.social.domain.exception.UserReferenceNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

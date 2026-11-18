@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendRequestStatusUp
 import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendRequestDirection;
 import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendRequestResult;
 import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendResult;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
+import com.example.DunbarHorizon.social.domain.friendship.FriendRequestStatus;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;

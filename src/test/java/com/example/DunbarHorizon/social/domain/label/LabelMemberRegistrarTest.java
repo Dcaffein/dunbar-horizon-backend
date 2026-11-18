@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.domain.label;
 
-import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
+import com.example.DunbarHorizon.social.domain.friendship.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
 import org.junit.jupiter.api.DisplayName;

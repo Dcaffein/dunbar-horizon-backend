@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.application.network;
 
 import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.network.port.SocialConnectionPathRepository;
-import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.friendship.repository.FriendshipRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

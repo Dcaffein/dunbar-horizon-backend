@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.application.friendrequest;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQueryRepository;
-import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
+import com.example.DunbarHorizon.social.domain.friendship.event.FriendRequestAcceptedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
