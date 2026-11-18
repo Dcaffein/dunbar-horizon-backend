@@ -1,9 +1,8 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.result.FriendshipDetailResult;
-import com.example.DunbarHorizon.social.application.port.out.FriendViewRepository;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipIdRepository;
 import com.example.DunbarHorizon.social.application.port.in.FriendshipQueryUseCase;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipQueryRepository;
 import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPort;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
@@ -21,12 +20,11 @@ import java.util.Set;
 public class FriendshipQueryService implements FriendshipQueryUseCase {
 
     private final FriendshipRepository friendshipRepository;
-    private final FriendshipIdRepository friendshipIdRepository;
-    private final FriendViewRepository friendViewRepository;
+    private final FriendshipQueryRepository friendshipQueryRepository;
     private final ImageUrlResolverPort imageUrlResolverPort;
 
     public List<FriendshipDetailResult> getDetailedFriendships(Long userId) {
-        return friendViewRepository.findFriends(userId).stream()
+        return friendshipQueryRepository.findFriends(userId).stream()
                 .map(friend -> FriendshipDetailResult.from(friend, imageUrlResolverPort))
                 .toList();
     }
@@ -37,23 +35,23 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
     }
 
     public FriendshipDetailResult getFriend(Long userId, Long targetId) {
-        return friendViewRepository.findFriend(userId, targetId)
+        return friendshipQueryRepository.findFriend(userId, targetId)
                 .map(friend -> FriendshipDetailResult.from(friend, imageUrlResolverPort))
                 .orElseThrow(() -> new FriendshipNotFoundException(userId, targetId));
     }
 
     @Override
     public Set<Long> getFriendIdsIn(Long userId, Collection<Long> targetIds) {
-        return friendshipIdRepository.filterFriendIdsAmong(userId, targetIds);
+        return friendshipQueryRepository.findFriendIdsIn(userId, targetIds);
     }
 
     @Override
     public Set<Long> getMutedIds(Long userId) {
-        return friendshipIdRepository.findFriendIdsByMuteStatus(userId, true);
+        return friendshipQueryRepository.findFriendIdsByMuteStatus(userId, true);
     }
 
     @Override
     public Set<Long> getListenableFriendIds(Long userId) {
-        return friendshipIdRepository.findFriendIdsByMuteStatus(userId, false);
+        return friendshipQueryRepository.findFriendIdsByMuteStatus(userId, false);
     }
 }

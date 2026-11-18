@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJ
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUser;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUserJpaRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendshipJpaRepository;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipIdRepository;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepository;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
@@ -29,7 +28,7 @@ import java.util.Set;
 @Repository
 @RequiredArgsConstructor
 public class FriendshipPersistenceAdapter
-        implements FriendshipRepository, FriendshipScoreRepository, FriendshipLockRepository, FriendshipIdRepository {
+        implements FriendshipRepository, FriendshipScoreRepository, FriendshipLockRepository {
 
     private static final String PAIR_KEY = "PRIMARY";
 
@@ -126,15 +125,4 @@ public class FriendshipPersistenceAdapter
     public void applyDecay(double rate, double threshold, LocalDateTime decayTime) {
         friendshipJdbcRepository.applyDecay(rate, threshold, decayTime);
     }
-
-    @Override
-    public Set<Long> findFriendIdsByMuteStatus(Long userId, boolean isMuted) {
-        return friendshipJdbcRepository.findFriendIdsByMuteStatus(userId, isMuted);
-    }
-
-    @Override
-    public Set<Long> filterFriendIdsAmong(Long userId, Collection<Long> candidateIds) {
-        return friendshipJdbcRepository.filterFriendIdsAmong(userId, candidateIds);
-    }
-
 }

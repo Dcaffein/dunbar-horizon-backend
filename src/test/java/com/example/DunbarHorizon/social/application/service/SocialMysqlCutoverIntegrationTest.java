@@ -112,6 +112,9 @@ class SocialMysqlCutoverIntegrationTest {
                 .containsExactly(TARGET);
         assertThat(socialConnectionPathQueryService.getConnectionPath(ME, TARGET).intermediaries()).extracting(IntermediaryResult::userId)
                 .containsExactly(ANCHOR, FRIEND);
+        assertThat(friendshipQueryService.getFriendIdsIn(ME, List.of(FRIEND, TARGET))).containsExactly(FRIEND);
+        assertThat(friendshipQueryService.getMutedIds(ME)).isEmpty();
+        assertThat(friendshipQueryService.getListenableFriendIds(ME)).containsExactlyInAnyOrder(ANCHOR, FRIEND);
 
         jdbc.update("UPDATE users SET nickname = 'renamed' WHERE user_id = ?", TARGET);
         assertThat(accountSocialUserQueryService.getSocialProfile(TARGET).nickname()).isEqualTo("renamed");

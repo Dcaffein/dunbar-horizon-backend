@@ -11,11 +11,9 @@ import org.springframework.stereotype.Repository;
 import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.StringJoiner;
 
 import static com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipConditions.ACTIVE_PAIR;
@@ -37,22 +35,6 @@ public class FriendshipJdbcRepository {
               AND %s
             ORDER BY low_user_id, high_user_id
             FOR UPDATE
-            """.formatted(ACTIVE_PAIR);
-
-    private static final String SELECT_FRIEND_IDS_BY_MUTE_STATUS = """
-            SELECT high_user_id FROM friendships
-            WHERE low_user_id = :userId AND low_is_muted = :muted AND %1$s
-            UNION ALL
-            SELECT low_user_id FROM friendships
-            WHERE high_user_id = :userId AND high_is_muted = :muted AND %1$s
-            """.formatted(ACTIVE_PAIR);
-
-    private static final String SELECT_FRIEND_IDS_AMONG = """
-            SELECT high_user_id FROM friendships
-            WHERE low_user_id = :userId AND high_user_id IN (:candidateIds) AND %1$s
-            UNION ALL
-            SELECT low_user_id FROM friendships
-            WHERE high_user_id = :userId AND low_user_id IN (:candidateIds) AND %1$s
             """.formatted(ACTIVE_PAIR);
 
     private static final String APPLY_DECAY = """
@@ -80,19 +62,6 @@ public class FriendshipJdbcRepository {
         }
         List<Object[]> pairs = keys.stream().map(key -> new Object[]{key.low(), key.high()}).toList();
         return jdbc.query(LOCK_PAIRS, Map.of("pairs", pairs), FriendshipRows::read);
-    }
-
-    public Set<Long> findFriendIdsByMuteStatus(long userId, boolean isMuted) {
-        return new HashSet<>(jdbc.queryForList(SELECT_FRIEND_IDS_BY_MUTE_STATUS,
-                Map.of("userId", userId, "muted", isMuted), Long.class));
-    }
-
-    public Set<Long> filterFriendIdsAmong(long userId, Collection<Long> candidateIds) {
-        if (candidateIds.isEmpty()) {
-            return Set.of();
-        }
-        return new HashSet<>(jdbc.queryForList(SELECT_FRIEND_IDS_AMONG,
-                Map.of("userId", userId, "candidateIds", candidateIds), Long.class));
     }
 
     public void saveInterestScores(Collection<Friendship> friendships) {

@@ -2,8 +2,8 @@ package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.application.dto.result.SocialProfileResult;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipQueryRepository;
 import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPort;
-import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,8 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -23,7 +22,7 @@ import static org.mockito.BDDMockito.given;
 class AccountSocialUserQueryServiceTest {
 
     @InjectMocks private AccountSocialUserQueryService service;
-    @Mock private UserProfileRepository userProfileRepository;
+    @Mock private FriendshipQueryRepository friendshipQueryRepository;
     @Mock private ImageUrlResolverPort images;
 
     @Test
@@ -32,8 +31,8 @@ class AccountSocialUserQueryServiceTest {
         // given
         String imageUrl = "https://example.com/profile.png";
         String imageKey = "profiles/friend";
-        given(userProfileRepository.findActiveProfiles(List.of(2L)))
-                .willReturn(Map.of(2L, new UserProfile(2L, "친구", imageKey)));
+        given(friendshipQueryRepository.findActiveProfile(2L))
+                .willReturn(Optional.of(new UserProfile(2L, "친구", imageKey)));
         given(images.resolveUrl(imageKey)).willReturn(imageUrl);
 
         // when
@@ -47,8 +46,8 @@ class AccountSocialUserQueryServiceTest {
     @DisplayName("프로필 이미지가 없으면 소셜 응답에도 이미지 URL이 없다")
     void getSocialProfile_ReturnsNullImageUrl_NoProfileImage() {
         // given
-        given(userProfileRepository.findActiveProfiles(List.of(2L)))
-                .willReturn(Map.of(2L, new UserProfile(2L, "친구", null)));
+        given(friendshipQueryRepository.findActiveProfile(2L))
+                .willReturn(Optional.of(new UserProfile(2L, "친구", null)));
 
         // when
         SocialProfileResult result = service.getSocialProfile(2L);
@@ -61,7 +60,7 @@ class AccountSocialUserQueryServiceTest {
     @DisplayName("활성 계정을 찾을 수 없으면 기존 소셜 사용자 조회 예외를 던진다")
     void getSocialProfile_ThrowsUserReferenceNotFound_NoActiveUser() {
         // given
-        given(userProfileRepository.findActiveProfiles(List.of(2L))).willReturn(Map.of());
+        given(friendshipQueryRepository.findActiveProfile(2L)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> service.getSocialProfile(2L))

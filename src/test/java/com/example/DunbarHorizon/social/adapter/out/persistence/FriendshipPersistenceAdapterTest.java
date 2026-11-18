@@ -19,7 +19,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -227,9 +226,6 @@ class FriendshipPersistenceAdapterTest {
         // when & then
         assertThat(repository.findBetween(me, friend)).isEmpty();
         assertThat(repository.existsBetween(me, friend)).isFalse();
-        assertThat(repository.findFriendIdsByMuteStatus(me, true)).isEmpty();
-        assertThat(repository.findFriendIdsByMuteStatus(friend, false)).isEmpty();
-        assertThat(repository.filterFriendIdsAmong(me, List.of(friend))).isEmpty();
         assertThat(repository.findBetweenForUpdate(me, friend)).isEmpty();
         assertThat(repository.findFriendIdsForShare(me, List.of(friend))).isEmpty();
         assertThat(repository.findAllAmongForUpdate(List.of(me, friend))).isEmpty();
@@ -269,23 +265,6 @@ class FriendshipPersistenceAdapterTest {
         assertThat(repository.findBetween(low.getId(), high.getId())).isEmpty();
         assertThat(repository.existsBetween(high.getId(), low.getId())).isFalse();
         assertThat(repository.deleteBetween(low.getId(), high.getId())).isFalse();
-    }
-
-    @Test
-    @DisplayName("사용자가 어느 방향에 속하든 자신의 음소거 설정과 후보 범위를 적용한다")
-    void findFriendIds_UsesEachSideAndFiltersCandidates_MixedDirections() {
-        // given
-        User third = createUser("third");
-        User other = createUser("other");
-        repository.create(friendship(low, high));
-        repository.create(friendship(high, third));
-
-        // when & then
-        assertThat(repository.findFriendIdsByMuteStatus(high.getId(), true)).containsExactly(third.getId());
-        assertThat(repository.findFriendIdsByMuteStatus(high.getId(), false)).containsExactly(low.getId());
-        assertThat(repository.filterFriendIdsAmong(high.getId(), List.of(low.getId(), third.getId(), other.getId())))
-                .containsExactlyInAnyOrder(low.getId(), third.getId());
-        assertThat(repository.filterFriendIdsAmong(high.getId(), Set.of())).isEmpty();
     }
 
     @Test
