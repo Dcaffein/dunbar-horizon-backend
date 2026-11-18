@@ -197,8 +197,7 @@ class FriendshipPersistenceAdapterTest {
         assertThat(repository.findFriendIdsByMuteStatus(friend, false)).isEmpty();
         assertThat(repository.filterFriendIdsAmong(me, List.of(friend))).isEmpty();
         assertThat(repository.findBetweenForUpdate(me, friend)).isEmpty();
-        assertThat(repository.existsFriendshipForUpdate(me, friend)).isFalse();
-        assertThat(repository.findAllBetweenForUpdate(me, List.of(friend))).isEmpty();
+        assertThat(repository.findFriendIdsForShare(me, List.of(friend))).isEmpty();
         assertThat(repository.findAllAmongForUpdate(List.of(me, friend))).isEmpty();
         assertThat(repository.deleteBetween(me, friend)).isFalse();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
@@ -216,8 +215,7 @@ class FriendshipPersistenceAdapterTest {
         assertThat(repository.findBetween(self, self)).isEmpty();
         assertThat(repository.existsFriendshipBetween(self, self)).isFalse();
         assertThat(repository.findBetweenForUpdate(self, self)).isEmpty();
-        assertThat(repository.existsFriendshipForUpdate(self, self)).isFalse();
-        assertThat(repository.findAllBetweenForUpdate(self, List.of(self))).isEmpty();
+        assertThat(repository.findFriendIdsForShare(self, List.of(self))).isEmpty();
         assertThat(repository.findAllAmongForUpdate(List.of(self, self))).isEmpty();
         assertThat(repository.deleteBetween(self, self)).isFalse();
     }
@@ -258,17 +256,37 @@ class FriendshipPersistenceAdapterTest {
 
     @Test
     @DisplayName("한 사람과 여러 사람 사이의 잠금 조회는 실제 친구 관계만 돌려준다")
-    void findAllBetweenForUpdate_ReturnsExistingFriendships_MixedCandidates() {
+    void findFriendIdsForShare_ReturnsExistingFriendships_MixedCandidates() {
         // given
         User third = createUser("third");
         repository.create(friendship(low, high));
 
         // when
-        var locked = repository.findAllBetweenForUpdate(high.getId(), List.of(low.getId(), third.getId(), high.getId()));
+        var locked = repository.findFriendIdsForShare(high.getId(), List.of(low.getId(), third.getId(), high.getId()));
 
         // then
-        assertThat(locked).singleElement()
-                .satisfies(friendship -> assertThat(friendship.getFriendId(high.getId())).isEqualTo(low.getId()));
+        assertThat(locked).containsExactly(low.getId());
+    }
+
+    @Test
+    @DisplayName("공유 잠금 조회는 양쪽 방향의 활성 친구만 반환하고 중복·본인·비활성 후보를 제외한다")
+    void findFriendIdsForShare_FiltersCandidates_BothDirections() {
+        // given
+        User third = createUser("third");
+        User inactive = createUser("inactive");
+        repository.create(friendship(low, high));
+        repository.create(friendship(high, third));
+        repository.create(friendship(high, inactive));
+        inactive.deactivate();
+        em.flush();
+        em.clear();
+
+        // when
+        var friendIds = repository.findFriendIdsForShare(high.getId(),
+                List.of(third.getId(), low.getId(), inactive.getId(), high.getId(), third.getId(), Long.MAX_VALUE));
+
+        // then
+        assertThat(friendIds).containsExactlyInAnyOrder(low.getId(), third.getId());
     }
 
     @Test

@@ -3,16 +3,17 @@ package com.example.DunbarHorizon.social.adapter.out.persistence;
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.command.FriendshipUpdateCommand;
+import com.example.DunbarHorizon.social.application.eventListener.LabelMembershipEventListener;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
-import com.example.DunbarHorizon.social.application.service.LabelService;
+import com.example.DunbarHorizon.social.application.service.LabelCommandService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipConflictException;
-import com.example.DunbarHorizon.social.domain.label.LabelNamer;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
+import com.example.DunbarHorizon.social.domain.label.LabelNamer;
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
@@ -33,165 +34,237 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class, LabelJdbcRepository.class, UserProfileJdbcRepository.class,
-        FriendshipCommandService.class, LabelService.class, LabelNamer.class, LabelMemberRegistrar.class})
+@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class,
+        LabelJdbcRepository.class, ActiveUserPersistenceAdapter.class, FriendshipCommandService.class,
+        LabelCommandService.class, LabelNamer.class, LabelMemberRegistrar.class, LabelMembershipEventListener.class})
 class FriendshipConcurrencyTest {
 
     private static final LocalDate FRIENDS_SINCE = LocalDate.of(2026, 1, 1);
 
-    @Autowired private UserJpaRepository users;
-    @Autowired private FriendshipCommandService lifecycle;
-    @Autowired private LabelService labelService;
-    @MockitoSpyBean private LabelJdbcRepository labels;
-    @Autowired private JdbcTemplate jdbc;
+    @Autowired private UserJpaRepository userJpaRepository;
+    @Autowired private FriendshipCommandService friendshipCommandService;
+    @Autowired private LabelCommandService labelCommandService;
+    @Autowired private LabelJdbcRepository labelJdbcRepository;
+    @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private PlatformTransactionManager transactionManager;
-    @MockitoSpyBean private FriendshipPersistenceAdapter friendships;
+    @MockitoSpyBean private FriendshipPersistenceAdapter friendshipPersistenceAdapter;
 
-    private Long first;
-    private Long second;
-    private String firstLabel;
-    private String secondLabel;
+    private Long ownerId;
+    private Long friendId;
+    private String ownerLabelId;
+    private String friendLabelId;
 
     @BeforeEach
     void setUp() {
-        first = users.save(User.createActive("first@mysql-friendship-lifecycle.test", "first")).getId();
-        second = users.save(User.createActive("second@mysql-friendship-lifecycle.test", "second")).getId();
-        firstLabel = labelService.createLabel(first, "내 라벨").getId();
-        secondLabel = labelService.createLabel(second, "상대 라벨").getId();
+        ownerId = userJpaRepository.save(User.createActive("owner@label-concurrency.test", "owner")).getId();
+        friendId = userJpaRepository.save(User.createActive("friend@label-concurrency.test", "friend")).getId();
+        ownerLabelId = labelCommandService.createLabel(ownerId, "내 라벨").getId();
+        friendLabelId = labelCommandService.createLabel(friendId, "상대 라벨").getId();
     }
 
     @AfterEach
     void tearDown() {
-        labelService.deleteLabel(first, firstLabel);
-        labelService.deleteLabel(second, secondLabel);
-        jdbc.update("DELETE FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
-                Math.min(first, second), Math.max(first, second));
-        users.deleteAllById(List.of(first, second));
+        labelCommandService.deleteLabel(ownerId, ownerLabelId);
+        labelCommandService.deleteLabel(friendId, friendLabelId);
+        jdbcTemplate.update("DELETE FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
+                Math.min(ownerId, friendId), Math.max(ownerId, friendId));
+        userJpaRepository.deleteAllById(List.of(ownerId, friendId));
     }
 
     @Test
-    @DisplayName("멤버 추가가 먼저 관계를 잠그면 뒤따르는 친구 끊기가 새 멤버십도 삭제한다")
-    void brokeUpWith_RemovesJustAddedMembership_WhenAdditionLocksFirst() throws Exception {
-        // given
-        connect(FriendRecognition.INITIAL_RAW_SCORE);
-        var additionLocked = new CountDownLatch(1);
-        var resumeAddition = new CountDownLatch(1);
-        var breakupStarted = new CountDownLatch(1);
-        doAnswer(call -> {
-            boolean exists = (boolean) call.callRealMethod();
-            additionLocked.countDown();
-            await(resumeAddition);
-            return exists;
-        }).when(friendships).existsFriendshipForUpdate(first, second);
-
-        // when
-        try (var workers = Executors.newFixedThreadPool(2)) {
-            var addition = workers.submit(() -> labelService.addMemberToLabel(first, firstLabel, second));
-            try {
-                await(additionLocked);
-                var breakup = workers.submit(() -> {
-                    breakupStarted.countDown();
-                    lifecycle.brokeUpWith(second, first);
-                });
-                await(breakupStarted);
-                resumeAddition.countDown();
-                addition.get(10, TimeUnit.SECONDS);
-                breakup.get(10, TimeUnit.SECONDS);
-            } finally {
-                resumeAddition.countDown();
-            }
-        }
-
-        // then
-        assertEnded();
+    @DisplayName("owner의 추가가 먼저 공유 락을 잡으면 상대방의 친구 해제가 기다렸다가 새 멤버십도 지운다")
+    void addMember_IsCleanedUp_WhenOwnerRegistersFirst() throws Exception {
+        assertRegistrationLocksFirst(() -> labelCommandService.addMemberToLabel(ownerId, ownerLabelId, friendId));
     }
 
     @Test
-    @DisplayName("친구 끊기가 먼저 관계를 삭제하면 뒤따르는 멤버 교체는 관계가 없음을 확인한다")
-    void replaceMembers_RejectsEndedFriend_WhenBreakupDeletesFirst() throws Exception {
+    @DisplayName("owner의 교체가 먼저 공유 락을 잡으면 상대방의 친구 해제가 기다렸다가 새 멤버십도 지운다")
+    void replaceMembers_IsCleanedUp_WhenOwnerRegistersFirst() throws Exception {
+        assertRegistrationLocksFirst(() -> labelCommandService.replaceLabelMembers(ownerId, ownerLabelId, List.of(friendId)));
+    }
+
+    @Test
+    @DisplayName("상대방이 먼저 친구를 끊으면 owner의 추가가 기다린 뒤 친구 관계 없음으로 실패한다")
+    void addMember_Rejects_WhenFriendBreaksUpFirst() throws Exception {
+        assertBreakupDeletesFirst(() -> labelCommandService.addMemberToLabel(ownerId, ownerLabelId, friendId),
+                FriendshipNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("상대방이 먼저 친구를 끊으면 owner의 교체가 기다린 뒤 비친구 등록으로 실패한다")
+    void replaceMembers_Rejects_WhenFriendBreaksUpFirst() throws Exception {
+        assertBreakupDeletesFirst(() -> labelCommandService.replaceLabelMembers(ownerId, ownerLabelId, List.of(friendId)),
+                NonFriendLabelMemberException.class);
+    }
+
+    @Test
+    @DisplayName("두 사용자가 서로를 각자의 라벨에 추가할 때 같은 친구 관계의 공유 락을 함께 잡는다")
+    void addMember_SharesRelationshipLock_BothOwnersRegister() throws Exception {
         // given
-        connectWithBothMemberships(FriendRecognition.INITIAL_RAW_SCORE);
-        var deleted = new CountDownLatch(1);
-        var finishBreakup = new CountDownLatch(1);
-        var replacementStarted = new CountDownLatch(1);
+        connect();
+        var bothLocked = new CountDownLatch(2);
+        var finishRegistrations = new CountDownLatch(1);
         doAnswer(call -> {
-            Object result = call.callRealMethod();
-            deleted.countDown();
-            await(finishBreakup);
-            return result;
-        }).when(friendships).deleteBetween(second, first);
+            Object friendIds = call.callRealMethod();
+            assertRepeatableRead();
+            bothLocked.countDown();
+            await(finishRegistrations);
+            return friendIds;
+        }).when(friendshipPersistenceAdapter).findFriendIdsForShare(anyLong(), anyCollection());
 
         // when
         try (var workers = Executors.newFixedThreadPool(2)) {
-            var breakup = workers.submit(() -> lifecycle.brokeUpWith(second, first));
+            var ownerRegistration = workers.submit(() -> labelCommandService.addMemberToLabel(ownerId, ownerLabelId, friendId));
+            var friendRegistration = workers.submit(() -> labelCommandService.addMemberToLabel(friendId, friendLabelId, ownerId));
             try {
-                await(deleted);
-                var replacement = workers.submit(() -> {
-                    replacementStarted.countDown();
-                    assertThatThrownBy(() -> labelService.replaceLabelMembers(first, firstLabel, List.of(second)))
-                            .isInstanceOf(NonFriendLabelMemberException.class);
-                });
-                await(replacementStarted);
-                finishBreakup.countDown();
-                breakup.get(10, TimeUnit.SECONDS);
-                replacement.get(10, TimeUnit.SECONDS);
+                await(bothLocked);
             } finally {
-                finishBreakup.countDown();
+                finishRegistrations.countDown();
             }
+            ownerRegistration.get(10, TimeUnit.SECONDS);
+            friendRegistration.get(10, TimeUnit.SECONDS);
         }
 
         // then
-        assertEnded();
+        assertThat(labelJdbcRepository.existsMember(ownerLabelId, friendId)).isTrue();
+        assertThat(labelJdbcRepository.existsMember(friendLabelId, ownerId)).isTrue();
     }
 
     @Test
     @DisplayName("설정을 바꾸려고 읽은 관계가 저장 전에 끊기면 설정 저장이 0건이라 충돌로 끝난다")
     void updateFriendship_ConflictsOnZeroRowUpdate_DeletedAfterLoad() {
         // given
-        connect(FriendRecognition.INITIAL_RAW_SCORE);
+        connect();
         doAnswer(call -> {
             Object loaded = call.callRealMethod();
-            jdbc.update("DELETE FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
-                    Math.min(first, second), Math.max(first, second));
+            jdbcTemplate.update("DELETE FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
+                    Math.min(ownerId, friendId), Math.max(ownerId, friendId));
             return loaded;
-        }).when(friendships).findBetween(first, second);
+        }).when(friendshipPersistenceAdapter).findBetween(ownerId, friendId);
 
         // when & then
-        assertThatThrownBy(() -> lifecycle.updateFriendship(first, second,
-                new FriendshipUpdateCommand(first, second, "친구", null, null)))
+        assertThatThrownBy(() -> friendshipCommandService.updateFriendship(ownerId, friendId,
+                new FriendshipUpdateCommand(ownerId, friendId, "친구", null, null)))
                 .isInstanceOf(FriendshipConflictException.class);
     }
 
-    private void connect(double interestScore) {
-        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
-                friendships.create(Friendship.restore(FRIENDS_SINCE,
-                        FriendRecognition.restore(first, null, interestScore, LocalDateTime.now(), false, true),
-                        FriendRecognition.restore(second, null, interestScore, LocalDateTime.now(), false, true))));
+    private void assertRegistrationLocksFirst(Runnable registration) throws Exception {
+        connect();
+        var registrationLocked = new CountDownLatch(1);
+        var finishRegistration = new CountDownLatch(1);
+        var breakupEntered = new CountDownLatch(1);
+        doAnswer(call -> {
+            Object friendIds = call.callRealMethod();
+            assertRepeatableRead();
+            registrationLocked.countDown();
+            await(finishRegistration);
+            return friendIds;
+        }).when(friendshipPersistenceAdapter).findFriendIdsForShare(ownerId, List.of(friendId));
+        doAnswer(call -> {
+            assertRepeatableRead();
+            breakupEntered.countDown();
+            return call.callRealMethod();
+        }).when(friendshipPersistenceAdapter).deleteBetween(friendId, ownerId);
+
+        try (var workers = Executors.newFixedThreadPool(2)) {
+            var addition = workers.submit(registration);
+            try {
+                await(registrationLocked);
+                var breakup = workers.submit(() -> friendshipCommandService.brokeUpWith(friendId, ownerId));
+                await(breakupEntered);
+                assertWaiting(breakup);
+                finishRegistration.countDown();
+                addition.get(10, TimeUnit.SECONDS);
+                breakup.get(10, TimeUnit.SECONDS);
+            } finally {
+                finishRegistration.countDown();
+            }
+        }
+
+        assertEnded();
     }
 
-    private void connectWithBothMemberships(double interestScore) {
-        connect(interestScore);
-        labelService.addMemberToLabel(first, firstLabel, second);
-        labelService.addMemberToLabel(second, secondLabel, first);
+    private void assertBreakupDeletesFirst(Runnable registration, Class<? extends RuntimeException> expected) throws Exception {
+        connectWithBothMemberships();
+        var deleted = new CountDownLatch(1);
+        var finishBreakup = new CountDownLatch(1);
+        var registrationEntered = new CountDownLatch(1);
+        doAnswer(call -> {
+            Object result = call.callRealMethod();
+            assertRepeatableRead();
+            deleted.countDown();
+            await(finishBreakup);
+            return result;
+        }).when(friendshipPersistenceAdapter).deleteBetween(friendId, ownerId);
+        doAnswer(call -> {
+            assertRepeatableRead();
+            registrationEntered.countDown();
+            return call.callRealMethod();
+        }).when(friendshipPersistenceAdapter).findFriendIdsForShare(ownerId, List.of(friendId));
+
+        try (var workers = Executors.newFixedThreadPool(2)) {
+            var breakup = workers.submit(() -> friendshipCommandService.brokeUpWith(friendId, ownerId));
+            try {
+                await(deleted);
+                var addition = workers.submit(() -> assertThatThrownBy(registration::run).isInstanceOf(expected));
+                await(registrationEntered);
+                assertWaiting(addition);
+                finishBreakup.countDown();
+                breakup.get(10, TimeUnit.SECONDS);
+                addition.get(10, TimeUnit.SECONDS);
+            } finally {
+                finishBreakup.countDown();
+            }
+        }
+
+        assertEnded();
+    }
+
+    private void connect() {
+        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                friendshipPersistenceAdapter.create(Friendship.restore(FRIENDS_SINCE,
+                        FriendRecognition.restore(ownerId, null, FriendRecognition.INITIAL_RAW_SCORE,
+                                LocalDateTime.now(), false, true),
+                        FriendRecognition.restore(friendId, null, FriendRecognition.INITIAL_RAW_SCORE,
+                                LocalDateTime.now(), false, true))));
+    }
+
+    private void connectWithBothMemberships() {
+        connect();
+        labelCommandService.addMemberToLabel(ownerId, ownerLabelId, friendId);
+        labelCommandService.addMemberToLabel(friendId, friendLabelId, ownerId);
     }
 
     private void assertEnded() {
-        assertThat(friendships.existsFriendshipBetween(first, second)).isFalse();
-        assertThat(labels.existsMember(firstLabel, second)).isFalse();
-        assertThat(labels.existsMember(secondLabel, first)).isFalse();
+        assertThat(friendshipPersistenceAdapter.existsFriendshipBetween(ownerId, friendId)).isFalse();
+        assertThat(labelJdbcRepository.existsMember(ownerLabelId, friendId)).isFalse();
+        assertThat(labelJdbcRepository.existsMember(friendLabelId, ownerId)).isFalse();
+    }
+
+    private void assertRepeatableRead() {
+        assertThat(jdbcTemplate.queryForObject("SELECT @@transaction_isolation", String.class))
+                .isEqualTo("REPEATABLE-READ");
+    }
+
+    private static void assertWaiting(Future<?> request) {
+        assertThatThrownBy(() -> request.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
     }
 
     private static void await(CountDownLatch latch) throws InterruptedException {
         if (!latch.await(10, TimeUnit.SECONDS)) {
-            throw new IllegalStateException("Concurrent lifecycle test did not reach its checkpoint");
+            throw new IllegalStateException("Concurrent request did not reach the expected database operation");
         }
     }
 }

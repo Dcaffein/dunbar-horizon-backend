@@ -42,7 +42,7 @@ class LabelControllerTest extends BaseControllerTest {
         given(mockLabel.getId()).willReturn(labelId);
         given(mockLabel.getLabelName()).willReturn("친한친구");
 
-        given(labelService.createLabel(eq(1L), eq("친한친구")))
+        given(labelCommandService.createLabel(eq(1L), eq("친한친구")))
                 .willReturn(mockLabel);
 
         mockMvc.perform(post("/api/v1/labels")
@@ -73,7 +73,7 @@ class LabelControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/labels/{labelId}", labelId))
                 .andExpect(status().isNoContent());
 
-        verify(labelService).deleteLabel(eq(1L), eq(labelId));
+        verify(labelCommandService).deleteLabel(eq(1L), eq(labelId));
     }
 
     @Test
@@ -87,7 +87,7 @@ class LabelControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNoContent());
 
-        verify(labelService).updateLabel(eq(labelId), eq(1L), eq(newLabelName));
+        verify(labelCommandService).updateLabel(eq(labelId), eq(1L), eq(newLabelName));
     }
 
     @Test
@@ -100,7 +100,7 @@ class LabelControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNoContent());
 
-        verify(labelService).replaceLabelMembers(anyLong(), eq(labelId), eq(List.of(2L, 3L)));
+        verify(labelCommandService).replaceLabelMembers(anyLong(), eq(labelId), eq(List.of(2L, 3L)));
     }
 
     @Test
@@ -114,7 +114,7 @@ class LabelControllerTest extends BaseControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/api/v1/labels/" + labelId + "/members/2"));
 
-        verify(labelService).addMemberToLabel(anyLong(), eq(labelId), eq(2L));
+        verify(labelCommandService).addMemberToLabel(anyLong(), eq(labelId), eq(2L));
     }
 
     @Test
@@ -125,14 +125,14 @@ class LabelControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/labels/{labelId}/members/{memberId}", labelId, memberId))
                 .andExpect(status().isNoContent());
 
-        verify(labelService).removeMemberFromLabel(anyLong(), eq(labelId), eq(memberId));
+        verify(labelCommandService).removeMemberFromLabel(anyLong(), eq(labelId), eq(memberId));
     }
 
     @Test
     @DisplayName("라벨 단건 정보를 조회한다")
     void getLabelById_Success() throws Exception {
         LabelResult result = new LabelResult(labelId, "친구들", 1);
-        given(labelService.getLabelById(eq(1L), eq(labelId))).willReturn(result);
+        given(labelQueryService.getLabelById(eq(1L), eq(labelId))).willReturn(result);
 
         mockMvc.perform(get("/api/v1/labels/{labelId}", labelId))
                 .andExpect(status().isOk())
@@ -146,7 +146,7 @@ class LabelControllerTest extends BaseControllerTest {
     @DisplayName("특정 멤버가 속한 내 라벨 목록을 조회한다")
     void getAllLabels_ByMember() throws Exception {
         Long memberId = 2L;
-        given(labelService.getLabelsByMember(eq(1L), eq(memberId)))
+        given(labelQueryService.getLabelsByMember(eq(1L), eq(memberId)))
                 .willReturn(List.of(new LabelResult(labelId, "친구들", 1)));
 
         mockMvc.perform(get("/api/v1/labels").param("memberId", String.valueOf(memberId)))
@@ -155,14 +155,14 @@ class LabelControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$[0].memberCount").value(1))
                 .andExpect(jsonPath("$[0].members").doesNotExist());
 
-        verify(labelService).getLabelsByMember(1L, memberId);
+        verify(labelQueryService).getLabelsByMember(1L, memberId);
     }
 
     @Test
     @DisplayName("라벨의 멤버 목록을 조회한다")
     void getLabelMembers_Success() throws Exception {
         List<LabelMemberResult> members = List.of(new LabelMemberResult(2L, "멤버닉네임"));
-        given(labelService.getLabelMembers(eq(1L), eq(labelId))).willReturn(members);
+        given(labelQueryService.getLabelMembers(eq(1L), eq(labelId))).willReturn(members);
 
         mockMvc.perform(get("/api/v1/labels/{labelId}/members", labelId))
                 .andExpect(status().isOk())
@@ -173,7 +173,7 @@ class LabelControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("비친구 단건 추가는 기존 404와 친구 관계 오류 코드를 반환한다")
     void addMember_ReturnsNotFound_NonFriend() throws Exception {
-        doThrow(new FriendshipNotFoundException(1L, 2L)).when(labelService).addMemberToLabel(1L, labelId, 2L);
+        doThrow(new FriendshipNotFoundException(1L, 2L)).when(labelCommandService).addMemberToLabel(1L, labelId, 2L);
 
         mockMvc.perform(post("/api/v1/labels/{labelId}/members", labelId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -186,7 +186,7 @@ class LabelControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("비친구를 포함한 교체는 기존 400과 라벨 자격 오류 코드를 반환한다")
     void replaceMembers_ReturnsBadRequest_NonFriend() throws Exception {
-        doThrow(new NonFriendLabelMemberException(List.of(2L))).when(labelService)
+        doThrow(new NonFriendLabelMemberException(List.of(2L))).when(labelCommandService)
                 .replaceLabelMembers(1L, labelId, List.of(2L));
 
         mockMvc.perform(put("/api/v1/labels/{labelId}/members", labelId)
@@ -200,7 +200,7 @@ class LabelControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("중복 멤버 추가는 기존 409와 중복 오류 코드를 반환한다")
     void addMember_ReturnsConflict_DuplicateMember() throws Exception {
-        doThrow(new DuplicateLabelMemberException(2L)).when(labelService).addMemberToLabel(1L, labelId, 2L);
+        doThrow(new DuplicateLabelMemberException(2L)).when(labelCommandService).addMemberToLabel(1L, labelId, 2L);
 
         mockMvc.perform(post("/api/v1/labels/{labelId}/members", labelId)
                         .contentType(MediaType.APPLICATION_JSON)

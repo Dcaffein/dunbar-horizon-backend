@@ -1,12 +1,8 @@
 package com.example.DunbarHorizon.social.application.port.out;
 
-import com.example.DunbarHorizon.social.domain.friend.Friendship;
-
 import java.util.Collection;
-import java.util.List;
+import java.util.Set;
 
 public interface FriendshipLockRepository {
-    boolean existsFriendshipForUpdate(Long userId, Long friendId);
-
-    List<Friendship> findAllBetweenForUpdate(Long userId, Collection<Long> friendIds);
+    Set<Long> findFriendIdsForShare(Long userId, Collection<Long> friendIds);
 }

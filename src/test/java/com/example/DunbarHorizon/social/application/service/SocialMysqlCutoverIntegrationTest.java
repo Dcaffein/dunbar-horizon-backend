@@ -10,7 +10,7 @@ import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.service.FriendRequestService;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.service.FriendshipQueryService;
-import com.example.DunbarHorizon.social.application.service.LabelService;
+import com.example.DunbarHorizon.social.application.service.LabelQueryService;
 import com.example.DunbarHorizon.social.application.service.SocialConnectionPathQueryService;
 import com.example.DunbarHorizon.social.application.service.SocialExpansionQueryService;
 import com.example.DunbarHorizon.social.application.service.SocialNetworkQueryService;
@@ -70,11 +70,12 @@ class SocialMysqlCutoverIntegrationTest {
     @Autowired private SocialNetworkQueryService socialNetworkQueryService;
     @Autowired private SocialExpansionQueryService socialExpansionQueryService;
     @Autowired private SocialConnectionPathQueryService socialConnectionPathQueryService;
-    @Autowired private LabelService labelService;
+    @Autowired private LabelQueryService labelQueryService;
     @Autowired private AccountSocialUserQueryService accountSocialUserQueryService;
 
     @AfterEach
     void cleanUp() {
+        jdbc.update("DELETE FROM label_members WHERE label_id = ?", LABEL_ID);
         jdbc.update("DELETE FROM labels WHERE id = ?", LABEL_ID);
         jdbc.update("DELETE FROM friend_requests WHERE requester_id = ?", REQUESTER);
         jdbc.update("DELETE FROM friendships WHERE low_user_id BETWEEN ? AND ?", ME, REQUESTER);
@@ -114,7 +115,7 @@ class SocialMysqlCutoverIntegrationTest {
 
         jdbc.update("UPDATE users SET nickname = 'renamed' WHERE user_id = ?", TARGET);
         assertThat(accountSocialUserQueryService.getSocialProfile(TARGET).nickname()).isEqualTo("renamed");
-        assertThat(labelService.getLabelMembers(ANCHOR, LABEL_ID)).contains(new LabelMemberResult(TARGET, "renamed"));
+        assertThat(labelQueryService.getLabelMembers(ANCHOR, LABEL_ID)).contains(new LabelMemberResult(TARGET, "renamed"));
         jdbc.update("UPDATE users SET status = 'DORMANT' WHERE user_id = ?", TARGET);
         assertThat(socialExpansionQueryService.getRecommendationsByAnchor(ME, ANCHOR)).isEmpty();
         jdbc.update("UPDATE users SET status = 'ACTIVE' WHERE user_id = ?", TARGET);
@@ -129,10 +130,10 @@ class SocialMysqlCutoverIntegrationTest {
         assertThat(friendshipQueryService.getFriend(ME, FRIEND).myInterestScore())
                 .isEqualTo(FriendRecognition.normalize(scoreFor(0.6) + InteractionScorePolicy.scoreOf(InteractionType.FLAG_ENDED)));
 
-        assertThat(labelService.getMemberIdsByLabels(ANCHOR, List.of(LABEL_ID))).containsExactlyInAnyOrder(ME, TARGET);
+        assertThat(labelQueryService.getMemberIdsByLabels(ANCHOR, List.of(LABEL_ID))).containsExactlyInAnyOrder(ME, TARGET);
         friendshipCommandService.brokeUpWith(ME, ANCHOR);
         assertThat(friendshipQueryService.areFriends(ME, ANCHOR)).isFalse();
-        assertThat(labelService.getMemberIdsByLabels(ANCHOR, List.of(LABEL_ID))).containsExactly(TARGET);
+        assertThat(labelQueryService.getMemberIdsByLabels(ANCHOR, List.of(LABEL_ID))).containsExactly(TARGET);
     }
 
     private void insertFriendship(long low, long high, double intimacy) {

@@ -37,25 +37,11 @@ public class LabelJdbcRepository implements LabelQueryRepository, LabelMembershi
     public void removeMembersBetween(Long userId, Long friendId) {
         List<Object[]> directions = List.of(new Object[]{userId, friendId}, new Object[]{friendId, userId});
 
-        // The caller deleted this friendship first, so its memberships cannot be added concurrently.
-        List<String> affectedLabels = jdbc.queryForList("""
-                SELECT DISTINCT l.id FROM labels l
-                JOIN label_members lm ON lm.label_id = l.id
-                WHERE (l.owner_id, lm.member_id) IN (:directions)
-                """, Map.of("directions", directions), String.class);
-        if (affectedLabels.isEmpty()) {
-            return;
-        }
-
-        jdbc.queryForList("""
-                SELECT id FROM labels FORCE INDEX (PRIMARY)
-                WHERE id IN (:ids) ORDER BY id FOR UPDATE
-                """, Map.of("ids", affectedLabels), String.class);
         jdbc.update("""
                 DELETE lm FROM label_members lm
                 JOIN labels l ON l.id = lm.label_id
-                WHERE l.id IN (:ids) AND (l.owner_id, lm.member_id) IN (:directions)
-                """, Map.of("ids", affectedLabels, "directions", directions));
+                WHERE (l.owner_id, lm.member_id) IN (:directions)
+                """, Map.of("directions", directions));
     }
 
     @Override

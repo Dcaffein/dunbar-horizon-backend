@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUser;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUserJpaRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendshipJpaRepository;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipIdRepository;
@@ -93,13 +94,25 @@ public class FriendshipPersistenceAdapter
     }
 
     @Override
-    public boolean existsFriendshipForUpdate(Long userId, Long friendId) {
-        return friendshipJdbcRepository.existsForUpdate(FriendshipKey.of(userId, friendId));
-    }
-
-    @Override
-    public List<Friendship> findAllBetweenForUpdate(Long userId, Collection<Long> friendIds) {
-        return friendshipJdbcRepository.findAllForUpdate(pairs(friendIds.stream().map(friendId -> FriendshipKey.of(userId, friendId)).toList()));
+    public Set<Long> findFriendIdsForShare(Long userId, Collection<Long> friendIds) {
+        List<Long> candidateIds = friendIds.stream()
+                .filter(friendId -> !userId.equals(friendId)).distinct().toList();
+        if (candidateIds.isEmpty()) {
+            return Set.of();
+        }
+        List<Long> userIds = new ArrayList<>(candidateIds);
+        userIds.add(userId);
+        Set<Long> activeUserIds = Set.copyOf(activeUserJpaRepository.findAllById(userIds).stream()
+                .map(ActiveUser::getId).toList());
+        if (!activeUserIds.contains(userId)) {
+            return Set.of();
+        }
+        List<Long> activeFriendIds = candidateIds.stream().filter(activeUserIds::contains).toList();
+        if (activeFriendIds.isEmpty()) {
+            return Set.of();
+        }
+        return Set.copyOf(friendshipJpaRepository.findAllBetweenForShare(userId, activeFriendIds).stream()
+                .map(friendship -> friendship.getFriendId(userId)).toList());
     }
 
     @Override
@@ -134,7 +147,4 @@ public class FriendshipPersistenceAdapter
         return friendshipJdbcRepository.filterFriendIdsAmong(userId, candidateIds);
     }
 
-    private static List<FriendshipKey> pairs(Collection<FriendshipKey> keys) {
-        return keys.stream().filter(FriendshipKey::isPair).distinct().toList();
-    }
 }

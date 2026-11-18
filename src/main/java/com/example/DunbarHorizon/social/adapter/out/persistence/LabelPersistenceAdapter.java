@@ -56,11 +56,6 @@ public class LabelPersistenceAdapter implements LabelRepository {
     }
 
     @Override
-    public Optional<Long> lockOwnerId(String labelId) {
-        return labelJpaRepository.findLockedById(labelId).map(Label::getOwnerId);
-    }
-
-    @Override
     public boolean existsByOwnerAndName(Long ownerId, String name) {
         return labelJpaRepository.existsByOwnerIdAndLabelName(ownerId, name);
     }

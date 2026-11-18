@@ -1,13 +1,13 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.dto.command.FriendshipUpdateCommand;
-import com.example.DunbarHorizon.social.application.port.out.LabelMembershipRepository;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.event.FriendshipEndedEvent;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class FriendshipCommandService {
 
     private final FriendshipRepository friendshipRepository;
-    private final LabelMembershipRepository labelMembershipRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
     public void updateFriendship(Long currentUserId, Long friendId, FriendshipUpdateCommand command) {
@@ -25,11 +25,11 @@ public class FriendshipCommandService {
         friendshipRepository.saveSettings(friendship);
     }
 
-    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Transactional
     public void brokeUpWith(Long currentUserId, Long friendId) {
         if (!friendshipRepository.deleteBetween(currentUserId, friendId)) {
             throw new FriendshipNotFoundException(currentUserId, friendId);
         }
-        labelMembershipRepository.removeMembersBetween(currentUserId, friendId);
+        applicationEventPublisher.publishEvent(new FriendshipEndedEvent(currentUserId, friendId));
     }
 }

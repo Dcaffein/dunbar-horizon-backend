@@ -5,7 +5,8 @@ import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelCreateRequest;
 import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelMemberAddRequest;
 import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelMembersReplaceRequest;
 import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelUpdateRequest;
-import com.example.DunbarHorizon.social.application.service.LabelService;
+import com.example.DunbarHorizon.social.application.service.LabelCommandService;
+import com.example.DunbarHorizon.social.application.service.LabelQueryService;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.domain.label.Label;
@@ -22,7 +23,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LabelController {
 
-    private final LabelService labelService;
+    private final LabelCommandService labelCommandService;
+    private final LabelQueryService labelQueryService;
 
     @GetMapping
     public ResponseEntity<List<LabelResult>> getAllLabels(
@@ -30,9 +32,9 @@ public class LabelController {
             @RequestParam(required = false) Long memberId) {
 
         if (memberId != null) {
-            return ResponseEntity.ok(labelService.getLabelsByMember(currentUserId, memberId));
+            return ResponseEntity.ok(labelQueryService.getLabelsByMember(currentUserId, memberId));
         }
-        return ResponseEntity.ok(labelService.getAllLabels(currentUserId));
+        return ResponseEntity.ok(labelQueryService.getAllLabels(currentUserId));
     }
 
     @GetMapping("/{labelId}")
@@ -40,7 +42,7 @@ public class LabelController {
             @CurrentUserId Long currentUserId,
             @PathVariable String labelId) {
 
-        return ResponseEntity.ok(labelService.getLabelById(currentUserId, labelId));
+        return ResponseEntity.ok(labelQueryService.getLabelById(currentUserId, labelId));
     }
 
     @GetMapping("/{labelId}/members")
@@ -48,7 +50,7 @@ public class LabelController {
             @CurrentUserId Long currentUserId,
             @PathVariable String labelId) {
 
-        return ResponseEntity.ok(labelService.getLabelMembers(currentUserId, labelId));
+        return ResponseEntity.ok(labelQueryService.getLabelMembers(currentUserId, labelId));
     }
 
     @PostMapping
@@ -56,7 +58,7 @@ public class LabelController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid LabelCreateRequest dto) {
 
-        Label newLabel = labelService.createLabel(currentUserId, dto.labelName());
+        Label newLabel = labelCommandService.createLabel(currentUserId, dto.labelName());
 
         return ResponseEntity
                 .created(URI.create("/api/v1/labels/" + newLabel.getId()))
@@ -68,7 +70,7 @@ public class LabelController {
             @CurrentUserId Long currentUserId,
             @PathVariable String labelId) {
 
-        labelService.deleteLabel(currentUserId, labelId);
+        labelCommandService.deleteLabel(currentUserId, labelId);
         return ResponseEntity.noContent().build();
     }
 
@@ -78,7 +80,7 @@ public class LabelController {
             @PathVariable String labelId,
             @RequestBody @Valid LabelUpdateRequest dto) {
 
-        labelService.updateLabel(labelId, currentUserId, dto.labelName());
+        labelCommandService.updateLabel(labelId, currentUserId, dto.labelName());
         return ResponseEntity.noContent().build();
     }
 
@@ -88,7 +90,7 @@ public class LabelController {
             @PathVariable String labelId,
             @RequestBody @Valid LabelMembersReplaceRequest labelMembersReplaceRequest) {
 
-        labelService.replaceLabelMembers(currentUserId, labelId, labelMembersReplaceRequest.memberIds());
+        labelCommandService.replaceLabelMembers(currentUserId, labelId, labelMembersReplaceRequest.memberIds());
         return ResponseEntity.noContent().build();
     }
 
@@ -98,7 +100,7 @@ public class LabelController {
             @PathVariable String labelId,
             @RequestBody @Valid LabelMemberAddRequest labelMemberAddRequest) {
 
-        labelService.addMemberToLabel(currentUserId, labelId, labelMemberAddRequest.memberId());
+        labelCommandService.addMemberToLabel(currentUserId, labelId, labelMemberAddRequest.memberId());
         return ResponseEntity
                 .created(URI.create("/api/v1/labels/" + labelId + "/members/" + labelMemberAddRequest.memberId()))
                 .build();
@@ -110,7 +112,7 @@ public class LabelController {
             @PathVariable String labelId,
             @PathVariable Long memberId) {
 
-        labelService.removeMemberFromLabel(currentUserId, labelId, memberId);
+        labelCommandService.removeMemberFromLabel(currentUserId, labelId, memberId);
         return ResponseEntity.noContent().build();
     }
 }

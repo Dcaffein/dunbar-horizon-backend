@@ -10,7 +10,6 @@ public interface LabelRepository {
     void delete(Label label);
     Optional<Label> findById(String labelId);
     Optional<Long> findOwnerId(String labelId);
-    Optional<Long> lockOwnerId(String labelId);
     boolean existsByOwnerAndName(Long ownerId, String name);
     boolean existsByOwnerAndNameExcludingLabel(Long ownerId, String name, String labelId);
 }

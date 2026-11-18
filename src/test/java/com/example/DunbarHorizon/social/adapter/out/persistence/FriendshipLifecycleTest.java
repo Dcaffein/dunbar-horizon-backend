@@ -3,13 +3,14 @@ package com.example.DunbarHorizon.social.adapter.out.persistence;
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.command.FriendshipUpdateCommand;
+import com.example.DunbarHorizon.social.application.eventListener.LabelMembershipEventListener;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
-import com.example.DunbarHorizon.social.application.service.LabelService;
+import com.example.DunbarHorizon.social.application.service.LabelCommandService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.event.FriendshipEndedEvent;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
 import com.example.DunbarHorizon.social.domain.label.LabelNamer;
@@ -23,6 +24,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,20 +40,23 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doAnswer;
 
 @JpaRepositoryTest
+@RecordApplicationEvents
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class, LabelJdbcRepository.class, UserProfileJdbcRepository.class,
-        FriendshipCommandService.class, LabelService.class, LabelNamer.class, LabelMemberRegistrar.class})
+@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class, LabelJdbcRepository.class, ActiveUserPersistenceAdapter.class,
+        FriendshipCommandService.class, LabelCommandService.class, LabelNamer.class, LabelMemberRegistrar.class,
+        LabelMembershipEventListener.class})
 class FriendshipLifecycleTest {
 
     private static final LocalDate FRIENDS_SINCE = LocalDate.of(2026, 1, 1);
 
     @Autowired private UserJpaRepository users;
     @Autowired private FriendshipCommandService lifecycle;
-    @Autowired private LabelService labelService;
+    @Autowired private LabelCommandService labelCommandService;
     @MockitoSpyBean private LabelJdbcRepository labels;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private PlatformTransactionManager transactionManager;
     @MockitoSpyBean private FriendshipPersistenceAdapter friendships;
+    @Autowired private ApplicationEvents applicationEvents;
 
     private Long first;
     private Long second;
@@ -61,21 +67,21 @@ class FriendshipLifecycleTest {
     void setUp() {
         first = users.save(User.createActive("first@mysql-friendship-lifecycle.test", "first")).getId();
         second = users.save(User.createActive("second@mysql-friendship-lifecycle.test", "second")).getId();
-        firstLabel = labelService.createLabel(first, "내 라벨").getId();
-        secondLabel = labelService.createLabel(second, "상대 라벨").getId();
+        firstLabel = labelCommandService.createLabel(first, "내 라벨").getId();
+        secondLabel = labelCommandService.createLabel(second, "상대 라벨").getId();
     }
 
     @AfterEach
     void tearDown() {
-        labelService.deleteLabel(first, firstLabel);
-        labelService.deleteLabel(second, secondLabel);
+        labelCommandService.deleteLabel(first, firstLabel);
+        labelCommandService.deleteLabel(second, secondLabel);
         jdbc.update("DELETE FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
                 Math.min(first, second), Math.max(first, second));
         users.deleteAllById(List.of(first, second));
     }
 
     @Test
-    @DisplayName("친구 관계를 끊으면 양쪽 라벨에서 서로 제거된다")
+    @DisplayName("친구 관계 삭제 이벤트가 동기로 양쪽 라벨을 정리하고 삭제 실패 시에는 발행되지 않는다")
     void brokeUpWith_RemovesBothMemberships_WithFriendship() {
         // given
         connectWithBothMemberships(FriendRecognition.INITIAL_RAW_SCORE);
@@ -88,10 +94,12 @@ class FriendshipLifecycleTest {
         // then
         assertEnded();
         assertThatThrownBy(() -> lifecycle.brokeUpWith(first, second)).isInstanceOf(FriendshipNotFoundException.class);
+        assertThat(applicationEvents.stream(FriendshipEndedEvent.class).toList())
+                .containsExactly(new FriendshipEndedEvent(second, first));
     }
 
     @Test
-    @DisplayName("친구 끊기에서 쓰기 중 실패하면 관계와 양쪽 라벨 멤버십이 복원된다")
+    @DisplayName("친구 관계 삭제 이벤트의 멤버십 정리가 실패하면 관계와 양쪽 멤버십이 함께 복원된다")
     void brokeUpWith_RollsBackBothMemberships_OnFailure() {
         // given
         connectWithBothMemberships(FriendRecognition.INITIAL_RAW_SCORE);
@@ -161,8 +169,8 @@ class FriendshipLifecycleTest {
 
     private void connectWithBothMemberships(double interestScore) {
         connect(interestScore);
-        labelService.addMemberToLabel(first, firstLabel, second);
-        labelService.addMemberToLabel(second, secondLabel, first);
+        labelCommandService.addMemberToLabel(first, firstLabel, second);
+        labelCommandService.addMemberToLabel(second, secondLabel, first);
     }
 
     private void assertEnded() {

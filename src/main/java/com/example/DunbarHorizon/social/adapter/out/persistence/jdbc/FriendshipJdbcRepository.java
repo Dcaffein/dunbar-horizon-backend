@@ -31,13 +31,6 @@ public class FriendshipJdbcRepository {
             FOR UPDATE
             """.formatted(ACTIVE_PAIR);
 
-    private static final String LOCK_PAIR = """
-            SELECT low_user_id FROM friendships
-            WHERE low_user_id = :low AND high_user_id = :high
-              AND %s
-            FOR UPDATE
-            """.formatted(ACTIVE_PAIR);
-
     private static final String LOCK_PAIRS = """
             SELECT * FROM friendships FORCE INDEX (PRIMARY)
             WHERE (low_user_id, high_user_id) IN (:pairs)
@@ -79,10 +72,6 @@ public class FriendshipJdbcRepository {
 
     public Optional<Friendship> findForUpdate(FriendshipKey key) {
         return jdbc.query(SELECT_PAIR_FOR_UPDATE, parameters(key), FriendshipRows::read).stream().findFirst();
-    }
-
-    public boolean existsForUpdate(FriendshipKey key) {
-        return !jdbc.queryForList(LOCK_PAIR, parameters(key), Long.class).isEmpty();
     }
 
     public List<Friendship> findAllForUpdate(Collection<FriendshipKey> keys) {

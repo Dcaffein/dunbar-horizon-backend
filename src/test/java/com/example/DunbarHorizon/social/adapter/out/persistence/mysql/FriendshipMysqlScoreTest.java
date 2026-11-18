@@ -4,16 +4,22 @@ import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepo
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
+import com.example.DunbarHorizon.social.adapter.out.persistence.ActiveUserPersistenceAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipPersistenceAdapter;
+import com.example.DunbarHorizon.social.adapter.out.persistence.LabelPersistenceAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.command.FriendshipUpdateCommand;
+import com.example.DunbarHorizon.social.application.eventListener.LabelMembershipEventListener;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.service.FriendshipScoreService;
+import com.example.DunbarHorizon.social.application.service.LabelCommandService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipDecayPolicy;
+import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
+import com.example.DunbarHorizon.social.domain.label.LabelNamer;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +46,9 @@ import static org.assertj.core.api.Assertions.within;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, UserProfileJdbcRepository.class, LabelJdbcRepository.class,
-        FriendshipScoreService.class, FriendshipCommandService.class, FriendshipDecayPolicy.class})
+        FriendshipScoreService.class, FriendshipCommandService.class, FriendshipDecayPolicy.class,
+        LabelPersistenceAdapter.class, ActiveUserPersistenceAdapter.class, LabelCommandService.class,
+        LabelNamer.class, LabelMemberRegistrar.class, LabelMembershipEventListener.class})
 class FriendshipMysqlScoreTest {
 
     private static final LocalDate CREATED_AT = LocalDate.of(2026, 1, 1);
