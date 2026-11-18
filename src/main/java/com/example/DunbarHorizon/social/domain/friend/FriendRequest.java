@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.global.exception.ErrorContext;
 import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;
 import com.example.DunbarHorizon.social.domain.friend.exception.CannotRequestToSelfException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestInvalidException;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestNotAcceptedException;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -63,5 +64,12 @@ public class FriendRequest {
 
     public boolean isAccepted() {
         return this.status == FriendRequestStatus.ACCEPTED;
+    }
+
+    Friendship toFriendship() {
+        if (!isAccepted()) {
+            throw new FriendRequestNotAcceptedException(requesterId, receiverId);
+        }
+        return new Friendship(requesterId, receiverId);
     }
 }

@@ -6,6 +6,7 @@ import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResu
 import com.example.DunbarHorizon.social.application.port.out.FriendRequestViewRepository;
 import com.example.DunbarHorizon.social.application.port.out.UserProfileRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
+import com.example.DunbarHorizon.social.domain.friend.FriendshipBroker;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestInvalidException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
@@ -41,6 +42,9 @@ class FriendRequestServiceTest {
 
     @Mock
     private FriendshipRepository friendshipRepository;
+
+    @Mock
+    private FriendshipBroker friendshipBroker;
 
     @Mock
     private UserProfileRepository userProfileRepository;

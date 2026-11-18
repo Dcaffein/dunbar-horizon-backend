@@ -10,6 +10,7 @@ import com.example.DunbarHorizon.social.application.service.FriendRequestService
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.FriendshipBroker;
 import com.example.DunbarHorizon.social.domain.friend.event.FriendRequestAcceptedEvent;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
@@ -36,7 +37,7 @@ import static org.mockito.Mockito.doAnswer;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendRequestPersistenceAdapter.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class,
-        FriendRequestService.class, FriendRequestViewJdbcRepository.class,
+        FriendRequestService.class, FriendshipBroker.class, FriendRequestViewJdbcRepository.class,
         UserProfileJdbcRepository.class,
         FriendRequestLifecycleTest.AcceptedEvents.class})
 class FriendRequestLifecycleTest {

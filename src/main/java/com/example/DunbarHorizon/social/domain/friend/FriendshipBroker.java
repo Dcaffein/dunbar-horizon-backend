@@ -1,12 +1,14 @@
 package com.example.DunbarHorizon.social.domain.friend;
 
-import com.example.DunbarHorizon.social.domain.friend.exception.*;
+import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
+import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
+import org.springframework.stereotype.Component;
 
+@Component
 public class FriendshipBroker {
-    private FriendshipBroker() {}
 
-    public static FriendRequest propose(Long requesterId, Long receiverId,
-                                        boolean existingFriendship, boolean existingRequest) {
+    public FriendRequest propose(Long requesterId, Long receiverId,
+                                 boolean existingFriendship, boolean existingRequest) {
         if (existingFriendship) {
             throw new AlreadyFriendsException(requesterId, receiverId);
         }
@@ -18,18 +20,11 @@ public class FriendshipBroker {
         return new FriendRequest(requesterId, receiverId);
     }
 
-    public static Friendship createFrom(FriendRequest friendRequest, boolean existingFriendship) {
-        if (!friendRequest.isAccepted()) {
-            throw new FriendRequestNotAcceptedException(friendRequest.getRequesterId(), friendRequest.getReceiverId());
-        }
-
+    public Friendship createFrom(FriendRequest friendRequest, boolean existingFriendship) {
         if (existingFriendship) {
             throw new AlreadyFriendsException(friendRequest.getRequesterId(), friendRequest.getReceiverId());
         }
 
-        return new Friendship(
-                friendRequest.getRequesterId(),
-                friendRequest.getReceiverId()
-        );
+        return friendRequest.toFriendship();
     }
 }
