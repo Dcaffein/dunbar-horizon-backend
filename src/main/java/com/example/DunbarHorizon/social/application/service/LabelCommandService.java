@@ -6,6 +6,7 @@ import com.example.DunbarHorizon.social.application.port.out.LabelMembershipRepo
 import com.example.DunbarHorizon.social.application.port.out.LabelRepository;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
+import com.example.DunbarHorizon.social.domain.label.LabelName;
 import com.example.DunbarHorizon.social.domain.label.LabelNamer;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelNotFoundException;
@@ -32,8 +33,8 @@ public class LabelCommandService {
 
     public Label createLabel(Long ownerId, String name) {
         requireActiveUser(ownerId);
-        boolean nameExists = labelRepository.existsByOwnerAndName(ownerId, name);
-        Label label = labelNamer.create(ownerId, name, nameExists);
+        LabelName assignedName = labelNamer.assign(name, labelRepository.findNamesByOwner(ownerId, null));
+        Label label = Label.create(ownerId, assignedName);
         labelRepository.create(label);
         return label;
     }
@@ -41,8 +42,8 @@ public class LabelCommandService {
     public void updateLabel(String labelId, Long ownerId, String name) {
         Label label = ownedLabel(ownerId, labelId);
         if (name != null) {
-            boolean nameExists = labelRepository.existsByOwnerAndNameExcludingLabel(ownerId, name, labelId);
-            labelNamer.rename(label, name, nameExists);
+            LabelName assignedName = labelNamer.assign(name, labelRepository.findNamesByOwner(ownerId, labelId));
+            label.rename(assignedName);
             labelRepository.saveChanges(label);
         }
     }

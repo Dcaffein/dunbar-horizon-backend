@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class LabelMemberRegistrarTest {
 
     private final LabelMemberRegistrar registrar = new LabelMemberRegistrar();
-    private final Label label = new Label(1L, "친구");
+    private final Label label = Label.create(1L, new LabelName("친구"));
 
     @Test
     @DisplayName("실제 친구 ID에 포함된 멤버를 추가하고 중복 추가는 거부한다")

@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 @RequiredArgsConstructor
@@ -56,12 +57,7 @@ public class LabelPersistenceAdapter implements LabelRepository {
     }
 
     @Override
-    public boolean existsByOwnerAndName(Long ownerId, String name) {
-        return labelJpaRepository.existsByOwnerIdAndLabelName(ownerId, name);
-    }
-
-    @Override
-    public boolean existsByOwnerAndNameExcludingLabel(Long ownerId, String name, String labelId) {
-        return labelJpaRepository.existsByOwnerIdAndLabelNameAndIdNot(ownerId, name, labelId);
+    public Set<String> findNamesByOwner(Long ownerId, String excludedLabelId) {
+        return labelJpaRepository.findNamesByOwner(ownerId, excludedLabelId);
     }
 }

@@ -7,7 +7,7 @@ import com.example.DunbarHorizon.social.application.port.out.LabelRepository;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
 import com.example.DunbarHorizon.social.domain.label.LabelNamer;
-import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelNameException;
+import com.example.DunbarHorizon.social.domain.label.LabelTestFactory;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
@@ -39,21 +39,29 @@ class LabelCommandServiceTest {
     @Mock private ActiveUserRepository activeUserRepository;
 
     private LabelCommandService service;
-    private final Label label = Label.restore("label", "친구", 1L, Set.of(2L));
+    private final Label label = LabelTestFactory.createLabel(1L, "친구");
 
     @BeforeEach
     void setUp() {
-        service = new LabelCommandService(labelRepository, labelMembershipRepository, new LabelNamer(), new LabelMemberRegistrar(), friendshipLockRepository, activeUserRepository);
+        var registrar = new LabelMemberRegistrar();
+        registrar.addMember(label, 2L, Set.of(2L));
+        service = new LabelCommandService(labelRepository, labelMembershipRepository, new LabelNamer(), registrar,
+                friendshipLockRepository, activeUserRepository);
     }
 
     @Test
-    @DisplayName("이름 중복 사실을 도메인에 전달하고 중복이면 저장하지 않는다")
-    void createLabel_Rejects_DuplicateName() {
+    @DisplayName("소유자의 기존 이름을 사용해 빈 번호를 선택하고 저장한다")
+    void createLabel_SavesAvailableName_WhenRequestedNameIsOccupied() {
+        // given
         given(activeUserRepository.existsById(1L)).willReturn(true);
-        given(labelRepository.existsByOwnerAndName(1L, "친구")).willReturn(true);
+        given(labelRepository.findNamesByOwner(1L, null)).willReturn(Set.of("친구", "친구 (3)"));
 
-        assertThatThrownBy(() -> service.createLabel(1L, "친구")).isInstanceOf(DuplicateLabelNameException.class);
-        verify(labelRepository, never()).create(any());
+        // when
+        Label created = service.createLabel(1L, "친구");
+
+        // then
+        assertThat(created.getLabelName()).isEqualTo("친구 (2)");
+        verify(labelRepository).create(created);
     }
 
     @Test
@@ -69,32 +77,33 @@ class LabelCommandServiceTest {
     @Test
     @DisplayName("이름 변경은 자기 라벨을 제외한 중복 사실을 사용한다")
     void updateLabel_Succeeds_SameName() {
-        given(labelRepository.findById("label")).willReturn(Optional.of(label));
+        given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
+        given(labelRepository.findNamesByOwner(1L, label.getId())).willReturn(Set.of("친구 (2)"));
 
-        service.updateLabel("label", 1L, "친구");
+        service.updateLabel(label.getId(), 1L, "친구");
 
-        verify(labelRepository).existsByOwnerAndNameExcludingLabel(1L, "친구", "label");
+        assertThat(label.getLabelName()).isEqualTo("친구");
         verify(labelRepository).saveChanges(label);
     }
 
     @Test
     @DisplayName("이름이 없는 PATCH는 소유권만 확인하고 변경하지 않는다")
     void updateLabel_SkipsRename_NullName() {
-        given(labelRepository.findById("label")).willReturn(Optional.of(label));
+        given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
 
-        service.updateLabel("label", 1L, null);
+        service.updateLabel(label.getId(), 1L, null);
 
         verify(labelRepository, never()).saveChanges(any());
-        verify(labelRepository, never()).existsByOwnerAndNameExcludingLabel(any(), any(), any());
+        verify(labelRepository, never()).findNamesByOwner(any(), any());
     }
 
     @Test
     @DisplayName("다른 소유자의 멤버 추가는 사용자와 친구 관계를 조회하기 전에 거부한다")
     void addMember_Rejects_ForeignOwner() {
-        given(labelRepository.findById("label"))
-                .willReturn(Optional.of(Label.restore("label", "친구", 2L, Set.of())));
+        Label foreignLabel = LabelTestFactory.createLabel(2L, "친구");
+        given(labelRepository.findById(foreignLabel.getId())).willReturn(Optional.of(foreignLabel));
 
-        assertThatThrownBy(() -> service.addMemberToLabel(1L, "label", 3L))
+        assertThatThrownBy(() -> service.addMemberToLabel(1L, foreignLabel.getId(), 3L))
                 .isInstanceOf(LabelAuthorizationException.class);
         verifyNoInteractions(activeUserRepository, friendshipLockRepository);
     }
@@ -102,9 +111,9 @@ class LabelCommandServiceTest {
     @Test
     @DisplayName("비활성 대상 추가는 친구 관계 조회 전에 사용자 없음으로 거부한다")
     void addMember_Rejects_InactiveUser() {
-        given(labelRepository.findById("label")).willReturn(Optional.of(label));
+        given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
 
-        assertThatThrownBy(() -> service.addMemberToLabel(1L, "label", 3L))
+        assertThatThrownBy(() -> service.addMemberToLabel(1L, label.getId(), 3L))
                 .isInstanceOf(UserReferenceNotFoundException.class);
         verify(activeUserRepository).existsById(3L);
         verifyNoInteractions(friendshipLockRepository);
@@ -115,9 +124,9 @@ class LabelCommandServiceTest {
     @DisplayName("교체 대상의 실제 친구 ID를 전달하고 비친구면 기존 멤버를 저장하지 않는다")
     void replaceMembers_Rejects_NonFriend() {
         given(friendshipLockRepository.findFriendIdsForShare(1L, List.of(3L))).willReturn(Set.of());
-        given(labelRepository.findById("label")).willReturn(Optional.of(label));
+        given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
 
-        assertThatThrownBy(() -> service.replaceLabelMembers(1L, "label", List.of(3L, 3L)))
+        assertThatThrownBy(() -> service.replaceLabelMembers(1L, label.getId(), List.of(3L, 3L)))
                 .isInstanceOf(NonFriendLabelMemberException.class);
         assertThat(label.getMemberIds()).containsExactly(2L);
         verify(labelRepository, never()).saveChanges(any());
@@ -127,9 +136,9 @@ class LabelCommandServiceTest {
     @DisplayName("null 교체 목록은 빈 목록으로 변환해 기존 멤버를 비운다")
     void replaceMembers_Clears_NullInput() {
         given(friendshipLockRepository.findFriendIdsForShare(1L, List.of())).willReturn(Set.of());
-        given(labelRepository.findById("label")).willReturn(Optional.of(label));
+        given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
 
-        service.replaceLabelMembers(1L, "label", null);
+        service.replaceLabelMembers(1L, label.getId(), null);
 
         assertThat(label.getMemberIds()).isEmpty();
         verify(labelRepository).saveChanges(label);
