@@ -7,9 +7,11 @@ import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelUpdateRequest;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.domain.label.Label;
+import com.example.DunbarHorizon.social.domain.label.LabelName;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
+import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelNameException;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
@@ -57,14 +59,27 @@ class LabelControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("라벨 이름이 20자를 초과하면 400과 validation.labelName을 반환한다")
     void createLabel_Fail_TooLongName() throws Exception {
-        String tooLong = "가".repeat(Label.NAME_MAX_LENGTH + 1);
+        String tooLong = "가".repeat(LabelName.MAX_LENGTH + 1);
         LabelCreateRequest dto = new LabelCreateRequest(tooLong);
 
         mockMvc.perform(post("/api/v1/labels")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.validation.labelName").value(Label.NAME_LENGTH_MESSAGE));
+                .andExpect(jsonPath("$.validation.labelName").value(LabelName.LENGTH_MESSAGE));
+    }
+
+    @Test
+    @DisplayName("신규 라벨의 이름 저장 경합은 409와 이름 중복 오류 코드를 반환한다")
+    void createLabel_ReturnsConflict_DuplicateName() throws Exception {
+        given(labelCommandService.createLabel(1L, "친구"))
+                .willThrow(new DuplicateLabelNameException(1L, "친구"));
+
+        mockMvc.perform(post("/api/v1/labels")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"labelName\":\"친구\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("LABEL_NAME_DUPLICATE"));
     }
 
     @Test
@@ -88,6 +103,19 @@ class LabelControllerTest extends BaseControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(labelCommandService).updateLabel(eq(labelId), eq(1L), eq(newLabelName));
+    }
+
+    @Test
+    @DisplayName("라벨 이름 변경의 저장 경합은 409와 이름 중복 오류 코드를 반환한다")
+    void updateLabel_ReturnsConflict_DuplicateName() throws Exception {
+        doThrow(new DuplicateLabelNameException(1L, "친구")).when(labelCommandService)
+                .updateLabel(labelId, 1L, "친구");
+
+        mockMvc.perform(patch("/api/v1/labels/{labelId}", labelId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"labelName\":\"친구\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("LABEL_NAME_DUPLICATE"));
     }
 
     @Test

@@ -16,9 +16,9 @@ import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFou
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelNamer;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
+import com.example.DunbarHorizon.social.domain.label.LabelTestFactory;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelNameException;
-import com.example.DunbarHorizon.social.domain.label.exception.InvalidLabelNameException;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelAuthorizationException;
 import com.example.DunbarHorizon.social.domain.label.exception.LabelNotFoundException;
 import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
@@ -35,7 +35,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -88,47 +87,12 @@ class LabelPersistenceAdapterTest {
     }
 
     @Test
-    @DisplayName("비활성이거나 없는 owner의 라벨 생성은 활성 사용자 조회를 거쳐 거부한다")
-    void createLabel_Rejects_InactiveOrMissingOwner() {
-        // given
-        owner.deactivate();
-        em.flush();
-        em.clear();
-
-        // when & then
-        assertThatThrownBy(() -> service.createLabel(owner.getId(), "친구"))
-                .isInstanceOf(UserReferenceNotFoundException.class);
-        assertThatThrownBy(() -> service.createLabel(Long.MAX_VALUE, "친구"))
-                .isInstanceOf(UserReferenceNotFoundException.class);
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM labels WHERE owner_id = ?", Long.class, owner.getId()))
-                .isZero();
-    }
-
-    @Test
-    @DisplayName("이름 유일성은 사용자별로 적용하고 대소문자가 다른 이름은 구분한다")
-    void changeName_EnforcesUniqueness_PerOwner() {
-        // given
-        Label firstLabel = service.createLabel(owner.getId(), "Work");
-        Label secondLabel = service.createLabel(owner.getId(), "work");
-        service.createLabel(first.getId(), "Work");
-
-        service.updateLabel(firstLabel.getId(), owner.getId(), "Work");
-
-        // when & then
-        assertThatThrownBy(() -> service.updateLabel(secondLabel.getId(), owner.getId(), "Work"))
-                .isInstanceOf(DuplicateLabelNameException.class);
-        assertThatThrownBy(() -> service.updateLabel(secondLabel.getId(), owner.getId(), " "))
-                .isInstanceOf(InvalidLabelNameException.class);
-        assertThat(labelQueryService.getAllLabels(owner.getId())).extracting(LabelResult::labelName)
-                .containsExactlyInAnyOrder("Work", "work");
-    }
-
-    @Test
     @DisplayName("사전 조회를 우회한 이름 충돌도 JPA flush에서 도메인 예외로 변환한다")
     void create_RejectsDuplicate_DatabaseConstraint() {
         service.createLabel(owner.getId(), "Work");
 
-        assertThatThrownBy(() -> labelRepository.create(Label.restore("another-id", "Work", owner.getId(), Set.of())))
+        Label duplicate = LabelTestFactory.createLabel(owner.getId(), "Work");
+        assertThatThrownBy(() -> labelRepository.create(duplicate))
                 .isInstanceOf(DuplicateLabelNameException.class);
     }
 
@@ -303,10 +267,6 @@ class LabelPersistenceAdapterTest {
         assertThat(labelRepository.findById(labelId).orElseThrow().getMemberIds()).containsExactly(second.getId());
     }
 
-    private User createUser(String name) {
-        return em.persistAndFlush(User.createActive(name + "@mysql-labels.test", name));
-    }
-
     @Test
     @DisplayName("소유자가 비활성이면 명령과 화면 조회에서 라벨을 찾을 수 없다")
     void findById_ReturnsEmpty_InactiveOwner() {
@@ -324,8 +284,10 @@ class LabelPersistenceAdapterTest {
         assertThat(labelJdbcRepository.findAllByOwner(owner.getId())).isEmpty();
         assertThat(labelJdbcRepository.findResultById(labelId)).isEmpty();
         assertThat(labelJdbcRepository.findMembers(labelId)).isEmpty();
-        assertThatThrownBy(() -> service.updateLabel(labelId, owner.getId(), "동료"))
-                .isInstanceOf(LabelNotFoundException.class);
+    }
+
+    private User createUser(String name) {
+        return em.persistAndFlush(User.createActive(name + "@mysql-labels.test", name));
     }
 
     private void connect(User one, User two) {

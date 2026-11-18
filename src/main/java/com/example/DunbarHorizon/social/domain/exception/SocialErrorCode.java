@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.domain.exception;
 
 import com.example.DunbarHorizon.global.exception.ErrorCode;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.label.Label;
+import com.example.DunbarHorizon.social.domain.label.LabelName;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
@@ -32,7 +32,7 @@ public enum SocialErrorCode implements ErrorCode {
     LABEL_NOT_FOUND(HttpStatus.NOT_FOUND, "라벨을 찾을 수 없습니다."),
     LABEL_NAME_DUPLICATE(HttpStatus.CONFLICT, "같은 이름의 라벨이 이미 있습니다."),
     LABEL_MEMBER_DUPLICATE(HttpStatus.CONFLICT, "이미 라벨에 포함된 멤버입니다."),
-    LABEL_INVALID_NAME(HttpStatus.BAD_REQUEST, Label.NAME_LENGTH_MESSAGE),
+    LABEL_INVALID_NAME(HttpStatus.BAD_REQUEST, LabelName.LENGTH_MESSAGE),
     LABEL_MEMBER_NOT_FRIEND(HttpStatus.BAD_REQUEST, "친구가 아닌 사용자는 라벨에 추가할 수 없습니다."),
     LABEL_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 라벨에 대한 권한이 없습니다."),
 

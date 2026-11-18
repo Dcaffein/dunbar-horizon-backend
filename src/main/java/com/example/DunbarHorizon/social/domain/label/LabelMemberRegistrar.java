@@ -12,21 +12,17 @@ import java.util.Set;
 public class LabelMemberRegistrar {
 
     public void addMember(Label label, Long memberId, Set<Long> friendIds) {
-        if (!nonFriendIds(List.of(memberId), friendIds).isEmpty()) {
+        if (!friendIds.contains(memberId)) {
             throw new FriendshipNotFoundException(label.getOwnerId(), memberId);
         }
         label.addMember(memberId);
     }
 
     public void replaceMembers(Label label, Collection<Long> memberIds, Set<Long> friendIds) {
-        List<Long> invalidIds = nonFriendIds(memberIds, friendIds);
+        List<Long> invalidIds = memberIds.stream().distinct().filter(id -> !friendIds.contains(id)).toList();
         if (!invalidIds.isEmpty()) {
             throw new NonFriendLabelMemberException(invalidIds);
         }
         label.replaceMembers(memberIds);
-    }
-
-    private List<Long> nonFriendIds(Collection<Long> memberIds, Set<Long> friendIds) {
-        return memberIds.stream().distinct().filter(id -> !friendIds.contains(id)).toList();
     }
 }

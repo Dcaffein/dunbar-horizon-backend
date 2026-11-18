@@ -1,11 +1,9 @@
 package com.example.DunbarHorizon.social.domain.label;
 
-import com.example.DunbarHorizon.social.domain.label.exception.InvalidLabelNameException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 class LabelTest {
@@ -21,7 +19,7 @@ class LabelTest {
     @DisplayName("라벨 생성 시 초기 멤버는 비어있어야 한다")
     void createLabel_Success() {
         // when
-        Label label = new Label(owner, "친구들");
+        Label label = Label.create(owner, new LabelName("친구들"));
 
         // then
         assertThat(label.getLabelName()).isEqualTo("친구들");
@@ -30,32 +28,15 @@ class LabelTest {
     }
 
     @Test
-    @DisplayName("라벨 이름을 변경할 때 빈 값이 들어오면 예외가 발생한다")
-    void applyNewLabelName_Fail_BlankName() {
+    @DisplayName("확정된 이름으로 라벨 이름을 변경한다")
+    void rename_ChangesName_WithAssignedName() {
         // given
-        Label label = new Label(owner, "친구들");
+        Label label = Label.create(owner, new LabelName("친구들"));
 
-        // when & then
-        assertThatThrownBy(() -> label.applyNewLabelName(""))
-                .isInstanceOf(InvalidLabelNameException.class);
-    }
+        // when
+        label.rename(new LabelName("동료"));
 
-    @Test
-    @DisplayName("라벨 이름이 20자를 초과하면 생성 시 예외가 발생한다")
-    void createLabel_Fail_TooLongName() {
-        String tooLong = "가".repeat(Label.NAME_MAX_LENGTH + 1);
-
-        assertThatThrownBy(() -> new Label(owner, tooLong))
-                .isInstanceOf(InvalidLabelNameException.class);
-    }
-
-    @Test
-    @DisplayName("라벨 이름을 20자 초과로 변경하면 예외가 발생한다")
-    void applyNewLabelName_Fail_TooLongName() {
-        Label label = new Label(owner, "친구들");
-        String tooLong = "가".repeat(Label.NAME_MAX_LENGTH + 1);
-
-        assertThatThrownBy(() -> label.applyNewLabelName(tooLong))
-                .isInstanceOf(InvalidLabelNameException.class);
+        // then
+        assertThat(label.getLabelName()).isEqualTo("동료");
     }
 }
