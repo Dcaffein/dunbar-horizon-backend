@@ -2,9 +2,9 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.label;
 
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
-import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup;
-import com.example.DunbarHorizon.social.application.service.LabelCommandService;
+import com.example.DunbarHorizon.social.application.label.dto.LabelResult;
+import com.example.DunbarHorizon.social.application.label.port.LabelMemberFriendshipLookup;
+import com.example.DunbarHorizon.social.application.label.LabelCommandService;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
 import com.example.DunbarHorizon.social.domain.label.LabelName;

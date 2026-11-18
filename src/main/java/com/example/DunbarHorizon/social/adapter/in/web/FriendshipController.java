@@ -2,9 +2,9 @@ package com.example.DunbarHorizon.social.adapter.in.web;
 
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendUpdateRequest;
-import com.example.DunbarHorizon.social.application.dto.result.FriendshipDetailResult;
-import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
-import com.example.DunbarHorizon.social.application.service.FriendshipQueryService;
+import com.example.DunbarHorizon.social.application.friendship.dto.FriendshipDetailResult;
+import com.example.DunbarHorizon.social.application.friendship.FriendshipCommandService;
+import com.example.DunbarHorizon.social.application.friendship.FriendshipQueryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

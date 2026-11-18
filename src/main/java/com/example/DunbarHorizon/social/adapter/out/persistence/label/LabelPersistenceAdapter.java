@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.label;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.support.PersistenceErrors;
-import com.example.DunbarHorizon.social.application.port.out.LabelRepository;
+import com.example.DunbarHorizon.social.application.label.port.LabelRepository;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
 import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelNameException;

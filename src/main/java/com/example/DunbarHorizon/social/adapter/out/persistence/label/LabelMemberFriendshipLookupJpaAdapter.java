@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.label;
 
 import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.FriendshipJpaRepository;
-import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup;
+import com.example.DunbarHorizon.social.application.label.port.LabelMemberFriendshipLookup;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

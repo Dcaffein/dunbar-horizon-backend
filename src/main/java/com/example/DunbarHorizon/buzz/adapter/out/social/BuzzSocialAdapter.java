@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.buzz.adapter.out.social;
 import com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
-import com.example.DunbarHorizon.social.application.port.in.FriendshipQueryUseCase;
+import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQueryUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

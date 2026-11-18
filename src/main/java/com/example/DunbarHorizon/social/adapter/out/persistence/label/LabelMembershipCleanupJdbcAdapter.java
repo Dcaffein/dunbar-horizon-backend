@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.label;
 
-import com.example.DunbarHorizon.social.application.port.out.LabelMembershipCleanup;
+import com.example.DunbarHorizon.social.application.label.port.LabelMembershipCleanup;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;

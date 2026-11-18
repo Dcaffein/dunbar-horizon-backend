@@ -1,13 +1,13 @@
 package com.example.DunbarHorizon.social.adapter.in.web;
 
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
-import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
-import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult;
-import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
-import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
-import com.example.DunbarHorizon.social.application.service.SocialConnectionPathQueryService;
-import com.example.DunbarHorizon.social.application.service.SocialExpansionQueryService;
-import com.example.DunbarHorizon.social.application.service.SocialNetworkQueryService;
+import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult;
+import com.example.DunbarHorizon.social.application.network.dto.MutualFriendEdgeResult;
+import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
+import com.example.DunbarHorizon.social.application.network.SocialConnectionPathQueryService;
+import com.example.DunbarHorizon.social.application.network.SocialExpansionQueryService;
+import com.example.DunbarHorizon.social.application.network.SocialNetworkQueryService;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

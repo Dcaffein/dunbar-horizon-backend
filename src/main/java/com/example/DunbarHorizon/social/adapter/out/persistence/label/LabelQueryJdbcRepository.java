@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.label;
 
-import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
-import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
-import com.example.DunbarHorizon.social.application.port.out.LabelQueryRepository;
+import com.example.DunbarHorizon.social.application.label.dto.LabelMemberResult;
+import com.example.DunbarHorizon.social.application.label.dto.LabelResult;
+import com.example.DunbarHorizon.social.application.label.port.LabelQueryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;

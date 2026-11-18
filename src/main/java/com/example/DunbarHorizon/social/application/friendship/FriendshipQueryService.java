@@ -1,0 +1,65 @@
+package com.example.DunbarHorizon.social.application.friendship;
+
+import com.example.DunbarHorizon.social.application.friendship.dto.FriendshipDetailResult;
+import com.example.DunbarHorizon.social.application.friendship.dto.SocialProfileResult;
+import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQueryUseCase;
+import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQueryRepository;
+import com.example.DunbarHorizon.social.application.friendship.port.ImageUrlResolverPort;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
+import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
+import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class FriendshipQueryService implements FriendshipQueryUseCase {
+
+    private final FriendshipRepository friendshipRepository;
+    private final FriendshipQueryRepository friendshipQueryRepository;
+    private final ImageUrlResolverPort imageUrlResolverPort;
+
+    public List<FriendshipDetailResult> getDetailedFriendships(Long userId) {
+        return friendshipQueryRepository.findFriends(userId).stream()
+                .map(friend -> FriendshipDetailResult.from(friend, imageUrlResolverPort))
+                .toList();
+    }
+
+    @Override
+    public boolean areFriends(Long userId, Long targetId) {
+        return friendshipRepository.existsBetween(userId, targetId);
+    }
+
+    public FriendshipDetailResult getFriend(Long userId, Long targetId) {
+        return friendshipQueryRepository.findFriend(userId, targetId)
+                .map(friend -> FriendshipDetailResult.from(friend, imageUrlResolverPort))
+                .orElseThrow(() -> new FriendshipNotFoundException(userId, targetId));
+    }
+
+    public SocialProfileResult getSocialProfile(Long userId) {
+        return friendshipQueryRepository.findActiveProfile(userId)
+                .map(profile -> SocialProfileResult.from(profile, imageUrlResolverPort))
+                .orElseThrow(() -> new UserReferenceNotFoundException(userId));
+    }
+
+    @Override
+    public Set<Long> getFriendIdsIn(Long userId, Collection<Long> targetIds) {
+        return friendshipQueryRepository.findFriendIdsIn(userId, targetIds);
+    }
+
+    @Override
+    public Set<Long> getMutedIds(Long userId) {
+        return friendshipQueryRepository.findFriendIdsByMuteStatus(userId, true);
+    }
+
+    @Override
+    public Set<Long> getListenableFriendIds(Long userId) {
+        return friendshipQueryRepository.findFriendIdsByMuteStatus(userId, false);
+    }
+}

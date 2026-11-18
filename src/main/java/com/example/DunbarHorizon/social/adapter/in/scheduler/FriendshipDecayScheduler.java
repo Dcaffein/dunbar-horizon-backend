@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.in.scheduler;
 
-import com.example.DunbarHorizon.social.application.service.FriendshipScoreService;
+import com.example.DunbarHorizon.social.application.friendship.FriendshipScoreService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;

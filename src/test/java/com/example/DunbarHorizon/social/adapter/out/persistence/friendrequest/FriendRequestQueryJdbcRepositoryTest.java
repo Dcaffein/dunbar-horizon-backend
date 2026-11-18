@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.friendrequest;
 
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.application.dto.FriendRequestView;
+import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendRequestView;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.social.domain.friend.FriendTestFactory;

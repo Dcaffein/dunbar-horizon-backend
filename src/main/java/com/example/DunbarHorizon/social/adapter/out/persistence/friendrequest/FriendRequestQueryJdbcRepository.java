@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.friendrequest;
 
-import com.example.DunbarHorizon.social.application.dto.FriendRequestView;
-import com.example.DunbarHorizon.social.application.port.out.FriendRequestQueryRepository;
+import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendRequestView;
+import com.example.DunbarHorizon.social.application.friendrequest.port.FriendRequestQueryRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.RowMapper;

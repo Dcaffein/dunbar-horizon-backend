@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.in.scheduler;
 
-import com.example.DunbarHorizon.social.application.service.FriendshipScoreService;
+import com.example.DunbarHorizon.social.application.friendship.FriendshipScoreService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;

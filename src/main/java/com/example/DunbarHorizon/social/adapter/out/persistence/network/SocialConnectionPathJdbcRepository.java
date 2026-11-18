@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.network;
 
-import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult.Intermediaries;
-import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult.IntermediaryResult;
-import com.example.DunbarHorizon.social.application.port.out.SocialConnectionPathRepository;
+import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult.Intermediaries;
+import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult.IntermediaryResult;
+import com.example.DunbarHorizon.social.application.network.port.SocialConnectionPathRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;

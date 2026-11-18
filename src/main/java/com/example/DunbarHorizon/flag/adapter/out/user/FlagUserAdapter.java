@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase;
 import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 import com.example.DunbarHorizon.flag.application.port.out.FlagUserPort;
 import com.example.DunbarHorizon.flag.domain.flag.FriendshipChecker;
-import com.example.DunbarHorizon.social.application.port.in.FriendshipQueryUseCase;
+import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQueryUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

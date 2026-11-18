@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.imageStorage;
 
 import com.example.DunbarHorizon.global.imageStorage.S3ImageUrlResolver;
-import com.example.DunbarHorizon.social.application.port.out.ImageUrlResolverPort;
+import com.example.DunbarHorizon.social.application.friendship.port.ImageUrlResolverPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

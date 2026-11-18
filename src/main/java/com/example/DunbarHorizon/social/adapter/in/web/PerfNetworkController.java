@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.in.web;
 
-import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
-import com.example.DunbarHorizon.social.application.service.SocialNetworkQueryService;
+import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
+import com.example.DunbarHorizon.social.application.network.SocialNetworkQueryService;
 
 import java.util.List;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;

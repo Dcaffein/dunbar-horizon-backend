@@ -2,10 +2,10 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.network;
 
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.FriendshipPersistenceAdapter;
-import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
-import com.example.DunbarHorizon.social.application.dto.result.NodeEdgeResult;
-import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
-import com.example.DunbarHorizon.social.application.service.SocialNetworkQueryService;
+import com.example.DunbarHorizon.social.application.network.dto.MutualFriendEdgeResult;
+import com.example.DunbarHorizon.social.application.network.dto.NodeEdgeResult;
+import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
+import com.example.DunbarHorizon.social.application.network.SocialNetworkQueryService;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.SocialNetworkExposurePolicy;

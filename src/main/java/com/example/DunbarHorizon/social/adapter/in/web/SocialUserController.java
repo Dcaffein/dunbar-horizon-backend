@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.in.web;
 
-import com.example.DunbarHorizon.social.application.dto.result.SocialProfileResult;
-import com.example.DunbarHorizon.social.application.service.FriendshipQueryService;
+import com.example.DunbarHorizon.social.application.friendship.dto.SocialProfileResult;
+import com.example.DunbarHorizon.social.application.friendship.FriendshipQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

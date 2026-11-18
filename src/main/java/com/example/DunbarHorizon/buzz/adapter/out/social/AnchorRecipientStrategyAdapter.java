@@ -4,8 +4,8 @@ import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecip
 import com.example.DunbarHorizon.buzz.application.dto.info.RecipientSpec;
 import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
 import com.example.DunbarHorizon.buzz.application.dto.info.RecipientType;
-import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
-import com.example.DunbarHorizon.social.application.port.in.SocialExpansionQueryUseCase;
+import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.network.port.SocialExpansionQueryUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.friendship.jdbc;
 
-import com.example.DunbarHorizon.social.application.dto.FriendView;
-import com.example.DunbarHorizon.social.application.dto.UserProfile;
-import com.example.DunbarHorizon.social.application.port.out.FriendshipQueryRepository;
+import com.example.DunbarHorizon.social.application.friendship.dto.FriendView;
+import com.example.DunbarHorizon.social.application.friendship.dto.UserProfile;
+import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQueryRepository;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipId;
 import lombok.RequiredArgsConstructor;

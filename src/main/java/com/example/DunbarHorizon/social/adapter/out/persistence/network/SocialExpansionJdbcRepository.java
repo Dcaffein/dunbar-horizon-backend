@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.network;
 
-import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
-import com.example.DunbarHorizon.social.application.port.out.SocialExpansionRepository;
+import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.network.port.SocialExpansionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;

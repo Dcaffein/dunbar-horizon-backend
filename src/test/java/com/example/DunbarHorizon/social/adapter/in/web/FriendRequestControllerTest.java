@@ -2,9 +2,9 @@ package com.example.DunbarHorizon.social.adapter.in.web;
 
 import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendRequestCreateRequest;
 import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendRequestStatusUpdateRequest;
-import com.example.DunbarHorizon.social.application.dto.FriendRequestDirection;
-import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
-import com.example.DunbarHorizon.social.application.dto.result.FriendResult;
+import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendRequestDirection;
+import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendRequestResult;
+import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendResult;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;

@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.friendship.jdbc;
 
-import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
+import com.example.DunbarHorizon.social.application.friendship.port.FriendshipScoreRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.FriendshipId;

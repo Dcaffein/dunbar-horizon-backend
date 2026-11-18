@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipi
 import com.example.DunbarHorizon.buzz.application.dto.info.RecipientSpec;
 import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
 import com.example.DunbarHorizon.buzz.application.dto.info.RecipientType;
-import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
+import com.example.DunbarHorizon.social.application.label.port.LabelQueryUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.buzz.application.dto.info.recipient.ManualRecip
 import com.example.DunbarHorizon.buzz.application.dto.info.RecipientSpec;
 import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
 import com.example.DunbarHorizon.buzz.application.dto.info.RecipientType;
-import com.example.DunbarHorizon.social.application.port.in.FriendshipQueryUseCase;
+import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQueryUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

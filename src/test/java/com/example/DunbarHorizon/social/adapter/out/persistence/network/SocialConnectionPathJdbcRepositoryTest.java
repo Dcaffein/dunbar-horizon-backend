@@ -2,9 +2,9 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.network;
 
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.FriendshipPersistenceAdapter;
-import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult.IntermediaryResult;
-import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult;
-import com.example.DunbarHorizon.social.application.service.SocialConnectionPathQueryService;
+import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult.IntermediaryResult;
+import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult;
+import com.example.DunbarHorizon.social.application.network.SocialConnectionPathQueryService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.DisplayName;

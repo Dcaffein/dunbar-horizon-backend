@@ -1,10 +1,10 @@
 package com.example.DunbarHorizon.social.adapter.in.web;
 
-import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
-import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult;
-import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
-import com.example.DunbarHorizon.social.application.dto.result.NodeEdgeResult;
-import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
+import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult;
+import com.example.DunbarHorizon.social.application.network.dto.MutualFriendEdgeResult;
+import com.example.DunbarHorizon.social.application.network.dto.NodeEdgeResult;
+import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
