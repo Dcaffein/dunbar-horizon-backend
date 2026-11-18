@@ -92,7 +92,7 @@ class LabelPersistenceAdapterTest {
         service.createLabel(owner.getId(), "Work");
 
         Label duplicate = LabelTestFactory.createLabel(owner.getId(), "Work");
-        assertThatThrownBy(() -> labelRepository.create(duplicate))
+        assertThatThrownBy(() -> labelRepository.save(duplicate))
                 .isInstanceOf(DuplicateLabelNameException.class);
     }
 
@@ -200,7 +200,7 @@ class LabelPersistenceAdapterTest {
 
     @Test
     @DisplayName("영속성 컨텍스트를 비운 뒤에도 이름과 멤버 교체·제거 결과를 복원한다")
-    void saveChanges_RestoresState_AfterReload() {
+    void save_RestoresState_AfterReload() {
         // given
         String labelId = service.createLabel(owner.getId(), "친구").getId();
         connect(owner, first);

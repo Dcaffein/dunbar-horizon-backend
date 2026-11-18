@@ -7,8 +7,6 @@ import java.util.Set;
 
 public interface LabelRepository {
     void save(Label label);
-    void create(Label label);
-    void saveChanges(Label label);
     void delete(Label label);
     Optional<Label> findById(String labelId);
     Optional<Long> findOwnerId(String labelId);

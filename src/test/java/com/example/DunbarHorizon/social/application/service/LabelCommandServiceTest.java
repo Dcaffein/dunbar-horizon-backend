@@ -61,7 +61,7 @@ class LabelCommandServiceTest {
 
         // then
         assertThat(created.getLabelName()).isEqualTo("친구 (2)");
-        verify(labelRepository).create(created);
+        verify(labelRepository).save(created);
     }
 
     @Test
@@ -83,7 +83,7 @@ class LabelCommandServiceTest {
         service.updateLabel(label.getId(), 1L, "친구");
 
         assertThat(label.getLabelName()).isEqualTo("친구");
-        verify(labelRepository).saveChanges(label);
+        verify(labelRepository).save(label);
     }
 
     @Test
@@ -93,7 +93,7 @@ class LabelCommandServiceTest {
 
         service.updateLabel(label.getId(), 1L, null);
 
-        verify(labelRepository, never()).saveChanges(any());
+        verify(labelRepository, never()).save(any());
         verify(labelRepository, never()).findNamesByOwner(any(), any());
     }
 
@@ -117,7 +117,7 @@ class LabelCommandServiceTest {
                 .isInstanceOf(UserReferenceNotFoundException.class);
         verify(activeUserRepository).existsById(3L);
         verifyNoInteractions(friendshipLockRepository);
-        verify(labelRepository, never()).saveChanges(any());
+        verify(labelRepository, never()).save(any());
     }
 
     @Test
@@ -129,7 +129,7 @@ class LabelCommandServiceTest {
         assertThatThrownBy(() -> service.replaceLabelMembers(1L, label.getId(), List.of(3L, 3L)))
                 .isInstanceOf(NonFriendLabelMemberException.class);
         assertThat(label.getMemberIds()).containsExactly(2L);
-        verify(labelRepository, never()).saveChanges(any());
+        verify(labelRepository, never()).save(any());
     }
 
     @Test
@@ -141,6 +141,6 @@ class LabelCommandServiceTest {
         service.replaceLabelMembers(1L, label.getId(), null);
 
         assertThat(label.getMemberIds()).isEmpty();
-        verify(labelRepository).saveChanges(label);
+        verify(labelRepository).save(label);
     }
 }

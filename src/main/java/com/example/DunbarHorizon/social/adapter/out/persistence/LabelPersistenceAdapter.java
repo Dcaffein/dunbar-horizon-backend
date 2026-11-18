@@ -31,16 +31,6 @@ public class LabelPersistenceAdapter implements LabelRepository {
     }
 
     @Override
-    public void create(Label label) {
-        save(label);
-    }
-
-    @Override
-    public void saveChanges(Label label) {
-        save(label);
-    }
-
-    @Override
     public void delete(Label label) {
         entityManager.remove(label);
         flush(label);

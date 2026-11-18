@@ -154,7 +154,7 @@ class LabelNamingConcurrencyTest {
 
         // then
         String shortenedName = "가".repeat(15) + " (2)";
-        assertThat(LabelResult.from(created)).isEqualTo(new LabelResult(created.getId(), shortenedName, 0));
+        assertThat(LabelResult.created(created)).isEqualTo(new LabelResult(created.getId(), shortenedName, 0));
         assertThat(namesOf(owner)).containsExactlyInAnyOrder(requestedName, shortenedName);
     }
 

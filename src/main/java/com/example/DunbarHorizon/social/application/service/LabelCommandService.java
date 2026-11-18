@@ -35,7 +35,7 @@ public class LabelCommandService {
         requireActiveUser(ownerId);
         LabelName assignedName = labelNamer.assign(name, labelRepository.findNamesByOwner(ownerId, null));
         Label label = Label.create(ownerId, assignedName);
-        labelRepository.create(label);
+        labelRepository.save(label);
         return label;
     }
 
@@ -44,7 +44,7 @@ public class LabelCommandService {
         if (name != null) {
             LabelName assignedName = labelNamer.assign(name, labelRepository.findNamesByOwner(ownerId, labelId));
             label.rename(assignedName);
-            labelRepository.saveChanges(label);
+            labelRepository.save(label);
         }
     }
 
@@ -58,7 +58,7 @@ public class LabelCommandService {
         requireActiveUser(memberId);
         Set<Long> friendIds = friendshipLockRepository.findFriendIdsForShare(ownerId, List.of(memberId));
         labelMemberRegistrar.addMember(label, memberId, friendIds);
-        labelRepository.saveChanges(label);
+        labelRepository.save(label);
     }
 
     public void replaceLabelMembers(Long ownerId, String labelId, List<Long> memberIds) {
@@ -66,13 +66,13 @@ public class LabelCommandService {
         List<Long> requestedMemberIds = memberIds == null ? List.of() : memberIds.stream().distinct().toList();
         Set<Long> friendIds = friendshipLockRepository.findFriendIdsForShare(ownerId, requestedMemberIds);
         labelMemberRegistrar.replaceMembers(label, requestedMemberIds, friendIds);
-        labelRepository.saveChanges(label);
+        labelRepository.save(label);
     }
 
     public void removeMemberFromLabel(Long ownerId, String labelId, Long memberId) {
         Label label = ownedLabel(ownerId, labelId);
         label.removeMember(memberId);
-        labelRepository.saveChanges(label);
+        labelRepository.save(label);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
