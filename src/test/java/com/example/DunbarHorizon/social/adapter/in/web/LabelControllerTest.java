@@ -7,6 +7,9 @@ import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelUpdateRequest;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.domain.label.Label;
+import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
+import com.example.DunbarHorizon.social.domain.label.exception.NonFriendLabelMemberException;
+import com.example.DunbarHorizon.social.domain.label.exception.DuplicateLabelMemberException;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +23,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -38,7 +42,7 @@ class LabelControllerTest extends BaseControllerTest {
         given(mockLabel.getId()).willReturn(labelId);
         given(mockLabel.getLabelName()).willReturn("친한친구");
 
-        given(mySqlLabelService.createLabel(eq(1L), eq("친한친구")))
+        given(labelService.createLabel(eq(1L), eq("친한친구")))
                 .willReturn(mockLabel);
 
         mockMvc.perform(post("/api/v1/labels")
@@ -69,7 +73,7 @@ class LabelControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/labels/{labelId}", labelId))
                 .andExpect(status().isNoContent());
 
-        verify(mySqlLabelService).deleteLabel(eq(1L), eq(labelId));
+        verify(labelService).deleteLabel(eq(1L), eq(labelId));
     }
 
     @Test
@@ -83,7 +87,7 @@ class LabelControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNoContent());
 
-        verify(mySqlLabelService).updateLabel(eq(labelId), eq(1L), eq(newLabelName));
+        verify(labelService).updateLabel(eq(labelId), eq(1L), eq(newLabelName));
     }
 
     @Test
@@ -96,7 +100,7 @@ class LabelControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNoContent());
 
-        verify(mySqlLabelService).replaceLabelMembers(anyLong(), eq(labelId), eq(List.of(2L, 3L)));
+        verify(labelService).replaceLabelMembers(anyLong(), eq(labelId), eq(List.of(2L, 3L)));
     }
 
     @Test
@@ -110,7 +114,7 @@ class LabelControllerTest extends BaseControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/api/v1/labels/" + labelId + "/members/2"));
 
-        verify(mySqlLabelService).addMemberToLabel(anyLong(), eq(labelId), eq(2L));
+        verify(labelService).addMemberToLabel(anyLong(), eq(labelId), eq(2L));
     }
 
     @Test
@@ -121,14 +125,14 @@ class LabelControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/labels/{labelId}/members/{memberId}", labelId, memberId))
                 .andExpect(status().isNoContent());
 
-        verify(mySqlLabelService).removeMemberFromLabel(anyLong(), eq(labelId), eq(memberId));
+        verify(labelService).removeMemberFromLabel(anyLong(), eq(labelId), eq(memberId));
     }
 
     @Test
     @DisplayName("라벨 단건 정보를 조회한다")
     void getLabelById_Success() throws Exception {
         LabelResult result = new LabelResult(labelId, "친구들", 1);
-        given(mySqlLabelService.getLabelById(eq(1L), eq(labelId))).willReturn(result);
+        given(labelService.getLabelById(eq(1L), eq(labelId))).willReturn(result);
 
         mockMvc.perform(get("/api/v1/labels/{labelId}", labelId))
                 .andExpect(status().isOk())
@@ -142,7 +146,7 @@ class LabelControllerTest extends BaseControllerTest {
     @DisplayName("특정 멤버가 속한 내 라벨 목록을 조회한다")
     void getAllLabels_ByMember() throws Exception {
         Long memberId = 2L;
-        given(mySqlLabelService.getLabelsByMember(eq(1L), eq(memberId)))
+        given(labelService.getLabelsByMember(eq(1L), eq(memberId)))
                 .willReturn(List.of(new LabelResult(labelId, "친구들", 1)));
 
         mockMvc.perform(get("/api/v1/labels").param("memberId", String.valueOf(memberId)))
@@ -151,18 +155,58 @@ class LabelControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$[0].memberCount").value(1))
                 .andExpect(jsonPath("$[0].members").doesNotExist());
 
-        verify(mySqlLabelService).getLabelsByMember(1L, memberId);
+        verify(labelService).getLabelsByMember(1L, memberId);
     }
 
     @Test
     @DisplayName("라벨의 멤버 목록을 조회한다")
     void getLabelMembers_Success() throws Exception {
         List<LabelMemberResult> members = List.of(new LabelMemberResult(2L, "멤버닉네임"));
-        given(mySqlLabelService.getLabelMembers(eq(1L), eq(labelId))).willReturn(members);
+        given(labelService.getLabelMembers(eq(1L), eq(labelId))).willReturn(members);
 
         mockMvc.perform(get("/api/v1/labels/{labelId}/members", labelId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(2))
                 .andExpect(jsonPath("$[0].nickname").value("멤버닉네임"));
+    }
+
+    @Test
+    @DisplayName("비친구 단건 추가는 기존 404와 친구 관계 오류 코드를 반환한다")
+    void addMember_ReturnsNotFound_NonFriend() throws Exception {
+        doThrow(new FriendshipNotFoundException(1L, 2L)).when(labelService).addMemberToLabel(1L, labelId, 2L);
+
+        mockMvc.perform(post("/api/v1/labels/{labelId}/members", labelId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"memberId\":2}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("FRIENDSHIP_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("친구 관계를 찾을 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("비친구를 포함한 교체는 기존 400과 라벨 자격 오류 코드를 반환한다")
+    void replaceMembers_ReturnsBadRequest_NonFriend() throws Exception {
+        doThrow(new NonFriendLabelMemberException(List.of(2L))).when(labelService)
+                .replaceLabelMembers(1L, labelId, List.of(2L));
+
+        mockMvc.perform(put("/api/v1/labels/{labelId}/members", labelId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"memberIds\":[2]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("LABEL_MEMBER_NOT_FRIEND"))
+                .andExpect(jsonPath("$.message").value("친구가 아닌 사용자는 라벨에 추가할 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("중복 멤버 추가는 기존 409와 중복 오류 코드를 반환한다")
+    void addMember_ReturnsConflict_DuplicateMember() throws Exception {
+        doThrow(new DuplicateLabelMemberException(2L)).when(labelService).addMemberToLabel(1L, labelId, 2L);
+
+        mockMvc.perform(post("/api/v1/labels/{labelId}/members", labelId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"memberId\":2}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("LABEL_MEMBER_DUPLICATE"))
+                .andExpect(jsonPath("$.message").value("이미 라벨에 포함된 멤버입니다."));
     }
 }

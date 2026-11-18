@@ -26,7 +26,7 @@ import com.example.DunbarHorizon.social.application.service.AccountSocialUserQue
 import com.example.DunbarHorizon.social.application.service.FriendRequestService;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.service.FriendshipQueryService;
-import com.example.DunbarHorizon.social.application.service.MySqlLabelService;
+import com.example.DunbarHorizon.social.application.service.LabelService;
 import com.example.DunbarHorizon.social.application.service.SocialConnectionPathQueryService;
 import com.example.DunbarHorizon.social.application.service.SocialExpansionQueryService;
 import com.example.DunbarHorizon.social.application.service.SocialNetworkQueryService;
@@ -83,7 +83,7 @@ public abstract class BaseControllerTest {
     @MockitoBean protected FriendshipCommandService friendshipCommandService;
     @MockitoBean protected FriendshipQueryService friendshipQueryService;
 
-    @MockitoBean protected MySqlLabelService mySqlLabelService;
+    @MockitoBean protected LabelService labelService;
 
     @MockitoBean protected SocialExpansionQueryService socialExpansionQueryService;
     @MockitoBean protected SocialNetworkQueryService socialNetworkQueryService;

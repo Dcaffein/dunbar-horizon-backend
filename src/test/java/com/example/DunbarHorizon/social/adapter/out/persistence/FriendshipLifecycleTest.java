@@ -4,16 +4,16 @@ import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepo
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.mysql.LabelMysqlRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
-import com.example.DunbarHorizon.social.application.service.MySqlLabelService;
+import com.example.DunbarHorizon.social.application.service.LabelService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipNotFoundException;
 import com.example.DunbarHorizon.social.domain.friend.exception.InvalidFriendAliasException;
-import com.example.DunbarHorizon.social.domain.label.LabelFactory;
-import com.example.DunbarHorizon.social.domain.label.LabelNamePolicy;
+import com.example.DunbarHorizon.social.domain.label.LabelNamer;
+import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,16 +38,16 @@ import static org.mockito.Mockito.doAnswer;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelMysqlRepository.class, UserProfileJdbcRepository.class,
-        FriendshipCommandService.class, MySqlLabelService.class, LabelFactory.class, LabelNamePolicy.class})
+@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class, LabelJdbcRepository.class, UserProfileJdbcRepository.class,
+        FriendshipCommandService.class, LabelService.class, LabelNamer.class, LabelMemberRegistrar.class})
 class FriendshipLifecycleTest {
 
     private static final LocalDate FRIENDS_SINCE = LocalDate.of(2026, 1, 1);
 
     @Autowired private UserJpaRepository users;
     @Autowired private FriendshipCommandService lifecycle;
-    @Autowired private MySqlLabelService labelService;
-    @MockitoSpyBean private LabelMysqlRepository labels;
+    @Autowired private LabelService labelService;
+    @MockitoSpyBean private LabelJdbcRepository labels;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private PlatformTransactionManager transactionManager;
     @MockitoSpyBean private FriendshipPersistenceAdapter friendships;
@@ -67,8 +67,8 @@ class FriendshipLifecycleTest {
 
     @AfterEach
     void tearDown() {
-        labels.delete(firstLabel);
-        labels.delete(secondLabel);
+        labelService.deleteLabel(first, firstLabel);
+        labelService.deleteLabel(second, secondLabel);
         jdbc.update("DELETE FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
                 Math.min(first, second), Math.max(first, second));
         users.deleteAllById(List.of(first, second));

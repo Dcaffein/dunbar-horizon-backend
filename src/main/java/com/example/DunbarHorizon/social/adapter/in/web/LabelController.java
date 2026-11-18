@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelCreateRequest;
 import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelMemberAddRequest;
 import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelMembersReplaceRequest;
 import com.example.DunbarHorizon.social.adapter.in.web.dto.LabelUpdateRequest;
-import com.example.DunbarHorizon.social.application.service.MySqlLabelService;
+import com.example.DunbarHorizon.social.application.service.LabelService;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.domain.label.Label;
@@ -22,7 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LabelController {
 
-    private final MySqlLabelService mySqlLabelService;
+    private final LabelService labelService;
 
     @GetMapping
     public ResponseEntity<List<LabelResult>> getAllLabels(
@@ -30,9 +30,9 @@ public class LabelController {
             @RequestParam(required = false) Long memberId) {
 
         if (memberId != null) {
-            return ResponseEntity.ok(mySqlLabelService.getLabelsByMember(currentUserId, memberId));
+            return ResponseEntity.ok(labelService.getLabelsByMember(currentUserId, memberId));
         }
-        return ResponseEntity.ok(mySqlLabelService.getAllLabels(currentUserId));
+        return ResponseEntity.ok(labelService.getAllLabels(currentUserId));
     }
 
     @GetMapping("/{labelId}")
@@ -40,7 +40,7 @@ public class LabelController {
             @CurrentUserId Long currentUserId,
             @PathVariable String labelId) {
 
-        return ResponseEntity.ok(mySqlLabelService.getLabelById(currentUserId, labelId));
+        return ResponseEntity.ok(labelService.getLabelById(currentUserId, labelId));
     }
 
     @GetMapping("/{labelId}/members")
@@ -48,7 +48,7 @@ public class LabelController {
             @CurrentUserId Long currentUserId,
             @PathVariable String labelId) {
 
-        return ResponseEntity.ok(mySqlLabelService.getLabelMembers(currentUserId, labelId));
+        return ResponseEntity.ok(labelService.getLabelMembers(currentUserId, labelId));
     }
 
     @PostMapping
@@ -56,7 +56,7 @@ public class LabelController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid LabelCreateRequest dto) {
 
-        Label newLabel = mySqlLabelService.createLabel(currentUserId, dto.labelName());
+        Label newLabel = labelService.createLabel(currentUserId, dto.labelName());
 
         return ResponseEntity
                 .created(URI.create("/api/v1/labels/" + newLabel.getId()))
@@ -68,7 +68,7 @@ public class LabelController {
             @CurrentUserId Long currentUserId,
             @PathVariable String labelId) {
 
-        mySqlLabelService.deleteLabel(currentUserId, labelId);
+        labelService.deleteLabel(currentUserId, labelId);
         return ResponseEntity.noContent().build();
     }
 
@@ -78,7 +78,7 @@ public class LabelController {
             @PathVariable String labelId,
             @RequestBody @Valid LabelUpdateRequest dto) {
 
-        mySqlLabelService.updateLabel(labelId, currentUserId, dto.labelName());
+        labelService.updateLabel(labelId, currentUserId, dto.labelName());
         return ResponseEntity.noContent().build();
     }
 
@@ -88,7 +88,7 @@ public class LabelController {
             @PathVariable String labelId,
             @RequestBody @Valid LabelMembersReplaceRequest labelMembersReplaceRequest) {
 
-        mySqlLabelService.replaceLabelMembers(currentUserId, labelId, labelMembersReplaceRequest.memberIds());
+        labelService.replaceLabelMembers(currentUserId, labelId, labelMembersReplaceRequest.memberIds());
         return ResponseEntity.noContent().build();
     }
 
@@ -98,7 +98,7 @@ public class LabelController {
             @PathVariable String labelId,
             @RequestBody @Valid LabelMemberAddRequest labelMemberAddRequest) {
 
-        mySqlLabelService.addMemberToLabel(currentUserId, labelId, labelMemberAddRequest.memberId());
+        labelService.addMemberToLabel(currentUserId, labelId, labelMemberAddRequest.memberId());
         return ResponseEntity
                 .created(URI.create("/api/v1/labels/" + labelId + "/members/" + labelMemberAddRequest.memberId()))
                 .build();
@@ -110,7 +110,7 @@ public class LabelController {
             @PathVariable String labelId,
             @PathVariable Long memberId) {
 
-        mySqlLabelService.removeMemberFromLabel(currentUserId, labelId, memberId);
+        labelService.removeMemberFromLabel(currentUserId, labelId, memberId);
         return ResponseEntity.noContent().build();
     }
 }
