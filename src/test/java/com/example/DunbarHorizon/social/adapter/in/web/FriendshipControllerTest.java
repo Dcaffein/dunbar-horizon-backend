@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.in.web;
 
 import com.example.DunbarHorizon.social.adapter.in.web.dto.FriendUpdateRequest;
-import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
+import com.example.DunbarHorizon.social.application.dto.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
@@ -28,7 +28,7 @@ class FriendshipControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNoContent());
 
-        verify(friendshipCommandUseCase).updateFriendship(anyLong(), eq(friendId), any(FriendshipUpdateCommand.class));
+        verify(friendshipCommandService).updateFriendship(anyLong(), eq(friendId), any(FriendshipUpdateCommand.class));
     }
 
     @Test
@@ -42,7 +42,7 @@ class FriendshipControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNoContent());
 
-        verify(friendshipCommandUseCase).updateFriendship(anyLong(), eq(friendId), any(FriendshipUpdateCommand.class));
+        verify(friendshipCommandService).updateFriendship(anyLong(), eq(friendId), any(FriendshipUpdateCommand.class));
     }
 
     @Test
@@ -67,6 +67,6 @@ class FriendshipControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/friends/{friendId}", friendId))
                 .andExpect(status().isNoContent());
 
-        verify(friendshipCommandUseCase).brokeUpWith(anyLong(), eq(friendId));
+        verify(friendshipCommandService).brokeUpWith(anyLong(), eq(friendId));
     }
 }

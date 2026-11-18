@@ -3,9 +3,9 @@ package com.example.DunbarHorizon.flag.domain.invitation;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagInvitationJpaRepository;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagJpaRepository;
 import com.example.DunbarHorizon.flag.adapter.out.user.FlagUserAdapter;
-import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.FlagInvitationUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
+import com.example.DunbarHorizon.flag.application.service.invitation.FlagInvitationCommandService;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagHostCommand;
 import com.example.DunbarHorizon.flag.domain.invitation.exception.FlagInvitationDuplicateException;
 import com.example.DunbarHorizon.flag.domain.invitation.repository.FlagInvitationRepository;
 import com.example.DunbarHorizon.support.TestContainerConfig;
@@ -47,8 +47,8 @@ class FlagInvitationDuplicateConcurrencyIntegrationTest {
     private static final Long INVITEE_ID = 12102L;
     private static final long WAIT_SECONDS = 10;
 
-    @Autowired private FlagHostUseCase flagHostUseCase;
-    @Autowired private FlagInvitationUseCase flagInvitationUseCase;
+    @Autowired private FlagHostService flagHostService;
+    @Autowired private FlagInvitationCommandService flagInvitationCommandService;
     @Autowired private FlagJpaRepository flagJpaRepository;
     @Autowired private FlagInvitationJpaRepository invitationJpaRepository;
     @Autowired private PlatformTransactionManager transactionManager;
@@ -93,7 +93,7 @@ class FlagInvitationDuplicateConcurrencyIntegrationTest {
         for (int i = 0; i < 2; i++) {
             executor.submit(() -> {
                 try {
-                    flagInvitationUseCase.invite(flagId, HOST_ID, INVITEE_ID);
+                    flagInvitationCommandService.invite(flagId, HOST_ID, INVITEE_ID);
                     successCount.incrementAndGet();
                 } catch (Throwable throwable) {
                     firstFailure.compareAndSet(null, throwable);
@@ -119,7 +119,7 @@ class FlagInvitationDuplicateConcurrencyIntegrationTest {
 
     private Long hostRecruitingFlag() {
         LocalDateTime base = LocalDateTime.now().withNano(0);
-        Long flagId = flagHostUseCase.hostFlag(new FlagHostCommand(
+        Long flagId = flagHostService.hostFlag(new FlagHostCommand(
                 HOST_ID, "중복 초대 테스트", "설명", 5,
                 base.plusHours(1), base.plusHours(2), base.plusHours(3)));
         createdFlagIds.add(flagId);

@@ -1,23 +1,36 @@
 package com.example.DunbarHorizon.support;
 
-import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
-import com.example.DunbarHorizon.account.application.port.in.SignupUseCase;
-import com.example.DunbarHorizon.account.application.port.in.UserProfileUpdateUseCase;
-import com.example.DunbarHorizon.account.application.port.in.VerificationUseCase;
+import com.example.DunbarHorizon.account.application.service.LoginService;
+import com.example.DunbarHorizon.account.application.service.SignupService;
+import com.example.DunbarHorizon.account.application.service.UserProfileUpdateService;
+import com.example.DunbarHorizon.account.application.service.UserQueryService;
+import com.example.DunbarHorizon.account.application.service.VerificationService;
 import com.example.DunbarHorizon.account.application.port.out.ProfileImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.notification.application.NotificationService;
-import com.example.DunbarHorizon.buzz.application.port.in.BuzzCommandUseCase;
-import com.example.DunbarHorizon.buzz.application.port.in.BuzzQueryUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.*;
+import com.example.DunbarHorizon.buzz.application.service.BuzzService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagModificationService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagParticipationService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagQueryService;
+import com.example.DunbarHorizon.flag.application.service.invitation.FlagInvitationCommandService;
+import com.example.DunbarHorizon.flag.application.service.invitation.FlagInvitationQueryService;
+import com.example.DunbarHorizon.flag.application.service.comment.FlagCommentCommandService;
+import com.example.DunbarHorizon.flag.application.service.comment.FlagCommentQueryService;
+import com.example.DunbarHorizon.flag.application.service.memorial.FlagMemorialCommandService;
+import com.example.DunbarHorizon.flag.application.service.memorial.FlagMemorialQueryService;
 import com.example.DunbarHorizon.global.security.JwtAuthenticationFilter;
 import com.example.DunbarHorizon.global.security.JwtTokenProvider;
 import com.example.DunbarHorizon.global.security.AuthCookieManager;
-import com.example.DunbarHorizon.social.application.port.in.*;
-import com.example.DunbarHorizon.social.application.port.in.LabelCommandUseCase;
-import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
-import com.example.DunbarHorizon.notification.application.NotificationService;
-import com.example.DunbarHorizon.trace.application.port.in.TraceCommandUseCase;
+import com.example.DunbarHorizon.social.application.service.AccountSocialUserQueryService;
+import com.example.DunbarHorizon.social.application.service.FriendRequestService;
+import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
+import com.example.DunbarHorizon.social.application.service.FriendshipQueryService;
+import com.example.DunbarHorizon.social.application.service.MySqlLabelService;
+import com.example.DunbarHorizon.social.application.service.SocialConnectionPathQueryService;
+import com.example.DunbarHorizon.social.application.service.SocialExpansionQueryService;
+import com.example.DunbarHorizon.social.application.service.SocialNetworkQueryService;
+import com.example.DunbarHorizon.trace.application.TraceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -41,49 +54,44 @@ public abstract class BaseControllerTest {
     @MockitoBean protected JwtAuthenticationFilter jwtAuthenticationFilter;
     @MockitoBean protected AuthCookieManager authCookieManager;
 
-    @MockitoBean protected SignupUseCase signupUseCase;
-    @MockitoBean protected LoginUseCase loginUseCase;
-    @MockitoBean protected VerificationUseCase verificationUseCase;
-    @MockitoBean protected UserProfileUpdateUseCase userProfileUpdateUseCase;
-    @MockitoBean protected com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase userQueryUseCase;
+    @MockitoBean protected SignupService signupService;
+    @MockitoBean protected LoginService loginService;
+    @MockitoBean protected VerificationService verificationService;
+    @MockitoBean protected UserProfileUpdateService userProfileUpdateService;
+    @MockitoBean protected UserQueryService userQueryService;
 
     @MockitoBean protected ProfileImageStoragePort profileImageStoragePort;
     @MockitoBean protected ImageStoragePort imageStoragePort;
 
-    @MockitoBean protected BuzzCommandUseCase buzzCommandUseCase;
-    @MockitoBean protected BuzzQueryUseCase buzzQueryUseCase;
+    @MockitoBean protected BuzzService buzzService;
 
-    @MockitoBean protected FlagHostUseCase flagHostUseCase;
-    @MockitoBean protected FlagModificationUseCase flagModificationUseCase;
-    @MockitoBean protected FlagParticipationUseCase flagParticipationUseCase;
-    @MockitoBean protected FlagQueryUseCase flagQueryUseCase;
-    @MockitoBean protected FlagInvitationUseCase flagInvitationUseCase;
-    @MockitoBean protected FlagInvitationQueryUseCase flagInvitationQueryUseCase;
+    @MockitoBean protected FlagHostService flagHostService;
+    @MockitoBean protected FlagModificationService flagModificationService;
+    @MockitoBean protected FlagParticipationService flagParticipationService;
+    @MockitoBean protected FlagQueryService flagQueryService;
+    @MockitoBean protected FlagInvitationCommandService flagInvitationCommandService;
+    @MockitoBean protected FlagInvitationQueryService flagInvitationQueryService;
 
-    @MockitoBean protected FlagCommentCommandUseCase flagCommentCommandUseCase;
-    @MockitoBean protected FlagCommentQueryUseCase flagCommentQueryUseCase;
+    @MockitoBean protected FlagCommentCommandService flagCommentCommandService;
+    @MockitoBean protected FlagCommentQueryService flagCommentQueryService;
 
-    @MockitoBean protected FlagMemorialCommandUseCase flagMemorialCommandUseCase;
-    @MockitoBean protected FlagMemorialQueryUseCase flagMemorialQueryUseCase;
+    @MockitoBean protected FlagMemorialCommandService flagMemorialCommandService;
+    @MockitoBean protected FlagMemorialQueryService flagMemorialQueryService;
 
-    @MockitoBean protected FriendRequesterActionUseCase friendRequesterActionUseCase;
-    @MockitoBean protected FriendRequestReceiverActionUseCase friendRequestReceiverActionUseCase;
-    @MockitoBean protected FriendRequestQueryUseCase friendRequestQueryUseCase;
+    @MockitoBean protected FriendRequestService friendRequestService;
 
-    @MockitoBean protected FriendshipCommandUseCase friendshipCommandUseCase;
-    @MockitoBean protected FriendshipQueryUseCase friendshipQueryUseCase;
+    @MockitoBean protected FriendshipCommandService friendshipCommandService;
+    @MockitoBean protected FriendshipQueryService friendshipQueryService;
 
-    @MockitoBean protected LabelCommandUseCase labelCommandUseCase;
-    @MockitoBean protected LabelQueryUseCase labelQueryUseCase;
+    @MockitoBean protected MySqlLabelService mySqlLabelService;
 
-    @MockitoBean protected SocialExpansionQueryUseCase socialExpansionQueryUseCase;
-    @MockitoBean protected SocialNetworkQueryUseCase socialNetworkQueryUseCase;
-    @MockitoBean protected SocialConnectionPathQueryUseCase socialConnectionPathQueryUseCase;
-    @MockitoBean protected com.example.DunbarHorizon.social.application.port.in.SocialUserQueryUseCase socialUserQueryUseCase;
+    @MockitoBean protected SocialExpansionQueryService socialExpansionQueryService;
+    @MockitoBean protected SocialNetworkQueryService socialNetworkQueryService;
+    @MockitoBean protected SocialConnectionPathQueryService socialConnectionPathQueryService;
+    @MockitoBean protected AccountSocialUserQueryService accountSocialUserQueryService;
 
-    @MockitoBean protected TraceCommandUseCase traceCommandUseCase;
+    @MockitoBean protected TraceService traceService;
 
-    // TODO: NotificationController가 구체 서비스를 직접 주입받음 — 포트 인터페이스 분리 필요 (별도 task)
     @MockitoBean protected NotificationService notificationService;
 
 }

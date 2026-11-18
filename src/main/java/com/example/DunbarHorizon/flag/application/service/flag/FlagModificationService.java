@@ -1,9 +1,8 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
-import com.example.DunbarHorizon.flag.application.port.in.FlagModificationUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagCapacityUpdateCommand;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagDetailsUpdateCommand;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagScheduleUpdateCommand;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagCapacityUpdateCommand;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagDetailsUpdateCommand;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagScheduleUpdateCommand;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagSchedule;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagNotFoundException;
@@ -16,17 +15,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class FlagModificationService implements FlagModificationUseCase {
+public class FlagModificationService {
     private final FlagRepository flagRepository;
 
-    @Override
     public void modifyFlagDetails(FlagDetailsUpdateCommand command) {
         Flag flag = getFlagOrThrow(command.flagId());
         flag.updateBasicInfo(command.hostId(), command.title(), command.description());
         flagRepository.save(flag);
     }
 
-    @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void modifyFlagCapacity(FlagCapacityUpdateCommand command) {
         Flag flag = flagRepository.findByIdForUpdate(command.flagId())
@@ -36,7 +33,6 @@ public class FlagModificationService implements FlagModificationUseCase {
         flagRepository.save(flag);
     }
 
-    @Override
     public void reschedule(FlagScheduleUpdateCommand command) {
         FlagSchedule newSchedule = FlagSchedule.of(command.deadline(), command.startDateTime(), command.endDateTime());
         Flag flag = flagRepository.findByIdForUpdate(command.flagId())
@@ -45,7 +41,6 @@ public class FlagModificationService implements FlagModificationUseCase {
         flagRepository.save(flag);
     }
 
-    @Override
     public void closeRecruitment(Long flagId, Long hostId) {
         Flag flag = flagRepository.findByIdForUpdate(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
@@ -53,7 +48,6 @@ public class FlagModificationService implements FlagModificationUseCase {
         flagRepository.save(flag);
     }
 
-    @Override
     public void closeFlag(Long flagId, Long userId) {
         Flag flag = flagRepository.findByIdForUpdate(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));

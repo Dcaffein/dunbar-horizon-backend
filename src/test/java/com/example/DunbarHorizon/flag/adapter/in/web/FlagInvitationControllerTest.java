@@ -28,7 +28,7 @@ class FlagInvitationControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("초대 생성 시 201과 초대 ID를 반환하고 invite()를 호출한다")
     void invite_Returns201() throws Exception {
-        given(flagInvitationUseCase.invite(FLAG_ID, CURRENT_USER_ID, INVITEE_ID)).willReturn(INVITATION_ID);
+        given(flagInvitationCommandService.invite(FLAG_ID, CURRENT_USER_ID, INVITEE_ID)).willReturn(INVITATION_ID);
         String body = """
                 {"flagId": 10, "inviteeId": 2}
                 """;
@@ -39,7 +39,7 @@ class FlagInvitationControllerTest extends BaseControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$").value(INVITATION_ID));
 
-        verify(flagInvitationUseCase).invite(FLAG_ID, CURRENT_USER_ID, INVITEE_ID);
+        verify(flagInvitationCommandService).invite(FLAG_ID, CURRENT_USER_ID, INVITEE_ID);
     }
 
     @Test
@@ -74,7 +74,7 @@ class FlagInvitationControllerTest extends BaseControllerTest {
         FlagInvitationResult result = new FlagInvitationResult(
                 INVITATION_ID, FLAG_ID, "테스트 플래그", "설명", "상대방", LocalDateTime.now()
         );
-        given(flagInvitationQueryUseCase.getInvitations(CURRENT_USER_ID, FlagInvitationDirection.RECEIVED))
+        given(flagInvitationQueryService.getInvitations(CURRENT_USER_ID, FlagInvitationDirection.RECEIVED))
                 .willReturn(List.of(result));
 
         mockMvc.perform(get("/api/v1/flag-invitations").param("direction", "received"))
@@ -83,7 +83,7 @@ class FlagInvitationControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$[0].flagId").value(FLAG_ID))
                 .andExpect(jsonPath("$[0].counterpartNickname").value("상대방"));
 
-        verify(flagInvitationQueryUseCase)
+        verify(flagInvitationQueryService)
                 .getInvitations(CURRENT_USER_ID, FlagInvitationDirection.RECEIVED);
     }
 
@@ -93,14 +93,14 @@ class FlagInvitationControllerTest extends BaseControllerTest {
         FlagInvitationResult result = new FlagInvitationResult(
                 INVITATION_ID, FLAG_ID, "테스트 플래그", "설명", "상대방", LocalDateTime.now()
         );
-        given(flagInvitationQueryUseCase.getInvitations(CURRENT_USER_ID, FlagInvitationDirection.SENT))
+        given(flagInvitationQueryService.getInvitations(CURRENT_USER_ID, FlagInvitationDirection.SENT))
                 .willReturn(List.of(result));
 
         mockMvc.perform(get("/api/v1/flag-invitations").param("direction", "sent"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(INVITATION_ID));
 
-        verify(flagInvitationQueryUseCase)
+        verify(flagInvitationQueryService)
                 .getInvitations(CURRENT_USER_ID, FlagInvitationDirection.SENT);
     }
 
@@ -130,7 +130,7 @@ class FlagInvitationControllerTest extends BaseControllerTest {
                         .content(body))
                 .andExpect(status().isNoContent());
 
-        verify(flagInvitationUseCase).accept(INVITATION_ID, CURRENT_USER_ID);
+        verify(flagInvitationCommandService).accept(INVITATION_ID, CURRENT_USER_ID);
     }
 
     @Test
@@ -161,6 +161,6 @@ class FlagInvitationControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/flag-invitations/{invitationId}", INVITATION_ID))
                 .andExpect(status().isNoContent());
 
-        verify(flagInvitationUseCase).delete(INVITATION_ID, CURRENT_USER_ID);
+        verify(flagInvitationCommandService).delete(INVITATION_ID, CURRENT_USER_ID);
     }
 }

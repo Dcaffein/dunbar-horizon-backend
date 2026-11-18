@@ -1,9 +1,9 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
-import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.FlagModificationUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagScheduleUpdateCommand;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagModificationService;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagHostCommand;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagScheduleUpdateCommand;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagMeetingChangedEvent;
 import com.example.DunbarHorizon.support.TestContainerConfig;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,8 +57,8 @@ class FlagRescheduleEventIntegrationTest {
         }
     }
 
-    @Autowired private FlagHostUseCase flagHostUseCase;
-    @Autowired private FlagModificationUseCase flagModificationUseCase;
+    @Autowired private FlagHostService flagHostService;
+    @Autowired private FlagModificationService flagModificationService;
     @Autowired private MeetingChangedRecorder recorder;
 
     private static final Long HOST_ID = 4103L;
@@ -71,7 +71,7 @@ class FlagRescheduleEventIntegrationTest {
     void setUp() {
         recorder.clear();
         base = LocalDateTime.now().withNano(0);
-        flagId = flagHostUseCase.hostFlag(new FlagHostCommand(
+        flagId = flagHostService.hostFlag(new FlagHostCommand(
                 HOST_ID, TITLE, "설명", 10,
                 base.plusHours(2), base.plusHours(3), base.plusHours(4)));
     }
@@ -84,7 +84,7 @@ class FlagRescheduleEventIntegrationTest {
         LocalDateTime newEnd = base.plusHours(6);
 
         // when
-        flagModificationUseCase.reschedule(new FlagScheduleUpdateCommand(
+        flagModificationService.reschedule(new FlagScheduleUpdateCommand(
                 flagId, HOST_ID, base.plusHours(4), newStart, newEnd));
 
         // then
@@ -100,7 +100,7 @@ class FlagRescheduleEventIntegrationTest {
     @DisplayName("모임 시간이 그대로면 FlagMeetingChangedEvent가 발행되지 않는다")
     void reschedule_sameMeetingTime_publishesNothing() {
         // when — 마감만 앞당기고 시작·종료는 그대로 둔다
-        flagModificationUseCase.reschedule(new FlagScheduleUpdateCommand(
+        flagModificationService.reschedule(new FlagScheduleUpdateCommand(
                 flagId, HOST_ID, base.plusHours(1), base.plusHours(3), base.plusHours(4)));
 
         // then

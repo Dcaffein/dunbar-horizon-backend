@@ -38,7 +38,7 @@ class LabelControllerTest extends BaseControllerTest {
         given(mockLabel.getId()).willReturn(labelId);
         given(mockLabel.getLabelName()).willReturn("친한친구");
 
-        given(labelCommandUseCase.createLabel(eq(1L), eq("친한친구")))
+        given(mySqlLabelService.createLabel(eq(1L), eq("친한친구")))
                 .willReturn(mockLabel);
 
         mockMvc.perform(post("/api/v1/labels")
@@ -69,7 +69,7 @@ class LabelControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/labels/{labelId}", labelId))
                 .andExpect(status().isNoContent());
 
-        verify(labelCommandUseCase).deleteLabel(eq(1L), eq(labelId));
+        verify(mySqlLabelService).deleteLabel(eq(1L), eq(labelId));
     }
 
     @Test
@@ -83,7 +83,7 @@ class LabelControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNoContent());
 
-        verify(labelCommandUseCase).updateLabel(eq(labelId), eq(1L), eq(newLabelName));
+        verify(mySqlLabelService).updateLabel(eq(labelId), eq(1L), eq(newLabelName));
     }
 
     @Test
@@ -96,7 +96,7 @@ class LabelControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNoContent());
 
-        verify(labelCommandUseCase).replaceLabelMembers(anyLong(), eq(labelId), eq(List.of(2L, 3L)));
+        verify(mySqlLabelService).replaceLabelMembers(anyLong(), eq(labelId), eq(List.of(2L, 3L)));
     }
 
     @Test
@@ -110,7 +110,7 @@ class LabelControllerTest extends BaseControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/api/v1/labels/" + labelId + "/members/2"));
 
-        verify(labelCommandUseCase).addMemberToLabel(anyLong(), eq(labelId), eq(2L));
+        verify(mySqlLabelService).addMemberToLabel(anyLong(), eq(labelId), eq(2L));
     }
 
     @Test
@@ -121,14 +121,14 @@ class LabelControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/labels/{labelId}/members/{memberId}", labelId, memberId))
                 .andExpect(status().isNoContent());
 
-        verify(labelCommandUseCase).removeMemberFromLabel(anyLong(), eq(labelId), eq(memberId));
+        verify(mySqlLabelService).removeMemberFromLabel(anyLong(), eq(labelId), eq(memberId));
     }
 
     @Test
     @DisplayName("라벨 단건 정보를 조회한다")
     void getLabelById_Success() throws Exception {
         LabelResult result = new LabelResult(labelId, "친구들", 1);
-        given(labelQueryUseCase.getLabelById(eq(1L), eq(labelId))).willReturn(result);
+        given(mySqlLabelService.getLabelById(eq(1L), eq(labelId))).willReturn(result);
 
         mockMvc.perform(get("/api/v1/labels/{labelId}", labelId))
                 .andExpect(status().isOk())
@@ -142,7 +142,7 @@ class LabelControllerTest extends BaseControllerTest {
     @DisplayName("특정 멤버가 속한 내 라벨 목록을 조회한다")
     void getAllLabels_ByMember() throws Exception {
         Long memberId = 2L;
-        given(labelQueryUseCase.getLabelsByMember(eq(1L), eq(memberId)))
+        given(mySqlLabelService.getLabelsByMember(eq(1L), eq(memberId)))
                 .willReturn(List.of(new LabelResult(labelId, "친구들", 1)));
 
         mockMvc.perform(get("/api/v1/labels").param("memberId", String.valueOf(memberId)))
@@ -151,14 +151,14 @@ class LabelControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$[0].memberCount").value(1))
                 .andExpect(jsonPath("$[0].members").doesNotExist());
 
-        verify(labelQueryUseCase).getLabelsByMember(1L, memberId);
+        verify(mySqlLabelService).getLabelsByMember(1L, memberId);
     }
 
     @Test
     @DisplayName("라벨의 멤버 목록을 조회한다")
     void getLabelMembers_Success() throws Exception {
         List<LabelMemberResult> members = List.of(new LabelMemberResult(2L, "멤버닉네임"));
-        given(labelQueryUseCase.getLabelMembers(eq(1L), eq(labelId))).willReturn(members);
+        given(mySqlLabelService.getLabelMembers(eq(1L), eq(labelId))).willReturn(members);
 
         mockMvc.perform(get("/api/v1/labels/{labelId}/members", labelId))
                 .andExpect(status().isOk())

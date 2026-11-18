@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.account.adapter.in.web;
 
-import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
-import com.example.DunbarHorizon.account.application.port.in.SignupUseCase;
-import com.example.DunbarHorizon.account.application.port.in.VerificationUseCase;
+import com.example.DunbarHorizon.account.application.service.LoginService;
+import com.example.DunbarHorizon.account.application.service.SignupService;
+import com.example.DunbarHorizon.account.application.service.VerificationService;
 import com.example.DunbarHorizon.account.application.dto.AuthTokenResult;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.LoginRequestDto;
 import com.example.DunbarHorizon.account.adapter.in.web.dto.LogoutRequest;
@@ -22,15 +22,15 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AccountController {
 
-    private final SignupUseCase signupUseCase;
-    private final LoginUseCase loginUseCase;
-    private final VerificationUseCase verificationUseCase;
+    private final SignupService signupService;
+    private final LoginService loginService;
+    private final VerificationService verificationService;
     private final AuthCookieManager authCookieManager;
 
     @PostMapping("/users")
     public ResponseEntity<Void> signup(@RequestBody @Valid SignupRequestDto dto,
                                        HttpServletResponse response) {
-        AuthTokenResult jwts = signupUseCase.signup(dto.token(), dto.password(), dto.nickname());
+        AuthTokenResult jwts = signupService.signup(dto.token(), dto.password(), dto.nickname());
         addTokenResponse(response, jwts);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -38,7 +38,7 @@ public class AccountController {
     @PostMapping("/tokens")
     public ResponseEntity<Void> login(@RequestBody @Valid LoginRequestDto loginRequestDto,
                                       HttpServletResponse response) {
-        AuthTokenResult jwts = loginUseCase.login(loginRequestDto.email(), loginRequestDto.password());
+        AuthTokenResult jwts = loginService.login(loginRequestDto.email(), loginRequestDto.password());
         addTokenResponse(response, jwts);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -49,7 +49,7 @@ public class AccountController {
             @RequestBody(required = false) LogoutRequest logoutRequest,
             HttpServletResponse response) {
         String fcmToken = logoutRequest != null ? logoutRequest.fcmToken() : null;
-        loginUseCase.logout(refreshToken, fcmToken);
+        loginService.logout(refreshToken, fcmToken);
         authCookieManager.addExpiredTokenCookie(response);
         return ResponseEntity.noContent().build();
     }
@@ -58,7 +58,7 @@ public class AccountController {
     public ResponseEntity<Void> reissue(
             @CookieValue(name = "refresh_token", required = false) String refreshToken,
             HttpServletResponse response) {
-        AuthTokenResult newJwts = loginUseCase.reissue(refreshToken);
+        AuthTokenResult newJwts = loginService.reissue(refreshToken);
         addTokenResponse(response, newJwts);
         return ResponseEntity.ok().build();
     }
@@ -66,7 +66,7 @@ public class AccountController {
     @PostMapping("/verifications")
     public ResponseEntity<Void> requestVerification(
             @RequestBody @Valid VerificationEmailRequestDto verificationEmailRequestDto) {
-        verificationUseCase.requestVerification(verificationEmailRequestDto.email());
+        verificationService.requestVerification(verificationEmailRequestDto.email());
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -76,7 +76,7 @@ public class AccountController {
      */
     @GetMapping("/verifications/{token}")
     public ResponseEntity<VerificationTokenResponse> resolveVerification(@PathVariable String token) {
-        return ResponseEntity.ok(new VerificationTokenResponse(verificationUseCase.resolveEmail(token)));
+        return ResponseEntity.ok(new VerificationTokenResponse(verificationService.resolveEmail(token)));
     }
 
     private void addTokenResponse(HttpServletResponse response, AuthTokenResult tokens) {

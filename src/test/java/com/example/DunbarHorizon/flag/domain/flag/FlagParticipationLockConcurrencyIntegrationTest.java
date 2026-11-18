@@ -6,13 +6,13 @@ import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagJpaReposit
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagInvitationJpaRepository;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagParticipantJpaRepository;
 import com.example.DunbarHorizon.flag.adapter.out.user.FlagUserAdapter;
-import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.FlagInvitationUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.FlagModificationUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.FlagParticipationUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagCapacityUpdateCommand;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagScheduleUpdateCommand;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
+import com.example.DunbarHorizon.flag.application.service.invitation.FlagInvitationCommandService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagModificationService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagParticipationService;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagCapacityUpdateCommand;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagHostCommand;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagScheduleUpdateCommand;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagDeadlinePassedException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagFullCapacityException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
@@ -64,10 +64,10 @@ class FlagParticipationLockConcurrencyIntegrationTest {
     private static final Long PARTICIPANT_B_ID = 11403L;
     private static final long WAIT_SECONDS = 5;
 
-    @Autowired private FlagHostUseCase flagHostUseCase;
-    @Autowired private FlagModificationUseCase flagModificationUseCase;
-    @Autowired private FlagParticipationUseCase flagParticipationUseCase;
-    @Autowired private FlagInvitationUseCase flagInvitationUseCase;
+    @Autowired private FlagHostService flagHostService;
+    @Autowired private FlagModificationService flagModificationService;
+    @Autowired private FlagParticipationService flagParticipationService;
+    @Autowired private FlagInvitationCommandService flagInvitationCommandService;
     @Autowired private FlagParticipationManager flagParticipationManager;
     @Autowired private FlagJpaRepository flagJpaRepository;
     @Autowired private FlagInvitationJpaRepository invitationJpaRepository;
@@ -128,7 +128,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
         // when
         assertThat(projectionRead.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
         // 트랜잭션 B: A가 Flag 락을 잡기 전에 모집을 마감하고 커밋한다.
-        flagModificationUseCase.closeRecruitment(flagId, HOST_ID);
+        flagModificationService.closeRecruitment(flagId, HOST_ID);
         continueToLock.countDown();
         assertThat(finished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
         executor.shutdownNow();
@@ -162,7 +162,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(() -> {
             try {
-                flagParticipationUseCase.participateInFlag(flagId, PARTICIPANT_A_ID);
+                flagParticipationService.participateInFlag(flagId, PARTICIPANT_A_ID);
             } catch (Throwable throwable) {
                 failure.set(throwable);
             }
@@ -170,7 +170,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
 
         // when
         assertThat(hostIdRead.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-        flagModificationUseCase.closeRecruitment(flagId, HOST_ID);
+        flagModificationService.closeRecruitment(flagId, HOST_ID);
         continueToLock.countDown();
         executor.shutdown();
         assertThat(executor.awaitTermination(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
@@ -211,7 +211,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
 
         // when
         assertThat(lockAttempted.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-        flagModificationUseCase.closeRecruitment(flagId, HOST_ID);
+        flagModificationService.closeRecruitment(flagId, HOST_ID);
         continueToLock.countDown();
         executor.shutdown();
         assertThat(executor.awaitTermination(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
@@ -250,7 +250,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(() -> {
             try {
-                flagModificationUseCase.reschedule(command);
+                flagModificationService.reschedule(command);
             } catch (Throwable throwable) {
                 failure.set(throwable);
             } finally {
@@ -261,7 +261,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
         try {
             // when
             assertThat(lockAttempted.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-            flagModificationUseCase.closeRecruitment(flagId, HOST_ID);
+            flagModificationService.closeRecruitment(flagId, HOST_ID);
             continueToLock.countDown();
             assertThat(completed.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
 
@@ -283,7 +283,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
         Long flagId = hostRecruitingFlag(3);
         given(flagUserAdapter.areFriends(HOST_ID, PARTICIPANT_A_ID)).willReturn(true);
         given(flagUserAdapter.areFriends(HOST_ID, PARTICIPANT_B_ID)).willReturn(true);
-        flagParticipationUseCase.participateInFlag(flagId, PARTICIPANT_A_ID);
+        flagParticipationService.participateInFlag(flagId, PARTICIPANT_A_ID);
 
         CountDownLatch projectionRead = new CountDownLatch(1);
         CountDownLatch continueToLock = new CountDownLatch(1);
@@ -304,7 +304,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(() -> {
             try {
-                flagModificationUseCase.modifyFlagCapacity(new FlagCapacityUpdateCommand(flagId, HOST_ID, 1));
+                flagModificationService.modifyFlagCapacity(new FlagCapacityUpdateCommand(flagId, HOST_ID, 1));
             } catch (Throwable throwable) {
                 failure.set(throwable);
             } finally {
@@ -316,7 +316,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
             // when
             assertThat(projectionRead.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
             // 트랜잭션 B: A가 Flag 락을 얻기 전 두 번째 참여를 커밋한다.
-            flagParticipationUseCase.participateInFlag(flagId, PARTICIPANT_B_ID);
+            flagParticipationService.participateInFlag(flagId, PARTICIPANT_B_ID);
             continueToLock.countDown();
             assertThat(completed.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
 
@@ -354,7 +354,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(() -> {
             try {
-                flagParticipationUseCase.participateInFlag(flagId, PARTICIPANT_A_ID);
+                flagParticipationService.participateInFlag(flagId, PARTICIPANT_A_ID);
             } catch (Throwable throwable) {
                 failure.set(throwable);
             } finally {
@@ -366,7 +366,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
             // when
             assertThat(lockRequested.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
             // 트랜잭션 B: A가 Flag 락을 얻기 전 마지막 자리에 참여하고 커밋한다.
-            flagParticipationUseCase.participateInFlag(flagId, PARTICIPANT_B_ID);
+            flagParticipationService.participateInFlag(flagId, PARTICIPANT_B_ID);
             continueToLock.countDown();
             assertThat(completed.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
 
@@ -391,7 +391,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
         }).when(flagUserAdapter).areFriends(HOST_ID, PARTICIPANT_A_ID);
 
         // when
-        flagParticipationUseCase.participateInFlag(flagId, PARTICIPANT_A_ID);
+        flagParticipationService.participateInFlag(flagId, PARTICIPANT_A_ID);
 
         // then
         assertThat(transactionActiveAtFriendCheck).hasValue(false);
@@ -497,7 +497,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
 
     private Long hostRecruitingFlag(int capacity) {
         LocalDateTime base = LocalDateTime.now().withNano(0);
-        Long flagId = flagHostUseCase.hostFlag(new FlagHostCommand(
+        Long flagId = flagHostService.hostFlag(new FlagHostCommand(
                 HOST_ID, "락 테스트", "설명", capacity,
                 base.plusHours(1), base.plusHours(2), base.plusHours(3)));
         createdFlagIds.add(flagId);
@@ -510,7 +510,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
         executor.submit(() -> {
             try {
                 await(start, "동시 참여 시작");
-                flagParticipationUseCase.participateInFlag(flagId, participantId);
+                flagParticipationService.participateInFlag(flagId, participantId);
                 successCount.incrementAndGet();
             } catch (Throwable throwable) {
                 firstFailure.compareAndSet(null, throwable);
@@ -545,7 +545,7 @@ class FlagParticipationLockConcurrencyIntegrationTest {
                                             Long invitationId, Long inviteeId) {
         executor.submit(() -> {
             try {
-                flagInvitationUseCase.accept(invitationId, inviteeId);
+                flagInvitationCommandService.accept(invitationId, inviteeId);
                 successCount.incrementAndGet();
             } catch (Throwable throwable) {
                 firstFailure.compareAndSet(null, throwable);

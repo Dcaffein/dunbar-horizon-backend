@@ -6,7 +6,8 @@ import com.example.DunbarHorizon.social.domain.exception.SocialErrorCode;
 
 public class FriendRequestAuthorizationException extends FriendException {
 
-    public FriendRequestAuthorizationException(String requestId, Long userId) {
-        super(SocialErrorCode.FRIEND_REQUEST_ACCESS_DENIED, ErrorContext.of("requestId", requestId).and("userId", userId));
+    public FriendRequestAuthorizationException(Long requesterId, Long receiverId, Long userId) {
+        super(SocialErrorCode.FRIEND_REQUEST_ACCESS_DENIED, ErrorContext.of("requesterId", requesterId)
+                .and("receiverId", receiverId).and("userId", userId));
     }
 }

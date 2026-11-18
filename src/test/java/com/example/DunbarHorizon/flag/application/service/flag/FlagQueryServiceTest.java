@@ -4,7 +4,7 @@ package com.example.DunbarHorizon.flag.application.service.flag;
 import java.util.Map;import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 import com.example.DunbarHorizon.flag.application.dto.result.FlagDetailResult;
 import com.example.DunbarHorizon.flag.application.dto.result.FlagResult;
-import com.example.DunbarHorizon.flag.application.port.in.FlagRole;
+import com.example.DunbarHorizon.flag.application.dto.FlagRole;
 import com.example.DunbarHorizon.flag.application.port.out.FlagUserPort;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;

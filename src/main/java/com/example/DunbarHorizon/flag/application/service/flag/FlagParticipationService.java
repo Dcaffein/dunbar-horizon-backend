@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
-import com.example.DunbarHorizon.flag.application.port.in.FlagParticipationUseCase;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipant;
 import com.example.DunbarHorizon.flag.domain.flag.FlagParticipationManager;
 import com.example.DunbarHorizon.flag.domain.flag.FriendshipChecker;
@@ -12,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
-public class FlagParticipationService implements FlagParticipationUseCase {
+public class FlagParticipationService {
     private final FlagRepository flagRepository;
     private final FlagParticipationManager flagParticipationManager;
     private final FriendshipChecker friendshipChecker;
@@ -28,7 +27,6 @@ public class FlagParticipationService implements FlagParticipationUseCase {
         this.participationTransaction = new TransactionTemplate(transactionManager);
     }
 
-    @Override
     public void participateInFlag(Long flagId, Long userId) {
         Long hostId = flagRepository.findHostIdById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
@@ -40,7 +38,6 @@ public class FlagParticipationService implements FlagParticipationUseCase {
         });
     }
 
-    @Override
     @Transactional
     public void leaveFlag(Long flagId, Long userId) {
         FlagParticipant participant = flagParticipationManager.unparticipate(flagId, userId);

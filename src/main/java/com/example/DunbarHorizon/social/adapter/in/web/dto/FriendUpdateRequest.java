@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.in.web.dto;
 
-import com.example.DunbarHorizon.social.application.port.in.command.FriendshipUpdateCommand;
+import com.example.DunbarHorizon.social.application.dto.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import jakarta.validation.constraints.Size;
 

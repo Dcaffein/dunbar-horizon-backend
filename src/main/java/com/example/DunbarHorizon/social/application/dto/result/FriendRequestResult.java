@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.social.application.dto.result;
 
-import com.example.DunbarHorizon.social.application.dto.SocialUserProfile;
+import com.example.DunbarHorizon.social.application.dto.FriendRequestView;
+import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
 
@@ -13,13 +14,28 @@ public record FriendRequestResult(
         FriendRequestStatus status,
         LocalDateTime createdAt
 ) {
-    public static FriendRequestResult from(FriendRequest friendRequest, SocialUserProfile requester, SocialUserProfile receiver) {
+    public static FriendRequestResult from(FriendRequest friendRequest, Long viewerId,
+                                           UserProfile requester, UserProfile receiver) {
         return new FriendRequestResult(
-                friendRequest.getId(),
+                pairId(friendRequest.getRequesterId(), friendRequest.getReceiverId()),
                 requester != null ? FriendResult.from(requester) : null,
                 receiver != null ? FriendResult.from(receiver) : null,
-                friendRequest.getStatus(),
+                friendRequest.getStatusFor(viewerId),
                 friendRequest.getCreatedAt()
         );
+    }
+
+    public static FriendRequestResult from(FriendRequestView request, Long viewerId) {
+        return new FriendRequestResult(
+                pairId(request.requesterId(), request.receiverId()),
+                new FriendResult(request.requesterId(), request.requesterNickname()),
+                new FriendResult(request.receiverId(), request.receiverNickname()),
+                request.status().visibleTo(request.requesterId(), viewerId),
+                request.createdAt()
+        );
+    }
+
+    private static String pairId(Long requesterId, Long receiverId) {
+        return Math.min(requesterId, receiverId) + "_" + Math.max(requesterId, receiverId);
     }
 }

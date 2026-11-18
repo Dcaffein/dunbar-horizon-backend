@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.buzz.adapter.out.social.AnchorRecipientStrategy
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
 import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipPersistenceAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
 import com.example.DunbarHorizon.social.application.service.SocialExpansionQueryService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
@@ -22,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
 @Import({SocialExpansionMysqlRepository.class, SocialExpansionQueryService.class,
-        SocialUserMysqlRepository.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, AnchorRecipientStrategyAdapter.class})
+        UserProfileJdbcRepository.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, AnchorRecipientStrategyAdapter.class})
 class SocialExpansionMysqlRepositoryTest {
 
     @Autowired private SocialExpansionMysqlRepository repository;

@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.flag.application.service.comment;
 
-import com.example.DunbarHorizon.flag.application.port.in.FlagCommentCommandUseCase;
 import com.example.DunbarHorizon.flag.domain.comment.FlagComment;
 import com.example.DunbarHorizon.flag.domain.comment.exception.FlagCommentNotFoundException;
 import com.example.DunbarHorizon.flag.domain.comment.repository.FlagCommentRepository;
@@ -13,12 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class FlagCommentCommandService implements FlagCommentCommandUseCase {
+public class FlagCommentCommandService {
 
     private final FlagCommentRepository commentRepository;
     private final FlagRepository flagRepository;
 
-    @Override
     @Transactional
     public Long createRootComment(Long flagId, Long userId, String content, boolean isPrivate) {
         flagRepository.findById(flagId)
@@ -28,7 +26,6 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
         return commentRepository.save(comment).getId();
     }
 
-    @Override
     @Transactional
     public Long createReply(Long flagId, Long parentId, Long userId, String content, boolean isPrivate) {
         FlagComment parent = commentRepository.findByIdForShare(parentId)
@@ -42,7 +39,6 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
         return commentRepository.save(reply).getId();
     }
 
-    @Override
     @Transactional
     public void updateComment(Long flagId, Long commentId, Long userId, String content, boolean isPrivate) {
         FlagComment comment = commentRepository.findById(commentId)
@@ -53,7 +49,6 @@ public class FlagCommentCommandService implements FlagCommentCommandUseCase {
         commentRepository.save(comment);
     }
 
-    @Override
     @Transactional
     public void deleteComment(Long flagId, Long commentId, Long userId) {
         FlagComment comment = commentRepository.findByIdForUpdate(commentId)

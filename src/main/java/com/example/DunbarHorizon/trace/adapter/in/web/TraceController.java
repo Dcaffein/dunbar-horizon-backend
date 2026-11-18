@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.trace.adapter.in.web;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import com.example.DunbarHorizon.trace.adapter.in.web.dto.VisitRequestDto;
 import com.example.DunbarHorizon.trace.application.dto.TraceResult;
-import com.example.DunbarHorizon.trace.application.port.in.TraceCommandUseCase;
+import com.example.DunbarHorizon.trace.application.TraceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,14 +14,14 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class TraceController {
 
-    private final TraceCommandUseCase traceCommandUseCase;
+    private final TraceService traceService;
 
     @PostMapping
     public ResponseEntity<TraceResult> recordTrace(
             @CurrentUserId Long currentUserId,
             @Valid @RequestBody VisitRequestDto request) {
 
-        TraceResult result = traceCommandUseCase.recordTrace(currentUserId, request.targetId());
+        TraceResult result = traceService.recordTrace(currentUserId, request.targetId());
         return ResponseEntity.ok(result);
     }
 }

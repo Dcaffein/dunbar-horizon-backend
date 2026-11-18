@@ -22,7 +22,7 @@ class TraceControllerTest extends BaseControllerTest {
     void visitProfile_NotRevealed() throws Exception {
         Long targetId = 2L;
         VisitRequestDto requestDto = new VisitRequestDto(targetId);
-        given(traceCommandUseCase.recordTrace(eq(1L), eq(targetId))).willReturn(TraceResult.notRevealed());
+        given(traceService.recordTrace(eq(1L), eq(targetId))).willReturn(TraceResult.notRevealed());
 
         mockMvc.perform(post("/api/v1/traces")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -30,7 +30,7 @@ class TraceControllerTest extends BaseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.revealed").value(false));
 
-        verify(traceCommandUseCase).recordTrace(eq(1L), eq(targetId));
+        verify(traceService).recordTrace(eq(1L), eq(targetId));
     }
 
     @Test
@@ -38,7 +38,7 @@ class TraceControllerTest extends BaseControllerTest {
     void visitProfile_Revealed() throws Exception {
         Long targetId = 2L;
         VisitRequestDto requestDto = new VisitRequestDto(targetId);
-        given(traceCommandUseCase.recordTrace(eq(1L), eq(targetId))).willReturn(new TraceResult(true));
+        given(traceService.recordTrace(eq(1L), eq(targetId))).willReturn(new TraceResult(true));
 
         mockMvc.perform(post("/api/v1/traces")
                         .contentType(MediaType.APPLICATION_JSON)

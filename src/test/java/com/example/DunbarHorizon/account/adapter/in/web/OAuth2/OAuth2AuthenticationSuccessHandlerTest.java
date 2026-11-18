@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.account.adapter.in.web.OAuth2;
 
 import com.example.DunbarHorizon.global.security.AuthCookieManager;
-import com.example.DunbarHorizon.account.application.port.in.LoginUseCase;
+import com.example.DunbarHorizon.account.application.service.LoginService;
 import com.example.DunbarHorizon.account.application.dto.AuthTokenResult;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.account.domain.UserRole;
@@ -32,7 +32,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     private OAuth2AuthenticationSuccessHandler handler;
 
     @Mock
-    private LoginUseCase loginUseCase;
+    private LoginService loginService;
 
     @Mock
     private AuthCookieManager authCookieManager;
@@ -63,13 +63,13 @@ class OAuth2AuthenticationSuccessHandlerTest {
         given(authentication.getPrincipal()).willReturn(userDetails);
 
         AuthTokenResult tokenResult = new AuthTokenResult("at", "rt");
-        given(loginUseCase.issueTokens(user)).willReturn(tokenResult);
+        given(loginService.issueTokens(user)).willReturn(tokenResult);
 
         // when
         handler.onAuthenticationSuccess(request, response, authentication);
 
         // then
-        verify(loginUseCase).issueTokens(user);
+        verify(loginService).issueTokens(user);
 
         //  쿠키 매니저 호출 검증
         verify(authCookieManager).addAccessTokenCookie(eq(response), eq("at"));

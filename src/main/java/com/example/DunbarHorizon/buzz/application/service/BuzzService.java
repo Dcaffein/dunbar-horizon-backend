@@ -1,8 +1,6 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
-import com.example.DunbarHorizon.buzz.application.port.in.BuzzCommandUseCase;
-import com.example.DunbarHorizon.buzz.application.port.in.BuzzQueryUseCase;
-import com.example.DunbarHorizon.buzz.application.port.in.command.CreateBuzzCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzProfileResult;
@@ -30,7 +28,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
-public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
+public class BuzzService {
 
     private final RecipientStrategyProvider strategyProvider;
     private final BuzzRepository buzzRepository;
@@ -38,7 +36,6 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
     private final ImageStoragePort imageStoragePort;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Override
     public void createBuzz(CreateBuzzCommand command, List<String> imageKeys) {
         BuzzCreatorInfo author = buzzSocialPort.getCreatorProfiles(List.of(command.creatorId()))
                 .stream()
@@ -62,7 +59,6 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
         eventPublisher.publishEvent(new BuzzCreatedEvent(savedBuzz.getId(), command.creatorId(), recipientIds));
     }
 
-    @Override
     public void commentOnBuzz(Long commenterId, String buzzId, String commentText, List<String> imageKeys, boolean isPublic) {
         BuzzCreatorInfo commenterProfile = buzzSocialPort.getCreatorProfiles(List.of(commenterId))
                 .stream()
@@ -85,7 +81,6 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
         eventPublisher.publishEvent(new BuzzCommentedEvent(buzzId, buzz.getCreatorId(), commenterId));
     }
 
-    @Override
     public void updateComment(Long requesterId, String buzzId, String commentId, String commentText, List<String> imageKeys) {
         Buzz buzz = getBuzzOrThrow(buzzId);
         buzz.validateNotExpired();
@@ -96,7 +91,6 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
         buzzRepository.updateComment(buzzId, commentId, comment.getText(), comment.getImageUrls());
     }
 
-    @Override
     public void deleteComment(Long requesterId, String buzzId, String commentId) {
         Buzz buzz = getBuzzOrThrow(buzzId);
         buzz.validateNotExpired();
@@ -106,27 +100,23 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
         buzzRepository.removeComment(buzzId, commentId);
     }
 
-    @Override
     public void deleteBuzz(Long requesterId, String buzzId) {
         Buzz buzz = getBuzzOrThrow(buzzId);
         buzz.validateDeletion(requesterId);
         buzzRepository.deleteById(buzzId);
     }
 
-    @Override
     public Slice<BuzzSummaryResult> getReceivedBuzzes(Long userId, Pageable pageable) {
         Set<Long> excludedIds = buzzSocialPort.getNonReceivableFriendIds(userId);
         return buzzRepository.findAllByRecipientId(userId, excludedIds, pageable)
                 .map(buzz -> BuzzSummaryResult.from(buzz, userId));
     }
 
-    @Override
     public Slice<BuzzSummaryResult> getSentBuzzes(Long userId, Pageable pageable) {
         return buzzRepository.findAllByCreatorId(userId, pageable)
                 .map(buzz -> BuzzSummaryResult.from(buzz, userId));
     }
 
-    @Override
     public BuzzDetailResult getBuzzDetail(Long userId, String buzzId) {
         Buzz buzz = getBuzzWithCommentsOrThrow(buzzId);
         buzz.validateAccess(userId);
@@ -137,7 +127,6 @@ public class BuzzService implements BuzzCommandUseCase, BuzzQueryUseCase {
         return BuzzDetailResult.from(buzz, userId, recipients);
     }
 
-    @Override
     public List<Long> getUnreadSenderIds(Long userId) {
         Set<Long> excludedIds = buzzSocialPort.getNonReceivableFriendIds(userId);
         return buzzRepository.findUnreadSenderIds(userId, excludedIds);

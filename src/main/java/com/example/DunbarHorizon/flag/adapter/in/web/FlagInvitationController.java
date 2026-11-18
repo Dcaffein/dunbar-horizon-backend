@@ -4,8 +4,8 @@ import com.example.DunbarHorizon.flag.adapter.in.web.dto.FlagInviteRequest;
 import com.example.DunbarHorizon.flag.adapter.in.web.dto.FlagInvitationStatusUpdateRequest;
 import com.example.DunbarHorizon.flag.application.dto.FlagInvitationDirection;
 import com.example.DunbarHorizon.flag.application.dto.result.FlagInvitationResult;
-import com.example.DunbarHorizon.flag.application.port.in.FlagInvitationQueryUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.FlagInvitationUseCase;
+import com.example.DunbarHorizon.flag.application.service.invitation.FlagInvitationQueryService;
+import com.example.DunbarHorizon.flag.application.service.invitation.FlagInvitationCommandService;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,15 +20,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FlagInvitationController {
 
-    private final FlagInvitationUseCase flagInvitationUseCase;
-    private final FlagInvitationQueryUseCase flagInvitationQueryUseCase;
+    private final FlagInvitationCommandService flagInvitationCommandService;
+    private final FlagInvitationQueryService flagInvitationQueryService;
 
     @PostMapping
     public ResponseEntity<Long> invite(
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid FlagInviteRequest request
     ) {
-        Long invitationId = flagInvitationUseCase.invite(request.flagId(), currentUserId, request.inviteeId());
+        Long invitationId = flagInvitationCommandService.invite(request.flagId(), currentUserId, request.inviteeId());
         return ResponseEntity.status(HttpStatus.CREATED).body(invitationId);
     }
 
@@ -37,7 +37,7 @@ public class FlagInvitationController {
             @CurrentUserId Long currentUserId,
             @RequestParam String direction
     ) {
-        return ResponseEntity.ok(flagInvitationQueryUseCase.getInvitations(
+        return ResponseEntity.ok(flagInvitationQueryService.getInvitations(
                 currentUserId, FlagInvitationDirection.from(direction)
         ));
     }
@@ -49,7 +49,7 @@ public class FlagInvitationController {
             @RequestBody @Valid FlagInvitationStatusUpdateRequest request
     ) {
         switch (request.status()) {
-            case ACCEPTED -> flagInvitationUseCase.accept(invitationId, currentUserId);
+            case ACCEPTED -> flagInvitationCommandService.accept(invitationId, currentUserId);
         }
         return ResponseEntity.noContent().build();
     }
@@ -59,7 +59,7 @@ public class FlagInvitationController {
             @PathVariable Long invitationId,
             @CurrentUserId Long currentUserId
     ) {
-        flagInvitationUseCase.delete(invitationId, currentUserId);
+        flagInvitationCommandService.delete(invitationId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 }

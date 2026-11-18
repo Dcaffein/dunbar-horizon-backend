@@ -7,14 +7,14 @@ import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionRe
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult.IntermediaryResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
-import com.example.DunbarHorizon.social.application.port.in.FriendRequestReceiverActionUseCase;
-import com.example.DunbarHorizon.social.application.port.in.FriendshipCommandUseCase;
-import com.example.DunbarHorizon.social.application.port.in.FriendshipQueryUseCase;
-import com.example.DunbarHorizon.social.application.port.in.LabelQueryUseCase;
-import com.example.DunbarHorizon.social.application.port.in.SocialConnectionPathQueryUseCase;
-import com.example.DunbarHorizon.social.application.port.in.SocialExpansionQueryUseCase;
-import com.example.DunbarHorizon.social.application.port.in.SocialNetworkQueryUseCase;
-import com.example.DunbarHorizon.social.application.port.in.SocialUserQueryUseCase;
+import com.example.DunbarHorizon.social.application.service.FriendRequestService;
+import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
+import com.example.DunbarHorizon.social.application.service.FriendshipQueryService;
+import com.example.DunbarHorizon.social.application.service.MySqlLabelService;
+import com.example.DunbarHorizon.social.application.service.SocialConnectionPathQueryService;
+import com.example.DunbarHorizon.social.application.service.SocialExpansionQueryService;
+import com.example.DunbarHorizon.social.application.service.SocialNetworkQueryService;
+import com.example.DunbarHorizon.social.application.service.AccountSocialUserQueryService;
 import com.example.DunbarHorizon.social.domain.friend.DunbarCircle;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequestStatus;
@@ -64,14 +64,14 @@ class SocialMysqlCutoverIntegrationTest {
     @Autowired private ApplicationContext app;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private TransactionTemplate transactions;
-    @Autowired private FriendshipQueryUseCase friendships;
-    @Autowired private FriendshipCommandUseCase friendshipChanges;
-    @Autowired private FriendRequestReceiverActionUseCase requests;
-    @Autowired private SocialNetworkQueryUseCase network;
-    @Autowired private SocialExpansionQueryUseCase expansion;
-    @Autowired private SocialConnectionPathQueryUseCase paths;
-    @Autowired private LabelQueryUseCase labels;
-    @Autowired private SocialUserQueryUseCase profiles;
+    @Autowired private FriendshipQueryService friendshipQueryService;
+    @Autowired private FriendshipCommandService friendshipCommandService;
+    @Autowired private FriendRequestService friendRequestService;
+    @Autowired private SocialNetworkQueryService socialNetworkQueryService;
+    @Autowired private SocialExpansionQueryService socialExpansionQueryService;
+    @Autowired private SocialConnectionPathQueryService socialConnectionPathQueryService;
+    @Autowired private MySqlLabelService mySqlLabelService;
+    @Autowired private AccountSocialUserQueryService accountSocialUserQueryService;
 
     @AfterEach
     void cleanUp() {
@@ -97,42 +97,42 @@ class SocialMysqlCutoverIntegrationTest {
         jdbc.update("INSERT INTO labels (id, owner_id, name) VALUES (?, ?, '동네')", LABEL_ID, ANCHOR);
         jdbc.update("INSERT INTO label_members (label_id, member_id) VALUES (?, ?), (?, ?)", LABEL_ID, ME, LABEL_ID, TARGET);
         jdbc.update("""
-                INSERT INTO friend_requests (low_user_id, high_user_id, requester_id, receiver_id, created_at, status)
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'PENDING')
-                """, ME, REQUESTER, REQUESTER, ME);
+                INSERT INTO friend_requests (requester_id, receiver_id, created_at, status)
+                VALUES (?, ?, CURRENT_TIMESTAMP, 'PENDING')
+                """, REQUESTER, ME);
 
         // when & then
         assertThat(app.containsBean("neo4jDriver")).isFalse();
-        assertThat(network.getFriendsNetwork(ME, DunbarCircle.DUNBAR)).extracting(NodeGraphResult::nodeId)
+        assertThat(socialNetworkQueryService.getFriendsNetwork(ME, DunbarCircle.DUNBAR)).extracting(NodeGraphResult::nodeId)
                 .containsExactly(ANCHOR, FRIEND);
-        assertThat(network.getLabelNetwork(ANCHOR, LABEL_ID)).extracting(NodeGraphResult::nodeId)
+        assertThat(socialNetworkQueryService.getLabelNetwork(ANCHOR, LABEL_ID)).extracting(NodeGraphResult::nodeId)
                 .containsExactly(ME, TARGET);
-        assertThat(expansion.getRecommendationsByAnchor(ME, ANCHOR)).extracting(AnchorExpansionResult::id)
+        assertThat(socialExpansionQueryService.getRecommendationsByAnchor(ME, ANCHOR)).extracting(AnchorExpansionResult::id)
                 .containsExactly(TARGET);
-        assertThat(paths.getConnectionPath(ME, TARGET).intermediaries()).extracting(IntermediaryResult::userId)
+        assertThat(socialConnectionPathQueryService.getConnectionPath(ME, TARGET).intermediaries()).extracting(IntermediaryResult::userId)
                 .containsExactly(ANCHOR, FRIEND);
 
         jdbc.update("UPDATE users SET nickname = 'renamed' WHERE user_id = ?", TARGET);
-        assertThat(profiles.getSocialProfile(TARGET).nickname()).isEqualTo("renamed");
-        assertThat(labels.getLabelMembers(ANCHOR, LABEL_ID)).contains(new LabelMemberResult(TARGET, "renamed"));
+        assertThat(accountSocialUserQueryService.getSocialProfile(TARGET).nickname()).isEqualTo("renamed");
+        assertThat(mySqlLabelService.getLabelMembers(ANCHOR, LABEL_ID)).contains(new LabelMemberResult(TARGET, "renamed"));
         jdbc.update("UPDATE users SET status = 'DORMANT' WHERE user_id = ?", TARGET);
-        assertThat(expansion.getRecommendationsByAnchor(ME, ANCHOR)).isEmpty();
+        assertThat(socialExpansionQueryService.getRecommendationsByAnchor(ME, ANCHOR)).isEmpty();
         jdbc.update("UPDATE users SET status = 'ACTIVE' WHERE user_id = ?", TARGET);
 
-        requests.updateStatus(ME, REQUESTER, FriendRequestStatus.ACCEPTED);
-        assertThat(friendships.areFriends(ME, REQUESTER)).isTrue();
+        friendRequestService.updateStatus(ME, REQUESTER, FriendRequestStatus.ACCEPTED);
+        assertThat(friendshipQueryService.areFriends(ME, REQUESTER)).isTrue();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM friend_requests WHERE requester_id = ?", Integer.class,
                 REQUESTER)).isZero();
 
         transactions.executeWithoutResult(status -> app.publishEvent(new BatchMutualInteractionEvent(
                 148L, List.of(FRIEND), ME, InteractionType.FLAG_ENDED, ScoreDirection.GRANT)));
-        assertThat(friendships.getFriend(ME, FRIEND).myInterestScore())
+        assertThat(friendshipQueryService.getFriend(ME, FRIEND).myInterestScore())
                 .isEqualTo(FriendRecognition.normalize(scoreFor(0.6) + InteractionScorePolicy.scoreOf(InteractionType.FLAG_ENDED)));
 
-        assertThat(labels.getMemberIdsByLabels(ANCHOR, List.of(LABEL_ID))).containsExactlyInAnyOrder(ME, TARGET);
-        friendshipChanges.brokeUpWith(ME, ANCHOR);
-        assertThat(friendships.areFriends(ME, ANCHOR)).isFalse();
-        assertThat(labels.getMemberIdsByLabels(ANCHOR, List.of(LABEL_ID))).containsExactly(TARGET);
+        assertThat(mySqlLabelService.getMemberIdsByLabels(ANCHOR, List.of(LABEL_ID))).containsExactlyInAnyOrder(ME, TARGET);
+        friendshipCommandService.brokeUpWith(ME, ANCHOR);
+        assertThat(friendshipQueryService.areFriends(ME, ANCHOR)).isFalse();
+        assertThat(mySqlLabelService.getMemberIdsByLabels(ANCHOR, List.of(LABEL_ID))).containsExactly(TARGET);
     }
 
     private void insertFriendship(long low, long high, double intimacy) {

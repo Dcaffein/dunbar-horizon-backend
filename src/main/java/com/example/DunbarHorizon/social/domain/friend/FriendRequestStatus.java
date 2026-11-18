@@ -43,6 +43,11 @@ public enum FriendRequestStatus {
             validateReceiver(request, userId);
             return this;
         }
+
+        @Override
+        public void cancel(FriendRequest request, Long userId) {
+            validateRequester(request, userId);
+        }
     };
 
     public FriendRequestStatus update(FriendRequest request, Long userId) {
@@ -53,15 +58,22 @@ public enum FriendRequestStatus {
         throwCancelNotAllowed(this);
     }
 
+    public FriendRequestStatus visibleTo(Long requesterId, Long viewerId) {
+        if (this == HIDDEN && requesterId.equals(viewerId)) {
+            return PENDING;
+        }
+        return this;
+    }
+
     protected void validateReceiver(FriendRequest request, Long userId) {
         if (!request.getReceiverId().equals(userId)) {
-            throw new FriendRequestAuthorizationException(request.getId(), userId);
+            throw new FriendRequestAuthorizationException(request.getRequesterId(), request.getReceiverId(), userId);
         }
     }
 
     protected void validateRequester(FriendRequest request, Long userId) {
         if (!request.getRequesterId().equals(userId)) {
-            throw new FriendRequestAuthorizationException(request.getId(), userId);
+            throw new FriendRequestAuthorizationException(request.getRequesterId(), request.getReceiverId(), userId);
         }
     }
 

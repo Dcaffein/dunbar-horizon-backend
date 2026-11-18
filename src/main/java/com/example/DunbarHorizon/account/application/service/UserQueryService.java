@@ -32,21 +32,12 @@ public class UserQueryService implements UserQueryUseCase {
                 .toList();
     }
 
-
-    @Override
-    public Optional<UserProfileInfo> getActiveUserProfile(Long id) {
-        return userRepository.findActivatedUser(id)
-                .map(user -> new UserProfileInfo(user.getId(), user.getNickname(), resolveProfileUrl(user.getProfileImage())));
-    }
-
-    @Override
     public Optional<UserProfileInfo> findActiveUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .filter(user -> user.getStatus() == UserStatus.ACTIVE)
                 .map(user -> new UserProfileInfo(user.getId(), user.getNickname(), resolveProfileUrl(user.getProfileImage())));
     }
 
-    @Override
     public MyProfileResult getMyProfile(Long id) {
         return userRepository.findActivatedUser(id)
                 .map(user -> new MyProfileResult(user.getId(), user.getEmail(), user.getNickname(), resolveProfileUrl(user.getProfileImage())))

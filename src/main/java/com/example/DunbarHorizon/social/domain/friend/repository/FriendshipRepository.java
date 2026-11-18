@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.social.domain.friend.repository;
 
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 
-import java.util.List;
 import java.util.Optional;
 
 public interface FriendshipRepository {
@@ -10,7 +9,7 @@ public interface FriendshipRepository {
 
     Optional<Friendship> findBetween(Long userId, Long friendId);
 
-    List<Friendship> findByUserId(Long userId);
+    void saveSettings(Friendship friendship);
 
     boolean existsFriendshipBetween(Long userId, Long friendId);
 

@@ -26,7 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 문서 | 경로 | 참조 시점 |
 |------|------|---------|
 | 작업 파이프라인 | `harness/WORKFLOW.md` | 모든 작업 시작 전 — Issue 확인, 계획·승인, 구현·커밋, 병합·완료 절차 |
-| 아키텍처 & 코딩 컨벤션 | `harness/ARCHITECTURE.md` | 새 파일·기능 추가 시 — 계층 분리, DDD/Hexagonal 규칙, 도메인 간 통신 방식 |
+| 백엔드 아키텍처 | `harness/ARCHITECTURE.md` | 새 파일·기능 추가 시 — 계층별 책임과 구성 요소, 모듈 간 호출 방식 |
 | 테스트 프로토콜 | `harness/TESTING-GUIDE.md` | 테스트 코드 작성 시 — Base 클래스, Given-When-Then, Edge Case 검증 |
 | Issue 작성 규칙 | `harness/ISSUE-GUIDE.md` | Issue 작성·갱신 시 — 요구사항, 설계 결정과 맥락, 완료 조건 |
 | 실행 계획 규칙 | `harness/PLAN-GUIDE.md` | PLAN 작성·갱신 시 — 커밋 단위 변경, 검증과 부작용 |
@@ -45,8 +45,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `global/` — 횡단 관심사: security, DB config, 예외 처리, 어노테이션, 도메인 이벤트, base entity
 
 ## Database Wiring
-
-어느 특성이면 어느 저장소를 쓰는지는 `harness/ARCHITECTURE.md` §2에 있다. 여기에는 실제 배선만 적는다.
 
 | Database | Config | Base packages |
 |----------|--------|---------------|

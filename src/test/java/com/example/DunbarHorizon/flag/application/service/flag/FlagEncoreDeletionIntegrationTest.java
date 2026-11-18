@@ -1,10 +1,10 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagJpaRepository;
-import com.example.DunbarHorizon.flag.application.port.in.FlagHostUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.FlagModificationUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagEncoreCommand;
-import com.example.DunbarHorizon.flag.application.port.in.command.FlagHostCommand;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
+import com.example.DunbarHorizon.flag.application.service.flag.FlagModificationService;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagEncoreCommand;
+import com.example.DunbarHorizon.flag.application.dto.command.FlagHostCommand;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.support.TestContainerConfig;
 import org.junit.jupiter.api.AfterEach;
@@ -35,8 +35,8 @@ class FlagEncoreDeletionIntegrationTest {
 
     private static final Long HOST_ID = 13101L;
 
-    @Autowired private FlagHostUseCase flagHostUseCase;
-    @Autowired private FlagModificationUseCase flagModificationUseCase;
+    @Autowired private FlagHostService flagHostService;
+    @Autowired private FlagModificationService flagModificationService;
     @Autowired private FlagJpaRepository flagJpaRepository;
     @Autowired private PlatformTransactionManager transactionManager;
 
@@ -47,7 +47,7 @@ class FlagEncoreDeletionIntegrationTest {
     @BeforeEach
     void setUp() {
         LocalDateTime base = LocalDateTime.now().withNano(0);
-        parentId = flagHostUseCase.hostFlag(new FlagHostCommand(
+        parentId = flagHostService.hostFlag(new FlagHostCommand(
                 HOST_ID, "종료된 모임", "설명", 10,
                 base.minusHours(4), base.minusHours(3), base.minusHours(1)));
         createdFlagIds.add(parentId);
@@ -65,7 +65,7 @@ class FlagEncoreDeletionIntegrationTest {
     void encore_Succeeds_AfterPreviousEncoreDeleted() {
         // given
         Long deletedEncoreId = encore();
-        flagModificationUseCase.closeFlag(deletedEncoreId, HOST_ID);
+        flagModificationService.closeFlag(deletedEncoreId, HOST_ID);
 
         // when
         Long recreatedEncoreId = encore();
@@ -77,7 +77,7 @@ class FlagEncoreDeletionIntegrationTest {
 
     private Long encore() {
         LocalDateTime base = LocalDateTime.now().withNano(0);
-        Long encoreId = flagHostUseCase.encoreFlag(new FlagEncoreCommand(
+        Long encoreId = flagHostService.encoreFlag(new FlagEncoreCommand(
                 parentId, HOST_ID, base.plusHours(1), base.plusHours(2), base.plusHours(3)));
         createdFlagIds.add(encoreId);
         return encoreId;

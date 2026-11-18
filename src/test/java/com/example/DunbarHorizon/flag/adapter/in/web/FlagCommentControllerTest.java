@@ -30,12 +30,12 @@ class FlagCommentControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("댓글 트리 조회 시 200을 반환하고 getCommentTree()를 호출한다")
     void getComments_Returns200() throws Exception {
-        given(flagCommentQueryUseCase.getCommentTree(1L, CURRENT_USER_ID)).willReturn(List.of());
+        given(flagCommentQueryService.getCommentTree(1L, CURRENT_USER_ID)).willReturn(List.of());
 
         mockMvc.perform(get("/api/v1/flags/1/comments"))
                 .andExpect(status().isOk());
 
-        verify(flagCommentQueryUseCase).getCommentTree(1L, CURRENT_USER_ID);
+        verify(flagCommentQueryService).getCommentTree(1L, CURRENT_USER_ID);
     }
 
     @Test
@@ -46,7 +46,7 @@ class FlagCommentControllerTest extends BaseControllerTest {
                 new CommentResult.WriterInfo(CURRENT_USER_ID, "작성자", null),
                 "댓글 내용", false, LocalDateTime.now(), List.of(), true
         );
-        given(flagCommentQueryUseCase.getCommentTree(1L, CURRENT_USER_ID)).willReturn(List.of(comment));
+        given(flagCommentQueryService.getCommentTree(1L, CURRENT_USER_ID)).willReturn(List.of(comment));
 
         mockMvc.perform(get("/api/v1/flags/1/comments"))
                 .andExpect(status().isOk())
@@ -56,18 +56,18 @@ class FlagCommentControllerTest extends BaseControllerTest {
     @Test
     @DisplayName("댓글 수 조회 시 200을 반환하고 getCommentCount()를 호출한다")
     void getCommentCount_Returns200() throws Exception {
-        given(flagCommentQueryUseCase.getCommentCount(1L)).willReturn(5L);
+        given(flagCommentQueryService.getCommentCount(1L)).willReturn(5L);
 
         mockMvc.perform(get("/api/v1/flags/1/comments/count"))
                 .andExpect(status().isOk());
 
-        verify(flagCommentQueryUseCase).getCommentCount(1L);
+        verify(flagCommentQueryService).getCommentCount(1L);
     }
 
     @Test
     @DisplayName("루트 댓글 생성 시 201을 반환하고 createRootComment()를 호출한다")
     void createRootComment_Returns201() throws Exception {
-        given(flagCommentCommandUseCase.createRootComment(eq(1L), eq(CURRENT_USER_ID), anyString(), anyBoolean()))
+        given(flagCommentCommandService.createRootComment(eq(1L), eq(CURRENT_USER_ID), anyString(), anyBoolean()))
                 .willReturn(10L);
         String body = """
                 {"content": "댓글 내용", "isPrivate": false}
@@ -78,13 +78,13 @@ class FlagCommentControllerTest extends BaseControllerTest {
                         .content(body))
                 .andExpect(status().isCreated());
 
-        verify(flagCommentCommandUseCase).createRootComment(eq(1L), eq(CURRENT_USER_ID), eq("댓글 내용"), eq(false));
+        verify(flagCommentCommandService).createRootComment(eq(1L), eq(CURRENT_USER_ID), eq("댓글 내용"), eq(false));
     }
 
     @Test
     @DisplayName("답글 생성 시 201을 반환하고 createReply()를 호출한다")
     void createReply_Returns201() throws Exception {
-        given(flagCommentCommandUseCase.createReply(eq(1L), eq(2L), eq(CURRENT_USER_ID), anyString(), anyBoolean()))
+        given(flagCommentCommandService.createReply(eq(1L), eq(2L), eq(CURRENT_USER_ID), anyString(), anyBoolean()))
                 .willReturn(11L);
         String body = """
                 {"content": "답글 내용", "isPrivate": false}
@@ -95,7 +95,7 @@ class FlagCommentControllerTest extends BaseControllerTest {
                         .content(body))
                 .andExpect(status().isCreated());
 
-        verify(flagCommentCommandUseCase).createReply(eq(1L), eq(2L), eq(CURRENT_USER_ID), eq("답글 내용"), eq(false));
+        verify(flagCommentCommandService).createReply(eq(1L), eq(2L), eq(CURRENT_USER_ID), eq("답글 내용"), eq(false));
     }
 
     @Test
@@ -110,7 +110,7 @@ class FlagCommentControllerTest extends BaseControllerTest {
                         .content(body))
                 .andExpect(status().isOk());
 
-        verify(flagCommentCommandUseCase).updateComment(1L, 2L, CURRENT_USER_ID, "수정된 내용", false);
+        verify(flagCommentCommandService).updateComment(1L, 2L, CURRENT_USER_ID, "수정된 내용", false);
     }
 
     @Test
@@ -119,14 +119,14 @@ class FlagCommentControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/flags/1/comments/2"))
                 .andExpect(status().isNoContent());
 
-        verify(flagCommentCommandUseCase).deleteComment(1L, 2L, CURRENT_USER_ID);
+        verify(flagCommentCommandService).deleteComment(1L, 2L, CURRENT_USER_ID);
     }
 
     @Test
     @DisplayName("Comment가 경로의 Flag에 속하지 않으면 404를 반환한다")
     void updateComment_WrongFlag_Returns404() throws Exception {
         willThrow(new FlagCommentNotFoundException(2L))
-                .given(flagCommentCommandUseCase)
+                .given(flagCommentCommandService)
                 .updateComment(eq(999L), eq(2L), eq(CURRENT_USER_ID), anyString(), anyBoolean());
 
         mockMvc.perform(patch("/api/v1/flags/999/comments/2")

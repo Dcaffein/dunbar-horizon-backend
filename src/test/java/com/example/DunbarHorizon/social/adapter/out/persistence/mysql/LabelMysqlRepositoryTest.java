@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.buzz.adapter.out.social.LabelRecipientStrategyA
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
 import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipPersistenceAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
 import com.example.DunbarHorizon.social.application.service.MySqlLabelService;
@@ -38,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
-@Import({LabelMysqlRepository.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, SocialUserMysqlRepository.class,
+@Import({LabelMysqlRepository.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, UserProfileJdbcRepository.class,
         MySqlLabelService.class, LabelFactory.class, LabelNamePolicy.class})
 class LabelMysqlRepositoryTest {
 

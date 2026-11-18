@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.trace.application;
 
 import com.example.DunbarHorizon.trace.application.dto.TraceResult;
-import com.example.DunbarHorizon.trace.application.port.in.TraceCommandUseCase;
 import com.example.DunbarHorizon.trace.domain.model.Trace;
 import com.example.DunbarHorizon.trace.domain.repository.TraceRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class TraceService implements TraceCommandUseCase {
+public class TraceService {
 
     private final TraceRepository traceRepository;
 

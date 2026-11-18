@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.account.adapter.in.web.OAuth2;
 
 import com.example.DunbarHorizon.account.adapter.in.web.OAuth2.OAuth2UserInfo.OAuth2UserInfo;
-import com.example.DunbarHorizon.account.application.port.in.SignupUseCase;
+import com.example.DunbarHorizon.account.application.service.SignupService;
 import com.example.DunbarHorizon.account.domain.AuthProvider;
 import com.example.DunbarHorizon.account.domain.User;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
-    private final SignupUseCase signupUseCase;
+    private final SignupService signupService;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -35,7 +35,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     new OAuth2Error("email_not_verified"), "공급자에서 이메일 인증이 완료되지 않은 계정입니다.");
         }
 
-        User savedUser = signupUseCase.registerOAuthUser(
+        User savedUser = signupService.registerOAuthUser(
                 userInfo.getEmail(),
                 userInfo.getName(),
                 provider,

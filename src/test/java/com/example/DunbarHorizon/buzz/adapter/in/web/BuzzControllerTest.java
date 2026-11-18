@@ -46,7 +46,7 @@ class BuzzControllerTest extends BaseControllerTest {
                     "테스트 버즈", List.of(), List.of(), 25L, false, true,
                     List.of()
             );
-            given(buzzQueryUseCase.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
+            given(buzzService.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
 
             mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
                     .andExpect(status().isOk())
@@ -63,7 +63,7 @@ class BuzzControllerTest extends BaseControllerTest {
                     "테스트 버즈", List.of(), List.of(), 25L, true, false,
                     List.of(new BuzzProfileResult(CURRENT_USER_ID, "나", null))
             );
-            given(buzzQueryUseCase.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
+            given(buzzService.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
 
             mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
                     .andExpect(status().isOk())
@@ -84,7 +84,7 @@ class BuzzControllerTest extends BaseControllerTest {
                     "테스트 버즈", List.of(), List.of(comment), 25L, true, false,
                     List.of(new BuzzProfileResult(CURRENT_USER_ID, "나", null))
             );
-            given(buzzQueryUseCase.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
+            given(buzzService.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
 
             mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
                     .andExpect(status().isOk())
@@ -107,7 +107,7 @@ class BuzzControllerTest extends BaseControllerTest {
                     new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
                     "내가 보낸 버즈", List.of(), 0, 10L, false, true
             );
-            given(buzzQueryUseCase.getSentBuzzes(eq(CURRENT_USER_ID), any()))
+            given(buzzService.getSentBuzzes(eq(CURRENT_USER_ID), any()))
                     .willReturn(new SliceImpl<>(List.of(summary), PageRequest.of(0, 20), false));
 
             mockMvc.perform(get("/api/v1/buzzes/sent"))

@@ -28,7 +28,7 @@ public class FriendshipScoreService {
 
     @Retryable(retryFor = TransientDataAccessException.class, maxAttempts = 3,
             backoff = @Backoff(delay = 50, maxDelay = 200, random = true))
-    @Transactional(transactionManager = "transactionManager", propagation = Propagation.REQUIRES_NEW,
+    @Transactional(propagation = Propagation.REQUIRES_NEW,
             isolation = Isolation.READ_COMMITTED)
     public void applyInteraction(Long userAId, Long userBId, InteractionType type) {
         double delta = InteractionScorePolicy.scoreOf(type);
@@ -45,7 +45,7 @@ public class FriendshipScoreService {
 
     @Retryable(retryFor = TransientDataAccessException.class, maxAttempts = 3,
             backoff = @Backoff(delay = 50, maxDelay = 200, random = true))
-    @Transactional(transactionManager = "transactionManager", propagation = Propagation.REQUIRES_NEW,
+    @Transactional(propagation = Propagation.REQUIRES_NEW,
             isolation = Isolation.READ_COMMITTED)
     public void applyFlagConclusion(Long hostId, List<Long> participantIds, InteractionType type, ScoreDirection direction) {
         double delta = direction.signed(InteractionScorePolicy.scoreOf(type));
@@ -57,7 +57,7 @@ public class FriendshipScoreService {
         friendships.saveInterestScores(locked);
     }
 
-    @Transactional(transactionManager = "transactionManager", isolation = Isolation.READ_COMMITTED)
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void processDecay() {
         friendships.applyDecay(decayPolicy.getDecayRate(), decayPolicy.getMinThreshold(),
                 decayPolicy.getDecayThresholdTime());

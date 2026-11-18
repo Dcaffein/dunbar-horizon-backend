@@ -2,8 +2,7 @@ package com.example.DunbarHorizon.buzz.adapter.in.web;
 
 import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzCommentRequest;
 import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzCreateRequest;
-import com.example.DunbarHorizon.buzz.application.port.in.BuzzCommandUseCase;
-import com.example.DunbarHorizon.buzz.application.port.in.BuzzQueryUseCase;
+import com.example.DunbarHorizon.buzz.application.service.BuzzService;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
@@ -27,8 +26,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BuzzController {
 
-    private final BuzzCommandUseCase buzzCommandUseCase;
-    private final BuzzQueryUseCase buzzQueryUseCase;
+    private final BuzzService buzzService;
     private final ImageStoragePort imageStoragePort;
 
     @PostMapping("/images/presign")
@@ -43,7 +41,7 @@ public class BuzzController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid BuzzCreateRequest request) {
         List<String> imageKeys = request.imageKeys() != null ? request.imageKeys() : List.of();
-        buzzCommandUseCase.createBuzz(request.toCommand(currentUserId), imageKeys);
+        buzzService.createBuzz(request.toCommand(currentUserId), imageKeys);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -51,26 +49,26 @@ public class BuzzController {
     public ResponseEntity<Slice<BuzzSummaryResult>> getReceivedBuzzes(
             @CurrentUserId Long currentUserId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(buzzQueryUseCase.getReceivedBuzzes(currentUserId, pageable));
+        return ResponseEntity.ok(buzzService.getReceivedBuzzes(currentUserId, pageable));
     }
 
     @GetMapping("/sent")
     public ResponseEntity<Slice<BuzzSummaryResult>> getSentBuzzes(
             @CurrentUserId Long currentUserId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(buzzQueryUseCase.getSentBuzzes(currentUserId, pageable));
+        return ResponseEntity.ok(buzzService.getSentBuzzes(currentUserId, pageable));
     }
 
     @GetMapping("/{buzzId}")
     public ResponseEntity<BuzzDetailResult> getBuzzDetail(
             @CurrentUserId Long currentUserId,
             @PathVariable String buzzId) {
-        return ResponseEntity.ok(buzzQueryUseCase.getBuzzDetail(currentUserId, buzzId));
+        return ResponseEntity.ok(buzzService.getBuzzDetail(currentUserId, buzzId));
     }
 
     @GetMapping("/senders/unread")
     public ResponseEntity<List<Long>> getUnreadSenders(@CurrentUserId Long currentUserId) {
-        return ResponseEntity.ok(buzzQueryUseCase.getUnreadSenderIds(currentUserId));
+        return ResponseEntity.ok(buzzService.getUnreadSenderIds(currentUserId));
     }
 
     @PostMapping("/{buzzId}/comments")
@@ -79,7 +77,7 @@ public class BuzzController {
             @PathVariable String buzzId,
             @RequestBody @Valid BuzzCommentRequest dto) {
         List<String> imageKeys = dto.imageKeys() != null ? dto.imageKeys() : List.of();
-        buzzCommandUseCase.commentOnBuzz(currentUserId, buzzId, dto.text(), imageKeys, dto.isPublic());
+        buzzService.commentOnBuzz(currentUserId, buzzId, dto.text(), imageKeys, dto.isPublic());
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -90,7 +88,7 @@ public class BuzzController {
             @PathVariable String commentId,
             @RequestBody @Valid BuzzCommentRequest dto) {
         List<String> imageKeys = dto.imageKeys() != null ? dto.imageKeys() : List.of();
-        buzzCommandUseCase.updateComment(currentUserId, buzzId, commentId, dto.text(), imageKeys);
+        buzzService.updateComment(currentUserId, buzzId, commentId, dto.text(), imageKeys);
         return ResponseEntity.noContent().build();
     }
 
@@ -99,7 +97,7 @@ public class BuzzController {
             @CurrentUserId Long currentUserId,
             @PathVariable String buzzId,
             @PathVariable String commentId) {
-        buzzCommandUseCase.deleteComment(currentUserId, buzzId, commentId);
+        buzzService.deleteComment(currentUserId, buzzId, commentId);
         return ResponseEntity.noContent().build();
     }
 
@@ -107,7 +105,7 @@ public class BuzzController {
     public ResponseEntity<Void> deleteBuzz(
             @CurrentUserId Long currentUserId,
             @PathVariable String buzzId) {
-        buzzCommandUseCase.deleteBuzz(currentUserId, buzzId);
+        buzzService.deleteBuzz(currentUserId, buzzId);
         return ResponseEntity.noContent().build();
     }
 }

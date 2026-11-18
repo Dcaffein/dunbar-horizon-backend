@@ -6,5 +6,4 @@ import java.util.List;
 
 public interface SocialExpansionQueryUseCase {
     List<AnchorExpansionResult> getAnchorExpansion(Long userId, Long anchorFriendId, Double expansionValue);
-    List<AnchorExpansionResult> getRecommendationsByAnchor(Long userId, Long anchorFriendId);
 }

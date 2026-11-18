@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web.dto;
 
-import com.example.DunbarHorizon.buzz.application.port.in.command.CreateBuzzCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzCommand;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

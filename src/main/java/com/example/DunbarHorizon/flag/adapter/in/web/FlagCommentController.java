@@ -2,8 +2,8 @@ package com.example.DunbarHorizon.flag.adapter.in.web;
 
 import com.example.DunbarHorizon.flag.adapter.in.web.dto.CommentCreateRequest;
 import com.example.DunbarHorizon.flag.adapter.in.web.dto.CommentUpdateRequest;
-import com.example.DunbarHorizon.flag.application.port.in.FlagCommentCommandUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.FlagCommentQueryUseCase;
+import com.example.DunbarHorizon.flag.application.service.comment.FlagCommentCommandService;
+import com.example.DunbarHorizon.flag.application.service.comment.FlagCommentQueryService;
 import com.example.DunbarHorizon.flag.application.dto.result.CommentResult;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import lombok.RequiredArgsConstructor;
@@ -19,21 +19,21 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FlagCommentController {
 
-    private final FlagCommentCommandUseCase flagCommentCommandUseCase;
-    private final FlagCommentQueryUseCase commentQueryUseCase;
+    private final FlagCommentCommandService flagCommentCommandService;
+    private final FlagCommentQueryService flagCommentQueryService;
 
     @GetMapping
     public ResponseEntity<List<CommentResult>> getComments(
             @PathVariable Long flagId,
             @CurrentUserId Long currentUserId
     ) {
-        List<CommentResult> commentTree = commentQueryUseCase.getCommentTree(flagId, currentUserId);
+        List<CommentResult> commentTree = flagCommentQueryService.getCommentTree(flagId, currentUserId);
         return ResponseEntity.ok(commentTree);
     }
 
     @GetMapping("/count")
     public ResponseEntity<Long> getCommentCount(@PathVariable Long flagId) {
-        return ResponseEntity.ok(commentQueryUseCase.getCommentCount(flagId));
+        return ResponseEntity.ok(flagCommentQueryService.getCommentCount(flagId));
     }
 
     @PostMapping
@@ -42,7 +42,7 @@ public class FlagCommentController {
             @CurrentUserId Long currentUserId,
             @Valid @RequestBody CommentCreateRequest request
     ) {
-        Long commentId = flagCommentCommandUseCase.createRootComment(
+        Long commentId = flagCommentCommandService.createRootComment(
                 flagId, currentUserId, request.content(), request.isPrivate()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(commentId);
@@ -55,7 +55,7 @@ public class FlagCommentController {
             @CurrentUserId Long currentUserId,
             @Valid @RequestBody CommentCreateRequest request
     ) {
-        Long replyId = flagCommentCommandUseCase.createReply(
+        Long replyId = flagCommentCommandService.createReply(
                 flagId, parentId, currentUserId, request.content(), request.isPrivate()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(replyId);
@@ -68,7 +68,7 @@ public class FlagCommentController {
             @CurrentUserId Long currentUserId,
             @Valid @RequestBody CommentUpdateRequest request
     ) {
-        flagCommentCommandUseCase.updateComment(
+        flagCommentCommandService.updateComment(
                 flagId, commentId, currentUserId, request.content(), request.isPrivate()
         );
         return ResponseEntity.ok().build();
@@ -80,7 +80,7 @@ public class FlagCommentController {
             @PathVariable Long commentId,
             @CurrentUserId Long currentUserId
     ) {
-        flagCommentCommandUseCase.deleteComment(flagId, commentId, currentUserId);
+        flagCommentCommandService.deleteComment(flagId, commentId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 }

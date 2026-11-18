@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.flag.application.service.invitation;
 import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
 import com.example.DunbarHorizon.flag.application.dto.FlagInvitationDirection;
 import com.example.DunbarHorizon.flag.application.dto.result.FlagInvitationResult;
-import com.example.DunbarHorizon.flag.application.port.in.FlagInvitationQueryUseCase;
 import com.example.DunbarHorizon.flag.application.port.out.FlagUserPort;
 import com.example.DunbarHorizon.flag.domain.flag.Flag;
 import com.example.DunbarHorizon.flag.domain.flag.repository.FlagRepository;
@@ -22,13 +21,12 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class FlagInvitationQueryService implements FlagInvitationQueryUseCase {
+public class FlagInvitationQueryService {
 
     private final FlagInvitationRepository invitationRepository;
     private final FlagRepository flagRepository;
     private final FlagUserPort flagUserPort;
 
-    @Override
     public List<FlagInvitationResult> getInvitations(Long userId, FlagInvitationDirection direction) {
         List<FlagInvitation> invitations = switch (direction) {
             case RECEIVED -> invitationRepository.findByInviteeId(userId);

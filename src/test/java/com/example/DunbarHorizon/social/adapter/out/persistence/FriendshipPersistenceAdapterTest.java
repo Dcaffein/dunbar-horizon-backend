@@ -47,17 +47,17 @@ class FriendshipPersistenceAdapterTest {
 
     @Test
     @DisplayName("두 사용자 방향에서 같은 관계 한 건을 읽고 각자의 설정을 복원한다")
-    void findByUserId_ReturnsSameRelationship_FromBothDirections() {
+    void findBetween_ReturnsSameRelationship_FromBothDirections() {
         // given
         repository.create(friendship(low, high));
         em.clear();
 
         // when
-        var fromLow = repository.findByUserId(low.getId());
-        var fromHigh = repository.findByUserId(high.getId());
+        var fromLow = repository.findBetween(low.getId(), high.getId());
+        var fromHigh = repository.findBetween(high.getId(), low.getId());
 
         // then
-        assertThat(fromLow).singleElement().satisfies(friendship -> {
+        assertThat(fromLow).get().satisfies(friendship -> {
             assertThat(friendship.getUserIds()).containsExactlyInAnyOrder(low.getId(), high.getId());
             assertThat(friendship.getFriendId(low.getId())).isEqualTo(high.getId());
             assertThat(friendship.getCreatedAt()).isEqualTo(CREATED_AT);
@@ -67,7 +67,7 @@ class FriendshipPersistenceAdapterTest {
             assertThat(friendship.isMuted(low.getId())).isTrue();
             assertThat(friendship.isRoutable(low.getId())).isFalse();
         });
-        assertThat(fromHigh).singleElement().satisfies(friendship -> {
+        assertThat(fromHigh).get().satisfies(friendship -> {
             assertThat(friendship.getUserIds()).containsExactlyInAnyOrder(low.getId(), high.getId());
             assertThat(friendship.getFriendId(high.getId())).isEqualTo(low.getId());
             assertThat(friendship.getFriendAlias(high.getId())).isEqualTo("from high");
@@ -91,7 +91,7 @@ class FriendshipPersistenceAdapterTest {
         // when & then
         assertThatThrownBy(() -> repository.create(duplicate)).isInstanceOf(AlreadyFriendsException.class);
         em.clear();
-        assertThat(repository.findByUserId(low.getId())).singleElement().satisfies(friendship -> {
+        assertThat(repository.findBetween(low.getId(), high.getId())).get().satisfies(friendship -> {
             assertThat(friendship.getFriendAlias(low.getId())).isEqualTo("from low");
             assertThat(friendship.isMuted(low.getId())).isTrue();
             assertThat(friendship.getMyInterestScore(low.getId())).isEqualTo(51.0);
@@ -191,8 +191,6 @@ class FriendshipPersistenceAdapterTest {
         Long friend = high.getId();
 
         // when & then
-        assertThat(repository.findByUserId(me)).isEmpty();
-        assertThat(repository.findByUserId(friend)).isEmpty();
         assertThat(repository.findBetween(me, friend)).isEmpty();
         assertThat(repository.existsFriendshipBetween(me, friend)).isFalse();
         assertThat(repository.findFriendIdsByMuteStatus(me, true)).isEmpty();
@@ -239,8 +237,6 @@ class FriendshipPersistenceAdapterTest {
         assertThat(repository.findBetween(low.getId(), high.getId())).isEmpty();
         assertThat(repository.existsFriendshipBetween(high.getId(), low.getId())).isFalse();
         assertThat(repository.deleteBetween(low.getId(), high.getId())).isFalse();
-        assertThat(repository.findByUserId(low.getId())).isEmpty();
-        assertThat(repository.findByUserId(high.getId())).isEmpty();
     }
 
     @Test

@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
-import com.example.DunbarHorizon.flag.application.port.in.FlagQueryUseCase;
-import com.example.DunbarHorizon.flag.application.port.in.FlagRole;
+import com.example.DunbarHorizon.flag.application.dto.FlagRole;
 import com.example.DunbarHorizon.flag.application.dto.result.FlagDetailResult;
 import com.example.DunbarHorizon.flag.application.dto.result.FlagResult;
 import com.example.DunbarHorizon.flag.application.dto.info.FlagUserInfo;
@@ -28,14 +27,13 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class FlagQueryService implements FlagQueryUseCase {
+public class FlagQueryService {
 
     private static final int PROFILE_FLAG_LIMIT = 5;
 
     private final FlagRepository flagRepository;
     private final FlagUserPort flagUserPort;
 
-    @Override
     public Slice<FlagResult> getFeedFlags(Long userId, Pageable pageable) {
         Set<Long> friendIds = flagUserPort.getRelatedUserIds(userId);
         if (friendIds.isEmpty()) return new SliceImpl<>(List.of(), pageable, false);
@@ -46,12 +44,10 @@ public class FlagQueryService implements FlagQueryUseCase {
         return toResultSlice(flags);
     }
 
-    @Override
     public List<FlagResult> getProfileFlags(Long userId) {
         return toResults(flagRepository.findByHostIdOrParticipantId(userId, PROFILE_FLAG_LIMIT));
     }
 
-    @Override
     public FlagDetailResult getFlagDetail(Long flagId, Long viewerId) {
         Flag flag = flagRepository.findById(flagId)
                 .orElseThrow(() -> new FlagNotFoundException(flagId));
@@ -77,7 +73,6 @@ public class FlagQueryService implements FlagQueryUseCase {
         return FlagDetailResult.of(flag, hostInfo, parentFlag, participants, isHost);
     }
 
-    @Override
     public Slice<FlagResult> getFlagsByRole(Long userId, FlagRole role, Pageable pageable) {
         Slice<Flag> flags = switch (role) {
             case HOST -> flagRepository.findAllByHostId(userId, pageable);
