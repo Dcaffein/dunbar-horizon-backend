@@ -1,9 +1,7 @@
-package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
+package com.example.DunbarHorizon.social.adapter.out.persistence.jdbc;
 
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipPersistenceAdapter;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.result.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeEdgeResult;
 import com.example.DunbarHorizon.social.application.dto.result.NodeGraphResult;
@@ -24,11 +22,11 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
-@Import({SocialNetworkMysqlRepository.class, SocialNetworkQueryService.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class,
+@Import({SocialNetworkJdbcRepository.class, SocialNetworkQueryService.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class,
         UserProfileJdbcRepository.class, SocialNetworkExposurePolicy.class})
-class SocialNetworkMysqlRepositoryTest {
+class SocialNetworkJdbcRepositoryTest {
 
-    @Autowired private SocialNetworkMysqlRepository repository;
+    @Autowired private SocialNetworkJdbcRepository repository;
     @Autowired private SocialNetworkQueryService queryService;
     @Autowired private TestEntityManager em;
     @Autowired private JdbcTemplate jdbc;

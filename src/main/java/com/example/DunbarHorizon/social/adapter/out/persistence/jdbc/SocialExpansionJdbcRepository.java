@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
+package com.example.DunbarHorizon.social.adapter.out.persistence.jdbc;
 
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
 import com.example.DunbarHorizon.social.application.port.out.SocialExpansionRepository;
@@ -11,7 +11,7 @@ import java.util.Map;
 
 @Repository
 @RequiredArgsConstructor
-public class SocialExpansionMysqlRepository implements SocialExpansionRepository {
+public class SocialExpansionJdbcRepository implements SocialExpansionRepository {
 
     // Prevent merging candidates into the outer join so MySQL can sort before scoring and stop at LIMIT.
     private static final String ANCHOR_QUERY = """

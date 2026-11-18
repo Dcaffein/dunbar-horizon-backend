@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
+package com.example.DunbarHorizon.social.adapter.out.persistence.jdbc;
 
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult.Intermediaries;
 import com.example.DunbarHorizon.social.application.dto.result.ConnectionPathResult.IntermediaryResult;
@@ -13,7 +13,7 @@ import java.util.Map;
 
 @Repository
 @RequiredArgsConstructor
-public class SocialConnectionPathMysqlRepository implements SocialConnectionPathRepository {
+public class SocialConnectionPathJdbcRepository implements SocialConnectionPathRepository {
 
     private static final String INTERMEDIARIES = """
             WITH my_friends AS (

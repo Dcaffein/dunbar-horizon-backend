@@ -1,11 +1,9 @@
-package com.example.DunbarHorizon.social.adapter.out.persistence.mysql;
+package com.example.DunbarHorizon.social.adapter.out.persistence.jdbc;
 
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.buzz.adapter.out.social.AnchorRecipientStrategyAdapter;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
 import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipPersistenceAdapter;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.UserProfileJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.result.AnchorExpansionResult;
 import com.example.DunbarHorizon.social.application.service.SocialExpansionQueryService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
@@ -22,11 +20,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
-@Import({SocialExpansionMysqlRepository.class, SocialExpansionQueryService.class,
+@Import({SocialExpansionJdbcRepository.class, SocialExpansionQueryService.class,
         UserProfileJdbcRepository.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, AnchorRecipientStrategyAdapter.class})
-class SocialExpansionMysqlRepositoryTest {
+class SocialExpansionJdbcRepositoryTest {
 
-    @Autowired private SocialExpansionMysqlRepository repository;
+    @Autowired private SocialExpansionJdbcRepository repository;
     @Autowired private SocialExpansionQueryService queryService;
     @Autowired private AnchorRecipientStrategyAdapter buzzRecipients;
     @Autowired private TestEntityManager em;

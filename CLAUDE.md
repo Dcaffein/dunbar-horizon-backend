@@ -48,7 +48,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Database | Config | Base packages |
 |----------|--------|---------------|
-| MySQL (JPA/Hibernate) | `global/config/database/JpaConfig.java` | `account`, `buzz`, `trace`, `flag`, `notification.adapter.out.persistence.jpa`, `social.adapter.out.persistence.jpa`, `social.adapter.out.persistence.mysql` |
+| MySQL (JPA/Hibernate) | `global/config/database/JpaConfig.java` | `account`, `buzz`, `trace`, `flag`, `notification.adapter.out.persistence.jpa`, `social.adapter.out.persistence.jpa` |
 | MongoDB | `global/config/database/MongoConfig.java` | `notification.adapter.out.persistence.mongo`, `buzz.adapter.out.persistence.mongo` |
 
 로컬 기본값:
