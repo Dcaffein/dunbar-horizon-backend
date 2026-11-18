@@ -85,15 +85,15 @@ class FriendshipLifecycleTest {
     void brokeUpWith_RemovesBothMemberships_WithFriendship() {
         // given
         connectWithBothMemberships(FriendRecognition.INITIAL_RAW_SCORE);
-        lifecycle.updateFriendship(second, first, new FriendshipUpdateCommand(second, first, "친구", null, null));
+        lifecycle.updateSettings(second, first, new FriendshipUpdateCommand(second, first, "친구", null, null));
         assertThat(friendships.findBetween(first, second).orElseThrow().getFriendAlias(second)).isEqualTo("친구");
 
         // when
-        lifecycle.brokeUpWith(second, first);
+        lifecycle.endFriendship(second, first);
 
         // then
         assertEnded();
-        assertThatThrownBy(() -> lifecycle.brokeUpWith(first, second)).isInstanceOf(FriendshipNotFoundException.class);
+        assertThatThrownBy(() -> lifecycle.endFriendship(first, second)).isInstanceOf(FriendshipNotFoundException.class);
         assertThat(applicationEvents.stream(FriendshipEndedEvent.class).toList())
                 .containsExactly(new FriendshipEndedEvent(second, first));
     }
@@ -106,7 +106,7 @@ class FriendshipLifecycleTest {
         failAfterLabelCleanup();
 
         // when & then
-        assertThatThrownBy(() -> lifecycle.brokeUpWith(first, second)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> lifecycle.endFriendship(first, second)).isInstanceOf(IllegalStateException.class);
         assertRelationshipAndMembershipsRemain();
     }
 
@@ -120,10 +120,10 @@ class FriendshipLifecycleTest {
     @Test
     @DisplayName("관계가 없거나 같은 사용자를 지정하면 설정 변경은 관계 없음 예외로 끝난다")
     void updateFriendship_ThrowsNotFound_MissingRelationship() {
-        assertThatThrownBy(() -> lifecycle.updateFriendship(first, second,
+        assertThatThrownBy(() -> lifecycle.updateSettings(first, second,
                 new FriendshipUpdateCommand(first, second, null, true, null)))
                 .isInstanceOf(FriendshipNotFoundException.class);
-        assertThatThrownBy(() -> lifecycle.updateFriendship(first, first,
+        assertThatThrownBy(() -> lifecycle.updateSettings(first, first,
                 new FriendshipUpdateCommand(first, first, null, null, null)))
                 .isInstanceOf(FriendshipNotFoundException.class);
     }
@@ -135,7 +135,7 @@ class FriendshipLifecycleTest {
         connect(FriendRecognition.INITIAL_RAW_SCORE);
 
         // when & then
-        assertThatThrownBy(() -> lifecycle.updateFriendship(second, first, new FriendshipUpdateCommand(second, first,
+        assertThatThrownBy(() -> lifecycle.updateSettings(second, first, new FriendshipUpdateCommand(second, first,
                 "a".repeat(Friendship.ALIAS_MAX_LENGTH + 1), true, null)))
                 .isInstanceOf(InvalidFriendAliasException.class);
         assertThat(friendships.findBetween(first, second).orElseThrow().isMuted(second)).isFalse();
@@ -146,10 +146,10 @@ class FriendshipLifecycleTest {
     void updateFriendship_ChangesRequestedFields_ClearsEmptyAlias() {
         // given
         connect(FriendRecognition.INITIAL_RAW_SCORE);
-        lifecycle.updateFriendship(first, second, new FriendshipUpdateCommand(first, second, "친구", true, null));
+        lifecycle.updateSettings(first, second, new FriendshipUpdateCommand(first, second, "친구", true, null));
 
         // when
-        lifecycle.updateFriendship(first, second, new FriendshipUpdateCommand(first, second, "", null, false));
+        lifecycle.updateSettings(first, second, new FriendshipUpdateCommand(first, second, "", null, false));
 
         // then
         Friendship updated = friendships.findBetween(first, second).orElseThrow();
@@ -174,13 +174,13 @@ class FriendshipLifecycleTest {
     }
 
     private void assertEnded() {
-        assertThat(friendships.existsFriendshipBetween(first, second)).isFalse();
+        assertThat(friendships.existsBetween(first, second)).isFalse();
         assertThat(labels.existsMember(firstLabel, second)).isFalse();
         assertThat(labels.existsMember(secondLabel, first)).isFalse();
     }
 
     private void assertRelationshipAndMembershipsRemain() {
-        assertThat(friendships.existsFriendshipBetween(first, second)).isTrue();
+        assertThat(friendships.existsBetween(first, second)).isTrue();
         assertThat(labels.existsMember(firstLabel, second)).isTrue();
         assertThat(labels.existsMember(secondLabel, first)).isTrue();
     }

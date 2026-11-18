@@ -11,8 +11,28 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface FriendshipJpaRepository extends JpaRepository<Friendship, FriendshipId> {
+
+    String BETWEEN_ACTIVE_USERS = """
+            WHERE f.lowUserId = :low AND f.highUserId = :high
+              AND EXISTS (SELECT u.id FROM ActiveUser u WHERE u.id = f.lowUserId)
+              AND EXISTS (SELECT u.id FROM ActiveUser u WHERE u.id = f.highUserId)
+            """;
+
+    @Query("SELECT f FROM Friendship f " + BETWEEN_ACTIVE_USERS)
+    Optional<Friendship> findBetweenActiveUsers(@Param("low") long low, @Param("high") long high);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(f) > 0 THEN true ELSE false END
+            FROM Friendship f
+            """ + BETWEEN_ACTIVE_USERS)
+    boolean existsBetweenActiveUsers(@Param("low") long low, @Param("high") long high);
+
+    @Modifying
+    @Query("DELETE FROM Friendship f " + BETWEEN_ACTIVE_USERS)
+    int deleteBetweenActiveUsers(@Param("low") long low, @Param("high") long high);
 
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("""
@@ -23,8 +43,4 @@ public interface FriendshipJpaRepository extends JpaRepository<Friendship, Frien
             """)
     List<Friendship> findAllBetweenForShare(@Param("userId") Long userId,
                                            @Param("friendIds") Collection<Long> friendIds);
-
-    @Modifying
-    @Query("DELETE FROM Friendship f WHERE f.lowUserId = :low AND f.highUserId = :high")
-    int deleteBetween(@Param("low") long low, @Param("high") long high);
 }

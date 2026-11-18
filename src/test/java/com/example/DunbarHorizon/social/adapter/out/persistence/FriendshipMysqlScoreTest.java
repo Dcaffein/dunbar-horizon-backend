@@ -108,7 +108,7 @@ class FriendshipMysqlScoreTest {
         // then
         assertScores(low, middle, 14, 18);
         assertScores(middle, high, 14, 18);
-        assertThat(friendships.existsFriendshipBetween(low, high)).isFalse();
+        assertThat(friendships.existsBetween(low, high)).isFalse();
         scores.applyFlagConclusion(low, List.of(middle, high), InteractionType.FLAG_PRESERVED, ScoreDirection.REVOKE);
         assertScores(low, middle, 0, 3);
         assertScores(middle, high, 0, 3);
@@ -145,11 +145,11 @@ class FriendshipMysqlScoreTest {
         try (var workers = Executors.newFixedThreadPool(3)) {
             var lowSettings = workers.submit(() -> {
                 await(start);
-                commands.updateFriendship(low, high, new FriendshipUpdateCommand(low, high, "친구", true, null));
+                commands.updateSettings(low, high, new FriendshipUpdateCommand(low, high, "친구", true, null));
             });
             var highSettings = workers.submit(() -> {
                 await(start);
-                commands.updateFriendship(high, low, new FriendshipUpdateCommand(high, low, null, null, false));
+                commands.updateSettings(high, low, new FriendshipUpdateCommand(high, low, null, null, false));
             });
             var score = workers.submit(() -> {
                 await(start);

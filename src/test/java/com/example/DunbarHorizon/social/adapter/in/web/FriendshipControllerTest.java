@@ -28,7 +28,7 @@ class FriendshipControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNoContent());
 
-        verify(friendshipCommandService).updateFriendship(anyLong(), eq(friendId), any(FriendshipUpdateCommand.class));
+        verify(friendshipCommandService).updateSettings(anyLong(), eq(friendId), any(FriendshipUpdateCommand.class));
     }
 
     @Test
@@ -42,7 +42,7 @@ class FriendshipControllerTest extends BaseControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isNoContent());
 
-        verify(friendshipCommandService).updateFriendship(anyLong(), eq(friendId), any(FriendshipUpdateCommand.class));
+        verify(friendshipCommandService).updateSettings(anyLong(), eq(friendId), any(FriendshipUpdateCommand.class));
     }
 
     @Test
@@ -67,6 +67,6 @@ class FriendshipControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/friends/{friendId}", friendId))
                 .andExpect(status().isNoContent());
 
-        verify(friendshipCommandService).brokeUpWith(anyLong(), eq(friendId));
+        verify(friendshipCommandService).endFriendship(anyLong(), eq(friendId));
     }
 }

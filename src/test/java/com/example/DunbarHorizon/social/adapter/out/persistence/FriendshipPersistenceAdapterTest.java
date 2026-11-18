@@ -6,6 +6,7 @@ import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -75,7 +76,40 @@ class FriendshipPersistenceAdapterTest {
             assertThat(friendship.isMuted(high.getId())).isFalse();
             assertThat(friendship.isRoutable(high.getId())).isTrue();
         });
-        assertThat(repository.existsFriendshipBetween(high.getId(), low.getId())).isTrue();
+        assertThat(repository.existsBetween(high.getId(), low.getId())).isTrue();
+    }
+
+    @Test
+    @DisplayName("활성 사용자 쌍의 단건 조회, 존재 확인, 삭제는 각각 SQL 한 문장으로 처리한다")
+    void pairOperations_UseOneStatementEach_ForActiveUsers() {
+        // given
+        repository.create(friendship(low, high));
+        em.clear();
+        var statistics = em.getEntityManager().getEntityManagerFactory()
+                .unwrap(SessionFactory.class).getStatistics();
+        boolean wasEnabled = statistics.isStatisticsEnabled();
+        statistics.setStatisticsEnabled(true);
+
+        try {
+            // when
+            long beforeFind = statistics.getPrepareStatementCount();
+            var found = repository.findBetween(high.getId(), low.getId());
+            long afterFind = statistics.getPrepareStatementCount();
+            boolean exists = repository.existsBetween(high.getId(), low.getId());
+            long afterExists = statistics.getPrepareStatementCount();
+            boolean deleted = repository.deleteBetween(high.getId(), low.getId());
+            long afterDelete = statistics.getPrepareStatementCount();
+
+            // then
+            assertThat(found).isPresent();
+            assertThat(exists).isTrue();
+            assertThat(deleted).isTrue();
+            assertThat(List.of(afterFind - beforeFind, afterExists - afterFind, afterDelete - afterExists))
+                    .as("단건 조회, 존재 확인, 삭제의 SQL 문장 수")
+                    .containsExactly(1L, 1L, 1L);
+        } finally {
+            statistics.setStatisticsEnabled(wasEnabled);
+        }
     }
 
     @Test
@@ -192,7 +226,7 @@ class FriendshipPersistenceAdapterTest {
 
         // when & then
         assertThat(repository.findBetween(me, friend)).isEmpty();
-        assertThat(repository.existsFriendshipBetween(me, friend)).isFalse();
+        assertThat(repository.existsBetween(me, friend)).isFalse();
         assertThat(repository.findFriendIdsByMuteStatus(me, true)).isEmpty();
         assertThat(repository.findFriendIdsByMuteStatus(friend, false)).isEmpty();
         assertThat(repository.filterFriendIdsAmong(me, List.of(friend))).isEmpty();
@@ -213,7 +247,7 @@ class FriendshipPersistenceAdapterTest {
 
         // when & then
         assertThat(repository.findBetween(self, self)).isEmpty();
-        assertThat(repository.existsFriendshipBetween(self, self)).isFalse();
+        assertThat(repository.existsBetween(self, self)).isFalse();
         assertThat(repository.findBetweenForUpdate(self, self)).isEmpty();
         assertThat(repository.findFriendIdsForShare(self, List.of(self))).isEmpty();
         assertThat(repository.findAllAmongForUpdate(List.of(self, self))).isEmpty();
@@ -233,7 +267,7 @@ class FriendshipPersistenceAdapterTest {
         // then
         assertThat(deleted).isTrue();
         assertThat(repository.findBetween(low.getId(), high.getId())).isEmpty();
-        assertThat(repository.existsFriendshipBetween(high.getId(), low.getId())).isFalse();
+        assertThat(repository.existsBetween(high.getId(), low.getId())).isFalse();
         assertThat(repository.deleteBetween(low.getId(), high.getId())).isFalse();
     }
 

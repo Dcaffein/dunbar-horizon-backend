@@ -8,7 +8,6 @@ import com.example.DunbarHorizon.social.application.port.out.FriendshipIdReposit
 import com.example.DunbarHorizon.social.application.port.out.FriendshipLockRepository;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
-import com.example.DunbarHorizon.social.domain.friend.FriendshipId;
 import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendshipConflictException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendshipRepository;
@@ -54,11 +53,8 @@ public class FriendshipPersistenceAdapter
 
     @Override
     public Optional<Friendship> findBetween(Long userId, Long friendId) {
-        if (!activeUserJpaRepository.areActive(userId, friendId)) {
-            return Optional.empty();
-        }
         var key = FriendshipKey.of(userId, friendId);
-        return friendshipJpaRepository.findById(new FriendshipId(key.low(), key.high()));
+        return friendshipJpaRepository.findBetweenActiveUsers(key.low(), key.high());
     }
 
     @Override
@@ -71,21 +67,15 @@ public class FriendshipPersistenceAdapter
     }
 
     @Override
-    public boolean existsFriendshipBetween(Long userId, Long friendId) {
-        if (!activeUserJpaRepository.areActive(userId, friendId)) {
-            return false;
-        }
+    public boolean existsBetween(Long userId, Long friendId) {
         var key = FriendshipKey.of(userId, friendId);
-        return friendshipJpaRepository.existsById(new FriendshipId(key.low(), key.high()));
+        return friendshipJpaRepository.existsBetweenActiveUsers(key.low(), key.high());
     }
 
     @Override
     public boolean deleteBetween(Long userId, Long friendId) {
-        if (!activeUserJpaRepository.areActive(userId, friendId)) {
-            return false;
-        }
         var key = FriendshipKey.of(userId, friendId);
-        return friendshipJpaRepository.deleteBetween(key.low(), key.high()) > 0;
+        return friendshipJpaRepository.deleteBetweenActiveUsers(key.low(), key.high()) > 0;
     }
 
     @Override

@@ -33,7 +33,7 @@ public class FriendshipQueryService implements FriendshipQueryUseCase {
 
     @Override
     public boolean areFriends(Long userId, Long targetId) {
-        return friendshipRepository.existsFriendshipBetween(userId, targetId);
+        return friendshipRepository.existsBetween(userId, targetId);
     }
 
     public FriendshipDetailResult getFriend(Long userId, Long targetId) {

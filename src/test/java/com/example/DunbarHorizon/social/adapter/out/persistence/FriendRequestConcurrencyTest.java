@@ -88,7 +88,7 @@ class FriendRequestConcurrencyTest {
                 friendshipPersistenceAdapter.create(Friendship.restore(LocalDate.of(2026, 1, 1),
                         FriendRecognition.restore(low, "기존", 21.4, null, false, true),
                         FriendRecognition.restore(high, null, 21.4, null, false, true))));
-        doReturn(false).when(friendshipPersistenceAdapter).existsFriendshipBetween(low, high);
+        doReturn(false).when(friendshipPersistenceAdapter).existsBetween(low, high);
 
         // when & then
         assertThatThrownBy(() -> friendRequestService.updateStatus(high, low, FriendRequestStatus.ACCEPTED))
@@ -155,7 +155,7 @@ class FriendRequestConcurrencyTest {
             // then
             assertThat(accept.get(10, TimeUnit.SECONDS)).isEqualTo(FriendRequestConflictException.class);
         }
-        assertThat(friendshipPersistenceAdapter.existsFriendshipBetween(low, high)).isFalse();
+        assertThat(friendshipPersistenceAdapter.existsBetween(low, high)).isFalse();
         assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).isEmpty();
         assertThat(acceptedEvents.events).isEmpty();
     }
@@ -192,7 +192,7 @@ class FriendRequestConcurrencyTest {
             // then
             assertThat(cancel.get(10, TimeUnit.SECONDS)).isEqualTo(FriendRequestConflictException.class);
         }
-        assertThat(friendshipPersistenceAdapter.existsFriendshipBetween(low, high)).isTrue();
+        assertThat(friendshipPersistenceAdapter.existsBetween(low, high)).isTrue();
         assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).isEmpty();
     }
 
@@ -224,7 +224,7 @@ class FriendRequestConcurrencyTest {
         assertThat(outcomes).filteredOn(Void.class::equals).hasSize(1);
         assertThat(outcomes).filteredOn(outcome -> !Void.class.equals(outcome)).singleElement()
                 .isEqualTo(FriendRequestConflictException.class);
-        assertThat(friendshipPersistenceAdapter.existsFriendshipBetween(low, high)).isTrue();
+        assertThat(friendshipPersistenceAdapter.existsBetween(low, high)).isTrue();
         assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).isEmpty();
         assertThat(acceptedEvents.events).hasSize(1);
     }

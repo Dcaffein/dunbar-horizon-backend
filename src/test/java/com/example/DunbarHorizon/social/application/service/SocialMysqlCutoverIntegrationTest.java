@@ -131,7 +131,7 @@ class SocialMysqlCutoverIntegrationTest {
                 .isEqualTo(FriendRecognition.normalize(scoreFor(0.6) + InteractionScorePolicy.scoreOf(InteractionType.FLAG_ENDED)));
 
         assertThat(labelQueryService.getMemberIdsByLabels(ANCHOR, List.of(LABEL_ID))).containsExactlyInAnyOrder(ME, TARGET);
-        friendshipCommandService.brokeUpWith(ME, ANCHOR);
+        friendshipCommandService.endFriendship(ME, ANCHOR);
         assertThat(friendshipQueryService.areFriends(ME, ANCHOR)).isFalse();
         assertThat(labelQueryService.getMemberIdsByLabels(ANCHOR, List.of(LABEL_ID))).containsExactly(TARGET);
     }

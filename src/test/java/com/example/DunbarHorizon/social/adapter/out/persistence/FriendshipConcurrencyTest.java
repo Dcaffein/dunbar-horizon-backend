@@ -155,7 +155,7 @@ class FriendshipConcurrencyTest {
         }).when(friendshipPersistenceAdapter).findBetween(ownerId, friendId);
 
         // when & then
-        assertThatThrownBy(() -> friendshipCommandService.updateFriendship(ownerId, friendId,
+        assertThatThrownBy(() -> friendshipCommandService.updateSettings(ownerId, friendId,
                 new FriendshipUpdateCommand(ownerId, friendId, "친구", null, null)))
                 .isInstanceOf(FriendshipConflictException.class);
     }
@@ -182,7 +182,7 @@ class FriendshipConcurrencyTest {
             var addition = workers.submit(registration);
             try {
                 await(registrationLocked);
-                var breakup = workers.submit(() -> friendshipCommandService.brokeUpWith(friendId, ownerId));
+                var breakup = workers.submit(() -> friendshipCommandService.endFriendship(friendId, ownerId));
                 await(breakupEntered);
                 assertWaiting(breakup);
                 finishRegistration.countDown();
@@ -215,7 +215,7 @@ class FriendshipConcurrencyTest {
         }).when(friendshipPersistenceAdapter).findFriendIdsForShare(ownerId, List.of(friendId));
 
         try (var workers = Executors.newFixedThreadPool(2)) {
-            var breakup = workers.submit(() -> friendshipCommandService.brokeUpWith(friendId, ownerId));
+            var breakup = workers.submit(() -> friendshipCommandService.endFriendship(friendId, ownerId));
             try {
                 await(deleted);
                 var addition = workers.submit(() -> assertThatThrownBy(registration::run).isInstanceOf(expected));
@@ -248,7 +248,7 @@ class FriendshipConcurrencyTest {
     }
 
     private void assertEnded() {
-        assertThat(friendshipPersistenceAdapter.existsFriendshipBetween(ownerId, friendId)).isFalse();
+        assertThat(friendshipPersistenceAdapter.existsBetween(ownerId, friendId)).isFalse();
         assertThat(labelJdbcRepository.existsMember(ownerLabelId, friendId)).isFalse();
         assertThat(labelJdbcRepository.existsMember(friendLabelId, ownerId)).isFalse();
     }

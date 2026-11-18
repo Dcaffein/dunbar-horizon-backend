@@ -18,7 +18,7 @@ public class FriendshipCommandService {
     private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
-    public void updateFriendship(Long currentUserId, Long friendId, FriendshipUpdateCommand command) {
+    public void updateSettings(Long currentUserId, Long friendId, FriendshipUpdateCommand command) {
         Friendship friendship = friendshipRepository.findBetween(currentUserId, friendId)
                 .orElseThrow(() -> new FriendshipNotFoundException(currentUserId, friendId));
         friendship.updateSettings(currentUserId, command.friendAlias(), command.isMuted(), command.isRoutable());
@@ -26,7 +26,7 @@ public class FriendshipCommandService {
     }
 
     @Transactional
-    public void brokeUpWith(Long currentUserId, Long friendId) {
+    public void endFriendship(Long currentUserId, Long friendId) {
         if (!friendshipRepository.deleteBetween(currentUserId, friendId)) {
             throw new FriendshipNotFoundException(currentUserId, friendId);
         }

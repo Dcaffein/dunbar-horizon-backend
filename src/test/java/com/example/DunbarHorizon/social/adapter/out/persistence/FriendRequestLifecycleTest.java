@@ -102,7 +102,7 @@ class FriendRequestLifecycleTest {
 
         // then
         assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).isEmpty();
-        assertThat(friendshipPersistenceAdapter.existsFriendshipBetween(low, high)).isTrue();
+        assertThat(friendshipPersistenceAdapter.existsBetween(low, high)).isTrue();
         assertThat(acceptedEvents.events).containsExactly(new FriendRequestAcceptedEvent(high, low, "low"));
     }
 
@@ -119,7 +119,7 @@ class FriendRequestLifecycleTest {
         // when & then
         assertThatThrownBy(() -> friendRequestService.updateStatus(high, low, FriendRequestStatus.ACCEPTED))
                 .isInstanceOf(IllegalStateException.class);
-        assertThat(friendshipPersistenceAdapter.existsFriendshipBetween(low, high)).isFalse();
+        assertThat(friendshipPersistenceAdapter.existsBetween(low, high)).isFalse();
         assertThat(friendRequestPersistenceAdapter.findBetween(low, high)).get().extracting(FriendRequest::getStatus)
                 .isEqualTo(FriendRequestStatus.PENDING);
         assertThat(acceptedEvents.events).isEmpty();

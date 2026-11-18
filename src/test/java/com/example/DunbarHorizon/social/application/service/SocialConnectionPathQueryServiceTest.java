@@ -33,7 +33,7 @@ class SocialConnectionPathQueryServiceTest {
     @DisplayName("상한 3을 리포지토리에 전달하고 전체 수와 목록을 응답에 담는다")
     void getConnectionPath_상한_전달() {
         // given
-        given(friendshipRepository.existsFriendshipBetween(1L, 99L)).willReturn(false);
+        given(friendshipRepository.existsBetween(1L, 99L)).willReturn(false);
         given(connectionPathRepository.findIntermediaries(1L, 99L, 3))
                 .willReturn(new ConnectionPathResult.Intermediaries(
                         List.of(new ConnectionPathResult.IntermediaryResult(2L, "중개인2")), 12));
@@ -53,7 +53,7 @@ class SocialConnectionPathQueryServiceTest {
     @DisplayName("이미 친구인 대상이어도 공통 친구를 조회한다")
     void getConnectionPath_직접_친구여도_조회한다() {
         // given
-        given(friendshipRepository.existsFriendshipBetween(1L, 99L)).willReturn(true);
+        given(friendshipRepository.existsBetween(1L, 99L)).willReturn(true);
         given(connectionPathRepository.findIntermediaries(1L, 99L, 3))
                 .willReturn(new ConnectionPathResult.Intermediaries(
                         List.of(new ConnectionPathResult.IntermediaryResult(2L, "중개인2")), 12));

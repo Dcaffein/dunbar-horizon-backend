@@ -37,7 +37,7 @@ public class FriendRequestService {
     private final ApplicationEventPublisher applicationEventPublisher;
 
     public FriendRequestResult sendRequest(Long currentUserId, Long counterpartId) {
-        boolean existingFriendship = friendshipRepository.existsFriendshipBetween(currentUserId, counterpartId);
+        boolean existingFriendship = friendshipRepository.existsBetween(currentUserId, counterpartId);
         boolean existingRequest = friendRequestRepository.existsBetween(currentUserId, counterpartId);
         FriendRequest request = friendshipBroker.propose(currentUserId, counterpartId, existingFriendship, existingRequest);
         friendRequestRepository.create(request);
@@ -62,7 +62,7 @@ public class FriendRequestService {
         }
 
         friendRequestRepository.delete(request);
-        boolean existingFriendship = friendshipRepository.existsFriendshipBetween(request.getRequesterId(), request.getReceiverId());
+        boolean existingFriendship = friendshipRepository.existsBetween(request.getRequesterId(), request.getReceiverId());
         friendshipRepository.create(friendshipBroker.createFrom(request, existingFriendship));
         UserProfile receiver = userProfileRepository.findActiveProfiles(List.of(request.getReceiverId()))
                 .get(request.getReceiverId());

@@ -41,7 +41,7 @@ public class FriendshipController {
             @PathVariable Long friendId,
             @RequestBody @Valid FriendUpdateRequest friendUpdateRequest) {
 
-        friendshipCommandService.updateFriendship(currentUserId, friendId, friendUpdateRequest.toCommand(currentUserId, friendId));
+        friendshipCommandService.updateSettings(currentUserId, friendId, friendUpdateRequest.toCommand(currentUserId, friendId));
         return ResponseEntity.noContent().build();
     }
 
@@ -50,7 +50,7 @@ public class FriendshipController {
             @CurrentUserId Long currentUserId,
             @PathVariable Long friendId) {
 
-        friendshipCommandService.brokeUpWith(currentUserId, friendId);
+        friendshipCommandService.endFriendship(currentUserId, friendId);
         return ResponseEntity.noContent().build();
     }
 }
