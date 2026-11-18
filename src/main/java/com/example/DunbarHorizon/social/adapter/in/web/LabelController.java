@@ -62,7 +62,7 @@ public class LabelController {
 
         return ResponseEntity
                 .created(URI.create("/api/v1/labels/" + newLabel.getId()))
-                .body(LabelResult.from(newLabel));
+                .body(LabelResult.created(newLabel));
     }
 
     @DeleteMapping("/{labelId}")

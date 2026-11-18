@@ -92,7 +92,7 @@ class LabelPersistenceAdapterTest {
         service.createLabel(owner.getId(), "Work");
 
         Label duplicate = LabelTestFactory.createLabel(owner.getId(), "Work");
-        assertThatThrownBy(() -> labelRepository.create(duplicate))
+        assertThatThrownBy(() -> labelRepository.save(duplicate))
                 .isInstanceOf(DuplicateLabelNameException.class);
     }
 
@@ -200,7 +200,7 @@ class LabelPersistenceAdapterTest {
 
     @Test
     @DisplayName("영속성 컨텍스트를 비운 뒤에도 이름과 멤버 교체·제거 결과를 복원한다")
-    void saveChanges_RestoresState_AfterReload() {
+    void save_RestoresState_AfterReload() {
         // given
         String labelId = service.createLabel(owner.getId(), "친구").getId();
         connect(owner, first);
@@ -284,6 +284,57 @@ class LabelPersistenceAdapterTest {
         assertThat(labelJdbcRepository.findAllByOwner(owner.getId())).isEmpty();
         assertThat(labelJdbcRepository.findResultById(labelId)).isEmpty();
         assertThat(labelJdbcRepository.findMembers(labelId)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("새 라벨은 버전 0으로 저장되고 이름 변경과 멤버 추가가 각각 버전을 올린다")
+    void save_IncrementsVersion_RenameAndMemberChange() {
+        // given
+        String labelId = service.createLabel(owner.getId(), "친구").getId();
+        connect(owner, first);
+        long created = versionOf(labelId);
+
+        // when
+        service.updateLabel(labelId, owner.getId(), "동료");
+        long renamed = versionOf(labelId);
+        service.addMemberToLabel(owner.getId(), labelId, first.getId());
+
+        // then
+        assertThat(created).isZero();
+        assertThat(renamed).isEqualTo(1);
+        assertThat(versionOf(labelId)).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("새 라벨은 사전 조회 없이 넘긴 객체 그대로 영속 상태가 된다")
+    void save_PersistsGivenInstance_NewLabel() {
+        // given
+        Label label = LabelTestFactory.createLabel(owner.getId(), "친구");
+
+        // when
+        labelRepository.save(label);
+
+        // then
+        assertThat(em.getEntityManager().contains(label)).isTrue();
+        assertThat(versionOf(label.getId())).isZero();
+    }
+
+    @Test
+    @DisplayName("저장 시점의 멤버 기본 키 위반을 멤버 중복 예외로 변환한다")
+    void save_TranslatesPrimaryKeyViolation_DuplicateMember() {
+        // given
+        String labelId = service.createLabel(owner.getId(), "친구").getId();
+        connect(owner, first);
+        assertThat(labelRepository.findById(labelId).orElseThrow().getMemberIds()).isEmpty();
+        jdbc.update("INSERT INTO label_members (label_id, member_id) VALUES (?, ?)", labelId, first.getId());
+
+        // when & then
+        assertThatThrownBy(() -> service.addMemberToLabel(owner.getId(), labelId, first.getId()))
+                .isInstanceOf(DuplicateLabelMemberException.class);
+    }
+
+    private long versionOf(String labelId) {
+        return jdbc.queryForObject("SELECT version FROM labels WHERE id = ?", Long.class, labelId);
     }
 
     private User createUser(String name) {

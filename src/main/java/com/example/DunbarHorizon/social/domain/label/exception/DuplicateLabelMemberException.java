@@ -9,4 +9,8 @@ public class DuplicateLabelMemberException extends LabelException {
     public DuplicateLabelMemberException(Long memberId) {
         super(SocialErrorCode.LABEL_MEMBER_DUPLICATE, ErrorContext.of("memberId", memberId));
     }
+
+    public DuplicateLabelMemberException(String labelId) {
+        super(SocialErrorCode.LABEL_MEMBER_DUPLICATE, ErrorContext.of("labelId", labelId));
+    }
 }

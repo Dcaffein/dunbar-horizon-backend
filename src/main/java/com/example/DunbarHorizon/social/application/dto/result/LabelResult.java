@@ -7,11 +7,7 @@ public record LabelResult(
         String labelName,
         int memberCount
 ) {
-    public static LabelResult from(Label label) {
-        return new LabelResult(
-                label.getId(),
-                label.getLabelName(),
-                label.getMemberIds().size()
-        );
+    public static LabelResult created(Label label) {
+        return new LabelResult(label.getId(), label.getLabelName(), 0);
     }
 }

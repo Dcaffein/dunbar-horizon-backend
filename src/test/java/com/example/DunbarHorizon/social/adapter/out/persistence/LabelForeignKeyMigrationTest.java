@@ -49,7 +49,7 @@ class LabelForeignKeyMigrationTest {
             List<Map<String, Object>> indexes = indexes(migrationJdbc);
 
             // when
-            Flyway.configure().dataSource(dataSource).locations("classpath:db/migration").load().migrate();
+            Flyway.configure().dataSource(dataSource).locations("classpath:db/migration").target("11").load().migrate();
 
             // then
             assertThat(foreignKeyCount(migrationJdbc)).isZero();
