@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
 @Import({SocialConnectionPathJdbcRepository.class, SocialConnectionPathQueryService.class,
-        FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class})
+        FriendshipPersistenceAdapter.class})
 class SocialConnectionPathJdbcRepositoryTest {
 
     @Autowired private SocialConnectionPathJdbcRepository repository;

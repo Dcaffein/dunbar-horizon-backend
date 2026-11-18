@@ -2,8 +2,8 @@ package com.example.DunbarHorizon.social.adapter.out.persistence;
 
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelMembershipCleanupJdbcAdapter;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.LabelMemberFriendshipLookupJpaAdapter;
 import com.example.DunbarHorizon.social.application.dto.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.application.eventListener.LabelMembershipEventListener;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
@@ -38,6 +38,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static com.example.DunbarHorizon.social.adapter.out.persistence.LabelMembershipTestQueries.hasLabelMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -46,8 +47,8 @@ import static org.mockito.Mockito.doAnswer;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class,
-        LabelJdbcRepository.class, FriendshipCommandService.class,
+@Import({FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class,
+        LabelMembershipCleanupJdbcAdapter.class, LabelMemberFriendshipLookupJpaAdapter.class, FriendshipCommandService.class,
         LabelCommandService.class, LabelNamer.class, LabelMemberRegistrar.class, LabelMembershipEventListener.class})
 class FriendshipConcurrencyTest {
 
@@ -56,10 +57,10 @@ class FriendshipConcurrencyTest {
     @Autowired private UserJpaRepository userJpaRepository;
     @Autowired private FriendshipCommandService friendshipCommandService;
     @Autowired private LabelCommandService labelCommandService;
-    @Autowired private LabelJdbcRepository labelJdbcRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private PlatformTransactionManager transactionManager;
     @MockitoSpyBean private FriendshipPersistenceAdapter friendshipPersistenceAdapter;
+    @MockitoSpyBean private LabelMemberFriendshipLookupJpaAdapter labelMemberFriendshipLookup;
 
     private Long ownerId;
     private Long friendId;
@@ -117,12 +118,12 @@ class FriendshipConcurrencyTest {
         var bothLocked = new CountDownLatch(2);
         var finishRegistrations = new CountDownLatch(1);
         doAnswer(call -> {
-            Object candidates = call.callRealMethod();
+            Object lockedFriendIds = call.callRealMethod();
             assertRepeatableRead();
             bothLocked.countDown();
             await(finishRegistrations);
-            return candidates;
-        }).when(friendshipPersistenceAdapter).findCandidatesWithSharedLock(anyLong(), anyCollection());
+            return lockedFriendIds;
+        }).when(labelMemberFriendshipLookup).findFriendIdsWithSharedLock(anyLong(), anyCollection());
 
         // when
         try (var workers = Executors.newFixedThreadPool(2)) {
@@ -138,8 +139,8 @@ class FriendshipConcurrencyTest {
         }
 
         // then
-        assertThat(labelJdbcRepository.existsMember(ownerLabelId, friendId)).isTrue();
-        assertThat(labelJdbcRepository.existsMember(friendLabelId, ownerId)).isTrue();
+        assertThat(hasLabelMember(jdbcTemplate, ownerLabelId, friendId)).isTrue();
+        assertThat(hasLabelMember(jdbcTemplate, friendLabelId, ownerId)).isTrue();
     }
 
     @Test
@@ -166,12 +167,12 @@ class FriendshipConcurrencyTest {
         var finishRegistration = new CountDownLatch(1);
         var breakupEntered = new CountDownLatch(1);
         doAnswer(call -> {
-            Object candidates = call.callRealMethod();
+            Object lockedFriendIds = call.callRealMethod();
             assertRepeatableRead();
             registrationLocked.countDown();
             await(finishRegistration);
-            return candidates;
-        }).when(friendshipPersistenceAdapter).findCandidatesWithSharedLock(ownerId, List.of(friendId));
+            return lockedFriendIds;
+        }).when(labelMemberFriendshipLookup).findFriendIdsWithSharedLock(ownerId, List.of(friendId));
         doAnswer(call -> {
             assertRepeatableRead();
             breakupEntered.countDown();
@@ -212,7 +213,7 @@ class FriendshipConcurrencyTest {
             assertRepeatableRead();
             registrationEntered.countDown();
             return call.callRealMethod();
-        }).when(friendshipPersistenceAdapter).findCandidatesWithSharedLock(ownerId, List.of(friendId));
+        }).when(labelMemberFriendshipLookup).findFriendIdsWithSharedLock(ownerId, List.of(friendId));
 
         try (var workers = Executors.newFixedThreadPool(2)) {
             var breakup = workers.submit(() -> friendshipCommandService.endFriendship(friendId, ownerId));
@@ -249,8 +250,8 @@ class FriendshipConcurrencyTest {
 
     private void assertEnded() {
         assertThat(friendshipPersistenceAdapter.existsBetween(ownerId, friendId)).isFalse();
-        assertThat(labelJdbcRepository.existsMember(ownerLabelId, friendId)).isFalse();
-        assertThat(labelJdbcRepository.existsMember(friendLabelId, ownerId)).isFalse();
+        assertThat(hasLabelMember(jdbcTemplate, ownerLabelId, friendId)).isFalse();
+        assertThat(hasLabelMember(jdbcTemplate, friendLabelId, ownerId)).isFalse();
     }
 
     private void assertRepeatableRead() {

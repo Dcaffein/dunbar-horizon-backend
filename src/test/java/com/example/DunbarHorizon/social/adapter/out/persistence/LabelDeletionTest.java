@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.social.adapter.out.persistence;
 
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelMembershipCleanupJdbcAdapter;
 import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup;
 import com.example.DunbarHorizon.social.application.service.LabelCommandService;
 import com.example.DunbarHorizon.social.domain.label.Label;
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.doAnswer;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({LabelCommandService.class, LabelPersistenceAdapter.class, LabelJdbcRepository.class,
+@Import({LabelCommandService.class, LabelPersistenceAdapter.class, LabelMembershipCleanupJdbcAdapter.class,
         LabelNamer.class, LabelMemberRegistrar.class})
 class LabelDeletionTest {
 

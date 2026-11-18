@@ -1,14 +1,17 @@
 package com.example.DunbarHorizon.social.application.port.out;
 
+import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
+
 import java.util.Collection;
 import java.util.Set;
 
 public interface LabelMemberFriendshipLookup {
     /**
-     * Returns active candidates and the subset whose friendships with the owner are locked
-     * in shared mode until the caller's transaction ends.
+     * Returns the locked friend ID, or an empty set if the available member is not a friend.
+     * @throws UserReferenceNotFoundException if the member is unavailable
      */
-    Candidates findCandidatesWithSharedLock(Long ownerId, Collection<Long> candidateIds);
+    Set<Long> findForMemberAdditionWithSharedLock(Long ownerId, Long memberId);
 
-    record Candidates(Set<Long> activeCandidateIds, Set<Long> lockedFriendIds) {}
+    /** Returns IDs whose friendships with the owner are locked until the caller's transaction ends. */
+    Set<Long> findFriendIdsWithSharedLock(Long ownerId, Collection<Long> candidateIds);
 }

@@ -15,11 +15,14 @@ import java.util.Optional;
 
 public interface FriendshipJpaRepository extends JpaRepository<Friendship, FriendshipId> {
 
+    String ACTIVE_PARTICIPANTS = """
+            AND EXISTS (SELECT u.id FROM ActiveUser u WHERE u.id = f.lowUserId)
+            AND EXISTS (SELECT u.id FROM ActiveUser u WHERE u.id = f.highUserId)
+            """;
+
     String BETWEEN_ACTIVE_USERS = """
             WHERE f.lowUserId = :low AND f.highUserId = :high
-              AND EXISTS (SELECT u.id FROM ActiveUser u WHERE u.id = f.lowUserId)
-              AND EXISTS (SELECT u.id FROM ActiveUser u WHERE u.id = f.highUserId)
-            """;
+            """ + ACTIVE_PARTICIPANTS;
 
     @Query("SELECT f FROM Friendship f " + BETWEEN_ACTIVE_USERS)
     Optional<Friendship> findBetweenActiveUsers(@Param("low") long low, @Param("high") long high);
@@ -34,11 +37,15 @@ public interface FriendshipJpaRepository extends JpaRepository<Friendship, Frien
     @Query("DELETE FROM Friendship f " + BETWEEN_ACTIVE_USERS)
     int deleteBetweenActiveUsers(@Param("low") long low, @Param("high") long high);
 
+    @Query("SELECT u.id FROM ActiveUser u WHERE u.id = :memberId")
+    Optional<Long> findAvailableMemberId(@Param("memberId") Long memberId);
+
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("""
             SELECT f FROM Friendship f
-            WHERE (f.lowUserId = :userId AND f.highUserId IN :friendIds)
-               OR (f.highUserId = :userId AND f.lowUserId IN :friendIds)
+            WHERE ((f.lowUserId = :userId AND f.highUserId IN :friendIds)
+                OR (f.highUserId = :userId AND f.lowUserId IN :friendIds))
+            """ + ACTIVE_PARTICIPANTS + """
             ORDER BY f.lowUserId, f.highUserId
             """)
     List<Friendship> findAllBetweenForShare(@Param("userId") Long userId,

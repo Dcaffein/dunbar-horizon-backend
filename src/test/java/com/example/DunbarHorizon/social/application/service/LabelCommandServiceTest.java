@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.application.service;
 
 import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup;
-import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup.Candidates;
 import com.example.DunbarHorizon.social.application.port.out.LabelMembershipCleanup;
 import com.example.DunbarHorizon.social.application.port.out.LabelRepository;
 import com.example.DunbarHorizon.social.domain.label.Label;
@@ -109,11 +108,11 @@ class LabelCommandServiceTest {
     }
 
     @Test
-    @DisplayName("조회 결과에서 활성 후보가 빠져 있으면 단건 추가를 사용자 없음으로 거부한다")
+    @DisplayName("친구 관계 조회에서 사용자 없음이 발생하면 라벨을 저장하지 않는다")
     void addMember_Rejects_InactiveUser() {
         given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
-        given(labelMemberFriendshipLookup.findCandidatesWithSharedLock(1L, List.of(3L)))
-                .willReturn(new Candidates(Set.of(), Set.of()));
+        given(labelMemberFriendshipLookup.findForMemberAdditionWithSharedLock(1L, 3L))
+                .willThrow(new UserReferenceNotFoundException(3L));
 
         assertThatThrownBy(() -> service.addMemberToLabel(1L, label.getId(), 3L))
                 .isInstanceOf(UserReferenceNotFoundException.class);
@@ -123,8 +122,8 @@ class LabelCommandServiceTest {
     @Test
     @DisplayName("교체 대상의 실제 친구 ID를 전달하고 비친구면 기존 멤버를 저장하지 않는다")
     void replaceMembers_Rejects_NonFriend() {
-        given(labelMemberFriendshipLookup.findCandidatesWithSharedLock(1L, List.of(3L)))
-                .willReturn(new Candidates(Set.of(3L), Set.of()));
+        given(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(1L, List.of(3L)))
+                .willReturn(Set.of());
         given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
 
         assertThatThrownBy(() -> service.replaceLabelMembers(1L, label.getId(), List.of(3L, 3L)))
@@ -136,8 +135,8 @@ class LabelCommandServiceTest {
     @Test
     @DisplayName("null 교체 목록은 빈 목록으로 변환해 기존 멤버를 비운다")
     void replaceMembers_Clears_NullInput() {
-        given(labelMemberFriendshipLookup.findCandidatesWithSharedLock(1L, List.of()))
-                .willReturn(new Candidates(Set.of(), Set.of()));
+        given(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(1L, List.of()))
+                .willReturn(Set.of());
         given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
 
         service.replaceLabelMembers(1L, label.getId(), null);

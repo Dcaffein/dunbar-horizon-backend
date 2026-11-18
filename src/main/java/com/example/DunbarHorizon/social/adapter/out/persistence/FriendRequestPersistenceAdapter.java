@@ -1,9 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence;
 
-import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.ActiveUserJpaRepository;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.FriendRequestJpaRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRequest;
-import com.example.DunbarHorizon.social.domain.friend.FriendRequestId;
 import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendRequestException;
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestConflictException;
 import com.example.DunbarHorizon.social.domain.friend.repository.FriendRequestRepository;
@@ -15,7 +13,6 @@ import jakarta.persistence.PersistenceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -26,16 +23,14 @@ public class FriendRequestPersistenceAdapter implements FriendRequestRepository 
     private static final String EITHER_DIRECTION_KEY = "uk_friend_requests_pair";
 
     private final FriendRequestJpaRepository friendRequestJpaRepository;
-    private final ActiveUserJpaRepository activeUserJpaRepository;
     private final EntityManager entityManager;
 
     @Override
     public void create(FriendRequest request) {
-        for (Long userId : List.of(request.getRequesterId(), request.getReceiverId())) {
-            if (!activeUserJpaRepository.existsById(userId)) {
-                throw new UserReferenceNotFoundException(userId);
-            }
-        }
+        friendRequestJpaRepository.findUnavailableParticipant(request.getRequesterId(), request.getReceiverId())
+                .ifPresent(userId -> {
+                    throw new UserReferenceNotFoundException(userId);
+                });
         try {
             entityManager.persist(request);
             entityManager.flush();
@@ -51,20 +46,12 @@ public class FriendRequestPersistenceAdapter implements FriendRequestRepository 
 
     @Override
     public Optional<FriendRequest> findBetween(Long userId, Long counterpartId) {
-        if (!activeUserJpaRepository.areActive(userId, counterpartId)) {
-            return Optional.empty();
-        }
-        return friendRequestJpaRepository.findById(new FriendRequestId(userId, counterpartId))
-                .or(() -> friendRequestJpaRepository.findById(new FriendRequestId(counterpartId, userId)));
+        return friendRequestJpaRepository.findBetweenActiveUsers(userId, counterpartId);
     }
 
     @Override
     public boolean existsBetween(Long userId, Long counterpartId) {
-        if (!activeUserJpaRepository.areActive(userId, counterpartId)) {
-            return false;
-        }
-        return friendRequestJpaRepository.existsById(new FriendRequestId(userId, counterpartId))
-                || friendRequestJpaRepository.existsById(new FriendRequestId(counterpartId, userId));
+        return friendRequestJpaRepository.existsBetweenActiveUsers(userId, counterpartId);
     }
 
     @Override

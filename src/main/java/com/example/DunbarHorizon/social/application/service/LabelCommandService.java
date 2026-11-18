@@ -52,19 +52,16 @@ public class LabelCommandService {
 
     public void addMemberToLabel(Long ownerId, String labelId, Long memberId) {
         Label label = ownedLabel(ownerId, labelId);
-        var candidates = labelMemberFriendshipLookup.findCandidatesWithSharedLock(ownerId, List.of(memberId));
-        if (!candidates.activeCandidateIds().contains(memberId)) {
-            throw new UserReferenceNotFoundException(memberId);
-        }
-        labelMemberRegistrar.addMember(label, memberId, candidates.lockedFriendIds());
+        Set<Long> lockedFriendIds = labelMemberFriendshipLookup.findForMemberAdditionWithSharedLock(ownerId, memberId);
+        labelMemberRegistrar.addMember(label, memberId, lockedFriendIds);
         labelRepository.save(label);
     }
 
     public void replaceLabelMembers(Long ownerId, String labelId, List<Long> memberIds) {
         Label label = ownedLabel(ownerId, labelId);
         List<Long> requestedMemberIds = memberIds == null ? List.of() : memberIds.stream().distinct().toList();
-        var candidates = labelMemberFriendshipLookup.findCandidatesWithSharedLock(ownerId, requestedMemberIds);
-        labelMemberRegistrar.replaceMembers(label, requestedMemberIds, candidates.lockedFriendIds());
+        Set<Long> lockedFriendIds = labelMemberFriendshipLookup.findFriendIdsWithSharedLock(ownerId, requestedMemberIds);
+        labelMemberRegistrar.replaceMembers(label, requestedMemberIds, lockedFriendIds);
         labelRepository.save(label);
     }
 

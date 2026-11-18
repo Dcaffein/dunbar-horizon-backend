@@ -2,9 +2,8 @@ package com.example.DunbarHorizon.social.adapter.out.persistence;
 
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelMembershipCleanupJdbcAdapter;
 import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup;
-import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup.Candidates;
 import com.example.DunbarHorizon.social.application.service.LabelCommandService;
 import com.example.DunbarHorizon.social.domain.label.Label;
 import com.example.DunbarHorizon.social.domain.label.LabelMemberRegistrar;
@@ -46,7 +45,7 @@ import static org.mockito.Mockito.doAnswer;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({LabelCommandService.class, LabelPersistenceAdapter.class, LabelJdbcRepository.class,
+@Import({LabelCommandService.class, LabelPersistenceAdapter.class, LabelMembershipCleanupJdbcAdapter.class,
         LabelNamer.class, LabelMemberRegistrar.class})
 class LabelMembershipConcurrencyTest {
 
@@ -68,11 +67,10 @@ class LabelMembershipConcurrencyTest {
         first = createUser("first");
         second = createUser("second");
         third = createUser("third");
-        given(labelMemberFriendshipLookup.findCandidatesWithSharedLock(anyLong(), anyCollection()))
-                .willAnswer(call -> {
-                    Set<Long> ids = Set.copyOf(call.<Collection<Long>>getArgument(1));
-                    return new Candidates(ids, ids);
-                });
+        given(labelMemberFriendshipLookup.findForMemberAdditionWithSharedLock(anyLong(), anyLong()))
+                .willAnswer(call -> Set.of(call.<Long>getArgument(1)));
+        given(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(anyLong(), anyCollection()))
+                .willAnswer(call -> Set.copyOf(call.<Collection<Long>>getArgument(1)));
         labelId = service.createLabel(owner.getId(), "친구").getId();
     }
 

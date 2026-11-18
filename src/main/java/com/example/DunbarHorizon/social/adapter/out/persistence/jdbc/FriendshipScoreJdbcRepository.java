@@ -1,8 +1,9 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.jdbc;
 
-import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipKey;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.FriendshipId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -10,17 +11,19 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.Types;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
 
-import static com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipConditions.ACTIVE_PAIR;
+import static com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipConditions.ACTIVE_PAIR;
 
 @Repository
 @RequiredArgsConstructor
-public class FriendshipJdbcRepository {
+public class FriendshipScoreJdbcRepository implements FriendshipScoreRepository {
 
     private static final String SELECT_PAIR_FOR_UPDATE = """
             SELECT * FROM friendships
@@ -52,18 +55,30 @@ public class FriendshipJdbcRepository {
 
     private final NamedParameterJdbcTemplate jdbc;
 
-    public Optional<Friendship> findForUpdate(FriendshipKey key) {
-        return jdbc.query(SELECT_PAIR_FOR_UPDATE, parameters(key), FriendshipRows::read).stream().findFirst();
+    @Override
+    public Optional<Friendship> findBetweenForUpdate(Long userId, Long friendId) {
+        var id = FriendshipId.of(userId, friendId);
+        return jdbc.query(SELECT_PAIR_FOR_UPDATE, Map.of("low", id.getLowUserId(), "high", id.getHighUserId()),
+                FriendshipRows::read).stream().findFirst();
     }
 
-    public List<Friendship> findAllForUpdate(Collection<FriendshipKey> keys) {
-        if (keys.isEmpty()) {
+    @Override
+    public List<Friendship> findAllAmongForUpdate(Collection<Long> userIds) {
+        List<Long> members = userIds.stream().filter(Objects::nonNull).distinct().toList();
+        List<Object[]> pairs = new ArrayList<>();
+        for (int i = 0; i < members.size(); i++) {
+            for (int j = i + 1; j < members.size(); j++) {
+                var id = FriendshipId.of(members.get(i), members.get(j));
+                pairs.add(new Object[]{id.getLowUserId(), id.getHighUserId()});
+            }
+        }
+        if (pairs.isEmpty()) {
             return List.of();
         }
-        List<Object[]> pairs = keys.stream().map(key -> new Object[]{key.low(), key.high()}).toList();
         return jdbc.query(LOCK_PAIRS, Map.of("pairs", pairs), FriendshipRows::read);
     }
 
+    @Override
     public void saveInterestScores(Collection<Friendship> friendships) {
         if (friendships.isEmpty()) {
             return;
@@ -97,11 +112,8 @@ public class FriendshipJdbcRepository {
                 """.formatted(rows), parameters);
     }
 
+    @Override
     public void applyDecay(double rate, double threshold, LocalDateTime decayTime) {
         jdbc.update(APPLY_DECAY, Map.of("rate", rate, "threshold", threshold, "decayTime", decayTime));
-    }
-
-    private static Map<String, Long> parameters(FriendshipKey key) {
-        return Map.of("low", key.low(), "high", key.high());
     }
 }

@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.social.adapter.out.persistence;
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendRequestQueryJdbcRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
 import com.example.DunbarHorizon.social.application.dto.result.FriendRequestResult;
 import com.example.DunbarHorizon.social.application.service.FriendRequestService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
@@ -47,7 +46,7 @@ import static org.mockito.Mockito.doReturn;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendRequestPersistenceAdapter.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class,
+@Import({FriendRequestPersistenceAdapter.class, FriendshipPersistenceAdapter.class,
         FriendRequestService.class, FriendshipBroker.class, FriendRequestQueryJdbcRepository.class,
         FriendRequestConcurrencyTest.AcceptedEvents.class})
 class FriendRequestConcurrencyTest {

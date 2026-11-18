@@ -3,11 +3,13 @@ package com.example.DunbarHorizon.social.adapter.out.persistence;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.buzz.adapter.out.social.LabelRecipientStrategyAdapter;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
-import com.example.DunbarHorizon.social.application.port.out.LabelRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelMembershipCleanupJdbcAdapter;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelQueryJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.LabelMemberFriendshipLookupJpaAdapter;
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
+import com.example.DunbarHorizon.social.application.port.out.LabelQueryRepository;
+import com.example.DunbarHorizon.social.application.port.out.LabelRepository;
 import com.example.DunbarHorizon.social.application.service.LabelCommandService;
 import com.example.DunbarHorizon.social.application.service.LabelQueryService;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
@@ -37,16 +39,18 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
+import static com.example.DunbarHorizon.social.adapter.out.persistence.LabelMembershipTestQueries.hasLabelMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
-@Import({LabelJdbcRepository.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class,
+@Import({LabelQueryJdbcRepository.class, LabelMembershipCleanupJdbcAdapter.class, LabelMemberFriendshipLookupJpaAdapter.class,
+        FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class,
         LabelCommandService.class, LabelQueryService.class, LabelNamer.class, LabelMemberRegistrar.class})
 class LabelPersistenceAdapterTest {
 
     @Autowired private TestEntityManager em;
-    @Autowired private LabelJdbcRepository labelJdbcRepository;
+    @Autowired private LabelQueryRepository labelQueryRepository;
     @Autowired private LabelRepository labelRepository;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private FriendshipPersistenceAdapter friendships;
@@ -131,9 +135,9 @@ class LabelPersistenceAdapterTest {
                 .isInstanceOf(LabelAuthorizationException.class);
         assertThatThrownBy(() -> service.deleteLabel(first.getId(), label.getId()))
                 .isInstanceOf(LabelAuthorizationException.class);
-        assertThat(labelJdbcRepository.existsMember(label.getId(), first.getId())).isTrue();
+        assertThat(hasLabelMember(jdbc, label.getId(), first.getId())).isTrue();
         service.deleteLabel(owner.getId(), label.getId());
-        assertThat(labelJdbcRepository.existsMember(label.getId(), first.getId())).isFalse();
+        assertThat(hasLabelMember(jdbc, label.getId(), first.getId())).isFalse();
         assertThatThrownBy(() -> labelQueryService.getLabelById(owner.getId(), label.getId()))
                 .isInstanceOf(LabelNotFoundException.class);
     }
@@ -304,10 +308,10 @@ class LabelPersistenceAdapterTest {
 
         // when & then
         assertThat(labelRepository.findById(labelId)).isEmpty();
-        assertThat(labelJdbcRepository.findOwnerId(labelId)).isEmpty();
-        assertThat(labelJdbcRepository.findAllByOwner(owner.getId())).isEmpty();
-        assertThat(labelJdbcRepository.findById(labelId)).isEmpty();
-        assertThat(labelJdbcRepository.findMembers(labelId)).isEmpty();
+        assertThat(labelQueryRepository.findOwnerId(labelId)).isEmpty();
+        assertThat(labelQueryRepository.findAllByOwner(owner.getId())).isEmpty();
+        assertThat(labelQueryRepository.findById(labelId)).isEmpty();
+        assertThat(labelQueryRepository.findMembers(labelId)).isEmpty();
     }
 
     @Test

@@ -8,6 +8,7 @@ import com.example.DunbarHorizon.social.domain.friend.exception.DuplicateFriendR
 import com.example.DunbarHorizon.social.domain.friend.exception.FriendRequestConflictException;
 import com.example.DunbarHorizon.social.domain.socialUser.exception.UserReferenceNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -52,6 +55,34 @@ class FriendRequestPersistenceAdapterTest {
             assertThat(found.getStatus()).isEqualTo(FriendRequestStatus.PENDING);
         }
         assertThat(friendRequestPersistenceAdapter.existsBetween(low.getId(), high.getId())).isTrue();
+    }
+
+    @Test
+    @DisplayName("친구 요청의 단건 조회와 존재 확인은 각각 한 SQL 문장으로 처리한다")
+    void pairLookups_UseOneStatementEach_ForActiveUsers() {
+        // given
+        friendRequestPersistenceAdapter.create(FriendTestFactory.createRequest(high.getId(), low.getId()));
+        testEntityManager.clear();
+        var statistics = testEntityManager.getEntityManager().getEntityManagerFactory()
+                .unwrap(SessionFactory.class).getStatistics();
+        boolean wasEnabled = statistics.isStatisticsEnabled();
+        statistics.setStatisticsEnabled(true);
+
+        try {
+            // when
+            long beforeFind = statistics.getPrepareStatementCount();
+            var request = friendRequestPersistenceAdapter.findBetween(low.getId(), high.getId());
+            long afterFind = statistics.getPrepareStatementCount();
+            boolean exists = friendRequestPersistenceAdapter.existsBetween(low.getId(), high.getId());
+            long afterExists = statistics.getPrepareStatementCount();
+
+            // then
+            assertThat(request).isPresent();
+            assertThat(exists).isTrue();
+            assertThat(List.of(afterFind - beforeFind, afterExists - afterFind)).containsExactly(1L, 1L);
+        } finally {
+            statistics.setStatisticsEnabled(wasEnabled);
+        }
     }
 
     @Test
@@ -97,9 +128,24 @@ class FriendRequestPersistenceAdapterTest {
 
         // when & then
         assertThatThrownBy(() -> friendRequestPersistenceAdapter.create(FriendTestFactory.createRequest(low.getId(), high.getId())))
-                .isInstanceOf(UserReferenceNotFoundException.class);
+                .isInstanceOf(UserReferenceNotFoundException.class)
+                .hasMessageContaining("userId=" + high.getId() + "}");
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM friend_requests WHERE requester_id = ?",
                 Integer.class, low.getId())).isZero();
+    }
+
+    @Test
+    @DisplayName("요청자와 수신자가 모두 비활성이면 요청자 ID로 사용자 없음 오류를 낸다")
+    void create_ReportsRequester_WhenBothParticipantsAreInactive() {
+        // given
+        low.deactivate();
+        high.deactivate();
+        testEntityManager.flush();
+
+        // when & then
+        assertThatThrownBy(() -> friendRequestPersistenceAdapter.create(FriendTestFactory.createRequest(high.getId(), low.getId())))
+                .isInstanceOf(UserReferenceNotFoundException.class)
+                .hasMessageContaining("userId=" + high.getId() + "}");
     }
 
     @Test

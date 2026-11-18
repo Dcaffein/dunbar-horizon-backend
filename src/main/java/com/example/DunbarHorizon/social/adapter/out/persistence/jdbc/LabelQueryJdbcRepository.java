@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.jdbc;
 
 import com.example.DunbarHorizon.social.application.dto.result.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.dto.result.LabelResult;
-import com.example.DunbarHorizon.social.application.port.out.LabelMembershipCleanup;
 import com.example.DunbarHorizon.social.application.port.out.LabelQueryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -15,7 +14,7 @@ import java.util.Set;
 
 @Repository
 @RequiredArgsConstructor
-public class LabelJdbcRepository implements LabelQueryRepository, LabelMembershipCleanup {
+public class LabelQueryJdbcRepository implements LabelQueryRepository {
 
     private static final String SELECT_LABELS = """
             SELECT l.id, l.name, COUNT(u.user_id) AS member_count
@@ -26,24 +25,6 @@ public class LabelJdbcRepository implements LabelQueryRepository, LabelMembershi
             """;
 
     private final NamedParameterJdbcTemplate jdbc;
-
-    public boolean existsMember(String labelId, Long memberId) {
-        return Boolean.TRUE.equals(jdbc.queryForObject("""
-                SELECT EXISTS (SELECT 1 FROM label_members WHERE label_id = :labelId AND member_id = :memberId)
-                """, Map.of("labelId", labelId, "memberId", memberId), Boolean.class));
-    }
-
-    @Override
-    public void removeMembershipsBetween(Long firstUserId, Long secondUserId) {
-        List<Object[]> directions = List.of(
-                new Object[]{firstUserId, secondUserId}, new Object[]{secondUserId, firstUserId});
-
-        jdbc.update("""
-                DELETE lm FROM label_members lm
-                JOIN labels l ON l.id = lm.label_id
-                WHERE (l.owner_id, lm.member_id) IN (:directions)
-                """, Map.of("directions", directions));
-    }
 
     @Override
     public List<LabelResult> findAllByOwner(Long ownerId) {

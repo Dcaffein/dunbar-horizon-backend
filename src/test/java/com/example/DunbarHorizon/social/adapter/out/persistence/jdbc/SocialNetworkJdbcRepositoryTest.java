@@ -22,7 +22,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
-@Import({SocialNetworkJdbcRepository.class, SocialNetworkQueryService.class, FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class,
+@Import({SocialNetworkJdbcRepository.class, SocialNetworkQueryService.class, FriendshipPersistenceAdapter.class,
         SocialNetworkExposurePolicy.class})
 class SocialNetworkJdbcRepositoryTest {
 

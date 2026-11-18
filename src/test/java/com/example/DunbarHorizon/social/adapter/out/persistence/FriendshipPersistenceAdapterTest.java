@@ -1,7 +1,10 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence;
 
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipScoreJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.LabelMemberFriendshipLookupJpaAdapter;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
+import com.example.DunbarHorizon.social.application.port.out.LabelMemberFriendshipLookup;
 import com.example.DunbarHorizon.social.domain.friend.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
 import com.example.DunbarHorizon.social.domain.friend.exception.AlreadyFriendsException;
@@ -24,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
-@Import({FriendshipPersistenceAdapter.class, FriendshipJdbcRepository.class})
+@Import({FriendshipPersistenceAdapter.class, FriendshipScoreJdbcRepository.class, LabelMemberFriendshipLookupJpaAdapter.class})
 class FriendshipPersistenceAdapterTest {
 
     private static final LocalDate CREATED_AT = LocalDate.of(2026, 9, 14);
@@ -33,6 +36,8 @@ class FriendshipPersistenceAdapterTest {
             Math.sqrt(FriendRecognition.normalize(51.0) * FriendRecognition.normalize(32.0));
 
     @Autowired private FriendshipPersistenceAdapter repository;
+    @Autowired private FriendshipScoreRepository scoreRepository;
+    @Autowired private LabelMemberFriendshipLookup labelMemberFriendshipLookup;
     @Autowired private TestEntityManager em;
     @Autowired private JdbcTemplate jdbc;
 
@@ -226,11 +231,10 @@ class FriendshipPersistenceAdapterTest {
         // when & then
         assertThat(repository.findBetween(me, friend)).isEmpty();
         assertThat(repository.existsBetween(me, friend)).isFalse();
-        assertThat(repository.findBetweenForUpdate(me, friend)).isEmpty();
-        var candidates = repository.findCandidatesWithSharedLock(me, List.of(friend));
-        assertThat(candidates.activeCandidateIds()).isEmpty();
-        assertThat(candidates.lockedFriendIds()).isEmpty();
-        assertThat(repository.findAllAmongForUpdate(List.of(me, friend))).isEmpty();
+        assertThat(scoreRepository.findBetweenForUpdate(me, friend)).isEmpty();
+        assertThat(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(me, List.of(friend))).isEmpty();
+        assertThat(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(friend, List.of(me))).isEmpty();
+        assertThat(scoreRepository.findAllAmongForUpdate(List.of(me, friend))).isEmpty();
         assertThat(repository.deleteBetween(me, friend)).isFalse();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
                 Integer.class, me, friend)).isEqualTo(1);
@@ -246,9 +250,9 @@ class FriendshipPersistenceAdapterTest {
         // when & then
         assertThat(repository.findBetween(self, self)).isEmpty();
         assertThat(repository.existsBetween(self, self)).isFalse();
-        assertThat(repository.findBetweenForUpdate(self, self)).isEmpty();
-        assertThat(repository.findCandidatesWithSharedLock(self, List.of(self)).lockedFriendIds()).isEmpty();
-        assertThat(repository.findAllAmongForUpdate(List.of(self, self))).isEmpty();
+        assertThat(scoreRepository.findBetweenForUpdate(self, self)).isEmpty();
+        assertThat(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(self, List.of(self))).isEmpty();
+        assertThat(scoreRepository.findAllAmongForUpdate(List.of(self, self))).isEmpty();
         assertThat(repository.deleteBetween(self, self)).isFalse();
     }
 
@@ -271,23 +275,22 @@ class FriendshipPersistenceAdapterTest {
 
     @Test
     @DisplayName("한 사람과 여러 사람 사이의 잠금 조회는 실제 친구 관계만 돌려준다")
-    void findCandidatesWithSharedLock_ReturnsExistingFriendships_MixedCandidates() {
+    void findFriendIdsWithSharedLock_ReturnsExistingFriendships_MixedCandidates() {
         // given
         User third = createUser("third");
         repository.create(friendship(low, high));
 
         // when
-        var candidates = repository.findCandidatesWithSharedLock(
+        var lockedFriendIds = labelMemberFriendshipLookup.findFriendIdsWithSharedLock(
                 high.getId(), List.of(low.getId(), third.getId(), high.getId()));
 
         // then
-        assertThat(candidates.activeCandidateIds()).containsExactlyInAnyOrder(low.getId(), third.getId(), high.getId());
-        assertThat(candidates.lockedFriendIds()).containsExactly(low.getId());
+        assertThat(lockedFriendIds).containsExactly(low.getId());
     }
 
     @Test
-    @DisplayName("공유 잠금 조회는 활성 후보와 실제로 잠근 친구를 구분한다")
-    void findCandidatesWithSharedLock_FiltersCandidates_BothDirections() {
+    @DisplayName("공유 잠금 조회는 양쪽 방향에서 잠근 활성 친구 ID만 반환한다")
+    void findFriendIdsWithSharedLock_ReturnsActiveFriends_BothDirections() {
         // given
         User third = createUser("third");
         User inactive = createUser("inactive");
@@ -299,12 +302,11 @@ class FriendshipPersistenceAdapterTest {
         em.clear();
 
         // when
-        var candidates = repository.findCandidatesWithSharedLock(high.getId(),
+        var lockedFriendIds = labelMemberFriendshipLookup.findFriendIdsWithSharedLock(high.getId(),
                 List.of(third.getId(), low.getId(), inactive.getId(), high.getId(), third.getId(), Long.MAX_VALUE));
 
         // then
-        assertThat(candidates.activeCandidateIds()).containsExactlyInAnyOrder(low.getId(), third.getId(), high.getId());
-        assertThat(candidates.lockedFriendIds()).containsExactlyInAnyOrder(low.getId(), third.getId());
+        assertThat(lockedFriendIds).containsExactlyInAnyOrder(low.getId(), third.getId());
     }
 
     @Test
@@ -318,7 +320,7 @@ class FriendshipPersistenceAdapterTest {
         repository.create(friendship(low, outsider));
 
         // when
-        var locked = repository.findAllAmongForUpdate(List.of(third.getId(), low.getId(), high.getId(), low.getId()));
+        var locked = scoreRepository.findAllAmongForUpdate(List.of(third.getId(), low.getId(), high.getId(), low.getId()));
 
         // then
         assertThat(locked).extracting(friendship -> friendship.getLower().getOwnerId() + "_"

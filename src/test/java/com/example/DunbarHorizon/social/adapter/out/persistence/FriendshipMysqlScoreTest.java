@@ -4,10 +4,12 @@ import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepo
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipScoreJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelMembershipCleanupJdbcAdapter;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.LabelMemberFriendshipLookupJpaAdapter;
 import com.example.DunbarHorizon.social.application.dto.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.application.eventListener.LabelMembershipEventListener;
+import com.example.DunbarHorizon.social.application.port.out.FriendshipScoreRepository;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
 import com.example.DunbarHorizon.social.application.service.FriendshipScoreService;
 import com.example.DunbarHorizon.social.application.service.LabelCommandService;
@@ -41,7 +43,8 @@ import static org.assertj.core.api.Assertions.within;
 
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelJdbcRepository.class,
+@Import({FriendshipScoreJdbcRepository.class, FriendshipPersistenceAdapter.class,
+        LabelMembershipCleanupJdbcAdapter.class, LabelMemberFriendshipLookupJpaAdapter.class,
         FriendshipScoreService.class, FriendshipCommandService.class, FriendshipDecayPolicy.class,
         LabelPersistenceAdapter.class, LabelCommandService.class,
         LabelNamer.class, LabelMemberRegistrar.class, LabelMembershipEventListener.class})
@@ -53,6 +56,7 @@ class FriendshipMysqlScoreTest {
 
     @Autowired private UserJpaRepository users;
     @Autowired private FriendshipPersistenceAdapter friendships;
+    @Autowired private FriendshipScoreRepository scoreRepository;
     @Autowired private FriendshipScoreService scores;
     @Autowired private FriendshipCommandService commands;
     @Autowired private PlatformTransactionManager transactionManager;
@@ -179,7 +183,7 @@ class FriendshipMysqlScoreTest {
         var transactions = new TransactionTemplate(transactionManager);
 
         // when
-        transactions.executeWithoutResult(status -> friendships.applyDecay(0.5, 1, OLD_INTERACTION));
+        transactions.executeWithoutResult(status -> scoreRepository.applyDecay(0.5, 1, OLD_INTERACTION));
 
         // then
         var decayed = assertScores(low, middle, 1, 42);
@@ -215,7 +219,7 @@ class FriendshipMysqlScoreTest {
         var transactions = new TransactionTemplate(transactionManager);
 
         // when
-        transactions.executeWithoutResult(status -> friendships.applyDecay(rate, floor, decayTime));
+        transactions.executeWithoutResult(status -> scoreRepository.applyDecay(rate, floor, decayTime));
 
         // then
         for (Friendship domain : expected) {
@@ -243,11 +247,11 @@ class FriendshipMysqlScoreTest {
         // when
         try (var workers = Executors.newFixedThreadPool(2)) {
             var interaction = workers.submit(() -> transactions.executeWithoutResult(status -> {
-                var locked = friendships.findBetweenForUpdate(low, high).stream().toList();
+                var locked = scoreRepository.findBetweenForUpdate(low, high).stream().toList();
                 rowLocked.countDown();
                 await(finishInteraction);
                 locked.getFirst().adjustInterestScore(high, 2);
-                friendships.saveInterestScores(locked);
+                scoreRepository.saveInterestScores(locked);
             }));
             try {
                 await(rowLocked);

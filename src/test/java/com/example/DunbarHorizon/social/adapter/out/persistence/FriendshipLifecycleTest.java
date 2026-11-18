@@ -2,8 +2,8 @@ package com.example.DunbarHorizon.social.adapter.out.persistence;
 
 import com.example.DunbarHorizon.account.adapter.out.persistence.jpa.UserJpaRepository;
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipJdbcRepository;
-import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.LabelMembershipCleanupJdbcAdapter;
+import com.example.DunbarHorizon.social.adapter.out.persistence.jpa.LabelMemberFriendshipLookupJpaAdapter;
 import com.example.DunbarHorizon.social.application.dto.command.FriendshipUpdateCommand;
 import com.example.DunbarHorizon.social.application.eventListener.LabelMembershipEventListener;
 import com.example.DunbarHorizon.social.application.service.FriendshipCommandService;
@@ -35,6 +35,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static com.example.DunbarHorizon.social.adapter.out.persistence.LabelMembershipTestQueries.hasLabelMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doAnswer;
@@ -42,7 +43,8 @@ import static org.mockito.Mockito.doAnswer;
 @JpaRepositoryTest
 @RecordApplicationEvents
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
-@Import({FriendshipJdbcRepository.class, FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class, LabelJdbcRepository.class,
+@Import({FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class,
+        LabelMembershipCleanupJdbcAdapter.class, LabelMemberFriendshipLookupJpaAdapter.class,
         FriendshipCommandService.class, LabelCommandService.class, LabelNamer.class, LabelMemberRegistrar.class,
         LabelMembershipEventListener.class})
 class FriendshipLifecycleTest {
@@ -52,7 +54,7 @@ class FriendshipLifecycleTest {
     @Autowired private UserJpaRepository users;
     @Autowired private FriendshipCommandService lifecycle;
     @Autowired private LabelCommandService labelCommandService;
-    @MockitoSpyBean private LabelJdbcRepository labels;
+    @MockitoSpyBean private LabelMembershipCleanupJdbcAdapter labelMembershipCleanup;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private PlatformTransactionManager transactionManager;
     @MockitoSpyBean private FriendshipPersistenceAdapter friendships;
@@ -114,7 +116,7 @@ class FriendshipLifecycleTest {
         doAnswer(call -> {
             call.callRealMethod();
             throw new IllegalStateException("interrupted after label cleanup");
-        }).when(labels).removeMembershipsBetween(first, second);
+        }).when(labelMembershipCleanup).removeMembershipsBetween(first, second);
     }
 
     @Test
@@ -175,13 +177,13 @@ class FriendshipLifecycleTest {
 
     private void assertEnded() {
         assertThat(friendships.existsBetween(first, second)).isFalse();
-        assertThat(labels.existsMember(firstLabel, second)).isFalse();
-        assertThat(labels.existsMember(secondLabel, first)).isFalse();
+        assertThat(hasLabelMember(jdbc, firstLabel, second)).isFalse();
+        assertThat(hasLabelMember(jdbc, secondLabel, first)).isFalse();
     }
 
     private void assertRelationshipAndMembershipsRemain() {
         assertThat(friendships.existsBetween(first, second)).isTrue();
-        assertThat(labels.existsMember(firstLabel, second)).isTrue();
-        assertThat(labels.existsMember(secondLabel, first)).isTrue();
+        assertThat(hasLabelMember(jdbc, firstLabel, second)).isTrue();
+        assertThat(hasLabelMember(jdbc, secondLabel, first)).isTrue();
     }
 }

@@ -1,10 +1,10 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.jdbc;
 
-import com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipKey;
 import com.example.DunbarHorizon.social.application.dto.FriendView;
 import com.example.DunbarHorizon.social.application.dto.UserProfile;
 import com.example.DunbarHorizon.social.application.port.out.FriendshipQueryRepository;
 import com.example.DunbarHorizon.social.domain.friend.Friendship;
+import com.example.DunbarHorizon.social.domain.friend.FriendshipId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.example.DunbarHorizon.social.adapter.out.persistence.FriendshipConditions.ACTIVE_PAIR;
+import static com.example.DunbarHorizon.social.adapter.out.persistence.jdbc.FriendshipConditions.ACTIVE_PAIR;
 
 @Repository
 @RequiredArgsConstructor
@@ -76,9 +76,10 @@ public class FriendshipQueryJdbcRepository implements FriendshipQueryRepository 
 
     @Override
     public Optional<FriendView> findFriend(Long userId, Long friendId) {
-        var key = FriendshipKey.of(userId, friendId);
+        var id = FriendshipId.of(userId, friendId);
         return jdbc.query(SELECT_FRIEND,
-                Map.of("userId", userId, "friendId", friendId, "low", key.low(), "high", key.high()),
+                Map.of("userId", userId, "friendId", friendId,
+                        "low", id.getLowUserId(), "high", id.getHighUserId()),
                 viewOf(userId)).stream().findFirst();
     }
 
