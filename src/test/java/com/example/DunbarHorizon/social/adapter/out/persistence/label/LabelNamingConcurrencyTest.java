@@ -50,7 +50,7 @@ import static org.mockito.Mockito.verify;
 class LabelNamingConcurrencyTest {
 
     @Autowired private UserJpaRepository userJpaRepository;
-    @Autowired private LabelCommandService service;
+    @Autowired private LabelCommandService labelCommandService;
     @Autowired private JdbcTemplate jdbc;
     @MockitoBean private LabelMemberFriendshipLookup labelMemberFriendshipLookup;
     @MockitoSpyBean private LabelNamer labelNamer;
@@ -78,8 +78,8 @@ class LabelNamingConcurrencyTest {
 
         // when
         List<Throwable> failures = runConcurrently(
-                () -> service.createLabel(owner.getId(), "친구"),
-                () -> service.createLabel(owner.getId(), "친구"));
+                () -> labelCommandService.createLabel(owner.getId(), "친구"),
+                () -> labelCommandService.createLabel(owner.getId(), "친구"));
 
         // then
         assertThat(failures).singleElement().isInstanceOf(DuplicateLabelNameException.class);
@@ -91,14 +91,14 @@ class LabelNamingConcurrencyTest {
     @DisplayName("두 라벨의 이름 변경이 경합하면 실패한 라벨은 원래 이름을 유지한다")
     void updateLabel_PreservesOriginalName_WhenRequestLosesNameConflict() throws Exception {
         // given
-        String firstId = service.createLabel(owner.getId(), "첫 라벨").getId();
-        String secondId = service.createLabel(owner.getId(), "둘째 라벨").getId();
+        String firstId = labelCommandService.createLabel(owner.getId(), "첫 라벨").getId();
+        String secondId = labelCommandService.createLabel(owner.getId(), "둘째 라벨").getId();
         synchronizeFirstTwoAssignments("친구");
 
         // when
         List<Throwable> failures = runConcurrently(
-                () -> service.updateLabel(firstId, owner.getId(), "친구"),
-                () -> service.updateLabel(secondId, owner.getId(), "친구"));
+                () -> labelCommandService.updateLabel(firstId, owner.getId(), "친구"),
+                () -> labelCommandService.updateLabel(secondId, owner.getId(), "친구"));
 
         // then
         assertThat(failures).singleElement().isInstanceOf(DuplicateLabelNameException.class);
@@ -111,15 +111,15 @@ class LabelNamingConcurrencyTest {
     @DisplayName("소유자별로 빈 번호를 고르고 자기 이름으로 변경하면 이름을 유지한다")
     void assign_UsesOnlyOtherLabels_OfSameOwner() {
         // given
-        service.createLabel(other.getId(), "Work");
-        service.createLabel(other.getId(), "Work (2)");
-        Label work = service.createLabel(owner.getId(), "Work");
-        Label lowerCase = service.createLabel(owner.getId(), "work");
-        service.createLabel(owner.getId(), "Work (3)");
+        labelCommandService.createLabel(other.getId(), "Work");
+        labelCommandService.createLabel(other.getId(), "Work (2)");
+        Label work = labelCommandService.createLabel(owner.getId(), "Work");
+        Label lowerCase = labelCommandService.createLabel(owner.getId(), "work");
+        labelCommandService.createLabel(owner.getId(), "Work (3)");
 
         // when
-        service.updateLabel(work.getId(), owner.getId(), "Work");
-        service.updateLabel(lowerCase.getId(), owner.getId(), "Work");
+        labelCommandService.updateLabel(work.getId(), owner.getId(), "Work");
+        labelCommandService.updateLabel(lowerCase.getId(), owner.getId(), "Work");
 
         // then
         assertThat(namesOf(owner)).containsExactlyInAnyOrder("Work", "Work (2)", "Work (3)");
@@ -131,12 +131,12 @@ class LabelNamingConcurrencyTest {
     @DisplayName("공백으로 이름을 바꾸거나 길이 제한을 넘는 이름으로 생성할 수 없다")
     void assign_RejectsInvalidName_WithoutChangingStoredLabels() {
         // given
-        String labelId = service.createLabel(owner.getId(), "친구").getId();
+        String labelId = labelCommandService.createLabel(owner.getId(), "친구").getId();
 
         // when & then
-        assertThatThrownBy(() -> service.updateLabel(labelId, owner.getId(), " "))
+        assertThatThrownBy(() -> labelCommandService.updateLabel(labelId, owner.getId(), " "))
                 .isInstanceOf(InvalidLabelNameException.class);
-        assertThatThrownBy(() -> service.createLabel(owner.getId(), "가".repeat(LabelName.MAX_LENGTH + 1)))
+        assertThatThrownBy(() -> labelCommandService.createLabel(owner.getId(), "가".repeat(LabelName.MAX_LENGTH + 1)))
                 .isInstanceOf(InvalidLabelNameException.class);
         assertThat(namesOf(owner)).containsExactly("친구");
     }
@@ -146,10 +146,10 @@ class LabelNamingConcurrencyTest {
     void createLabel_SavesShortenedName_WhenSuffixSplitsSurrogatePair() {
         // given
         String requestedName = "가".repeat(15) + "😀나다라";
-        service.createLabel(owner.getId(), requestedName);
+        labelCommandService.createLabel(owner.getId(), requestedName);
 
         // when
-        Label created = service.createLabel(owner.getId(), requestedName);
+        Label created = labelCommandService.createLabel(owner.getId(), requestedName);
 
         // then
         String shortenedName = "가".repeat(15) + " (2)";
@@ -161,16 +161,16 @@ class LabelNamingConcurrencyTest {
     @DisplayName("비활성 소유자는 이름을 바꿀 수 없고 비활성이거나 없는 사용자에게 라벨을 생성할 수 없다")
     void writeLabel_Rejects_InactiveOrMissingOwner() {
         // given
-        String labelId = service.createLabel(owner.getId(), "친구").getId();
+        String labelId = labelCommandService.createLabel(owner.getId(), "친구").getId();
         owner.deactivate();
         userJpaRepository.save(owner);
 
         // when & then
-        assertThatThrownBy(() -> service.updateLabel(labelId, owner.getId(), "동료"))
+        assertThatThrownBy(() -> labelCommandService.updateLabel(labelId, owner.getId(), "동료"))
                 .isInstanceOf(LabelNotFoundException.class);
-        assertThatThrownBy(() -> service.createLabel(owner.getId(), "동료"))
+        assertThatThrownBy(() -> labelCommandService.createLabel(owner.getId(), "동료"))
                 .isInstanceOf(UserReferenceNotFoundException.class);
-        assertThatThrownBy(() -> service.createLabel(Long.MAX_VALUE, "친구"))
+        assertThatThrownBy(() -> labelCommandService.createLabel(Long.MAX_VALUE, "친구"))
                 .isInstanceOf(UserReferenceNotFoundException.class);
         assertThat(namesOf(owner)).containsExactly("친구");
     }

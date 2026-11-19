@@ -23,8 +23,8 @@ import static org.assertj.core.api.Assertions.assertThat;
         FriendshipPersistenceAdapter.class})
 class SocialConnectionPathJdbcRepositoryTest {
 
-    @Autowired private SocialConnectionPathJdbcRepository repository;
-    @Autowired private SocialConnectionPathQueryService queryService;
+    @Autowired private SocialConnectionPathJdbcRepository socialConnectionPathJdbcRepository;
+    @Autowired private SocialConnectionPathQueryService socialConnectionPathQueryService;
     @Autowired private TestEntityManager em;
     @Autowired private JdbcTemplate jdbc;
 
@@ -49,12 +49,12 @@ class SocialConnectionPathJdbcRepositoryTest {
         connect(last, target, 0.2, false, true);
 
         // when
-        var result = queryService.getConnectionPath(me.getId(), target.getId());
+        var result = socialConnectionPathQueryService.getConnectionPath(me.getId(), target.getId());
 
         // then
         assertThat(result).isEqualTo(new ConnectionPathResult(true, 4,
                 List.of(result(tie), result(lower), result(higher))));
-        assertThat(repository.findIntermediaries(me.getId(), target.getId(), 0))
+        assertThat(socialConnectionPathJdbcRepository.findIntermediaries(me.getId(), target.getId(), 0))
                 .isEqualTo(new ConnectionPathResult.Intermediaries(List.of(), 4));
     }
 
@@ -87,11 +87,11 @@ class SocialConnectionPathJdbcRepositoryTest {
         connect(open, target, 0.6, false, true);
 
         // when & then
-        assertThat(queryService.getConnectionPath(me.getId(), target.getId()))
+        assertThat(socialConnectionPathQueryService.getConnectionPath(me.getId(), target.getId()))
                 .isEqualTo(new ConnectionPathResult(false, 1, List.of(result(open))));
         target.deactivate();
         em.flush();
-        assertThat(repository.findIntermediaries(me.getId(), target.getId(), 3))
+        assertThat(socialConnectionPathJdbcRepository.findIntermediaries(me.getId(), target.getId(), 3))
                 .isEqualTo(new ConnectionPathResult.Intermediaries(List.of(), 0));
     }
 
@@ -106,8 +106,8 @@ class SocialConnectionPathJdbcRepositoryTest {
 
         // when & then
         var empty = new ConnectionPathResult(false, 0, List.of());
-        assertThat(queryService.getConnectionPath(me.getId(), target.getId())).isEqualTo(empty);
-        assertThat(queryService.getConnectionPath(me.getId(), me.getId())).isEqualTo(empty);
+        assertThat(socialConnectionPathQueryService.getConnectionPath(me.getId(), target.getId())).isEqualTo(empty);
+        assertThat(socialConnectionPathQueryService.getConnectionPath(me.getId(), me.getId())).isEqualTo(empty);
     }
 
     private User user(String nickname) {

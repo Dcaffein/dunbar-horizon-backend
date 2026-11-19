@@ -35,7 +35,7 @@ class SocialExpansionQueryServiceTest {
     private Friendship friendship;
 
     @InjectMocks
-    private SocialExpansionQueryService service;
+    private SocialExpansionQueryService socialExpansionQueryService;
 
     // ── getAnchorExpansion ────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ class SocialExpansionQueryServiceTest {
                 .willReturn(List.of());
 
         // when
-        service.getAnchorExpansion(userId, anchorId, 0.0);
+        socialExpansionQueryService.getAnchorExpansion(userId, anchorId, 0.0);
 
         // then
         verify(socialExpansionRepository).getRelatedNetworkByAnchor(userId, anchorId, 5, 10);
@@ -63,7 +63,7 @@ class SocialExpansionQueryServiceTest {
                 .willReturn(List.of());
 
         // when
-        service.getAnchorExpansion(userId, anchorId, 0.8);
+        socialExpansionQueryService.getAnchorExpansion(userId, anchorId, 0.8);
 
         // then
         verify(socialExpansionRepository).getRelatedNetworkByAnchor(userId, anchorId, 2, 50);
@@ -78,7 +78,7 @@ class SocialExpansionQueryServiceTest {
                 .willReturn(List.of());
 
         // when
-        service.getAnchorExpansion(userId, anchorId, 1.0);
+        socialExpansionQueryService.getAnchorExpansion(userId, anchorId, 1.0);
 
         // then
         verify(socialExpansionRepository).getRelatedNetworkByAnchor(userId, anchorId, 1, 150);
@@ -88,11 +88,11 @@ class SocialExpansionQueryServiceTest {
     @DisplayName("getAnchorExpansion: 범위를 벗어난 expansionValue는 예외를 던진다")
     void getAnchorExpansion_잘못된_expansionValue_예외() {
         // when & then
-        assertThatThrownBy(() -> service.getAnchorExpansion(1L, 10L, -0.1))
+        assertThatThrownBy(() -> socialExpansionQueryService.getAnchorExpansion(1L, 10L, -0.1))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.getAnchorExpansion(1L, 10L, 1.1))
+        assertThatThrownBy(() -> socialExpansionQueryService.getAnchorExpansion(1L, 10L, 1.1))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.getAnchorExpansion(1L, 10L, null))
+        assertThatThrownBy(() -> socialExpansionQueryService.getAnchorExpansion(1L, 10L, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -108,7 +108,7 @@ class SocialExpansionQueryServiceTest {
                 .willReturn(expected);
 
         // when
-        List<AnchorExpansionResult> result = service.getAnchorExpansion(userId, anchorId, 0.5);
+        List<AnchorExpansionResult> result = socialExpansionQueryService.getAnchorExpansion(userId, anchorId, 0.5);
 
         // then
         assertThat(result).isEqualTo(expected);
@@ -129,7 +129,7 @@ class SocialExpansionQueryServiceTest {
                 .willReturn(List.of());
 
         // when
-        service.getRecommendationsByAnchor(userId, anchorId);
+        socialExpansionQueryService.getRecommendationsByAnchor(userId, anchorId);
 
         // then
         verify(socialExpansionRepository).getRecommendedNetworkByAnchor(userId, anchorId, 3, 7);
@@ -144,7 +144,7 @@ class SocialExpansionQueryServiceTest {
                 .willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> service.getRecommendationsByAnchor(userId, anchorId))
+        assertThatThrownBy(() -> socialExpansionQueryService.getRecommendationsByAnchor(userId, anchorId))
                 .isInstanceOf(FriendshipNotFoundException.class);
     }
 
@@ -163,7 +163,7 @@ class SocialExpansionQueryServiceTest {
                 .willReturn(expected);
 
         // when
-        List<AnchorExpansionResult> result = service.getRecommendationsByAnchor(userId, anchorId);
+        List<AnchorExpansionResult> result = socialExpansionQueryService.getRecommendationsByAnchor(userId, anchorId);
 
         // then
         assertThat(result).isEqualTo(expected);

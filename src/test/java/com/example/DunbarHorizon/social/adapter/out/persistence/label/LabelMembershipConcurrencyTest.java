@@ -49,7 +49,7 @@ import static org.mockito.Mockito.doAnswer;
 class LabelMembershipConcurrencyTest {
 
     @Autowired private UserJpaRepository userJpaRepository;
-    @Autowired private LabelCommandService service;
+    @Autowired private LabelCommandService labelCommandService;
     @Autowired private JdbcTemplate jdbc;
     @MockitoBean private LabelMemberFriendshipLookup labelMemberFriendshipLookup;
     @MockitoSpyBean private LabelMemberRegistrar labelMemberRegistrar;
@@ -70,7 +70,7 @@ class LabelMembershipConcurrencyTest {
                 .willAnswer(call -> Set.of(call.<Long>getArgument(1)));
         given(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(anyLong(), anyCollection()))
                 .willAnswer(call -> Set.copyOf(call.<Collection<Long>>getArgument(1)));
-        labelId = service.createLabel(owner.getId(), "친구").getId();
+        labelId = labelCommandService.createLabel(owner.getId(), "친구").getId();
     }
 
     @AfterEach
@@ -94,8 +94,8 @@ class LabelMembershipConcurrencyTest {
 
         // when
         List<Throwable> failures = runConcurrently(
-                () -> service.addMemberToLabel(owner.getId(), labelId, first.getId()),
-                () -> service.addMemberToLabel(owner.getId(), labelId, first.getId()));
+                () -> labelCommandService.addMemberToLabel(owner.getId(), labelId, first.getId()),
+                () -> labelCommandService.addMemberToLabel(owner.getId(), labelId, first.getId()));
 
         // then
         assertThat(failures).singleElement()
@@ -118,11 +118,11 @@ class LabelMembershipConcurrencyTest {
 
         // when
         List<Throwable> failures = runConcurrently(
-                () -> service.addMemberToLabel(owner.getId(), labelId, first.getId()),
+                () -> labelCommandService.addMemberToLabel(owner.getId(), labelId, first.getId()),
                 () -> {
                     try {
                         assertThat(added.await(10, TimeUnit.SECONDS)).isTrue();
-                        service.deleteLabel(owner.getId(), labelId);
+                        labelCommandService.deleteLabel(owner.getId(), labelId);
                     } catch (InterruptedException e) {
                         throw new IllegalStateException(e);
                     } finally {
@@ -140,7 +140,7 @@ class LabelMembershipConcurrencyTest {
     @DisplayName("멤버 교체가 읽은 뒤 추가가 먼저 커밋되면 교체는 충돌로 실패하고 추가 결과가 남는다")
     void replaceMembers_FailsWithConflict_WhenMemberAddedAfterSnapshot() throws Exception {
         // given
-        service.addMemberToLabel(owner.getId(), labelId, first.getId());
+        labelCommandService.addMemberToLabel(owner.getId(), labelId, first.getId());
         var replaced = new CountDownLatch(1);
         var added = new CountDownLatch(1);
         doAnswer(call -> {
@@ -152,11 +152,11 @@ class LabelMembershipConcurrencyTest {
 
         // when
         List<Throwable> failures = runConcurrently(
-                () -> service.replaceLabelMembers(owner.getId(), labelId, List.of(second.getId())),
+                () -> labelCommandService.replaceLabelMembers(owner.getId(), labelId, List.of(second.getId())),
                 () -> {
                     try {
                         assertThat(replaced.await(10, TimeUnit.SECONDS)).isTrue();
-                        service.addMemberToLabel(owner.getId(), labelId, third.getId());
+                        labelCommandService.addMemberToLabel(owner.getId(), labelId, third.getId());
                     } catch (InterruptedException e) {
                         throw new IllegalStateException(e);
                     } finally {

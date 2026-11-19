@@ -55,11 +55,11 @@ class FriendshipMysqlScoreTest {
     private static final LocalDateTime OLD_INTERACTION = CREATED_AT.atStartOfDay();
     private static final LocalDateTime RECENT_INTERACTION = LocalDateTime.now().withNano(0);
 
-    @Autowired private UserJpaRepository users;
-    @Autowired private FriendshipPersistenceAdapter friendships;
-    @Autowired private FriendshipScoreRepository scoreRepository;
-    @Autowired private FriendshipScoreService scores;
-    @Autowired private FriendshipCommandService commands;
+    @Autowired private UserJpaRepository userJpaRepository;
+    @Autowired private FriendshipPersistenceAdapter friendshipPersistenceAdapter;
+    @Autowired private FriendshipScoreRepository friendshipScoreRepository;
+    @Autowired private FriendshipScoreService friendshipScoreService;
+    @Autowired private FriendshipCommandService friendshipCommandService;
     @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private JdbcTemplate jdbc;
 
@@ -69,15 +69,15 @@ class FriendshipMysqlScoreTest {
 
     @BeforeEach
     void setUp() {
-        low = users.save(User.createActive("low@mysql-scores.test", "low")).getId();
-        middle = users.save(User.createActive("middle@mysql-scores.test", "middle")).getId();
-        high = users.save(User.createActive("high@mysql-scores.test", "high")).getId();
+        low = userJpaRepository.save(User.createActive("low@mysql-scores.test", "low")).getId();
+        middle = userJpaRepository.save(User.createActive("middle@mysql-scores.test", "middle")).getId();
+        high = userJpaRepository.save(User.createActive("high@mysql-scores.test", "high")).getId();
     }
 
     @AfterEach
     void tearDown() {
         jdbc.update("DELETE FROM friendships WHERE low_user_id IN (?, ?, ?)", low, middle, high);
-        users.deleteAllById(List.of(low, middle, high));
+        userJpaRepository.deleteAllById(List.of(low, middle, high));
     }
 
     @Test
@@ -87,15 +87,15 @@ class FriendshipMysqlScoreTest {
         create(low, high, 21.4, 30, OLD_INTERACTION, OLD_INTERACTION);
 
         // when
-        scores.applyInteraction(high, low, InteractionType.BUZZ_REPLY);
+        friendshipScoreService.applyInteraction(high, low, InteractionType.BUZZ_REPLY);
 
         // then
         Friendship first = assertScores(low, high, 21.4, 32);
         assertThat(first.getLower().getLastInteractedAt()).isEqualTo(OLD_INTERACTION);
         assertThat(first.getHigher().getLastInteractedAt()).isAfter(OLD_INTERACTION);
-        scores.applyInteraction(low, high, InteractionType.VISIT);
+        friendshipScoreService.applyInteraction(low, high, InteractionType.VISIT);
         assertScores(low, high, 22.4, 32);
-        scores.applyInteraction(high, low, InteractionType.FLAG_ENDED);
+        friendshipScoreService.applyInteraction(high, low, InteractionType.FLAG_ENDED);
         assertScores(low, high, 32.4, 42);
     }
 
@@ -107,13 +107,13 @@ class FriendshipMysqlScoreTest {
         create(middle, high, 4, 8, OLD_INTERACTION, OLD_INTERACTION);
 
         // when
-        scores.applyFlagConclusion(low, List.of(high, middle), InteractionType.FLAG_ENDED, ScoreDirection.GRANT);
+        friendshipScoreService.applyFlagConclusion(low, List.of(high, middle), InteractionType.FLAG_ENDED, ScoreDirection.GRANT);
 
         // then
         assertScores(low, middle, 14, 18);
         assertScores(middle, high, 14, 18);
-        assertThat(friendships.existsBetween(low, high)).isFalse();
-        scores.applyFlagConclusion(low, List.of(middle, high), InteractionType.FLAG_PRESERVED, ScoreDirection.REVOKE);
+        assertThat(friendshipPersistenceAdapter.existsBetween(low, high)).isFalse();
+        friendshipScoreService.applyFlagConclusion(low, List.of(middle, high), InteractionType.FLAG_PRESERVED, ScoreDirection.REVOKE);
         assertScores(low, middle, 0, 3);
         assertScores(middle, high, 0, 3);
     }
@@ -149,15 +149,15 @@ class FriendshipMysqlScoreTest {
         try (var workers = Executors.newFixedThreadPool(3)) {
             var lowSettings = workers.submit(() -> {
                 await(start);
-                commands.updateSettings(low, high, new FriendshipUpdateCommand(low, high, "친구", true, null));
+                friendshipCommandService.updateSettings(low, high, new FriendshipUpdateCommand(low, high, "친구", true, null));
             });
             var highSettings = workers.submit(() -> {
                 await(start);
-                commands.updateSettings(high, low, new FriendshipUpdateCommand(high, low, null, null, false));
+                friendshipCommandService.updateSettings(high, low, new FriendshipUpdateCommand(high, low, null, null, false));
             });
             var score = workers.submit(() -> {
                 await(start);
-                scores.applyInteraction(high, low, InteractionType.VISIT);
+                friendshipScoreService.applyInteraction(high, low, InteractionType.VISIT);
             });
             start.countDown();
             for (var update : List.of(lowSettings, highSettings, score)) {
@@ -184,7 +184,7 @@ class FriendshipMysqlScoreTest {
         var transactions = new TransactionTemplate(transactionManager);
 
         // when
-        transactions.executeWithoutResult(status -> scoreRepository.applyDecay(0.5, 1, OLD_INTERACTION));
+        transactions.executeWithoutResult(status -> friendshipScoreRepository.applyDecay(0.5, 1, OLD_INTERACTION));
 
         // then
         var decayed = assertScores(low, middle, 1, 42);
@@ -208,7 +208,7 @@ class FriendshipMysqlScoreTest {
                         recognition(high, 0.5, OLD_INTERACTION)),
                 Friendship.restore(CREATED_AT, recognition(low, floor, decayTime),
                         recognition(high, 63.2, decayTime)));
-        new TransactionTemplate(transactionManager).executeWithoutResult(status -> inputs.forEach(friendships::create));
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> inputs.forEach(friendshipPersistenceAdapter::create));
         List<Friendship> expected = List.of(
                 Friendship.restore(CREATED_AT, recognition(low, 40, OLD_INTERACTION),
                         recognition(middle, 20, decayTime.plusSeconds(1))),
@@ -220,13 +220,13 @@ class FriendshipMysqlScoreTest {
         var transactions = new TransactionTemplate(transactionManager);
 
         // when
-        transactions.executeWithoutResult(status -> scoreRepository.applyDecay(rate, floor, decayTime));
+        transactions.executeWithoutResult(status -> friendshipScoreRepository.applyDecay(rate, floor, decayTime));
 
         // then
         for (Friendship domain : expected) {
             Long lowerId = domain.getLower().getOwnerId();
             Long higherId = domain.getHigher().getOwnerId();
-            Friendship stored = friendships.findBetween(lowerId, higherId).orElseThrow();
+            Friendship stored = friendshipPersistenceAdapter.findBetween(lowerId, higherId).orElseThrow();
             assertThat(stored.getMyInterestScore(lowerId))
                     .isCloseTo(domain.getMyInterestScore(lowerId), within(1e-9));
             assertThat(stored.getMyInterestScore(higherId))
@@ -248,17 +248,17 @@ class FriendshipMysqlScoreTest {
         // when
         try (var workers = Executors.newFixedThreadPool(2)) {
             var interaction = workers.submit(() -> transactions.executeWithoutResult(status -> {
-                var locked = scoreRepository.findBetweenForUpdate(low, high).stream().toList();
+                var locked = friendshipScoreRepository.findBetweenForUpdate(low, high).stream().toList();
                 rowLocked.countDown();
                 await(finishInteraction);
                 locked.getFirst().adjustInterestScore(high, 2);
-                scoreRepository.saveInterestScores(locked);
+                friendshipScoreRepository.saveInterestScores(locked);
             }));
             try {
                 await(rowLocked);
                 var decay = workers.submit(() -> {
                     decayStarted.countDown();
-                    scores.processDecay();
+                    friendshipScoreService.processDecay();
                 });
                 await(decayStarted);
                 finishInteraction.countDown();
@@ -276,14 +276,14 @@ class FriendshipMysqlScoreTest {
     private void applyVisits(CountDownLatch start, Long actor, Long target) {
         await(start);
         for (int visit = 0; visit < 20; visit++) {
-            scores.applyInteraction(actor, target, InteractionType.VISIT);
+            friendshipScoreService.applyInteraction(actor, target, InteractionType.VISIT);
         }
     }
 
     private void create(Long first, Long second, double firstScore, double secondScore,
                         LocalDateTime firstTime, LocalDateTime secondTime) {
         new TransactionTemplate(transactionManager).executeWithoutResult(status ->
-                friendships.create(Friendship.restore(CREATED_AT,
+                friendshipPersistenceAdapter.create(Friendship.restore(CREATED_AT,
                         recognition(first, firstScore, firstTime), recognition(second, secondScore, secondTime))));
     }
 
@@ -293,7 +293,7 @@ class FriendshipMysqlScoreTest {
     }
 
     private Friendship assertScores(Long first, Long second, double firstScore, double secondScore) {
-        Friendship friendship = friendships.findBetween(first, second).orElseThrow();
+        Friendship friendship = friendshipPersistenceAdapter.findBetween(first, second).orElseThrow();
         assertThat(friendship.getMyInterestScore(first)).isCloseTo(firstScore, within(1e-9));
         assertThat(friendship.getMyInterestScore(second)).isCloseTo(secondScore, within(1e-9));
         assertThat(friendship.getIntimacy()).isCloseTo(intimacy(firstScore, secondScore), within(1e-9));

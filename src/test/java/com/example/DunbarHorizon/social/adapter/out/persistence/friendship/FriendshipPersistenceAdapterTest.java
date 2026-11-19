@@ -35,8 +35,8 @@ class FriendshipPersistenceAdapterTest {
     private static final double INTIMACY =
             Math.sqrt(FriendRecognition.normalize(51.0) * FriendRecognition.normalize(32.0));
 
-    @Autowired private FriendshipPersistenceAdapter repository;
-    @Autowired private FriendshipScoreRepository scoreRepository;
+    @Autowired private FriendshipPersistenceAdapter friendshipPersistenceAdapter;
+    @Autowired private FriendshipScoreRepository friendshipScoreRepository;
     @Autowired private LabelMemberFriendshipLookup labelMemberFriendshipLookup;
     @Autowired private TestEntityManager em;
     @Autowired private JdbcTemplate jdbc;
@@ -54,12 +54,12 @@ class FriendshipPersistenceAdapterTest {
     @DisplayName("두 사용자 방향에서 같은 관계 한 건을 읽고 각자의 설정을 복원한다")
     void findBetween_ReturnsSameRelationship_FromBothDirections() {
         // given
-        repository.create(friendship(low, high));
+        friendshipPersistenceAdapter.create(friendship(low, high));
         em.clear();
 
         // when
-        var fromLow = repository.findBetween(low.getId(), high.getId());
-        var fromHigh = repository.findBetween(high.getId(), low.getId());
+        var fromLow = friendshipPersistenceAdapter.findBetween(low.getId(), high.getId());
+        var fromHigh = friendshipPersistenceAdapter.findBetween(high.getId(), low.getId());
 
         // then
         assertThat(fromLow).get().satisfies(friendship -> {
@@ -80,14 +80,14 @@ class FriendshipPersistenceAdapterTest {
             assertThat(friendship.isMuted(high.getId())).isFalse();
             assertThat(friendship.isRoutable(high.getId())).isTrue();
         });
-        assertThat(repository.existsBetween(high.getId(), low.getId())).isTrue();
+        assertThat(friendshipPersistenceAdapter.existsBetween(high.getId(), low.getId())).isTrue();
     }
 
     @Test
     @DisplayName("활성 사용자 쌍의 단건 조회, 존재 확인, 삭제는 각각 SQL 한 문장으로 처리한다")
     void pairOperations_UseOneStatementEach_ForActiveUsers() {
         // given
-        repository.create(friendship(low, high));
+        friendshipPersistenceAdapter.create(friendship(low, high));
         em.clear();
         var statistics = em.getEntityManager().getEntityManagerFactory()
                 .unwrap(SessionFactory.class).getStatistics();
@@ -97,11 +97,11 @@ class FriendshipPersistenceAdapterTest {
         try {
             // when
             long beforeFind = statistics.getPrepareStatementCount();
-            var found = repository.findBetween(high.getId(), low.getId());
+            var found = friendshipPersistenceAdapter.findBetween(high.getId(), low.getId());
             long afterFind = statistics.getPrepareStatementCount();
-            boolean exists = repository.existsBetween(high.getId(), low.getId());
+            boolean exists = friendshipPersistenceAdapter.existsBetween(high.getId(), low.getId());
             long afterExists = statistics.getPrepareStatementCount();
-            boolean deleted = repository.deleteBetween(high.getId(), low.getId());
+            boolean deleted = friendshipPersistenceAdapter.deleteBetween(high.getId(), low.getId());
             long afterDelete = statistics.getPrepareStatementCount();
 
             // then
@@ -120,16 +120,16 @@ class FriendshipPersistenceAdapterTest {
     @DisplayName("이미 친구인 쌍을 다시 생성하면 친구 중복 예외로 끝나고 기존 행의 설정과 점수는 그대로다")
     void create_ThrowsAlreadyFriends_DuplicatePair() {
         // given
-        repository.create(friendship(low, high));
+        friendshipPersistenceAdapter.create(friendship(low, high));
         em.clear();
         Friendship duplicate = friendship(high, low);
         duplicate.updateSettings(low.getId(), "overwritten", false, true);
         duplicate.adjustMutualInterestScore(10);
 
         // when & then
-        assertThatThrownBy(() -> repository.create(duplicate)).isInstanceOf(AlreadyFriendsException.class);
+        assertThatThrownBy(() -> friendshipPersistenceAdapter.create(duplicate)).isInstanceOf(AlreadyFriendsException.class);
         em.clear();
-        assertThat(repository.findBetween(low.getId(), high.getId())).get().satisfies(friendship -> {
+        assertThat(friendshipPersistenceAdapter.findBetween(low.getId(), high.getId())).get().satisfies(friendship -> {
             assertThat(friendship.getFriendAlias(low.getId())).isEqualTo("from low");
             assertThat(friendship.isMuted(low.getId())).isTrue();
             assertThat(friendship.getMyInterestScore(low.getId())).isEqualTo(51.0);
@@ -141,10 +141,10 @@ class FriendshipPersistenceAdapterTest {
     @DisplayName("이미 영속 상태인 쌍을 다시 생성해도 친구 중복 예외로 끝난다")
     void create_ThrowsAlreadyFriends_PairInPersistenceContext() {
         // given
-        repository.create(friendship(low, high));
+        friendshipPersistenceAdapter.create(friendship(low, high));
 
         // when & then
-        assertThatThrownBy(() -> repository.create(friendship(high, low))).isInstanceOf(AlreadyFriendsException.class);
+        assertThatThrownBy(() -> friendshipPersistenceAdapter.create(friendship(high, low))).isInstanceOf(AlreadyFriendsException.class);
     }
 
     @Test
@@ -166,9 +166,9 @@ class FriendshipPersistenceAdapterTest {
     @DisplayName("설정 변경은 본인 쪽 설정 열만 쓰고 로드 뒤 바뀐 상대 설정과 양쪽 점수를 보존한다")
     void updateSettings_WritesOnlyOwnSettings_OtherColumnsChangedAfterLoad() {
         // given
-        repository.create(friendship(low, high));
+        friendshipPersistenceAdapter.create(friendship(low, high));
         em.clear();
-        Friendship loaded = repository.findBetween(low.getId(), high.getId()).orElseThrow();
+        Friendship loaded = friendshipPersistenceAdapter.findBetween(low.getId(), high.getId()).orElseThrow();
         jdbc.update("""
                 UPDATE friendships SET low_friend_alias = 'changed by low', low_is_muted = FALSE,
                     low_interest_score = 60, high_interest_score = 40,
@@ -183,7 +183,7 @@ class FriendshipPersistenceAdapterTest {
         em.clear();
 
         // then
-        Friendship updated = repository.findBetween(low.getId(), high.getId()).orElseThrow();
+        Friendship updated = friendshipPersistenceAdapter.findBetween(low.getId(), high.getId()).orElseThrow();
         assertThat(updated.getFriendAlias(high.getId())).isEmpty();
         assertThat(updated.isMuted(high.getId())).isTrue();
         assertThat(updated.isRoutable(high.getId())).isFalse();
@@ -207,7 +207,7 @@ class FriendshipPersistenceAdapterTest {
                 FriendRecognition.restore(high.getId(), "", 21.4, INTERACTED_AT, false, true));
 
         // when
-        repository.create(friendship);
+        friendshipPersistenceAdapter.create(friendship);
 
         // then
         assertThat(jdbc.queryForList("""
@@ -221,7 +221,7 @@ class FriendshipPersistenceAdapterTest {
     @DisplayName("계정이 비활성화되면 모든 조회·잠금·삭제에서 관계가 없는 것으로 다뤄지고 행은 남는다")
     void lookups_TreatAsMissing_InactiveAccount() {
         // given
-        repository.create(friendship(low, high));
+        friendshipPersistenceAdapter.create(friendship(low, high));
         high.deactivate();
         em.flush();
         em.clear();
@@ -229,13 +229,13 @@ class FriendshipPersistenceAdapterTest {
         Long friend = high.getId();
 
         // when & then
-        assertThat(repository.findBetween(me, friend)).isEmpty();
-        assertThat(repository.existsBetween(me, friend)).isFalse();
-        assertThat(scoreRepository.findBetweenForUpdate(me, friend)).isEmpty();
+        assertThat(friendshipPersistenceAdapter.findBetween(me, friend)).isEmpty();
+        assertThat(friendshipPersistenceAdapter.existsBetween(me, friend)).isFalse();
+        assertThat(friendshipScoreRepository.findBetweenForUpdate(me, friend)).isEmpty();
         assertThat(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(me, List.of(friend))).isEmpty();
         assertThat(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(friend, List.of(me))).isEmpty();
-        assertThat(scoreRepository.findAllAmongForUpdate(List.of(me, friend))).isEmpty();
-        assertThat(repository.deleteBetween(me, friend)).isFalse();
+        assertThat(friendshipScoreRepository.findAllAmongForUpdate(List.of(me, friend))).isEmpty();
+        assertThat(friendshipPersistenceAdapter.deleteBetween(me, friend)).isFalse();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
                 Integer.class, me, friend)).isEqualTo(1);
     }
@@ -244,33 +244,33 @@ class FriendshipPersistenceAdapterTest {
     @DisplayName("같은 사용자 두 명으로 조회하면 예외 없이 관계 없음으로 끝난다")
     void lookups_ReturnNothing_SameUser() {
         // given
-        repository.create(friendship(low, high));
+        friendshipPersistenceAdapter.create(friendship(low, high));
         Long self = low.getId();
 
         // when & then
-        assertThat(repository.findBetween(self, self)).isEmpty();
-        assertThat(repository.existsBetween(self, self)).isFalse();
-        assertThat(scoreRepository.findBetweenForUpdate(self, self)).isEmpty();
+        assertThat(friendshipPersistenceAdapter.findBetween(self, self)).isEmpty();
+        assertThat(friendshipPersistenceAdapter.existsBetween(self, self)).isFalse();
+        assertThat(friendshipScoreRepository.findBetweenForUpdate(self, self)).isEmpty();
         assertThat(labelMemberFriendshipLookup.findFriendIdsWithSharedLock(self, List.of(self))).isEmpty();
-        assertThat(scoreRepository.findAllAmongForUpdate(List.of(self, self))).isEmpty();
-        assertThat(repository.deleteBetween(self, self)).isFalse();
+        assertThat(friendshipScoreRepository.findAllAmongForUpdate(List.of(self, self))).isEmpty();
+        assertThat(friendshipPersistenceAdapter.deleteBetween(self, self)).isFalse();
     }
 
     @Test
     @DisplayName("관계를 삭제하면 어느 방향에서도 조회되지 않는다")
     void deleteBetween_RemovesPair_FromBothDirections() {
         // given
-        repository.create(friendship(low, high));
+        friendshipPersistenceAdapter.create(friendship(low, high));
         em.clear();
 
         // when
-        boolean deleted = repository.deleteBetween(high.getId(), low.getId());
+        boolean deleted = friendshipPersistenceAdapter.deleteBetween(high.getId(), low.getId());
 
         // then
         assertThat(deleted).isTrue();
-        assertThat(repository.findBetween(low.getId(), high.getId())).isEmpty();
-        assertThat(repository.existsBetween(high.getId(), low.getId())).isFalse();
-        assertThat(repository.deleteBetween(low.getId(), high.getId())).isFalse();
+        assertThat(friendshipPersistenceAdapter.findBetween(low.getId(), high.getId())).isEmpty();
+        assertThat(friendshipPersistenceAdapter.existsBetween(high.getId(), low.getId())).isFalse();
+        assertThat(friendshipPersistenceAdapter.deleteBetween(low.getId(), high.getId())).isFalse();
     }
 
     @Test
@@ -278,7 +278,7 @@ class FriendshipPersistenceAdapterTest {
     void findFriendIdsWithSharedLock_ReturnsExistingFriendships_MixedCandidates() {
         // given
         User third = createUser("third");
-        repository.create(friendship(low, high));
+        friendshipPersistenceAdapter.create(friendship(low, high));
 
         // when
         var lockedFriendIds = labelMemberFriendshipLookup.findFriendIdsWithSharedLock(
@@ -294,9 +294,9 @@ class FriendshipPersistenceAdapterTest {
         // given
         User third = createUser("third");
         User inactive = createUser("inactive");
-        repository.create(friendship(low, high));
-        repository.create(friendship(high, third));
-        repository.create(friendship(high, inactive));
+        friendshipPersistenceAdapter.create(friendship(low, high));
+        friendshipPersistenceAdapter.create(friendship(high, third));
+        friendshipPersistenceAdapter.create(friendship(high, inactive));
         inactive.deactivate();
         em.flush();
         em.clear();
@@ -315,12 +315,12 @@ class FriendshipPersistenceAdapterTest {
         // given
         User third = createUser("third");
         User outsider = createUser("outsider");
-        repository.create(friendship(high, third));
-        repository.create(friendship(low, high));
-        repository.create(friendship(low, outsider));
+        friendshipPersistenceAdapter.create(friendship(high, third));
+        friendshipPersistenceAdapter.create(friendship(low, high));
+        friendshipPersistenceAdapter.create(friendship(low, outsider));
 
         // when
-        var locked = scoreRepository.findAllAmongForUpdate(List.of(third.getId(), low.getId(), high.getId(), low.getId()));
+        var locked = friendshipScoreRepository.findAllAmongForUpdate(List.of(third.getId(), low.getId(), high.getId(), low.getId()));
 
         // then
         assertThat(locked).extracting(friendship -> friendship.getLower().getOwnerId() + "_"

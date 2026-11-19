@@ -22,10 +22,10 @@ import static org.mockito.BDDMockito.given;
 @ExtendWith(MockitoExtension.class)
 class FriendshipQueryServiceTest {
 
-    @InjectMocks private FriendshipQueryService service;
+    @InjectMocks private FriendshipQueryService friendshipQueryService;
     @Mock private FriendshipRepository friendshipRepository;
     @Mock private FriendshipQueryRepository friendshipQueryRepository;
-    @Mock private ImageUrlResolverPort images;
+    @Mock private ImageUrlResolverPort imageUrlResolverPort;
 
     @Test
     @DisplayName("계정 원본의 ID, 닉네임, 이미지 URL을 소셜 프로필로 반환한다")
@@ -35,10 +35,10 @@ class FriendshipQueryServiceTest {
         String imageKey = "profiles/friend";
         given(friendshipQueryRepository.findActiveProfile(2L))
                 .willReturn(Optional.of(new UserProfile(2L, "친구", imageKey)));
-        given(images.resolveUrl(imageKey)).willReturn(imageUrl);
+        given(imageUrlResolverPort.resolveUrl(imageKey)).willReturn(imageUrl);
 
         // when
-        SocialProfileResult result = service.getSocialProfile(2L);
+        SocialProfileResult result = friendshipQueryService.getSocialProfile(2L);
 
         // then
         assertThat(result).isEqualTo(new SocialProfileResult(2L, "친구", imageUrl));
@@ -52,7 +52,7 @@ class FriendshipQueryServiceTest {
                 .willReturn(Optional.of(new UserProfile(2L, "친구", null)));
 
         // when
-        SocialProfileResult result = service.getSocialProfile(2L);
+        SocialProfileResult result = friendshipQueryService.getSocialProfile(2L);
 
         // then
         assertThat(result.profileImageUrl()).isNull();
@@ -65,7 +65,7 @@ class FriendshipQueryServiceTest {
         given(friendshipQueryRepository.findActiveProfile(2L)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> service.getSocialProfile(2L))
+        assertThatThrownBy(() -> friendshipQueryService.getSocialProfile(2L))
                 .isInstanceOf(UserReferenceNotFoundException.class);
     }
 }
