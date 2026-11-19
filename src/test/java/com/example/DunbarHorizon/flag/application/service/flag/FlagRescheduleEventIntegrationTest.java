@@ -1,11 +1,13 @@
 package com.example.DunbarHorizon.flag.application.service.flag;
 
+import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagJpaRepository;
 import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
 import com.example.DunbarHorizon.flag.application.service.flag.FlagModificationService;
 import com.example.DunbarHorizon.flag.application.dto.command.FlagHostCommand;
 import com.example.DunbarHorizon.flag.application.dto.command.FlagScheduleUpdateCommand;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagMeetingChangedEvent;
 import com.example.DunbarHorizon.support.TestContainerConfig;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,6 +18,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.event.EventListener;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -59,6 +63,8 @@ class FlagRescheduleEventIntegrationTest {
 
     @Autowired private FlagHostService flagHostService;
     @Autowired private FlagModificationService flagModificationService;
+    @Autowired private FlagJpaRepository flagJpaRepository;
+    @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private MeetingChangedRecorder recorder;
 
     private static final Long HOST_ID = 4103L;
@@ -74,6 +80,14 @@ class FlagRescheduleEventIntegrationTest {
         flagId = flagHostService.hostFlag(new FlagHostCommand(
                 HOST_ID, TITLE, "설명", 10,
                 base.plusHours(2), base.plusHours(3), base.plusHours(4)));
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (flagId == null) return;
+
+        new TransactionTemplate(transactionManager).executeWithoutResult(
+                status -> flagJpaRepository.hardDeleteByIdsIn(List.of(flagId)));
     }
 
     @Test

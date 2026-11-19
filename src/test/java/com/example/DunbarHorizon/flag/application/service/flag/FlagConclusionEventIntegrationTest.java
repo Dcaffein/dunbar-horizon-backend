@@ -4,8 +4,10 @@ import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
 import com.example.DunbarHorizon.flag.application.service.memorial.FlagMemorialCommandService;
 import com.example.DunbarHorizon.flag.application.dto.command.FlagHostCommand;
 import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagJpaRepository;
+import com.example.DunbarHorizon.flag.adapter.out.persistence.jpa.FlagMemorialJpaRepository;
 import com.example.DunbarHorizon.flag.domain.flag.event.FlagConcludedEvent;
 import com.example.DunbarHorizon.support.TestContainerConfig;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,6 +18,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.event.EventListener;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -56,6 +60,8 @@ class FlagConclusionEventIntegrationTest {
     @Autowired private FlagHostService flagHostService;
     @Autowired private FlagMemorialCommandService flagMemorialCommandService;
     @Autowired private FlagJpaRepository flagJpaRepository;
+    @Autowired private FlagMemorialJpaRepository flagMemorialJpaRepository;
+    @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private ConclusionRecorder recorder;
 
     private static final Long HOST_ID = 4201L;
@@ -69,6 +75,17 @@ class FlagConclusionEventIntegrationTest {
         endedFlagId = flagHostService.hostFlag(new FlagHostCommand(
                 HOST_ID, "종료된 모임", "설명", 10,
                 base.minusHours(4), base.minusHours(3), base.minusHours(1)));
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (endedFlagId == null) return;
+
+        List<Long> flagIds = List.of(endedFlagId);
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            flagMemorialJpaRepository.hardDeleteByFlagIdsIn(flagIds);
+            flagJpaRepository.hardDeleteByIdsIn(flagIds);
+        });
     }
 
     @Test
