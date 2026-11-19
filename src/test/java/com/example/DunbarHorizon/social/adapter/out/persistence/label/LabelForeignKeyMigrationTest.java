@@ -5,12 +5,12 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.jdbc.JdbcConnectionDetails;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.MySQLContainer;
 
 import java.util.List;
 import java.util.Map;
@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class LabelForeignKeyMigrationTest {
 
-    @Autowired private MySQLContainer<?> mysqlContainer;
+    @Autowired private JdbcConnectionDetails connectionDetails;
     @Autowired private JdbcTemplate jdbcTemplate;
 
     @Test
@@ -33,11 +33,12 @@ class LabelForeignKeyMigrationTest {
         assertThat(foreignKeyCount(jdbcTemplate)).isZero();
         String databaseName = "label_migration_" + UUID.randomUUID().toString().replace("-", "");
         jdbcTemplate.execute("CREATE DATABASE " + databaseName);
-        String jdbcUrl = mysqlContainer.getJdbcUrl()
-                .replace("/" + mysqlContainer.getDatabaseName(), "/" + databaseName);
-        var dataSource = new DriverManagerDataSource(jdbcUrl, mysqlContainer.getUsername(), mysqlContainer.getPassword());
-        var migrationJdbc = new JdbcTemplate(dataSource);
         try {
+            var dataSource = new DriverManagerDataSource(
+                    connectionDetails.getJdbcUrl(), connectionDetails.getUsername(), connectionDetails.getPassword());
+            dataSource.setCatalog(databaseName);
+            var migrationJdbc = new JdbcTemplate(dataSource);
+
             Flyway.configure().dataSource(dataSource).locations("classpath:db/migration").target("10").load().migrate();
             migrationJdbc.update("INSERT INTO users (user_id, email, nickname, role, status) VALUES (1, 'owner@migration.test', 'owner', 'USER', 'ACTIVE')");
             migrationJdbc.update("INSERT INTO users (user_id, email, nickname, role, status) VALUES (2, 'member@migration.test', 'member', 'USER', 'ACTIVE')");

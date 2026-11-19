@@ -8,9 +8,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.jdbc.JdbcConnectionDetails;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.testcontainers.containers.MySQLContainer;
 
 import java.util.List;
 
@@ -25,14 +25,14 @@ class FlagUniqueConstraintMigrationTest {
 
     private static final String SCHEMA = "flag_v4_migration_check";
 
-    @Autowired private MySQLContainer<?> mysql;
+    @Autowired private JdbcConnectionDetails connectionDetails;
 
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setUp() {
         jdbcTemplate = new JdbcTemplate(new DriverManagerDataSource(
-                mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword()));
+                connectionDetails.getJdbcUrl(), connectionDetails.getUsername(), connectionDetails.getPassword()));
         jdbcTemplate.execute("DROP DATABASE IF EXISTS " + SCHEMA);
     }
 
@@ -64,7 +64,7 @@ class FlagUniqueConstraintMigrationTest {
 
     private FluentConfiguration flyway() {
         return Flyway.configure()
-                .dataSource(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword())
+                .dataSource(connectionDetails.getJdbcUrl(), connectionDetails.getUsername(), connectionDetails.getPassword())
                 .schemas(SCHEMA)
                 .defaultSchema(SCHEMA)
                 .createSchemas(true)
