@@ -51,8 +51,8 @@ class LabelPersistenceAdapterTest {
     @Autowired private LabelQueryRepository labelQueryRepository;
     @Autowired private LabelRepository labelRepository;
     @Autowired private JdbcTemplate jdbc;
-    @Autowired private FriendshipPersistenceAdapter friendships;
-    @Autowired private LabelCommandService service;
+    @Autowired private FriendshipPersistenceAdapter friendshipPersistenceAdapter;
+    @Autowired private LabelCommandService labelCommandService;
     @Autowired private LabelQueryService labelQueryService;
 
     private User owner;
@@ -77,10 +77,10 @@ class LabelPersistenceAdapterTest {
         assertThat(labelRepository.findNamesOfActiveOwner(owner.getId(), null)).contains(Set.of());
         assertThat(labelRepository.findNamesOfActiveOwner(first.getId(), null)).isEmpty();
         assertThat(labelRepository.findNamesOfActiveOwner(Long.MAX_VALUE, null)).isEmpty();
-        assertThatThrownBy(() -> service.createLabel(first.getId(), "친구"))
+        assertThatThrownBy(() -> labelCommandService.createLabel(first.getId(), "친구"))
                 .isInstanceOf(UserReferenceNotFoundException.class);
 
-        Label label = service.createLabel(owner.getId(), "친구");
+        Label label = labelCommandService.createLabel(owner.getId(), "친구");
         assertThat(labelRepository.findNamesOfActiveOwner(owner.getId(), null)).contains(Set.of("친구"));
         assertThat(labelRepository.findNamesOfActiveOwner(owner.getId(), label.getId())).contains(Set.of());
     }
@@ -89,12 +89,12 @@ class LabelPersistenceAdapterTest {
     @DisplayName("라벨을 생성하고 이름을 바꾸면 기존 응답으로 조회된다")
     void getLabel_ReturnsExistingResponse_AfterRename() {
         // given
-        Label label = service.createLabel(owner.getId(), "친구");
+        Label label = labelCommandService.createLabel(owner.getId(), "친구");
         connect(owner, first);
-        service.addMemberToLabel(owner.getId(), label.getId(), first.getId());
+        labelCommandService.addMemberToLabel(owner.getId(), label.getId(), first.getId());
 
         // when
-        service.updateLabel(label.getId(), owner.getId(), "함께 운동");
+        labelCommandService.updateLabel(label.getId(), owner.getId(), "함께 운동");
 
         // then
         var expected = new LabelResult(label.getId(), "함께 운동", 1);
@@ -111,7 +111,7 @@ class LabelPersistenceAdapterTest {
     @Test
     @DisplayName("사전 조회를 우회한 이름 충돌도 JPA flush에서 도메인 예외로 변환한다")
     void create_RejectsDuplicate_DatabaseConstraint() {
-        service.createLabel(owner.getId(), "Work");
+        labelCommandService.createLabel(owner.getId(), "Work");
 
         Label duplicate = LabelTestFactory.createLabel(owner.getId(), "Work");
         assertThatThrownBy(() -> labelRepository.save(duplicate))
@@ -122,19 +122,19 @@ class LabelPersistenceAdapterTest {
     @DisplayName("비소유자의 조회·삭제를 거부하고 소유자 삭제는 멤버십도 없앤다")
     void deleteLabel_DeletesMemberships_OwnerOnly() {
         // given
-        Label label = service.createLabel(owner.getId(), "친구");
+        Label label = labelCommandService.createLabel(owner.getId(), "친구");
         connect(owner, first);
-        service.addMemberToLabel(owner.getId(), label.getId(), first.getId());
+        labelCommandService.addMemberToLabel(owner.getId(), label.getId(), first.getId());
 
         // when & then
         assertThatThrownBy(() -> labelQueryService.getLabelById(first.getId(), label.getId()))
                 .isInstanceOf(LabelAuthorizationException.class);
         assertThatThrownBy(() -> labelQueryService.getLabelMembers(first.getId(), label.getId()))
                 .isInstanceOf(LabelAuthorizationException.class);
-        assertThatThrownBy(() -> service.deleteLabel(first.getId(), label.getId()))
+        assertThatThrownBy(() -> labelCommandService.deleteLabel(first.getId(), label.getId()))
                 .isInstanceOf(LabelAuthorizationException.class);
         assertThat(hasLabelMember(jdbc, label.getId(), first.getId())).isTrue();
-        service.deleteLabel(owner.getId(), label.getId());
+        labelCommandService.deleteLabel(owner.getId(), label.getId());
         assertThat(hasLabelMember(jdbc, label.getId(), first.getId())).isFalse();
         assertThatThrownBy(() -> labelQueryService.getLabelById(owner.getId(), label.getId()))
                 .isInstanceOf(LabelNotFoundException.class);
@@ -144,19 +144,19 @@ class LabelPersistenceAdapterTest {
     @DisplayName("친구만 추가할 수 있고 같은 멤버는 중복 등록할 수 없다")
     void addMember_RejectsNonFriendAndDuplicate() {
         // given
-        Label label = service.createLabel(owner.getId(), "친구");
+        Label label = labelCommandService.createLabel(owner.getId(), "친구");
         connect(owner, first);
-        service.addMemberToLabel(owner.getId(), label.getId(), first.getId());
+        labelCommandService.addMemberToLabel(owner.getId(), label.getId(), first.getId());
 
         // when & then
-        assertThatThrownBy(() -> service.addMemberToLabel(owner.getId(), label.getId(), first.getId()))
+        assertThatThrownBy(() -> labelCommandService.addMemberToLabel(owner.getId(), label.getId(), first.getId()))
                 .isInstanceOf(DuplicateLabelMemberException.class);
-        assertThatThrownBy(() -> service.addMemberToLabel(owner.getId(), label.getId(), second.getId()))
+        assertThatThrownBy(() -> labelCommandService.addMemberToLabel(owner.getId(), label.getId(), second.getId()))
                 .isInstanceOf(FriendshipNotFoundException.class);
-        assertThatThrownBy(() -> service.addMemberToLabel(owner.getId(), label.getId(), owner.getId()))
+        assertThatThrownBy(() -> labelCommandService.addMemberToLabel(owner.getId(), label.getId(), owner.getId()))
                 .isInstanceOf(FriendshipNotFoundException.class);
         assertThat(labelQueryService.getLabelMembers(owner.getId(), label.getId())).hasSize(1);
-        service.removeMemberFromLabel(owner.getId(), label.getId(), first.getId());
+        labelCommandService.removeMemberFromLabel(owner.getId(), label.getId(), first.getId());
         assertThat(labelQueryService.getLabelMembers(owner.getId(), label.getId())).isEmpty();
     }
 
@@ -164,15 +164,15 @@ class LabelPersistenceAdapterTest {
     @DisplayName("비활성 친구를 멤버로 추가하면 관계 없음이 아니라 사용자 없음으로 거부한다")
     void addMember_RejectsInactiveFriend_AsMissingUser() {
         // given
-        Label label = service.createLabel(owner.getId(), "친구");
+        Label label = labelCommandService.createLabel(owner.getId(), "친구");
         connect(owner, first);
         first.deactivate();
         em.flush();
 
         // when & then
-        assertThatThrownBy(() -> service.addMemberToLabel(owner.getId(), label.getId(), first.getId()))
+        assertThatThrownBy(() -> labelCommandService.addMemberToLabel(owner.getId(), label.getId(), first.getId()))
                 .isInstanceOf(UserReferenceNotFoundException.class);
-        assertThatThrownBy(() -> service.addMemberToLabel(owner.getId(), label.getId(), Long.MAX_VALUE))
+        assertThatThrownBy(() -> labelCommandService.addMemberToLabel(owner.getId(), label.getId(), Long.MAX_VALUE))
                 .isInstanceOf(UserReferenceNotFoundException.class);
         assertThat(labelQueryService.getLabelMembers(owner.getId(), label.getId())).isEmpty();
     }
@@ -181,21 +181,21 @@ class LabelPersistenceAdapterTest {
     @DisplayName("멤버 교체는 중복을 제거하고 빈 목록은 라벨을 비운다")
     void replaceMembers_StoresExactlyTheRequestedFriends() {
         // given
-        Label label = service.createLabel(owner.getId(), "친구");
+        Label label = labelCommandService.createLabel(owner.getId(), "친구");
         connect(owner, first);
         connect(owner, second);
-        service.addMemberToLabel(owner.getId(), label.getId(), first.getId());
+        labelCommandService.addMemberToLabel(owner.getId(), label.getId(), first.getId());
 
         // when
-        service.replaceLabelMembers(owner.getId(), label.getId(), List.of(second.getId(), second.getId()));
+        labelCommandService.replaceLabelMembers(owner.getId(), label.getId(), List.of(second.getId(), second.getId()));
 
         // then
         assertThat(labelQueryService.getLabelMembers(owner.getId(), label.getId()))
                 .extracting(LabelMemberResult::id).containsExactly(second.getId());
-        assertThatThrownBy(() -> service.replaceLabelMembers(owner.getId(), label.getId(), List.of(owner.getId())))
+        assertThatThrownBy(() -> labelCommandService.replaceLabelMembers(owner.getId(), label.getId(), List.of(owner.getId())))
                 .isInstanceOf(NonFriendLabelMemberException.class);
         assertThat(labelQueryService.getLabelById(owner.getId(), label.getId()).memberCount()).isEqualTo(1);
-        service.replaceLabelMembers(owner.getId(), label.getId(), List.of());
+        labelCommandService.replaceLabelMembers(owner.getId(), label.getId(), List.of());
         assertThat(labelQueryService.getLabelMembers(owner.getId(), label.getId())).isEmpty();
     }
 
@@ -204,14 +204,14 @@ class LabelPersistenceAdapterTest {
     void fetchRecipientIds_FiltersForeignLabelsAndInactiveMembers() {
         // given
         var buzz = new LabelRecipientStrategyAdapter(labelQueryService);
-        Label firstLabel = service.createLabel(owner.getId(), "첫 라벨");
-        Label secondLabel = service.createLabel(owner.getId(), "둘째 라벨");
-        Label foreignLabel = service.createLabel(first.getId(), "다른 사람의 라벨");
+        Label firstLabel = labelCommandService.createLabel(owner.getId(), "첫 라벨");
+        Label secondLabel = labelCommandService.createLabel(owner.getId(), "둘째 라벨");
+        Label foreignLabel = labelCommandService.createLabel(first.getId(), "다른 사람의 라벨");
         connect(owner, first);
         connect(owner, second);
-        service.addMemberToLabel(owner.getId(), firstLabel.getId(), first.getId());
-        service.replaceLabelMembers(owner.getId(), secondLabel.getId(), List.of(first.getId(), second.getId()));
-        service.addMemberToLabel(first.getId(), foreignLabel.getId(), owner.getId());
+        labelCommandService.addMemberToLabel(owner.getId(), firstLabel.getId(), first.getId());
+        labelCommandService.replaceLabelMembers(owner.getId(), secondLabel.getId(), List.of(first.getId(), second.getId()));
+        labelCommandService.addMemberToLabel(first.getId(), foreignLabel.getId(), owner.getId());
         second.deactivate();
         em.flush();
 
@@ -228,22 +228,22 @@ class LabelPersistenceAdapterTest {
     @DisplayName("영속성 컨텍스트를 비운 뒤에도 이름과 멤버 교체·제거 결과를 복원한다")
     void save_RestoresState_AfterReload() {
         // given
-        String labelId = service.createLabel(owner.getId(), "친구").getId();
+        String labelId = labelCommandService.createLabel(owner.getId(), "친구").getId();
         connect(owner, first);
         connect(owner, second);
-        service.replaceLabelMembers(owner.getId(), labelId, List.of(first.getId(), second.getId()));
+        labelCommandService.replaceLabelMembers(owner.getId(), labelId, List.of(first.getId(), second.getId()));
         em.clear();
 
         // when
-        service.updateLabel(labelId, owner.getId(), "동료");
-        service.replaceLabelMembers(owner.getId(), labelId, List.of(second.getId()));
+        labelCommandService.updateLabel(labelId, owner.getId(), "동료");
+        labelCommandService.replaceLabelMembers(owner.getId(), labelId, List.of(second.getId()));
         em.clear();
 
         // then
         Label loaded = labelRepository.findById(labelId).orElseThrow();
         assertThat(loaded.getLabelName()).isEqualTo("동료");
         assertThat(loaded.getMemberIds()).containsExactly(second.getId());
-        service.removeMemberFromLabel(owner.getId(), labelId, second.getId());
+        labelCommandService.removeMemberFromLabel(owner.getId(), labelId, second.getId());
         em.clear();
         assertThat(labelRepository.findById(labelId).orElseThrow().getMemberIds()).isEmpty();
     }
@@ -252,16 +252,16 @@ class LabelPersistenceAdapterTest {
     @DisplayName("명령 모델은 비활성 멤버도 복원하고 화면 집계는 활성 멤버만 보여 준다")
     void findById_PreservesInactiveMembers_CommandModel() {
         // given
-        String labelId = service.createLabel(owner.getId(), "친구").getId();
+        String labelId = labelCommandService.createLabel(owner.getId(), "친구").getId();
         connect(owner, first);
         connect(owner, second);
-        service.addMemberToLabel(owner.getId(), labelId, first.getId());
+        labelCommandService.addMemberToLabel(owner.getId(), labelId, first.getId());
         first.deactivate();
         em.flush();
         em.clear();
 
         // when
-        service.addMemberToLabel(owner.getId(), labelId, second.getId());
+        labelCommandService.addMemberToLabel(owner.getId(), labelId, second.getId());
         em.clear();
 
         // then
@@ -276,17 +276,17 @@ class LabelPersistenceAdapterTest {
     @DisplayName("단건 추가가 JPA로 읽은 다른 멤버십의 외부 삭제를 복원하지 않는다")
     void addMember_PreservesCleanup_ExistingSnapshot() {
         // given
-        String labelId = service.createLabel(owner.getId(), "친구").getId();
+        String labelId = labelCommandService.createLabel(owner.getId(), "친구").getId();
         connect(owner, first);
         connect(owner, second);
-        service.addMemberToLabel(owner.getId(), labelId, first.getId());
+        labelCommandService.addMemberToLabel(owner.getId(), labelId, first.getId());
         em.clear();
         Label label = labelRepository.findById(labelId).orElseThrow();
         assertThat(label.getMemberIds()).containsExactly(first.getId());
         jdbc.update("DELETE FROM label_members WHERE label_id = ? AND member_id = ?", labelId, first.getId());
 
         // when
-        service.addMemberToLabel(owner.getId(), labelId, second.getId());
+        labelCommandService.addMemberToLabel(owner.getId(), labelId, second.getId());
         em.clear();
 
         // then
@@ -297,9 +297,9 @@ class LabelPersistenceAdapterTest {
     @DisplayName("소유자가 비활성이면 명령과 화면 조회에서 라벨을 찾을 수 없다")
     void findById_ReturnsEmpty_InactiveOwner() {
         // given
-        String labelId = service.createLabel(owner.getId(), "친구").getId();
+        String labelId = labelCommandService.createLabel(owner.getId(), "친구").getId();
         connect(owner, first);
-        service.addMemberToLabel(owner.getId(), labelId, first.getId());
+        labelCommandService.addMemberToLabel(owner.getId(), labelId, first.getId());
         owner.deactivate();
         em.flush();
         em.clear();
@@ -316,14 +316,14 @@ class LabelPersistenceAdapterTest {
     @DisplayName("새 라벨은 버전 0으로 저장되고 이름 변경과 멤버 추가가 각각 버전을 올린다")
     void save_IncrementsVersion_RenameAndMemberChange() {
         // given
-        String labelId = service.createLabel(owner.getId(), "친구").getId();
+        String labelId = labelCommandService.createLabel(owner.getId(), "친구").getId();
         connect(owner, first);
         long created = versionOf(labelId);
 
         // when
-        service.updateLabel(labelId, owner.getId(), "동료");
+        labelCommandService.updateLabel(labelId, owner.getId(), "동료");
         long renamed = versionOf(labelId);
-        service.addMemberToLabel(owner.getId(), labelId, first.getId());
+        labelCommandService.addMemberToLabel(owner.getId(), labelId, first.getId());
 
         // then
         assertThat(created).isZero();
@@ -349,13 +349,13 @@ class LabelPersistenceAdapterTest {
     @DisplayName("저장 시점의 멤버 기본 키 위반을 멤버 중복 예외로 변환한다")
     void save_TranslatesPrimaryKeyViolation_DuplicateMember() {
         // given
-        String labelId = service.createLabel(owner.getId(), "친구").getId();
+        String labelId = labelCommandService.createLabel(owner.getId(), "친구").getId();
         connect(owner, first);
         assertThat(labelRepository.findById(labelId).orElseThrow().getMemberIds()).isEmpty();
         jdbc.update("INSERT INTO label_members (label_id, member_id) VALUES (?, ?)", labelId, first.getId());
 
         // when & then
-        assertThatThrownBy(() -> service.addMemberToLabel(owner.getId(), labelId, first.getId()))
+        assertThatThrownBy(() -> labelCommandService.addMemberToLabel(owner.getId(), labelId, first.getId()))
                 .isInstanceOf(DuplicateLabelMemberException.class);
     }
 
@@ -368,7 +368,7 @@ class LabelPersistenceAdapterTest {
     }
 
     private void connect(User one, User two) {
-        friendships.create(Friendship.restore(LocalDate.of(2026, 1, 1), recognition(one), recognition(two)));
+        friendshipPersistenceAdapter.create(Friendship.restore(LocalDate.of(2026, 1, 1), recognition(one), recognition(two)));
     }
 
     private static FriendRecognition recognition(User user) {

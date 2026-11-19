@@ -39,7 +39,7 @@ class SocialNetworkQueryServiceTest {
     private NetworkEdgeLimits edgeLimits;
 
     @InjectMocks
-    private SocialNetworkQueryService service;
+    private SocialNetworkQueryService socialNetworkQueryService;
 
     @Test
     @DisplayName("getFriendsNetwork: 기본 네트워크 결과를 반환한다")
@@ -50,7 +50,7 @@ class SocialNetworkQueryServiceTest {
         given(socialNetworkRepository.getDefaultNetworkGraph(1L, DunbarCircle.KINSHIP, 5, 10))
                 .willReturn(expected);
 
-        List<NodeGraphResult> result = service.getFriendsNetwork(1L, DunbarCircle.KINSHIP);
+        List<NodeGraphResult> result = socialNetworkQueryService.getFriendsNetwork(1L, DunbarCircle.KINSHIP);
 
         verify(socialNetworkRepository).getDefaultNetworkGraph(1L, DunbarCircle.KINSHIP, 5, 10);
         assertThat(result).isEqualTo(expected);
@@ -62,7 +62,7 @@ class SocialNetworkQueryServiceTest {
         given(socialNetworkRepository.getLabelCustomNetwork(1L, "label-1", DunbarCircle.KINSHIP, 5, 10))
                 .willReturn(List.of());
 
-        List<NodeGraphResult> result = service.getLabelNetwork(1L, "label-1");
+        List<NodeGraphResult> result = socialNetworkQueryService.getLabelNetwork(1L, "label-1");
 
         verify(socialNetworkRepository).getLabelCustomNetwork(1L, "label-1", DunbarCircle.KINSHIP, 5, 10);
         assertThat(result).isEmpty();
@@ -71,8 +71,8 @@ class SocialNetworkQueryServiceTest {
     @Test
     @DisplayName("getNetworkEdges: baseNetworkFriendIds가 비어있으면 Repository를 호출하지 않는다")
     void getNetworkEdges_baseNetworkFriendIds가_비어있으면_빈_리스트() {
-        assertThat(service.getNetworkEdges(1L, 10L, null)).isEmpty();
-        assertThat(service.getNetworkEdges(1L, 10L, List.of())).isEmpty();
+        assertThat(socialNetworkQueryService.getNetworkEdges(1L, 10L, null)).isEmpty();
+        assertThat(socialNetworkQueryService.getNetworkEdges(1L, 10L, List.of())).isEmpty();
 
         verifyNoInteractions(socialNetworkRepository, friendshipRepository);
     }
@@ -88,7 +88,7 @@ class SocialNetworkQueryServiceTest {
         given(edgeLimits.directFriendEdgeLimit(0.5)).willReturn(7);
         given(socialNetworkRepository.getDirectFriendEdgesForTarget(1L, 10L, baseNetworkFriendIds, 7)).willReturn(expected);
 
-        List<MutualFriendEdgeResult> result = service.getNetworkEdges(1L, 10L, baseNetworkFriendIds);
+        List<MutualFriendEdgeResult> result = socialNetworkQueryService.getNetworkEdges(1L, 10L, baseNetworkFriendIds);
 
         verify(edgeLimits).directFriendEdgeLimit(0.5);
         verify(socialNetworkRepository).getDirectFriendEdgesForTarget(1L, 10L, baseNetworkFriendIds, 7);
@@ -105,7 +105,7 @@ class SocialNetworkQueryServiceTest {
         given(edgeLimits.twoHopContactEdgeLimit()).willReturn(5);
         given(socialNetworkRepository.getTwoHopContactEdgesForTarget(1L, 10L, baseNetworkFriendIds, 5)).willReturn(expected);
 
-        List<MutualFriendEdgeResult> result = service.getNetworkEdges(1L, 10L, baseNetworkFriendIds);
+        List<MutualFriendEdgeResult> result = socialNetworkQueryService.getNetworkEdges(1L, 10L, baseNetworkFriendIds);
 
         verify(edgeLimits).twoHopContactEdgeLimit();
         verify(socialNetworkRepository).getTwoHopContactEdgesForTarget(1L, 10L, baseNetworkFriendIds, 5);

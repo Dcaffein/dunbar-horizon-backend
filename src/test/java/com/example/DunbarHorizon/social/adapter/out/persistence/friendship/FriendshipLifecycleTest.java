@@ -52,13 +52,13 @@ class FriendshipLifecycleTest {
 
     private static final LocalDate FRIENDS_SINCE = LocalDate.of(2026, 1, 1);
 
-    @Autowired private UserJpaRepository users;
-    @Autowired private FriendshipCommandService lifecycle;
+    @Autowired private UserJpaRepository userJpaRepository;
+    @Autowired private FriendshipCommandService friendshipCommandService;
     @Autowired private LabelCommandService labelCommandService;
     @MockitoSpyBean private LabelMembershipCleanupJdbcAdapter labelMembershipCleanup;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private PlatformTransactionManager transactionManager;
-    @MockitoSpyBean private FriendshipPersistenceAdapter friendships;
+    @MockitoSpyBean private FriendshipPersistenceAdapter friendshipPersistenceAdapter;
     @Autowired private ApplicationEvents applicationEvents;
 
     private Long first;
@@ -68,8 +68,8 @@ class FriendshipLifecycleTest {
 
     @BeforeEach
     void setUp() {
-        first = users.save(User.createActive("first@mysql-friendship-lifecycle.test", "first")).getId();
-        second = users.save(User.createActive("second@mysql-friendship-lifecycle.test", "second")).getId();
+        first = userJpaRepository.save(User.createActive("first@mysql-friendship-lifecycle.test", "first")).getId();
+        second = userJpaRepository.save(User.createActive("second@mysql-friendship-lifecycle.test", "second")).getId();
         firstLabel = labelCommandService.createLabel(first, "내 라벨").getId();
         secondLabel = labelCommandService.createLabel(second, "상대 라벨").getId();
     }
@@ -80,7 +80,7 @@ class FriendshipLifecycleTest {
         labelCommandService.deleteLabel(second, secondLabel);
         jdbc.update("DELETE FROM friendships WHERE low_user_id = ? AND high_user_id = ?",
                 Math.min(first, second), Math.max(first, second));
-        users.deleteAllById(List.of(first, second));
+        userJpaRepository.deleteAllById(List.of(first, second));
     }
 
     @Test
@@ -88,15 +88,15 @@ class FriendshipLifecycleTest {
     void brokeUpWith_RemovesBothMemberships_WithFriendship() {
         // given
         connectWithBothMemberships(FriendRecognition.INITIAL_RAW_SCORE);
-        lifecycle.updateSettings(second, first, new FriendshipUpdateCommand(second, first, "친구", null, null));
-        assertThat(friendships.findBetween(first, second).orElseThrow().getFriendAlias(second)).isEqualTo("친구");
+        friendshipCommandService.updateSettings(second, first, new FriendshipUpdateCommand(second, first, "친구", null, null));
+        assertThat(friendshipPersistenceAdapter.findBetween(first, second).orElseThrow().getFriendAlias(second)).isEqualTo("친구");
 
         // when
-        lifecycle.endFriendship(second, first);
+        friendshipCommandService.endFriendship(second, first);
 
         // then
         assertEnded();
-        assertThatThrownBy(() -> lifecycle.endFriendship(first, second)).isInstanceOf(FriendshipNotFoundException.class);
+        assertThatThrownBy(() -> friendshipCommandService.endFriendship(first, second)).isInstanceOf(FriendshipNotFoundException.class);
         assertThat(applicationEvents.stream(FriendshipEndedEvent.class).toList())
                 .containsExactly(new FriendshipEndedEvent(second, first));
     }
@@ -109,7 +109,7 @@ class FriendshipLifecycleTest {
         failAfterLabelCleanup();
 
         // when & then
-        assertThatThrownBy(() -> lifecycle.endFriendship(first, second)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> friendshipCommandService.endFriendship(first, second)).isInstanceOf(IllegalStateException.class);
         assertRelationshipAndMembershipsRemain();
     }
 
@@ -123,10 +123,10 @@ class FriendshipLifecycleTest {
     @Test
     @DisplayName("관계가 없거나 같은 사용자를 지정하면 설정 변경은 관계 없음 예외로 끝난다")
     void updateFriendship_ThrowsNotFound_MissingRelationship() {
-        assertThatThrownBy(() -> lifecycle.updateSettings(first, second,
+        assertThatThrownBy(() -> friendshipCommandService.updateSettings(first, second,
                 new FriendshipUpdateCommand(first, second, null, true, null)))
                 .isInstanceOf(FriendshipNotFoundException.class);
-        assertThatThrownBy(() -> lifecycle.updateSettings(first, first,
+        assertThatThrownBy(() -> friendshipCommandService.updateSettings(first, first,
                 new FriendshipUpdateCommand(first, first, null, null, null)))
                 .isInstanceOf(FriendshipNotFoundException.class);
     }
@@ -138,10 +138,10 @@ class FriendshipLifecycleTest {
         connect(FriendRecognition.INITIAL_RAW_SCORE);
 
         // when & then
-        assertThatThrownBy(() -> lifecycle.updateSettings(second, first, new FriendshipUpdateCommand(second, first,
+        assertThatThrownBy(() -> friendshipCommandService.updateSettings(second, first, new FriendshipUpdateCommand(second, first,
                 "a".repeat(Friendship.ALIAS_MAX_LENGTH + 1), true, null)))
                 .isInstanceOf(InvalidFriendAliasException.class);
-        assertThat(friendships.findBetween(first, second).orElseThrow().isMuted(second)).isFalse();
+        assertThat(friendshipPersistenceAdapter.findBetween(first, second).orElseThrow().isMuted(second)).isFalse();
     }
 
     @Test
@@ -149,13 +149,13 @@ class FriendshipLifecycleTest {
     void updateFriendship_ChangesRequestedFields_ClearsEmptyAlias() {
         // given
         connect(FriendRecognition.INITIAL_RAW_SCORE);
-        lifecycle.updateSettings(first, second, new FriendshipUpdateCommand(first, second, "친구", true, null));
+        friendshipCommandService.updateSettings(first, second, new FriendshipUpdateCommand(first, second, "친구", true, null));
 
         // when
-        lifecycle.updateSettings(first, second, new FriendshipUpdateCommand(first, second, "", null, false));
+        friendshipCommandService.updateSettings(first, second, new FriendshipUpdateCommand(first, second, "", null, false));
 
         // then
-        Friendship updated = friendships.findBetween(first, second).orElseThrow();
+        Friendship updated = friendshipPersistenceAdapter.findBetween(first, second).orElseThrow();
         assertThat(updated.getFriendAlias(first)).isEmpty();
         assertThat(updated.isMuted(first)).isTrue();
         assertThat(updated.isRoutable(first)).isFalse();
@@ -165,7 +165,7 @@ class FriendshipLifecycleTest {
 
     private void connect(double interestScore) {
         new TransactionTemplate(transactionManager).executeWithoutResult(status ->
-                friendships.create(Friendship.restore(FRIENDS_SINCE,
+                friendshipPersistenceAdapter.create(Friendship.restore(FRIENDS_SINCE,
                         FriendRecognition.restore(first, null, interestScore, LocalDateTime.now(), false, true),
                         FriendRecognition.restore(second, null, interestScore, LocalDateTime.now(), false, true))));
     }
@@ -177,13 +177,13 @@ class FriendshipLifecycleTest {
     }
 
     private void assertEnded() {
-        assertThat(friendships.existsBetween(first, second)).isFalse();
+        assertThat(friendshipPersistenceAdapter.existsBetween(first, second)).isFalse();
         assertThat(hasLabelMember(jdbc, firstLabel, second)).isFalse();
         assertThat(hasLabelMember(jdbc, secondLabel, first)).isFalse();
     }
 
     private void assertRelationshipAndMembershipsRemain() {
-        assertThat(friendships.existsBetween(first, second)).isTrue();
+        assertThat(friendshipPersistenceAdapter.existsBetween(first, second)).isTrue();
         assertThat(hasLabelMember(jdbc, firstLabel, second)).isTrue();
         assertThat(hasLabelMember(jdbc, secondLabel, first)).isTrue();
     }

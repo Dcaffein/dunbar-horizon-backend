@@ -36,14 +36,14 @@ class LabelCommandServiceTest {
     @Mock private LabelMembershipCleanup labelMembershipCleanup;
     @Mock private LabelMemberFriendshipLookup labelMemberFriendshipLookup;
 
-    private LabelCommandService service;
+    private LabelCommandService labelCommandService;
     private final Label label = LabelTestFactory.createLabel(1L, "친구");
 
     @BeforeEach
     void setUp() {
         var registrar = new LabelMemberRegistrar();
         registrar.addMember(label, 2L, Set.of(2L));
-        service = new LabelCommandService(labelRepository, labelMembershipCleanup, new LabelNamer(), registrar,
+        labelCommandService = new LabelCommandService(labelRepository, labelMembershipCleanup, new LabelNamer(), registrar,
                 labelMemberFriendshipLookup);
     }
 
@@ -54,7 +54,7 @@ class LabelCommandServiceTest {
         given(labelRepository.findNamesOfActiveOwner(1L, null)).willReturn(Optional.of(Set.of("친구", "친구 (3)")));
 
         // when
-        Label created = service.createLabel(1L, "친구");
+        Label created = labelCommandService.createLabel(1L, "친구");
 
         // then
         assertThat(created.getLabelName()).isEqualTo("친구 (2)");
@@ -68,7 +68,7 @@ class LabelCommandServiceTest {
         given(labelRepository.findNamesOfActiveOwner(1L, null)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> service.createLabel(1L, "친구"))
+        assertThatThrownBy(() -> labelCommandService.createLabel(1L, "친구"))
                 .isInstanceOf(UserReferenceNotFoundException.class);
         verify(labelRepository, never()).save(any());
     }
@@ -79,7 +79,7 @@ class LabelCommandServiceTest {
         given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
         given(labelRepository.findNamesOfActiveOwner(1L, label.getId())).willReturn(Optional.of(Set.of("친구 (2)")));
 
-        service.updateLabel(label.getId(), 1L, "친구");
+        labelCommandService.updateLabel(label.getId(), 1L, "친구");
 
         assertThat(label.getLabelName()).isEqualTo("친구");
         verify(labelRepository).save(label);
@@ -90,7 +90,7 @@ class LabelCommandServiceTest {
     void updateLabel_SkipsRename_NullName() {
         given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
 
-        service.updateLabel(label.getId(), 1L, null);
+        labelCommandService.updateLabel(label.getId(), 1L, null);
 
         verify(labelRepository, never()).save(any());
         verify(labelRepository, never()).findNamesOfActiveOwner(any(), any());
@@ -102,7 +102,7 @@ class LabelCommandServiceTest {
         Label foreignLabel = LabelTestFactory.createLabel(2L, "친구");
         given(labelRepository.findById(foreignLabel.getId())).willReturn(Optional.of(foreignLabel));
 
-        assertThatThrownBy(() -> service.addMemberToLabel(1L, foreignLabel.getId(), 3L))
+        assertThatThrownBy(() -> labelCommandService.addMemberToLabel(1L, foreignLabel.getId(), 3L))
                 .isInstanceOf(LabelAuthorizationException.class);
         verifyNoInteractions(labelMemberFriendshipLookup);
     }
@@ -114,7 +114,7 @@ class LabelCommandServiceTest {
         given(labelMemberFriendshipLookup.findForMemberAdditionWithSharedLock(1L, 3L))
                 .willThrow(new UserReferenceNotFoundException(3L));
 
-        assertThatThrownBy(() -> service.addMemberToLabel(1L, label.getId(), 3L))
+        assertThatThrownBy(() -> labelCommandService.addMemberToLabel(1L, label.getId(), 3L))
                 .isInstanceOf(UserReferenceNotFoundException.class);
         verify(labelRepository, never()).save(any());
     }
@@ -126,7 +126,7 @@ class LabelCommandServiceTest {
                 .willReturn(Set.of());
         given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
 
-        assertThatThrownBy(() -> service.replaceLabelMembers(1L, label.getId(), List.of(3L, 3L)))
+        assertThatThrownBy(() -> labelCommandService.replaceLabelMembers(1L, label.getId(), List.of(3L, 3L)))
                 .isInstanceOf(NonFriendLabelMemberException.class);
         assertThat(label.getMemberIds()).containsExactly(2L);
         verify(labelRepository, never()).save(any());
@@ -139,7 +139,7 @@ class LabelCommandServiceTest {
                 .willReturn(Set.of());
         given(labelRepository.findById(label.getId())).willReturn(Optional.of(label));
 
-        service.replaceLabelMembers(1L, label.getId(), null);
+        labelCommandService.replaceLabelMembers(1L, label.getId(), null);
 
         assertThat(label.getMemberIds()).isEmpty();
         verify(labelRepository).save(label);

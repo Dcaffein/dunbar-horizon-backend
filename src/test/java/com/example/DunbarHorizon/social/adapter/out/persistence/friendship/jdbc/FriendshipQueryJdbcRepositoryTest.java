@@ -26,7 +26,7 @@ class FriendshipQueryJdbcRepositoryTest {
     private static final LocalDate CREATED_AT = LocalDate.of(2026, 9, 14);
     private static final LocalDateTime INTERACTED_AT = CREATED_AT.atTime(12, 30);
 
-    @Autowired private FriendshipQueryJdbcRepository repository;
+    @Autowired private FriendshipQueryJdbcRepository friendshipQueryJdbcRepository;
     @Autowired private TestEntityManager testEntityManager;
 
     private User low;
@@ -47,16 +47,16 @@ class FriendshipQueryJdbcRepositoryTest {
         testEntityManager.clear();
 
         // when
-        var fromLow = repository.findFriends(low.getId());
-        var fromHigh = repository.findFriends(high.getId());
+        var fromLow = friendshipQueryJdbcRepository.findFriends(low.getId());
+        var fromHigh = friendshipQueryJdbcRepository.findFriends(high.getId());
 
         // then
         assertThat(fromLow).containsExactly(new FriendView(high.getId(), "high", "profiles/high", "from low",
                 friendship.getIntimacy(), FriendRecognition.normalize(51.0), true, false));
         assertThat(fromHigh).containsExactly(new FriendView(low.getId(), "low", "profiles/low", "from high",
                 friendship.getIntimacy(), FriendRecognition.normalize(32.0), false, true));
-        assertThat(repository.findFriend(low.getId(), high.getId())).contains(fromLow.getFirst());
-        assertThat(repository.findFriend(high.getId(), low.getId())).contains(fromHigh.getFirst());
+        assertThat(friendshipQueryJdbcRepository.findFriend(low.getId(), high.getId())).contains(fromLow.getFirst());
+        assertThat(friendshipQueryJdbcRepository.findFriend(high.getId(), low.getId())).contains(fromHigh.getFirst());
     }
 
     @Test
@@ -69,22 +69,22 @@ class FriendshipQueryJdbcRepositoryTest {
         testEntityManager.clear();
 
         // when & then
-        assertThat(repository.findFriends(low.getId())).isEmpty();
-        assertThat(repository.findFriends(high.getId())).isEmpty();
-        assertThat(repository.findFriend(low.getId(), high.getId())).isEmpty();
-        assertThat(repository.findFriend(high.getId(), low.getId())).isEmpty();
-        assertThat(repository.findFriendIdsByMuteStatus(low.getId(), true)).isEmpty();
-        assertThat(repository.findFriendIdsByMuteStatus(high.getId(), false)).isEmpty();
-        assertThat(repository.findFriendIdsIn(low.getId(), List.of(high.getId()))).isEmpty();
+        assertThat(friendshipQueryJdbcRepository.findFriends(low.getId())).isEmpty();
+        assertThat(friendshipQueryJdbcRepository.findFriends(high.getId())).isEmpty();
+        assertThat(friendshipQueryJdbcRepository.findFriend(low.getId(), high.getId())).isEmpty();
+        assertThat(friendshipQueryJdbcRepository.findFriend(high.getId(), low.getId())).isEmpty();
+        assertThat(friendshipQueryJdbcRepository.findFriendIdsByMuteStatus(low.getId(), true)).isEmpty();
+        assertThat(friendshipQueryJdbcRepository.findFriendIdsByMuteStatus(high.getId(), false)).isEmpty();
+        assertThat(friendshipQueryJdbcRepository.findFriendIdsIn(low.getId(), List.of(high.getId()))).isEmpty();
     }
 
     @Test
     @DisplayName("관계가 없거나 같은 사용자를 지정하면 상세가 비어 있다")
     void findFriend_ReturnsEmpty_NoPairOrSameUser() {
         // when & then
-        assertThat(repository.findFriend(low.getId(), high.getId())).isEmpty();
-        assertThat(repository.findFriend(low.getId(), low.getId())).isEmpty();
-        assertThat(repository.findFriends(low.getId())).isEmpty();
+        assertThat(friendshipQueryJdbcRepository.findFriend(low.getId(), high.getId())).isEmpty();
+        assertThat(friendshipQueryJdbcRepository.findFriend(low.getId(), low.getId())).isEmpty();
+        assertThat(friendshipQueryJdbcRepository.findFriends(low.getId())).isEmpty();
     }
 
     @Test
@@ -97,11 +97,11 @@ class FriendshipQueryJdbcRepositoryTest {
         testEntityManager.persistAndFlush(friendship(high, third));
 
         // when & then
-        assertThat(repository.findFriendIdsByMuteStatus(high.getId(), true)).containsExactly(third.getId());
-        assertThat(repository.findFriendIdsByMuteStatus(high.getId(), false)).containsExactly(low.getId());
-        assertThat(repository.findFriendIdsIn(high.getId(), List.of(low.getId(), third.getId(), other.getId())))
+        assertThat(friendshipQueryJdbcRepository.findFriendIdsByMuteStatus(high.getId(), true)).containsExactly(third.getId());
+        assertThat(friendshipQueryJdbcRepository.findFriendIdsByMuteStatus(high.getId(), false)).containsExactly(low.getId());
+        assertThat(friendshipQueryJdbcRepository.findFriendIdsIn(high.getId(), List.of(low.getId(), third.getId(), other.getId())))
                 .containsExactlyInAnyOrder(low.getId(), third.getId());
-        assertThat(repository.findFriendIdsIn(high.getId(), List.of())).isEmpty();
+        assertThat(friendshipQueryJdbcRepository.findFriendIdsIn(high.getId(), List.of())).isEmpty();
     }
 
     @Test
@@ -112,10 +112,10 @@ class FriendshipQueryJdbcRepositoryTest {
         testEntityManager.flush();
 
         // when & then
-        assertThat(repository.findActiveProfile(low.getId()))
+        assertThat(friendshipQueryJdbcRepository.findActiveProfile(low.getId()))
                 .contains(new UserProfile(low.getId(), "low", "profiles/low"));
-        assertThat(repository.findActiveProfile(high.getId())).isEmpty();
-        assertThat(repository.findActiveProfile(Long.MAX_VALUE)).isEmpty();
+        assertThat(friendshipQueryJdbcRepository.findActiveProfile(high.getId())).isEmpty();
+        assertThat(friendshipQueryJdbcRepository.findActiveProfile(Long.MAX_VALUE)).isEmpty();
     }
 
     private User createUser(String nickname) {

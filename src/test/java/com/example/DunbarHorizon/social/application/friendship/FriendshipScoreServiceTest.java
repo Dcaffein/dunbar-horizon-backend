@@ -38,23 +38,23 @@ class FriendshipScoreServiceTest {
     private static final Long USER_1 = 1L;
     private static final Long USER_2 = 2L;
 
-    @InjectMocks private FriendshipScoreService interactionScoreService;
-    @Mock private FriendshipScoreRepository friendshipRepository;
+    @InjectMocks private FriendshipScoreService friendshipScoreService;
+    @Mock private FriendshipScoreRepository friendshipScoreRepository;
 
     @Test
     @DisplayName("수정용으로 불러온 관계를 계산한 뒤 쓴다")
     void applyInteraction_LoadsForUpdateThenSaves() {
         // given
         Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
-        when(friendshipRepository.findBetweenForUpdate(anyLong(), anyLong())).thenReturn(Optional.of(friendship));
+        when(friendshipScoreRepository.findBetweenForUpdate(anyLong(), anyLong())).thenReturn(Optional.of(friendship));
 
         // when
-        interactionScoreService.applyInteraction(1L, 2L, InteractionType.FLAG_ENDED);
+        friendshipScoreService.applyInteraction(1L, 2L, InteractionType.FLAG_ENDED);
 
         // then
-        InOrder order = inOrder(friendshipRepository);
-        order.verify(friendshipRepository).findBetweenForUpdate(1L, 2L);
-        order.verify(friendshipRepository).saveInterestScores(List.of(friendship));
+        InOrder order = inOrder(friendshipScoreRepository);
+        order.verify(friendshipScoreRepository).findBetweenForUpdate(1L, 2L);
+        order.verify(friendshipScoreRepository).saveInterestScores(List.of(friendship));
     }
 
     @Test
@@ -63,10 +63,10 @@ class FriendshipScoreServiceTest {
         // given
         InteractionType type = InteractionType.FLAG_ENDED_ENCORE;
         Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
-        when(friendshipRepository.findBetweenForUpdate(anyLong(), anyLong())).thenReturn(Optional.of(friendship));
+        when(friendshipScoreRepository.findBetweenForUpdate(anyLong(), anyLong())).thenReturn(Optional.of(friendship));
 
         // when
-        interactionScoreService.applyInteraction(2L, 1L, type);
+        friendshipScoreService.applyInteraction(2L, 1L, type);
 
         // then
         double expected = FriendRecognition.INITIAL_RAW_SCORE + InteractionScores.scoreOf(type);
@@ -81,10 +81,10 @@ class FriendshipScoreServiceTest {
         // given
         InteractionType type = InteractionType.VISIT;
         Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
-        when(friendshipRepository.findBetweenForUpdate(anyLong(), anyLong())).thenReturn(Optional.of(friendship));
+        when(friendshipScoreRepository.findBetweenForUpdate(anyLong(), anyLong())).thenReturn(Optional.of(friendship));
 
         // when
-        interactionScoreService.applyInteraction(2L, 1L, type);
+        friendshipScoreService.applyInteraction(2L, 1L, type);
 
         // then
         assertThat(friendship.getMyInterestScore(2L))
@@ -96,14 +96,14 @@ class FriendshipScoreServiceTest {
     @DisplayName("Flag 결론은 호스트와 참가자 전체를 한 무리로 한 번에 불러온다")
     void applyFlagConclusion_LoadsEveryPairOnce() {
         // given
-        when(friendshipRepository.findAllAmongForUpdate(anyCollection())).thenReturn(List.of());
+        when(friendshipScoreRepository.findAllAmongForUpdate(anyCollection())).thenReturn(List.of());
 
         // when
-        interactionScoreService.applyFlagConclusion(HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT);
+        friendshipScoreService.applyFlagConclusion(HOST_ID, PARTICIPANT_IDS, FLAG_TYPE, ScoreDirection.GRANT);
 
         // then
         ArgumentCaptor<Collection<Long>> captor = ArgumentCaptor.forClass(Collection.class);
-        verify(friendshipRepository).findAllAmongForUpdate(captor.capture());
+        verify(friendshipScoreRepository).findAllAmongForUpdate(captor.capture());
         assertThat(captor.getValue()).containsExactlyInAnyOrder(HOST_ID, 21L, 22L);
     }
 
@@ -112,13 +112,13 @@ class FriendshipScoreServiceTest {
     void applyFlagConclusion_SkipsMissingPairs() {
         // given
         Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
-        when(friendshipRepository.findAllAmongForUpdate(anyCollection())).thenReturn(List.of(friendship));
+        when(friendshipScoreRepository.findAllAmongForUpdate(anyCollection())).thenReturn(List.of(friendship));
 
         // when
-        interactionScoreService.applyFlagConclusion(1L, List.of(2L, 3L), FLAG_TYPE, ScoreDirection.GRANT);
+        friendshipScoreService.applyFlagConclusion(1L, List.of(2L, 3L), FLAG_TYPE, ScoreDirection.GRANT);
 
         // then
-        verify(friendshipRepository).saveInterestScores(List.of(friendship));
+        verify(friendshipScoreRepository).saveInterestScores(List.of(friendship));
         assertThat(friendship.getMyInterestScore(1L))
                 .isCloseTo(FriendRecognition.INITIAL_RAW_SCORE + FLAG_DELTA, within(0.0001));
     }
@@ -129,10 +129,10 @@ class FriendshipScoreServiceTest {
         // given
         InteractionType type = InteractionType.FLAG_PRESERVED;
         Friendship friendship = FriendTestFactory.createFriendship(USER_1, USER_2);
-        when(friendshipRepository.findAllAmongForUpdate(anyCollection())).thenReturn(List.of(friendship));
+        when(friendshipScoreRepository.findAllAmongForUpdate(anyCollection())).thenReturn(List.of(friendship));
 
         // when
-        interactionScoreService.applyFlagConclusion(1L, List.of(2L), type, ScoreDirection.REVOKE);
+        friendshipScoreService.applyFlagConclusion(1L, List.of(2L), type, ScoreDirection.REVOKE);
 
         // then
         double expected = Math.max(0.0, FriendRecognition.INITIAL_RAW_SCORE - InteractionScores.scoreOf(type));

@@ -26,8 +26,8 @@ import static org.assertj.core.api.Assertions.assertThat;
         NetworkEdgeLimits.class})
 class SocialNetworkJdbcRepositoryTest {
 
-    @Autowired private SocialNetworkJdbcRepository repository;
-    @Autowired private SocialNetworkQueryService queryService;
+    @Autowired private SocialNetworkJdbcRepository socialNetworkJdbcRepository;
+    @Autowired private SocialNetworkQueryService socialNetworkQueryService;
     @Autowired private TestEntityManager em;
     @Autowired private JdbcTemplate jdbc;
 
@@ -57,7 +57,7 @@ class SocialNetworkJdbcRepositoryTest {
         connect(lower, fourth, 0.5);
         connect(lower, outside, 0.96875);
 
-        var graph = repository.getDefaultNetworkGraph(me.getId(), DunbarCircle.SUPPORT, 1, 2);
+        var graph = socialNetworkJdbcRepository.getDefaultNetworkGraph(me.getId(), DunbarCircle.SUPPORT, 1, 2);
 
         assertThat(graph).containsExactly(
                 new NodeGraphResult(lower.getId(), 0.9375,
@@ -66,7 +66,7 @@ class SocialNetworkJdbcRepositoryTest {
                 new NodeGraphResult(third.getId(), 0.75, List.of(new NodeEdgeResult(lower.getId(), 0.75))),
                 new NodeGraphResult(fourth.getId(), 0.5, List.of(new NodeEdgeResult(lower.getId(), 0.5))),
                 new NodeGraphResult(isolated.getId(), 0.5, List.of()));
-        assertThat(repository.getDefaultNetworkGraph(inactive.getId(), DunbarCircle.DUNBAR, 5, 10)).isEmpty();
+        assertThat(socialNetworkJdbcRepository.getDefaultNetworkGraph(inactive.getId(), DunbarCircle.DUNBAR, 5, 10)).isEmpty();
     }
 
     @Test
@@ -91,12 +91,12 @@ class SocialNetworkJdbcRepositoryTest {
         createLabel("theirs", member, me, otherMember);
         createLabel("empty", me);
 
-        assertThat(repository.getLabelCustomNetwork(me.getId(), "mine", DunbarCircle.SUPPORT, 5, 10))
+        assertThat(socialNetworkJdbcRepository.getLabelCustomNetwork(me.getId(), "mine", DunbarCircle.SUPPORT, 5, 10))
                 .containsExactly(
                         new NodeGraphResult(member.getId(), 0.75, List.of(new NodeEdgeResult(otherMember.getId(), 0.875))),
                         new NodeGraphResult(otherMember.getId(), 0.5, List.of(new NodeEdgeResult(member.getId(), 0.875))));
-        assertThat(queryService.getLabelNetwork(me.getId(), "theirs")).isEmpty();
-        assertThat(queryService.getLabelNetwork(me.getId(), "empty")).isEmpty();
+        assertThat(socialNetworkQueryService.getLabelNetwork(me.getId(), "theirs")).isEmpty();
+        assertThat(socialNetworkQueryService.getLabelNetwork(me.getId(), "empty")).isEmpty();
     }
 
     @Test
@@ -123,20 +123,20 @@ class SocialNetworkJdbcRepositoryTest {
         connect(target, omitted, 0.96875);
         List<Long> candidates = List.of(forged.getId(), higher.getId(), lower.getId(), inactive.getId(), higher.getId());
 
-        assertThat(queryService.getNetworkEdges(me.getId(), target.getId(), candidates)).containsExactly(
+        assertThat(socialNetworkQueryService.getNetworkEdges(me.getId(), target.getId(), candidates)).containsExactly(
                 new MutualFriendEdgeResult(target.getId(), higher.getId(), null),
                 new MutualFriendEdgeResult(target.getId(), lower.getId(), null));
         connect(me, target, 0.875);
-        assertThat(queryService.getNetworkEdges(me.getId(), target.getId(), candidates)).containsExactly(
+        assertThat(socialNetworkQueryService.getNetworkEdges(me.getId(), target.getId(), candidates)).containsExactly(
                 new MutualFriendEdgeResult(target.getId(), higher.getId(), 0.75),
                 new MutualFriendEdgeResult(target.getId(), lower.getId(), 0.5));
-        assertThat(repository.getDirectFriendEdgesForTarget(me.getId(), target.getId(), candidates, 1))
+        assertThat(socialNetworkJdbcRepository.getDirectFriendEdgesForTarget(me.getId(), target.getId(), candidates, 1))
                 .containsExactly(new MutualFriendEdgeResult(target.getId(), higher.getId(), 0.75));
 
         target.deactivate();
         em.flush();
-        assertThat(queryService.getNetworkEdges(me.getId(), target.getId(), candidates)).isEmpty();
-        assertThat(queryService.getNetworkEdges(me.getId(), target.getId(), List.of())).isEmpty();
+        assertThat(socialNetworkQueryService.getNetworkEdges(me.getId(), target.getId(), candidates)).isEmpty();
+        assertThat(socialNetworkQueryService.getNetworkEdges(me.getId(), target.getId(), List.of())).isEmpty();
     }
 
     private User createUser(String nickname) {

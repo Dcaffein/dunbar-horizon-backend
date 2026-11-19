@@ -54,9 +54,9 @@ class FriendshipScoreServiceRetryTest {
         }
     }
 
-    @Autowired private FriendshipScoreService interactionScoreService;
+    @Autowired private FriendshipScoreService friendshipScoreService;
     @Autowired private PlatformTransactionManager transactionManager;
-    @MockitoBean private FriendshipScoreRepository friendshipRepository;
+    @MockitoBean private FriendshipScoreRepository friendshipScoreRepository;
     @MockitoBean private InterestScoreDecayParameters decayParameters;
 
     @BeforeEach
@@ -69,15 +69,15 @@ class FriendshipScoreServiceRetryTest {
     @DisplayName("일시적 실패는 시도마다 새 트랜잭션을 열어 재시도한다")
     void applyFlagConclusion_RetriesInNewTransaction_TransientFailure() {
         // given
-        when(friendshipRepository.findAllAmongForUpdate(anyCollection()))
+        when(friendshipScoreRepository.findAllAmongForUpdate(anyCollection()))
                 .thenThrow(new TransientDataAccessResourceException("deadlock"))
                 .thenReturn(List.of());
 
         // when
-        interactionScoreService.applyFlagConclusion(10L, List.of(21L, 22L), FLAG_TYPE, ScoreDirection.GRANT);
+        friendshipScoreService.applyFlagConclusion(10L, List.of(21L, 22L), FLAG_TYPE, ScoreDirection.GRANT);
 
         // then
-        verify(friendshipRepository, times(2)).findAllAmongForUpdate(anyCollection());
+        verify(friendshipScoreRepository, times(2)).findAllAmongForUpdate(anyCollection());
         verify(transactionManager, times(2)).getTransaction(any());
         verify(transactionManager).rollback(any());
         verify(transactionManager).commit(any());
@@ -87,13 +87,13 @@ class FriendshipScoreServiceRetryTest {
     @DisplayName("커밋 시점에 DB가 던진 일시적 실패도 재시도한다")
     void applyInteraction_Retries_TransientFailureOnCommit() {
         // given
-        when(friendshipRepository.findBetweenForUpdate(anyLong(), anyLong())).thenReturn(Optional.empty());
+        when(friendshipScoreRepository.findBetweenForUpdate(anyLong(), anyLong())).thenReturn(Optional.empty());
         doThrow(new TransientDataAccessResourceException("deadlock"))
                 .doNothing()
                 .when(transactionManager).commit(any());
 
         // when
-        interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT);
+        friendshipScoreService.applyInteraction(1L, 2L, InteractionType.VISIT);
 
         // then
         verify(transactionManager, times(2)).getTransaction(any());
@@ -104,13 +104,13 @@ class FriendshipScoreServiceRetryTest {
     @DisplayName("재시도를 소진한 실패는 삼키지 않고 호출자에게 올린다")
     void applyInteraction_Rethrows_RetriesExhausted() {
         // given
-        when(friendshipRepository.findBetweenForUpdate(anyLong(), anyLong()))
+        when(friendshipScoreRepository.findBetweenForUpdate(anyLong(), anyLong()))
                 .thenThrow(new TransientDataAccessResourceException("deadlock"));
 
         // when & then
-        assertThatThrownBy(() -> interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT))
+        assertThatThrownBy(() -> friendshipScoreService.applyInteraction(1L, 2L, InteractionType.VISIT))
                 .isInstanceOf(TransientDataAccessResourceException.class);
-        verify(friendshipRepository, times(3)).findBetweenForUpdate(anyLong(), anyLong());
+        verify(friendshipScoreRepository, times(3)).findBetweenForUpdate(anyLong(), anyLong());
         verify(transactionManager, times(3)).rollback(any());
     }
 
@@ -118,13 +118,13 @@ class FriendshipScoreServiceRetryTest {
     @DisplayName("비일시적 실패는 재시도하지 않고 바로 올린다")
     void applyInteraction_RethrowsImmediately_NonTransientFailure() {
         // given
-        when(friendshipRepository.findBetweenForUpdate(anyLong(), anyLong()))
+        when(friendshipScoreRepository.findBetweenForUpdate(anyLong(), anyLong()))
                 .thenThrow(new IllegalStateException("not transient"));
 
         // when & then
-        assertThatThrownBy(() -> interactionScoreService.applyInteraction(1L, 2L, InteractionType.VISIT))
+        assertThatThrownBy(() -> friendshipScoreService.applyInteraction(1L, 2L, InteractionType.VISIT))
                 .isInstanceOf(IllegalStateException.class);
-        verify(friendshipRepository, times(1)).findBetweenForUpdate(anyLong(), anyLong());
+        verify(friendshipScoreRepository, times(1)).findBetweenForUpdate(anyLong(), anyLong());
         verify(transactionManager, never()).commit(any());
     }
 }

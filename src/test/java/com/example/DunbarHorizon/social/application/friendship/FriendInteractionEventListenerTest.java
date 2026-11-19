@@ -22,7 +22,7 @@ class FriendInteractionEventListenerTest {
     private FriendInteractionEventListener listener;
 
     @Mock
-    private FriendshipScoreService friendshipScores;
+    private FriendshipScoreService friendshipScoreService;
 
     private static final Long USER_A = 1L;
     private static final Long USER_B = 2L;
@@ -35,7 +35,7 @@ class FriendInteractionEventListenerTest {
 
         listener.handleUserInteraction(event);
 
-        verify(friendshipScores).applyInteraction(USER_A, USER_B, InteractionType.VISIT);
+        verify(friendshipScoreService).applyInteraction(USER_A, USER_B, InteractionType.VISIT);
     }
 
     @Test
@@ -48,7 +48,7 @@ class FriendInteractionEventListenerTest {
 
         listener.handleBatchMutualInteraction(event);
 
-        verify(friendshipScores).applyFlagConclusion(HOST, participants, InteractionType.FLAG_ENDED, ScoreDirection.GRANT);
+        verify(friendshipScoreService).applyFlagConclusion(HOST, participants, InteractionType.FLAG_ENDED, ScoreDirection.GRANT);
     }
 
     @Test
@@ -61,6 +61,6 @@ class FriendInteractionEventListenerTest {
 
         listener.handleBatchMutualInteraction(event);
 
-        verify(friendshipScores).applyFlagConclusion(HOST, participants, InteractionType.FLAG_PRESERVED, ScoreDirection.REVOKE);
+        verify(friendshipScoreService).applyFlagConclusion(HOST, participants, InteractionType.FLAG_PRESERVED, ScoreDirection.REVOKE);
     }
 }

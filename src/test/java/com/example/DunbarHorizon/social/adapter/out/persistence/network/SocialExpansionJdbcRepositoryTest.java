@@ -24,9 +24,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         FriendshipPersistenceAdapter.class, AnchorRecipientStrategyAdapter.class})
 class SocialExpansionJdbcRepositoryTest {
 
-    @Autowired private SocialExpansionJdbcRepository repository;
-    @Autowired private SocialExpansionQueryService queryService;
-    @Autowired private AnchorRecipientStrategyAdapter buzzRecipients;
+    @Autowired private SocialExpansionJdbcRepository socialExpansionJdbcRepository;
+    @Autowired private SocialExpansionQueryService socialExpansionQueryService;
+    @Autowired private AnchorRecipientStrategyAdapter anchorRecipientStrategyAdapter;
     @Autowired private TestEntityManager em;
     @Autowired private JdbcTemplate jdbc;
 
@@ -65,11 +65,11 @@ class SocialExpansionJdbcRepositoryTest {
         label("no-viewer", anchor, insufficient);
 
         // when & then
-        assertThat(queryService.getRecommendationsByAnchor(me.getId(), anchor.getId()))
+        assertThat(socialExpansionQueryService.getRecommendationsByAnchor(me.getId(), anchor.getId()))
                 .containsExactly(result(lowCandidate), result(highCandidate));
-        assertThat(repository.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 2, 1))
+        assertThat(socialExpansionJdbcRepository.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 2, 1))
                 .containsExactly(result(lowCandidate));
-        assertThat(repository.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 3, 10)).isEmpty();
+        assertThat(socialExpansionJdbcRepository.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 3, 10)).isEmpty();
     }
 
     @Test
@@ -90,13 +90,13 @@ class SocialExpansionJdbcRepositoryTest {
         label("shared", anchor, me, eligible, hidden, outside);
 
         // when
-        var expansion = queryService.getAnchorExpansion(me.getId(), anchor.getId(), 1.0);
-        var recipients = buzzRecipients.fetchRecipientIds(me.getId(), new AnchorRecipientSpec(anchor.getId(), 1.0));
+        var expansion = socialExpansionQueryService.getAnchorExpansion(me.getId(), anchor.getId(), 1.0);
+        var recipients = anchorRecipientStrategyAdapter.fetchRecipientIds(me.getId(), new AnchorRecipientSpec(anchor.getId(), 1.0));
 
         // then
         assertThat(expansion).containsExactly(result(eligible));
         assertThat(recipients).containsExactly(eligible.getId());
-        assertThat(repository.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 1, 10))
+        assertThat(socialExpansionJdbcRepository.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 1, 10))
                 .containsExactly(result(outside));
     }
 
@@ -117,9 +117,9 @@ class SocialExpansionJdbcRepositoryTest {
         label("shared", anchor, me, outside);
 
         // when & then
-        assertThat(repository.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 1, 10)).isEmpty();
-        assertThat(queryService.getAnchorExpansion(me.getId(), anchor.getId(), 1.0)).isEmpty();
-        assertThatThrownBy(() -> queryService.getRecommendationsByAnchor(me.getId(), outside.getId()))
+        assertThat(socialExpansionJdbcRepository.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 1, 10)).isEmpty();
+        assertThat(socialExpansionQueryService.getAnchorExpansion(me.getId(), anchor.getId(), 1.0)).isEmpty();
+        assertThatThrownBy(() -> socialExpansionQueryService.getRecommendationsByAnchor(me.getId(), outside.getId()))
                 .isInstanceOf(FriendshipNotFoundException.class);
     }
 

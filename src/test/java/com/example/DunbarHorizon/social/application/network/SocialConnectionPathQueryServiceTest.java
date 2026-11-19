@@ -27,7 +27,7 @@ class SocialConnectionPathQueryServiceTest {
     private FriendshipRepository friendshipRepository;
 
     @InjectMocks
-    private SocialConnectionPathQueryService service;
+    private SocialConnectionPathQueryService socialConnectionPathQueryService;
 
     @Test
     @DisplayName("상한 3을 리포지토리에 전달하고 전체 수와 목록을 응답에 담는다")
@@ -39,7 +39,7 @@ class SocialConnectionPathQueryServiceTest {
                         List.of(new ConnectionPathResult.IntermediaryResult(2L, "중개인2")), 12));
 
         // when
-        ConnectionPathResult result = service.getConnectionPath(1L, 99L);
+        ConnectionPathResult result = socialConnectionPathQueryService.getConnectionPath(1L, 99L);
 
         // then
         verify(connectionPathRepository).findIntermediaries(1L, 99L, 3);
@@ -59,7 +59,7 @@ class SocialConnectionPathQueryServiceTest {
                         List.of(new ConnectionPathResult.IntermediaryResult(2L, "중개인2")), 12));
 
         // when
-        ConnectionPathResult result = service.getConnectionPath(1L, 99L);
+        ConnectionPathResult result = socialConnectionPathQueryService.getConnectionPath(1L, 99L);
 
         // then
         verify(connectionPathRepository).findIntermediaries(1L, 99L, 3);
@@ -72,7 +72,7 @@ class SocialConnectionPathQueryServiceTest {
     @DisplayName("자기 자신을 대상으로 하면 조회 없이 빈 결과를 반환한다")
     void getConnectionPath_자기_자신() {
         // when
-        ConnectionPathResult result = service.getConnectionPath(1L, 1L);
+        ConnectionPathResult result = socialConnectionPathQueryService.getConnectionPath(1L, 1L);
 
         // then
         assertThat(result.direct()).isFalse();
