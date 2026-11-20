@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.notification.adapter.out.persistence;
 
-import com.example.DunbarHorizon.notification.adapter.out.persistence.mongo.NotificationMongoRepository;
+import com.example.DunbarHorizon.notification.adapter.out.persistence.jpa.NotificationJpaRepository;
 import com.example.DunbarHorizon.notification.domain.Notification;
 import com.example.DunbarHorizon.notification.domain.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +9,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,40 +17,57 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class NotificationRepositoryAdapter implements NotificationRepository {
 
-    private final NotificationMongoRepository notificationMongoRepository;
+    private final NotificationJpaRepository notificationJpaRepository;
 
     @Override
-    public Slice<Notification> findAllByReceiverId(Long receiverId, Pageable pageable) {
-        return notificationMongoRepository.findAllByReceiverIdOrderByCreatedAtDesc(receiverId, pageable);
+    public Slice<Notification> findAllRetainedByReceiverId(Long receiverId, LocalDateTime asOf, Pageable pageable) {
+        return notificationJpaRepository.findAllByReceiverIdAndCreatedAtAfterOrderByCreatedAtDesc(
+                receiverId, Notification.retentionCutoff(asOf), pageable);
     }
 
     @Override
-    public long countByReceiverIdAndIsReadFalse(Long receiverId) {
-        return notificationMongoRepository.countByReceiverIdAndIsReadFalse(receiverId);
-    }
-
-    @Override
-    public List<Notification> findByIsSentFalse() {
-        return notificationMongoRepository.findByIsSentFalse();
+    public long countRetainedUnreadByReceiverId(Long receiverId, LocalDateTime asOf) {
+        return notificationJpaRepository.countByReceiverIdAndIsReadFalseAndCreatedAtAfter(
+                receiverId, Notification.retentionCutoff(asOf));
     }
 
     @Override
     public Notification save(Notification notification) {
-        return notificationMongoRepository.save(notification);
+        return notificationJpaRepository.save(notification);
     }
 
     @Override
-    public Optional<Notification> findById(String id) {
-        return notificationMongoRepository.findById(id);
+    public Optional<Notification> findById(Long id) {
+        return notificationJpaRepository.findById(id);
+    }
+
+    @Override
+    public Optional<Notification> findRetainedById(Long id, LocalDateTime asOf) {
+        return notificationJpaRepository.findByIdAndCreatedAtAfter(id, Notification.retentionCutoff(asOf));
     }
 
     @Override
     public List<Notification> saveAll(List<Notification> notifications) {
-        return notificationMongoRepository.saveAll(notifications);
+        return notificationJpaRepository.saveAll(notifications);
     }
 
     @Override
-    public void deleteById(String id) {
-        notificationMongoRepository.deleteById(id);
+    public void deleteById(Long id) {
+        notificationJpaRepository.deleteById(id);
+    }
+
+    @Override
+    public int markAllAsSent(Collection<Long> ids) {
+        return notificationJpaRepository.updateIsSentTrueByIdIn(ids);
+    }
+
+    @Override
+    public int markAsRead(Long id, LocalDateTime asOf) {
+        return notificationJpaRepository.updateIsReadTrueByIdAndCreatedAtAfter(id, Notification.retentionCutoff(asOf));
+    }
+
+    @Override
+    public int purgeExpired(LocalDateTime asOf) {
+        return notificationJpaRepository.deleteAllByCreatedAtAtOrBefore(Notification.retentionCutoff(asOf));
     }
 }

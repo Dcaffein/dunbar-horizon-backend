@@ -55,6 +55,7 @@ class NotificationEventListenerTest {
                 .willReturn(List.of("token-1", "token-2"));
 
         Notification saved = Notification.builder().receiverId(1L).build();
+        ReflectionTestUtils.setField(saved, "id", 11L);
         given(notificationService.savePendingNotifications(anyList())).willReturn(List.of(saved));
 
         List<String> invalidTokens = List.of("token-2");
@@ -68,7 +69,7 @@ class NotificationEventListenerTest {
         verify(notificationSender).sendMulticast(eq(event), tokenCaptor.capture());
         assertThat(tokenCaptor.getValue()).containsExactlyInAnyOrder("token-1", "token-2");
 
-        verify(notificationService).markAllAsSent(List.of(saved));
+        verify(notificationService).markAllAsSent(List.of(11L));
         verify(notificationService).cleanupInvalidTokens(invalidTokens);
     }
 
@@ -104,7 +105,7 @@ class NotificationEventListenerTest {
         );
 
         Notification savedNotice = Notification.builder().receiverId(null).title("공지 제목").build();
-        ReflectionTestUtils.setField(savedNotice, "id", "broadcast-id");
+        ReflectionTestUtils.setField(savedNotice, "id", 1L);
         given(notificationService.savePendingNotification(any(Notification.class))).willReturn(savedNotice);
 
         // when
@@ -113,7 +114,7 @@ class NotificationEventListenerTest {
         // then
         verify(notificationService).savePendingNotification(any(Notification.class));
         verify(notificationSender).sendBroadcast(event);
-        verify(notificationService).markAsSent("broadcast-id");
+        verify(notificationService).markAsSent(1L);
     }
 
     @Test

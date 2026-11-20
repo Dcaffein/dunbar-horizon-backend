@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.notification.application;
 import com.example.DunbarHorizon.notification.domain.DeviceToken;
 import com.example.DunbarHorizon.notification.domain.Notification;
 import com.example.DunbarHorizon.notification.domain.event.DeviceTokenRegisteredEvent;
+import com.example.DunbarHorizon.notification.domain.exception.NotificationAccessDeniedException;
 import com.example.DunbarHorizon.notification.domain.repository.DeviceTokenRepository;
 import com.example.DunbarHorizon.notification.domain.repository.NotificationRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -14,11 +15,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -142,34 +146,101 @@ class NotificationServiceTest {
     }
 
     @Test
-    @DisplayName("markAsSent: 알림을 조회하여 발송 완료 상태로 변경한다")
-    void markAsSent_발송_완료_상태로_변경한다() {
-        // given
-        Notification notice = Notification.builder().receiverId(1L).isSent(false).build();
-        given(notificationRepository.findById("notice-id")).willReturn(Optional.of(notice));
-
+    @DisplayName("markAsSent: 알림을 읽지 않고 발송 완료만 갱신한다")
+    void markAsSent_발송_완료만_갱신한다() {
         // when
-        notificationService.markAsSent("notice-id");
+        notificationService.markAsSent(1L);
 
         // then
-        assertThat(notice.isSent()).isTrue();
-        verify(notificationRepository).save(notice);
+        verify(notificationRepository).markAllAsSent(List.of(1L));
+        verify(notificationRepository, never()).findById(any());
+        verify(notificationRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("markAllAsSent: 다수의 알림을 일괄 발송 완료 상태로 변경한다")
-    void markAllAsSent_일괄_발송_완료_상태로_변경한다() {
-        // given
-        Notification n1 = Notification.builder().receiverId(1L).isSent(false).build();
-        Notification n2 = Notification.builder().receiverId(2L).isSent(false).build();
-        List<Notification> notices = List.of(n1, n2);
-
+    @DisplayName("markAllAsSent: 다수의 알림을 ID로 일괄 발송 완료 갱신한다")
+    void markAllAsSent_ID로_일괄_갱신한다() {
         // when
-        notificationService.markAllAsSent(notices);
+        notificationService.markAllAsSent(List.of(1L, 2L));
 
         // then
-        assertThat(n1.isSent()).isTrue();
-        assertThat(n2.isSent()).isTrue();
-        verify(notificationRepository).saveAll(notices);
+        verify(notificationRepository).markAllAsSent(List.of(1L, 2L));
+        verify(notificationRepository, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("readNotification: 소유자 확인 뒤 읽음만 갱신하고 읽은 상태로 돌려준다")
+    void readNotification_읽음만_갱신한다() {
+        // given
+        Notification notice = Notification.builder().receiverId(1L).build();
+        given(notificationRepository.findRetainedById(eq(5L), any(LocalDateTime.class))).willReturn(Optional.of(notice));
+        given(notificationRepository.markAsRead(eq(5L), any(LocalDateTime.class))).willReturn(1);
+
+        // when
+        Notification result = notificationService.readNotification(5L, 1L);
+
+        // then
+        assertThat(result.isRead()).isTrue();
+        verify(notificationRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("readNotification: 남의 알림이면 읽음 갱신 없이 거부한다")
+    void readNotification_남의_알림이면_거부한다() {
+        // given
+        Notification notice = Notification.builder().receiverId(2L).build();
+        given(notificationRepository.findRetainedById(eq(5L), any(LocalDateTime.class))).willReturn(Optional.of(notice));
+
+        // when & then
+        assertThatThrownBy(() -> notificationService.readNotification(5L, 1L))
+                .isInstanceOf(NotificationAccessDeniedException.class);
+        verify(notificationRepository, never()).markAsRead(any(), any());
+    }
+
+    @Test
+    @DisplayName("readNotification: 보관 기간이 지난 알림이면 찾을 수 없음으로 끝내고 읽음 갱신을 하지 않는다")
+    void readNotification_보관_기간이_지나면_찾을_수_없다() {
+        // given
+        given(notificationRepository.findRetainedById(eq(5L), any(LocalDateTime.class))).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> notificationService.readNotification(5L, 1L))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(notificationRepository, never()).markAsRead(any(), any());
+    }
+
+    @Test
+    @DisplayName("readNotification: 조회와 읽음 갱신은 같은 기준 시각을 쓴다")
+    void readNotification_조회와_갱신이_같은_기준_시각을_쓴다() {
+        // given
+        Notification notice = Notification.builder().receiverId(1L).build();
+        given(notificationRepository.findRetainedById(eq(5L), any(LocalDateTime.class))).willReturn(Optional.of(notice));
+        given(notificationRepository.markAsRead(eq(5L), any(LocalDateTime.class))).willReturn(1);
+
+        // when
+        notificationService.readNotification(5L, 1L);
+
+        // then
+        ArgumentCaptor<LocalDateTime> lookupAsOf = ArgumentCaptor.forClass(LocalDateTime.class);
+        ArgumentCaptor<LocalDateTime> updateAsOf = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(notificationRepository).findRetainedById(eq(5L), lookupAsOf.capture());
+        verify(notificationRepository).markAsRead(eq(5L), updateAsOf.capture());
+        assertThat(updateAsOf.getValue()).isEqualTo(lookupAsOf.getValue());
+    }
+
+    @Test
+    @DisplayName("purgeExpiredNotifications: 현재 시각을 기준 시각으로 보관 기간이 지난 알림을 정리한다")
+    void purgeExpiredNotifications_현재_시각_기준으로_정리한다() {
+        // given
+        LocalDateTime before = LocalDateTime.now();
+        given(notificationRepository.purgeExpired(any(LocalDateTime.class))).willReturn(3);
+
+        // when
+        notificationService.purgeExpiredNotifications();
+
+        // then
+        ArgumentCaptor<LocalDateTime> asOf = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(notificationRepository).purgeExpired(asOf.capture());
+        assertThat(asOf.getValue()).isBetween(before, LocalDateTime.now());
     }
 }

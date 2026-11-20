@@ -6,14 +6,17 @@ import com.example.DunbarHorizon.notification.domain.event.DeviceTokenRegistered
 import com.example.DunbarHorizon.notification.domain.repository.DeviceTokenRepository;
 import com.example.DunbarHorizon.notification.domain.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -54,17 +57,15 @@ public class NotificationService {
         return notificationRepository.saveAll(notifications);
     }
 
-    public void markAsSent(String notificationId) {
-        notificationRepository.findById(notificationId)
-                .ifPresent(notice -> {
-                    notice.markAsSent();
-                    notificationRepository.save(notice);
-                });
+    @Transactional
+    public void markAsSent(Long notificationId) {
+        notificationRepository.markAllAsSent(List.of(notificationId));
     }
 
-    public void markAllAsSent(List<Notification> notifications) {
-        notifications.forEach(Notification::markAsSent);
-        notificationRepository.saveAll(notifications);
+    @Transactional
+    public void markAllAsSent(List<Long> notificationIds) {
+        if (notificationIds.isEmpty()) return;
+        notificationRepository.markAllAsSent(notificationIds);
     }
 
     @Transactional
@@ -73,25 +74,40 @@ public class NotificationService {
         deviceTokenRepository.deleteAllByFcmTokenIn(invalidTokens);
     }
 
-    public Notification readNotification(String notificationId, Long currentUserId) {
-        Notification notice = notificationRepository.findById(notificationId)
+    @Transactional
+    public Notification readNotification(Long notificationId, Long currentUserId) {
+        LocalDateTime asOf = LocalDateTime.now();
+        Notification notice = notificationRepository.findRetainedById(notificationId, asOf)
                 .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
+        notice.requireOwnership(currentUserId);
+        if (notificationRepository.markAsRead(notificationId, asOf) == 0) {
+            throw new IllegalArgumentException("알림을 찾을 수 없습니다.");
+        }
         notice.read(currentUserId);
-        return notificationRepository.save(notice);
+        return notice;
     }
 
     public Slice<Notification> getMyNotifications(Long userId, Pageable pageable) {
-        return notificationRepository.findAllByReceiverId(userId, pageable);
+        return notificationRepository.findAllRetainedByReceiverId(userId, LocalDateTime.now(), pageable);
     }
 
     public long countUnreadNotifications(Long userId) {
-        return notificationRepository.countByReceiverIdAndIsReadFalse(userId);
+        return notificationRepository.countRetainedUnreadByReceiverId(userId, LocalDateTime.now());
     }
 
-    public void deleteNotification(String notificationId, Long currentUserId) {
+    public void deleteNotification(Long notificationId, Long currentUserId) {
         Notification notice = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
         notice.requireOwnership(currentUserId);
         notificationRepository.deleteById(notificationId);
+    }
+
+    @Transactional
+    public void purgeExpiredNotifications() {
+        int purged = notificationRepository.purgeExpired(LocalDateTime.now());
+
+        if (purged > 0) {
+            log.info("알림 정리 완료: 보관 기간이 지난 알림 {}건 삭제", purged);
+        }
     }
 }

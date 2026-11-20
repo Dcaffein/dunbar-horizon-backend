@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 public record NotificationResponse(
-        String id,
+        Long id,
         String title,
         String content,
         Map<String, Object> metadata,
