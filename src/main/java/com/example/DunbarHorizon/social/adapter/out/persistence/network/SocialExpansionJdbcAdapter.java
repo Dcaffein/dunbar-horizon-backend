@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-public class SocialExpansionJdbcRepository implements SocialExpansionRepository {
+public class SocialExpansionJdbcAdapter implements SocialExpansionRepository {
 
     // Prevent merging candidates into the outer join so MySQL can sort before scoring and stop at LIMIT.
     private static final String SEED_FRIENDS_QUERY = """

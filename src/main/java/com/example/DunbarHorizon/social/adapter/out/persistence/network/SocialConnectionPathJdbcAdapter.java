@@ -13,7 +13,7 @@ import java.util.Map;
 
 @Repository
 @RequiredArgsConstructor
-public class SocialConnectionPathJdbcRepository implements SocialConnectionPathRepository {
+public class SocialConnectionPathJdbcAdapter implements SocialConnectionPathRepository {
 
     private static final String INTERMEDIARIES = """
             WITH my_friends AS (

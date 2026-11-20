@@ -20,10 +20,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
 @JpaRepositoryTest
-@Import({SocialExpansionJdbcRepository.class, SocialExpansionQueryService.class, AnchorRecipientStrategyAdapter.class})
-class SocialExpansionJdbcRepositoryTest {
+@Import({SocialExpansionJdbcAdapter.class, SocialExpansionQueryService.class, AnchorRecipientStrategyAdapter.class})
+class SocialExpansionJdbcAdapterTest {
 
-    @Autowired private SocialExpansionJdbcRepository socialExpansionJdbcRepository;
+    @Autowired private SocialExpansionJdbcAdapter socialExpansionJdbcAdapter;
     @Autowired private SocialExpansionQueryService socialExpansionQueryService;
     @Autowired private AnchorRecipientStrategyAdapter anchorRecipientStrategyAdapter;
     @Autowired private TestEntityManager em;
@@ -66,9 +66,9 @@ class SocialExpansionJdbcRepositoryTest {
         // when & then
         assertThat(socialExpansionQueryService.getRecommendationsByAnchor(me.getId(), anchor.getId()))
                 .containsExactly(result(lowCandidate), result(highCandidate));
-        assertThat(socialExpansionJdbcRepository.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 2, 1))
+        assertThat(socialExpansionJdbcAdapter.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 2, 1))
                 .containsExactly(result(lowCandidate));
-        assertThat(socialExpansionJdbcRepository.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 3, 10)).isEmpty();
+        assertThat(socialExpansionJdbcAdapter.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 3, 10)).isEmpty();
     }
 
     @Test
@@ -95,7 +95,7 @@ class SocialExpansionJdbcRepositoryTest {
         // then
         assertThat(expansion).containsExactly(result(eligible));
         assertThat(recipients).containsExactly(eligible.getId());
-        assertThat(socialExpansionJdbcRepository.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 1, 10))
+        assertThat(socialExpansionJdbcAdapter.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 1, 10))
                 .containsExactly(result(outside));
     }
 
@@ -116,7 +116,7 @@ class SocialExpansionJdbcRepositoryTest {
         label("shared", anchor, me, outside);
 
         // when & then
-        assertThat(socialExpansionJdbcRepository.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 1, 10)).isEmpty();
+        assertThat(socialExpansionJdbcAdapter.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 1, 10)).isEmpty();
         assertThat(socialExpansionQueryService.getAnchorExpansion(me.getId(), anchor.getId(), 1.0)).isEmpty();
         assertThatThrownBy(() -> socialExpansionQueryService.getRecommendationsByAnchor(me.getId(), outside.getId()))
                 .isInstanceOf(FriendshipNotFoundException.class);
@@ -136,13 +136,13 @@ class SocialExpansionJdbcRepositoryTest {
         em.flush();
 
         // when & then
-        assertThat(socialExpansionJdbcRepository.findIntimacy(me.getId(), friend.getId()))
+        assertThat(socialExpansionJdbcAdapter.findIntimacy(me.getId(), friend.getId()))
                 .hasValueSatisfying(intimacy -> assertThat(intimacy).isCloseTo(0.9, within(1e-9)));
-        assertThat(socialExpansionJdbcRepository.findIntimacy(friend.getId(), me.getId()))
+        assertThat(socialExpansionJdbcAdapter.findIntimacy(friend.getId(), me.getId()))
                 .hasValueSatisfying(intimacy -> assertThat(intimacy).isCloseTo(0.9, within(1e-9)));
-        assertThat(socialExpansionJdbcRepository.findIntimacy(me.getId(), inactive.getId())).isEmpty();
-        assertThat(socialExpansionJdbcRepository.findIntimacy(me.getId(), stranger.getId())).isEmpty();
-        assertThat(socialExpansionJdbcRepository.findIntimacy(me.getId(), me.getId())).isEmpty();
+        assertThat(socialExpansionJdbcAdapter.findIntimacy(me.getId(), inactive.getId())).isEmpty();
+        assertThat(socialExpansionJdbcAdapter.findIntimacy(me.getId(), stranger.getId())).isEmpty();
+        assertThat(socialExpansionJdbcAdapter.findIntimacy(me.getId(), me.getId())).isEmpty();
     }
 
     private User user(String nickname) {

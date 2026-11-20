@@ -19,7 +19,7 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-public class SocialNetworkJdbcRepository implements SocialNetworkRepository {
+public class SocialNetworkJdbcAdapter implements SocialNetworkRepository {
 
     private static final String NETWORK_GRAPH = """
             WITH my_friends AS (

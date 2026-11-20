@@ -15,7 +15,7 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-public class FriendRequestQueryJdbcRepository implements FriendRequestQueryRepository {
+public class FriendRequestQueryJdbcAdapter implements FriendRequestQueryRepository {
 
     private static final String SELECT_REQUEST = """
             SELECT r.requester_id, r.receiver_id, r.status, r.created_at,

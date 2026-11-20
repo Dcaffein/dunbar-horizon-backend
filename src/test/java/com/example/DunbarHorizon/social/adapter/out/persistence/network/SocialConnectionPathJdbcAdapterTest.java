@@ -18,10 +18,10 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
-@Import({SocialConnectionPathJdbcRepository.class, SocialConnectionPathQueryService.class})
-class SocialConnectionPathJdbcRepositoryTest {
+@Import({SocialConnectionPathJdbcAdapter.class, SocialConnectionPathQueryService.class})
+class SocialConnectionPathJdbcAdapterTest {
 
-    @Autowired private SocialConnectionPathJdbcRepository socialConnectionPathJdbcRepository;
+    @Autowired private SocialConnectionPathJdbcAdapter socialConnectionPathJdbcAdapter;
     @Autowired private SocialConnectionPathQueryService socialConnectionPathQueryService;
     @Autowired private TestEntityManager em;
     @Autowired private JdbcTemplate jdbc;
@@ -52,7 +52,7 @@ class SocialConnectionPathJdbcRepositoryTest {
         // then
         assertThat(result).isEqualTo(new ConnectionPathResult(true, 4,
                 List.of(result(tie), result(lower), result(higher))));
-        assertThat(socialConnectionPathJdbcRepository.findIntermediaries(me.getId(), target.getId(), 0))
+        assertThat(socialConnectionPathJdbcAdapter.findIntermediaries(me.getId(), target.getId(), 0))
                 .isEqualTo(new ConnectionPathResult.Intermediaries(List.of(), 4));
     }
 
@@ -89,7 +89,7 @@ class SocialConnectionPathJdbcRepositoryTest {
                 .isEqualTo(new ConnectionPathResult(false, 1, List.of(result(open))));
         target.deactivate();
         em.flush();
-        assertThat(socialConnectionPathJdbcRepository.findIntermediaries(me.getId(), target.getId(), 3))
+        assertThat(socialConnectionPathJdbcAdapter.findIntermediaries(me.getId(), target.getId(), 3))
                 .isEqualTo(new ConnectionPathResult.Intermediaries(List.of(), 0));
     }
 
@@ -122,11 +122,11 @@ class SocialConnectionPathJdbcRepositoryTest {
         em.flush();
 
         // when & then
-        assertThat(socialConnectionPathJdbcRepository.existsFriendship(me.getId(), friend.getId())).isTrue();
-        assertThat(socialConnectionPathJdbcRepository.existsFriendship(friend.getId(), me.getId())).isTrue();
-        assertThat(socialConnectionPathJdbcRepository.existsFriendship(me.getId(), inactive.getId())).isFalse();
-        assertThat(socialConnectionPathJdbcRepository.existsFriendship(me.getId(), stranger.getId())).isFalse();
-        assertThat(socialConnectionPathJdbcRepository.existsFriendship(me.getId(), me.getId())).isFalse();
+        assertThat(socialConnectionPathJdbcAdapter.existsFriendship(me.getId(), friend.getId())).isTrue();
+        assertThat(socialConnectionPathJdbcAdapter.existsFriendship(friend.getId(), me.getId())).isTrue();
+        assertThat(socialConnectionPathJdbcAdapter.existsFriendship(me.getId(), inactive.getId())).isFalse();
+        assertThat(socialConnectionPathJdbcAdapter.existsFriendship(me.getId(), stranger.getId())).isFalse();
+        assertThat(socialConnectionPathJdbcAdapter.existsFriendship(me.getId(), me.getId())).isFalse();
     }
 
     private User user(String nickname) {

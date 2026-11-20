@@ -16,10 +16,10 @@ import org.springframework.context.annotation.Import;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
-@Import(FriendRequestQueryJdbcRepository.class)
-class FriendRequestQueryJdbcRepositoryTest {
+@Import(FriendRequestQueryJdbcAdapter.class)
+class FriendRequestQueryJdbcAdapterTest {
 
-    @Autowired private FriendRequestQueryJdbcRepository friendRequestQueryJdbcRepository;
+    @Autowired private FriendRequestQueryJdbcAdapter friendRequestQueryJdbcAdapter;
     @Autowired private TestEntityManager testEntityManager;
 
     private User requester;
@@ -41,8 +41,8 @@ class FriendRequestQueryJdbcRepositoryTest {
         testEntityManager.clear();
 
         // when
-        var sent = friendRequestQueryJdbcRepository.findSent(requester.getId());
-        var receivedHidden = friendRequestQueryJdbcRepository.findReceived(receiver.getId(), FriendRequestStatus.HIDDEN);
+        var sent = friendRequestQueryJdbcAdapter.findSent(requester.getId());
+        var receivedHidden = friendRequestQueryJdbcAdapter.findReceived(receiver.getId(), FriendRequestStatus.HIDDEN);
 
         // then
         assertThat(sent).singleElement().satisfies(view -> {
@@ -54,10 +54,10 @@ class FriendRequestQueryJdbcRepositoryTest {
             assertThat(view.createdAt()).isNotNull();
         });
         assertThat(receivedHidden).containsExactlyElementsOf(sent);
-        assertThat(friendRequestQueryJdbcRepository.findSentTo(requester.getId(), receiver.getId())).contains(sent.getFirst());
-        assertThat(friendRequestQueryJdbcRepository.findSentTo(receiver.getId(), requester.getId())).isEmpty();
-        assertThat(friendRequestQueryJdbcRepository.findReceived(receiver.getId(), FriendRequestStatus.PENDING)).isEmpty();
-        assertThat(friendRequestQueryJdbcRepository.findSent(receiver.getId())).isEmpty();
+        assertThat(friendRequestQueryJdbcAdapter.findSentTo(requester.getId(), receiver.getId())).contains(sent.getFirst());
+        assertThat(friendRequestQueryJdbcAdapter.findSentTo(receiver.getId(), requester.getId())).isEmpty();
+        assertThat(friendRequestQueryJdbcAdapter.findReceived(receiver.getId(), FriendRequestStatus.PENDING)).isEmpty();
+        assertThat(friendRequestQueryJdbcAdapter.findSent(receiver.getId())).isEmpty();
     }
 
     @Test
@@ -70,9 +70,9 @@ class FriendRequestQueryJdbcRepositoryTest {
         testEntityManager.clear();
 
         // when & then
-        assertThat(friendRequestQueryJdbcRepository.findSent(requester.getId())).isEmpty();
-        assertThat(friendRequestQueryJdbcRepository.findReceived(receiver.getId(), FriendRequestStatus.PENDING)).isEmpty();
-        assertThat(friendRequestQueryJdbcRepository.findSentTo(requester.getId(), receiver.getId())).hasValueSatisfying(view -> {
+        assertThat(friendRequestQueryJdbcAdapter.findSent(requester.getId())).isEmpty();
+        assertThat(friendRequestQueryJdbcAdapter.findReceived(receiver.getId(), FriendRequestStatus.PENDING)).isEmpty();
+        assertThat(friendRequestQueryJdbcAdapter.findSentTo(requester.getId(), receiver.getId())).hasValueSatisfying(view -> {
             assertThat(view.requesterNickname()).isEqualTo("requester");
             assertThat(view.receiverNickname()).isNull();
         });

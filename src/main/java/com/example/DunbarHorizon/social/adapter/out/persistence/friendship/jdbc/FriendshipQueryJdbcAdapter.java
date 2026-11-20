@@ -21,7 +21,7 @@ import static com.example.DunbarHorizon.social.adapter.out.persistence.friendshi
 
 @Repository
 @RequiredArgsConstructor
-public class FriendshipQueryJdbcRepository implements FriendshipQueryRepository {
+public class FriendshipQueryJdbcAdapter implements FriendshipQueryRepository {
 
     private static final String VIEWER_ACTIVE =
             "EXISTS (SELECT 1 FROM users me WHERE me.user_id = :userId AND me.status = 'ACTIVE')";

@@ -42,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
-@Import({LabelQueryJdbcRepository.class, LabelMembershipCleanupJdbcAdapter.class, LabelMemberFriendshipLookupJpaAdapter.class,
+@Import({LabelQueryJdbcAdapter.class, LabelMembershipCleanupJdbcAdapter.class, LabelMemberFriendshipLookupJpaAdapter.class,
         FriendshipPersistenceAdapter.class, LabelPersistenceAdapter.class,
         LabelCommandService.class, LabelQueryService.class, LabelNamer.class, LabelMemberRegistrar.class})
 class LabelPersistenceAdapterTest {

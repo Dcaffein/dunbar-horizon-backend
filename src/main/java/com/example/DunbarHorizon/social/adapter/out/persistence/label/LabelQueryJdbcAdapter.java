@@ -14,7 +14,7 @@ import java.util.Set;
 
 @Repository
 @RequiredArgsConstructor
-public class LabelQueryJdbcRepository implements LabelQueryRepository {
+public class LabelQueryJdbcAdapter implements LabelQueryRepository {
 
     private static final String SELECT_LABELS = """
             SELECT l.id, l.name, COUNT(u.user_id) AS member_count
