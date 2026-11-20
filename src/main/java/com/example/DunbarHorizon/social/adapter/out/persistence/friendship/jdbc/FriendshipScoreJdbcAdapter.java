@@ -23,7 +23,7 @@ import static com.example.DunbarHorizon.social.adapter.out.persistence.friendshi
 
 @Repository
 @RequiredArgsConstructor
-public class FriendshipScoreJdbcRepository implements FriendshipScoreRepository {
+public class FriendshipScoreJdbcAdapter implements FriendshipScoreRepository {
 
     private static final String SELECT_PAIR_FOR_UPDATE = """
             SELECT * FROM friendships

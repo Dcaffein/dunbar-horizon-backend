@@ -15,10 +15,11 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-public class SocialNetworkJdbcRepository implements SocialNetworkRepository {
+public class SocialNetworkJdbcAdapter implements SocialNetworkRepository {
 
     private static final String NETWORK_GRAPH = """
             WITH my_friends AS (
@@ -78,6 +79,14 @@ public class SocialNetworkJdbcRepository implements SocialNetworkRepository {
                                 AND edge.high_user_id = GREATEST(:targetId, base.friend_id)
             ORDER BY edge.intimacy DESC, base.friend_id
             LIMIT :edgeLimit
+            """;
+
+    private static final String INTIMACY = """
+            SELECT f.intimacy
+            FROM friendships f
+            JOIN users low_user ON low_user.user_id = f.low_user_id AND low_user.status = 'ACTIVE'
+            JOIN users high_user ON high_user.user_id = f.high_user_id AND high_user.status = 'ACTIVE'
+            WHERE f.low_user_id = LEAST(:userId, :friendId) AND f.high_user_id = GREATEST(:userId, :friendId)
             """;
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -144,5 +153,11 @@ public class SocialNetworkJdbcRepository implements SocialNetworkRepository {
         return nodes.values().stream()
                 .map(node -> new NodeGraphResult(node.nodeId(), node.interestScore(), List.copyOf(node.edges())))
                 .toList();
+    }
+
+    @Override
+    public Optional<Double> findIntimacy(Long userId, Long friendId) {
+        return jdbc.queryForList(INTIMACY, Map.of("userId", userId, "friendId", friendId), Double.class)
+                .stream().findFirst();
     }
 }

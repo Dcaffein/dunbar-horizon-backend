@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.friendship;
 
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.jdbc.FriendshipScoreJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.jdbc.FriendshipScoreJdbcAdapter;
 import com.example.DunbarHorizon.social.adapter.out.persistence.label.LabelMemberFriendshipLookupJpaAdapter;
 import com.example.DunbarHorizon.social.application.friendship.port.FriendshipScoreRepository;
 import com.example.DunbarHorizon.social.application.label.port.LabelMemberFriendshipLookup;
@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @JpaRepositoryTest
-@Import({FriendshipPersistenceAdapter.class, FriendshipScoreJdbcRepository.class, LabelMemberFriendshipLookupJpaAdapter.class})
+@Import({FriendshipPersistenceAdapter.class, FriendshipScoreJdbcAdapter.class, LabelMemberFriendshipLookupJpaAdapter.class})
 class FriendshipPersistenceAdapterTest {
 
     private static final LocalDate CREATED_AT = LocalDate.of(2026, 9, 14);

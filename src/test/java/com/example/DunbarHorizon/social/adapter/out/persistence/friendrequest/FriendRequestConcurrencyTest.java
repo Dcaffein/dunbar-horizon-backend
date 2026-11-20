@@ -47,7 +47,7 @@ import static org.mockito.Mockito.doReturn;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendRequestPersistenceAdapter.class, FriendshipPersistenceAdapter.class,
-        FriendRequestService.class, FriendshipBroker.class, FriendRequestQueryJdbcRepository.class,
+        FriendRequestService.class, FriendshipBroker.class, FriendRequestQueryJdbcAdapter.class,
         FriendRequestConcurrencyTest.AcceptedEvents.class})
 class FriendRequestConcurrencyTest {
 

@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.FriendshipPersistenceAdapter;
-import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.jdbc.FriendshipQueryJdbcRepository;
+import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.jdbc.FriendshipQueryJdbcAdapter;
 import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendRequestDirection;
 import com.example.DunbarHorizon.social.application.friendrequest.dto.FriendResult;
 import com.example.DunbarHorizon.social.application.friendrequest.FriendshipNotificationEventListener;
@@ -42,8 +42,8 @@ import static org.mockito.Mockito.doAnswer;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({FriendRequestPersistenceAdapter.class, FriendshipPersistenceAdapter.class,
-        FriendRequestService.class, FriendshipBroker.class, FriendRequestQueryJdbcRepository.class,
-        FriendshipQueryJdbcRepository.class, FriendshipNotificationEventListener.class,
+        FriendRequestService.class, FriendshipBroker.class, FriendRequestQueryJdbcAdapter.class,
+        FriendshipQueryJdbcAdapter.class, FriendshipNotificationEventListener.class,
         FriendRequestLifecycleTest.AcceptedEvents.class})
 class FriendRequestLifecycleTest {
 

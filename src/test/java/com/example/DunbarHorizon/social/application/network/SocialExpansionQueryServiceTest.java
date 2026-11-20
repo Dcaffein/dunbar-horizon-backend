@@ -2,9 +2,7 @@ package com.example.DunbarHorizon.social.application.network;
 
 import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
 import com.example.DunbarHorizon.social.application.network.port.SocialExpansionRepository;
-import com.example.DunbarHorizon.social.domain.friendship.Friendship;
 import com.example.DunbarHorizon.social.domain.friendship.exception.FriendshipNotFoundException;
-import com.example.DunbarHorizon.social.domain.friendship.repository.FriendshipRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,12 +25,6 @@ class SocialExpansionQueryServiceTest {
 
     @Mock
     private SocialExpansionRepository socialExpansionRepository;
-
-    @Mock
-    private FriendshipRepository friendshipRepository;
-
-    @Mock
-    private Friendship friendship;
 
     @InjectMocks
     private SocialExpansionQueryService socialExpansionQueryService;
@@ -117,14 +109,12 @@ class SocialExpansionQueryServiceTest {
     // ── getRecommendationsByAnchor ────────────────────────────────────────────
 
     @Test
-    @DisplayName("getRecommendationsByAnchor: Friendship.intimacy를 기반으로 limit/threshold를 계산해 호출된다")
+    @DisplayName("getRecommendationsByAnchor: 기준 친구와의 친밀도를 기반으로 limit/threshold를 계산해 호출된다")
     void getRecommendationsByAnchor_intimacy_기반_파라미터_검증() {
         // given
         Long userId = 1L, anchorId = 10L;
         double intimacy = 0.5; // limit=7, threshold=3
-        given(friendshipRepository.findBetween(userId, anchorId))
-                .willReturn(Optional.of(friendship));
-        given(friendship.getIntimacy()).willReturn(intimacy);
+        given(socialExpansionRepository.findIntimacy(userId, anchorId)).willReturn(Optional.of(intimacy));
         given(socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, 3, 7))
                 .willReturn(List.of());
 
@@ -140,8 +130,7 @@ class SocialExpansionQueryServiceTest {
     void getRecommendationsByAnchor_친구가_아닌_경우_예외() {
         // given
         Long userId = 1L, anchorId = 10L;
-        given(friendshipRepository.findBetween(userId, anchorId))
-                .willReturn(Optional.empty());
+        given(socialExpansionRepository.findIntimacy(userId, anchorId)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> socialExpansionQueryService.getRecommendationsByAnchor(userId, anchorId))
@@ -156,9 +145,7 @@ class SocialExpansionQueryServiceTest {
         List<AnchorExpansionResult> expected = List.of(
                 new AnchorExpansionResult(200L, "유저B")
         );
-        given(friendshipRepository.findBetween(userId, anchorId))
-                .willReturn(Optional.of(friendship));
-        given(friendship.getIntimacy()).willReturn(0.9);
+        given(socialExpansionRepository.findIntimacy(userId, anchorId)).willReturn(Optional.of(0.9));
         given(socialExpansionRepository.getRecommendedNetworkByAnchor(eq(userId), eq(anchorId), anyInt(), anyInt()))
                 .willReturn(expected);
 

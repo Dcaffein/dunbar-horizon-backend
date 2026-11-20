@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.network;
 
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.FriendshipPersistenceAdapter;
 import com.example.DunbarHorizon.social.application.network.dto.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
@@ -22,11 +21,11 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
-@Import({SocialNetworkJdbcRepository.class, SocialNetworkQueryService.class, FriendshipPersistenceAdapter.class,
+@Import({SocialNetworkJdbcAdapter.class, SocialNetworkQueryService.class,
         NetworkEdgeLimits.class})
-class SocialNetworkJdbcRepositoryTest {
+class SocialNetworkJdbcAdapterTest {
 
-    @Autowired private SocialNetworkJdbcRepository socialNetworkJdbcRepository;
+    @Autowired private SocialNetworkJdbcAdapter socialNetworkJdbcAdapter;
     @Autowired private SocialNetworkQueryService socialNetworkQueryService;
     @Autowired private TestEntityManager em;
     @Autowired private JdbcTemplate jdbc;
@@ -57,7 +56,7 @@ class SocialNetworkJdbcRepositoryTest {
         connect(lower, fourth, 0.5);
         connect(lower, outside, 0.96875);
 
-        var graph = socialNetworkJdbcRepository.getDefaultNetworkGraph(me.getId(), DunbarCircle.SUPPORT, 1, 2);
+        var graph = socialNetworkJdbcAdapter.getDefaultNetworkGraph(me.getId(), DunbarCircle.SUPPORT, 1, 2);
 
         assertThat(graph).containsExactly(
                 new NodeGraphResult(lower.getId(), 0.9375,
@@ -66,7 +65,7 @@ class SocialNetworkJdbcRepositoryTest {
                 new NodeGraphResult(third.getId(), 0.75, List.of(new NodeEdgeResult(lower.getId(), 0.75))),
                 new NodeGraphResult(fourth.getId(), 0.5, List.of(new NodeEdgeResult(lower.getId(), 0.5))),
                 new NodeGraphResult(isolated.getId(), 0.5, List.of()));
-        assertThat(socialNetworkJdbcRepository.getDefaultNetworkGraph(inactive.getId(), DunbarCircle.DUNBAR, 5, 10)).isEmpty();
+        assertThat(socialNetworkJdbcAdapter.getDefaultNetworkGraph(inactive.getId(), DunbarCircle.DUNBAR, 5, 10)).isEmpty();
     }
 
     @Test
@@ -91,7 +90,7 @@ class SocialNetworkJdbcRepositoryTest {
         createLabel("theirs", member, me, otherMember);
         createLabel("empty", me);
 
-        assertThat(socialNetworkJdbcRepository.getLabelCustomNetwork(me.getId(), "mine", DunbarCircle.SUPPORT, 5, 10))
+        assertThat(socialNetworkJdbcAdapter.getLabelCustomNetwork(me.getId(), "mine", DunbarCircle.SUPPORT, 5, 10))
                 .containsExactly(
                         new NodeGraphResult(member.getId(), 0.75, List.of(new NodeEdgeResult(otherMember.getId(), 0.875))),
                         new NodeGraphResult(otherMember.getId(), 0.5, List.of(new NodeEdgeResult(member.getId(), 0.875))));
@@ -130,13 +129,35 @@ class SocialNetworkJdbcRepositoryTest {
         assertThat(socialNetworkQueryService.getNetworkEdges(me.getId(), target.getId(), candidates)).containsExactly(
                 new MutualFriendEdgeResult(target.getId(), higher.getId(), 0.75),
                 new MutualFriendEdgeResult(target.getId(), lower.getId(), 0.5));
-        assertThat(socialNetworkJdbcRepository.getDirectFriendEdgesForTarget(me.getId(), target.getId(), candidates, 1))
+        assertThat(socialNetworkJdbcAdapter.getDirectFriendEdgesForTarget(me.getId(), target.getId(), candidates, 1))
                 .containsExactly(new MutualFriendEdgeResult(target.getId(), higher.getId(), 0.75));
 
         target.deactivate();
         em.flush();
         assertThat(socialNetworkQueryService.getNetworkEdges(me.getId(), target.getId(), candidates)).isEmpty();
         assertThat(socialNetworkQueryService.getNetworkEdges(me.getId(), target.getId(), List.of())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("활성 사용자 쌍의 친밀도만 ID 순서와 무관하게 조회한다")
+    void findIntimacy_ReturnsOnlyActivePair_EitherOrder() {
+        // given
+        User me = createUser("me");
+        User friend = createUser("friend");
+        User inactive = createUser("inactive");
+        User stranger = createUser("stranger");
+        connect(me, friend, 0.5);
+        connect(me, inactive, 0.5);
+        inactive.deleteAccount();
+        em.flush();
+
+        // when & then
+        assertThat(socialNetworkJdbcAdapter.findIntimacy(me.getId(), friend.getId())).isPresent();
+        assertThat(socialNetworkJdbcAdapter.findIntimacy(friend.getId(), me.getId()))
+                .isEqualTo(socialNetworkJdbcAdapter.findIntimacy(me.getId(), friend.getId()));
+        assertThat(socialNetworkJdbcAdapter.findIntimacy(me.getId(), inactive.getId())).isEmpty();
+        assertThat(socialNetworkJdbcAdapter.findIntimacy(me.getId(), stranger.getId())).isEmpty();
+        assertThat(socialNetworkJdbcAdapter.findIntimacy(me.getId(), me.getId())).isEmpty();
     }
 
     private User createUser(String nickname) {

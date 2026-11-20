@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.social.application.network;
 
 import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.network.port.SocialConnectionPathRepository;
-import com.example.DunbarHorizon.social.domain.friendship.repository.FriendshipRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,9 +22,6 @@ class SocialConnectionPathQueryServiceTest {
     @Mock
     private SocialConnectionPathRepository connectionPathRepository;
 
-    @Mock
-    private FriendshipRepository friendshipRepository;
-
     @InjectMocks
     private SocialConnectionPathQueryService socialConnectionPathQueryService;
 
@@ -33,7 +29,7 @@ class SocialConnectionPathQueryServiceTest {
     @DisplayName("상한 3을 리포지토리에 전달하고 전체 수와 목록을 응답에 담는다")
     void getConnectionPath_상한_전달() {
         // given
-        given(friendshipRepository.existsBetween(1L, 99L)).willReturn(false);
+        given(connectionPathRepository.existsFriendship(1L, 99L)).willReturn(false);
         given(connectionPathRepository.findIntermediaries(1L, 99L, 3))
                 .willReturn(new ConnectionPathResult.Intermediaries(
                         List.of(new ConnectionPathResult.IntermediaryResult(2L, "중개인2")), 12));
@@ -53,7 +49,7 @@ class SocialConnectionPathQueryServiceTest {
     @DisplayName("이미 친구인 대상이어도 공통 친구를 조회한다")
     void getConnectionPath_직접_친구여도_조회한다() {
         // given
-        given(friendshipRepository.existsBetween(1L, 99L)).willReturn(true);
+        given(connectionPathRepository.existsFriendship(1L, 99L)).willReturn(true);
         given(connectionPathRepository.findIntermediaries(1L, 99L, 3))
                 .willReturn(new ConnectionPathResult.Intermediaries(
                         List.of(new ConnectionPathResult.IntermediaryResult(2L, "중개인2")), 12));
@@ -78,6 +74,6 @@ class SocialConnectionPathQueryServiceTest {
         assertThat(result.direct()).isFalse();
         assertThat(result.totalCount()).isZero();
         assertThat(result.intermediaries()).isEmpty();
-        verifyNoInteractions(connectionPathRepository, friendshipRepository);
+        verifyNoInteractions(connectionPathRepository);
     }
 }
