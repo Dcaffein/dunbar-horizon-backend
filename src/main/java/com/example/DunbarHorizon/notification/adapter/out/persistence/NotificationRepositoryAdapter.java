@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,5 +46,15 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     @Override
     public void deleteById(Long id) {
         notificationJpaRepository.deleteById(id);
+    }
+
+    @Override
+    public int markAllAsSent(Collection<Long> ids) {
+        return notificationJpaRepository.updateIsSentTrueByIdIn(ids);
+    }
+
+    @Override
+    public int markAsRead(Long id) {
+        return notificationJpaRepository.updateIsReadTrueById(id);
     }
 }

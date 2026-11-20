@@ -50,7 +50,7 @@ public class NotificationEventListener {
 
         try {
             List<String> invalidTokens = notificationSender.sendMulticast(event, tokens);
-            notificationService.markAllAsSent(savedNotifications);
+            notificationService.markAllAsSent(savedNotifications.stream().map(Notification::getId).toList());
             notificationService.cleanupInvalidTokens(invalidTokens);
         } catch (Exception e) {
             log.error("FCM 벌크 전송 중 시스템 에러: {}", e.getMessage());

@@ -61,10 +61,6 @@ public class Notification {
         }
     }
 
-    public void markAsSent() {
-        this.isSent = true;
-    }
-
     private boolean isOwnedBy(Long userId) {
         return this.receiverId != null && this.receiverId.equals(userId);
     }

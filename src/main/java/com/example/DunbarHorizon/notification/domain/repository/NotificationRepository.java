@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.notification.domain.Notification;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,4 +15,6 @@ public interface NotificationRepository {
     Optional<Notification> findById(Long id);
     List<Notification> saveAll(List<Notification> notifications);
     void deleteById(Long id);
+    int markAllAsSent(Collection<Long> ids);
+    int markAsRead(Long id);
 }

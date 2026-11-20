@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.notification.application;
 import com.example.DunbarHorizon.notification.domain.DeviceToken;
 import com.example.DunbarHorizon.notification.domain.Notification;
 import com.example.DunbarHorizon.notification.domain.event.DeviceTokenRegisteredEvent;
+import com.example.DunbarHorizon.notification.domain.exception.NotificationAccessDeniedException;
 import com.example.DunbarHorizon.notification.domain.repository.DeviceTokenRepository;
 import com.example.DunbarHorizon.notification.domain.repository.NotificationRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
@@ -142,34 +144,54 @@ class NotificationServiceTest {
     }
 
     @Test
-    @DisplayName("markAsSent: 알림을 조회하여 발송 완료 상태로 변경한다")
-    void markAsSent_발송_완료_상태로_변경한다() {
-        // given
-        Notification notice = Notification.builder().receiverId(1L).isSent(false).build();
-        given(notificationRepository.findById(1L)).willReturn(Optional.of(notice));
-
+    @DisplayName("markAsSent: 알림을 읽지 않고 발송 완료만 갱신한다")
+    void markAsSent_발송_완료만_갱신한다() {
         // when
         notificationService.markAsSent(1L);
 
         // then
-        assertThat(notice.isSent()).isTrue();
-        verify(notificationRepository).save(notice);
+        verify(notificationRepository).markAllAsSent(List.of(1L));
+        verify(notificationRepository, never()).findById(any());
+        verify(notificationRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("markAllAsSent: 다수의 알림을 일괄 발송 완료 상태로 변경한다")
-    void markAllAsSent_일괄_발송_완료_상태로_변경한다() {
-        // given
-        Notification n1 = Notification.builder().receiverId(1L).isSent(false).build();
-        Notification n2 = Notification.builder().receiverId(2L).isSent(false).build();
-        List<Notification> notices = List.of(n1, n2);
-
+    @DisplayName("markAllAsSent: 다수의 알림을 ID로 일괄 발송 완료 갱신한다")
+    void markAllAsSent_ID로_일괄_갱신한다() {
         // when
-        notificationService.markAllAsSent(notices);
+        notificationService.markAllAsSent(List.of(1L, 2L));
 
         // then
-        assertThat(n1.isSent()).isTrue();
-        assertThat(n2.isSent()).isTrue();
-        verify(notificationRepository).saveAll(notices);
+        verify(notificationRepository).markAllAsSent(List.of(1L, 2L));
+        verify(notificationRepository, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("readNotification: 소유자 확인 뒤 읽음만 갱신하고 읽은 상태로 돌려준다")
+    void readNotification_읽음만_갱신한다() {
+        // given
+        Notification notice = Notification.builder().receiverId(1L).build();
+        given(notificationRepository.findById(5L)).willReturn(Optional.of(notice));
+        given(notificationRepository.markAsRead(5L)).willReturn(1);
+
+        // when
+        Notification result = notificationService.readNotification(5L, 1L);
+
+        // then
+        assertThat(result.isRead()).isTrue();
+        verify(notificationRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("readNotification: 남의 알림이면 읽음 갱신 없이 거부한다")
+    void readNotification_남의_알림이면_거부한다() {
+        // given
+        Notification notice = Notification.builder().receiverId(2L).build();
+        given(notificationRepository.findById(5L)).willReturn(Optional.of(notice));
+
+        // when & then
+        assertThatThrownBy(() -> notificationService.readNotification(5L, 1L))
+                .isInstanceOf(NotificationAccessDeniedException.class);
+        verify(notificationRepository, never()).markAsRead(any());
     }
 }

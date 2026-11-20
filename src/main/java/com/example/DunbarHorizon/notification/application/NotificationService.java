@@ -54,17 +54,15 @@ public class NotificationService {
         return notificationRepository.saveAll(notifications);
     }
 
+    @Transactional
     public void markAsSent(Long notificationId) {
-        notificationRepository.findById(notificationId)
-                .ifPresent(notice -> {
-                    notice.markAsSent();
-                    notificationRepository.save(notice);
-                });
+        notificationRepository.markAllAsSent(List.of(notificationId));
     }
 
-    public void markAllAsSent(List<Notification> notifications) {
-        notifications.forEach(Notification::markAsSent);
-        notificationRepository.saveAll(notifications);
+    @Transactional
+    public void markAllAsSent(List<Long> notificationIds) {
+        if (notificationIds.isEmpty()) return;
+        notificationRepository.markAllAsSent(notificationIds);
     }
 
     @Transactional
@@ -73,11 +71,16 @@ public class NotificationService {
         deviceTokenRepository.deleteAllByFcmTokenIn(invalidTokens);
     }
 
+    @Transactional
     public Notification readNotification(Long notificationId, Long currentUserId) {
         Notification notice = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
+        notice.requireOwnership(currentUserId);
+        if (notificationRepository.markAsRead(notificationId) == 0) {
+            throw new IllegalArgumentException("알림을 찾을 수 없습니다.");
+        }
         notice.read(currentUserId);
-        return notificationRepository.save(notice);
+        return notice;
     }
 
     public Slice<Notification> getMyNotifications(Long userId, Pageable pageable) {
