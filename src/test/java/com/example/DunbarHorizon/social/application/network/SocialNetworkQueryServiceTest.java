@@ -5,9 +5,7 @@ import com.example.DunbarHorizon.social.application.network.dto.NodeEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.network.port.SocialNetworkRepository;
 import com.example.DunbarHorizon.social.domain.network.DunbarCircle;
-import com.example.DunbarHorizon.social.domain.friendship.Friendship;
 import com.example.DunbarHorizon.social.domain.network.NetworkEdgeLimits;
-import com.example.DunbarHorizon.social.domain.friendship.repository.FriendshipRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,12 +26,6 @@ class SocialNetworkQueryServiceTest {
 
     @Mock
     private SocialNetworkRepository socialNetworkRepository;
-
-    @Mock
-    private FriendshipRepository friendshipRepository;
-
-    @Mock
-    private Friendship friendship;
 
     @Mock
     private NetworkEdgeLimits edgeLimits;
@@ -74,7 +66,7 @@ class SocialNetworkQueryServiceTest {
         assertThat(socialNetworkQueryService.getNetworkEdges(1L, 10L, null)).isEmpty();
         assertThat(socialNetworkQueryService.getNetworkEdges(1L, 10L, List.of())).isEmpty();
 
-        verifyNoInteractions(socialNetworkRepository, friendshipRepository);
+        verifyNoInteractions(socialNetworkRepository);
     }
 
     @Test
@@ -82,9 +74,7 @@ class SocialNetworkQueryServiceTest {
     void getNetworkEdges_직접_친구() {
         List<Long> baseNetworkFriendIds = List.of(20L, 30L);
         List<MutualFriendEdgeResult> expected = List.of(new MutualFriendEdgeResult(10L, 20L, 0.6));
-        given(friendshipRepository.findBetween(1L, 10L))
-                .willReturn(Optional.of(friendship));
-        given(friendship.getIntimacy()).willReturn(0.5);
+        given(socialNetworkRepository.findIntimacy(1L, 10L)).willReturn(Optional.of(0.5));
         given(edgeLimits.directFriendEdgeLimit(0.5)).willReturn(7);
         given(socialNetworkRepository.getDirectFriendEdgesForTarget(1L, 10L, baseNetworkFriendIds, 7)).willReturn(expected);
 
@@ -100,8 +90,7 @@ class SocialNetworkQueryServiceTest {
     void getNetworkEdges_직접_친구가_아니면_2홉() {
         List<Long> baseNetworkFriendIds = List.of(20L, 30L);
         List<MutualFriendEdgeResult> expected = List.of(new MutualFriendEdgeResult(10L, 20L, null));
-        given(friendshipRepository.findBetween(1L, 10L))
-                .willReturn(Optional.empty());
+        given(socialNetworkRepository.findIntimacy(1L, 10L)).willReturn(Optional.empty());
         given(edgeLimits.twoHopContactEdgeLimit()).willReturn(5);
         given(socialNetworkRepository.getTwoHopContactEdgesForTarget(1L, 10L, baseNetworkFriendIds, 5)).willReturn(expected);
 

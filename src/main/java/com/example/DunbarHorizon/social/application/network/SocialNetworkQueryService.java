@@ -6,7 +6,6 @@ import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
 import com.example.DunbarHorizon.social.application.network.port.SocialNetworkRepository;
 import com.example.DunbarHorizon.social.domain.network.DunbarCircle;
 import com.example.DunbarHorizon.social.domain.network.NetworkEdgeLimits;
-import com.example.DunbarHorizon.social.domain.friendship.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +19,6 @@ public class SocialNetworkQueryService {
     private static final int PRUNING_EDGE_RANGE = 10;
 
     private final SocialNetworkRepository socialNetworkRepository;
-    private final FriendshipRepository friendshipRepository;
     private final NetworkEdgeLimits edgeLimits;
 
     public List<NodeGraphResult> getFriendsNetwork(Long userId, DunbarCircle circleSize) {
@@ -34,10 +32,10 @@ public class SocialNetworkQueryService {
     @Transactional(readOnly = true)
     public List<MutualFriendEdgeResult> getNetworkEdges(Long userId, Long targetId, List<Long> baseNetworkFriendIds) {
         if (baseNetworkFriendIds == null || baseNetworkFriendIds.isEmpty()) return List.of();
-        return friendshipRepository.findBetween(userId, targetId)
-                .map(friendship -> socialNetworkRepository.getDirectFriendEdgesForTarget(
+        return socialNetworkRepository.findIntimacy(userId, targetId)
+                .map(intimacy -> socialNetworkRepository.getDirectFriendEdgesForTarget(
                         userId, targetId, baseNetworkFriendIds,
-                        edgeLimits.directFriendEdgeLimit(friendship.getIntimacy())))
+                        edgeLimits.directFriendEdgeLimit(intimacy)))
                 .orElseGet(() -> socialNetworkRepository.getTwoHopContactEdgesForTarget(
                         userId, targetId, baseNetworkFriendIds, edgeLimits.twoHopContactEdgeLimit()));
     }

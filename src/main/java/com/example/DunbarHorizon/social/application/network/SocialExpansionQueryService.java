@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionR
 import com.example.DunbarHorizon.social.application.network.port.SocialExpansionQueryUseCase;
 import com.example.DunbarHorizon.social.application.network.port.SocialExpansionRepository;
 import com.example.DunbarHorizon.social.domain.friendship.exception.FriendshipNotFoundException;
-import com.example.DunbarHorizon.social.domain.friendship.repository.FriendshipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
@@ -33,7 +32,6 @@ public class SocialExpansionQueryService implements SocialExpansionQueryUseCase 
     private static final int MIN_THRESHOLD        = 1;
 
     private final SocialExpansionRepository socialExpansionRepository;
-    private final FriendshipRepository friendshipRepository;
 
     @Override
     public List<AnchorExpansionResult> getAnchorExpansion(Long userId, Long anchorFriendId, Double expansionValue) {
@@ -44,10 +42,9 @@ public class SocialExpansionQueryService implements SocialExpansionQueryUseCase 
     }
 
     public List<AnchorExpansionResult> getRecommendationsByAnchor(Long userId, Long anchorFriendId) {
-        double intimacy = friendshipRepository
-                .findBetween(userId, anchorFriendId)
-                .orElseThrow(() -> new FriendshipNotFoundException(userId, anchorFriendId))
-                .getIntimacy();
+        double intimacy = socialExpansionRepository
+                .findIntimacy(userId, anchorFriendId)
+                .orElseThrow(() -> new FriendshipNotFoundException(userId, anchorFriendId));
         int limit = calculateLimit(intimacy, REC_MIN_LIMIT, REC_INFLECTION_LIMIT, REC_MAX_LIMIT);
         int threshold = calculateThreshold(intimacy);
         return socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorFriendId, threshold, limit);
