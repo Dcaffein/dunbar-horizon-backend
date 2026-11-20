@@ -19,4 +19,5 @@ public interface NotificationRepository {
     void deleteById(Long id);
     int markAllAsSent(Collection<Long> ids);
     int markAsRead(Long id, LocalDateTime asOf);
+    int purgeExpired(LocalDateTime asOf);
 }

@@ -6,6 +6,7 @@ import com.example.DunbarHorizon.notification.domain.event.DeviceTokenRegistered
 import com.example.DunbarHorizon.notification.domain.repository.DeviceTokenRepository;
 import com.example.DunbarHorizon.notification.domain.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -98,5 +100,14 @@ public class NotificationService {
                 .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
         notice.requireOwnership(currentUserId);
         notificationRepository.deleteById(notificationId);
+    }
+
+    @Transactional
+    public void purgeExpiredNotifications() {
+        int purged = notificationRepository.purgeExpired(LocalDateTime.now());
+
+        if (purged > 0) {
+            log.info("알림 정리 완료: 보관 기간이 지난 알림 {}건 삭제", purged);
+        }
     }
 }

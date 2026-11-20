@@ -227,4 +227,20 @@ class NotificationServiceTest {
         verify(notificationRepository).markAsRead(eq(5L), updateAsOf.capture());
         assertThat(updateAsOf.getValue()).isEqualTo(lookupAsOf.getValue());
     }
+
+    @Test
+    @DisplayName("purgeExpiredNotifications: 현재 시각을 기준 시각으로 보관 기간이 지난 알림을 정리한다")
+    void purgeExpiredNotifications_현재_시각_기준으로_정리한다() {
+        // given
+        LocalDateTime before = LocalDateTime.now();
+        given(notificationRepository.purgeExpired(any(LocalDateTime.class))).willReturn(3);
+
+        // when
+        notificationService.purgeExpiredNotifications();
+
+        // then
+        ArgumentCaptor<LocalDateTime> asOf = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(notificationRepository).purgeExpired(asOf.capture());
+        assertThat(asOf.getValue()).isBetween(before, LocalDateTime.now());
+    }
 }

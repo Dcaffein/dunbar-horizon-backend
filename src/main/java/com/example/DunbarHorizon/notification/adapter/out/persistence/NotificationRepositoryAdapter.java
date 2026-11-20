@@ -65,4 +65,9 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     public int markAsRead(Long id, LocalDateTime asOf) {
         return notificationJpaRepository.updateIsReadTrueByIdAndCreatedAtAfter(id, Notification.retentionCutoff(asOf));
     }
+
+    @Override
+    public int purgeExpired(LocalDateTime asOf) {
+        return notificationJpaRepository.deleteAllByCreatedAtAtOrBefore(Notification.retentionCutoff(asOf));
+    }
 }

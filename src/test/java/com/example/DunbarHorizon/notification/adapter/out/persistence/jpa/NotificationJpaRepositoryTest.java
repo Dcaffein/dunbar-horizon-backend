@@ -176,6 +176,26 @@ class NotificationJpaRepositoryTest {
         assertThat(afterCutoffUpdated).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("정리는 기준선과 같거나 이전에 생성된 알림을 지우고 기준선 직후 알림은 남긴다")
+    void deleteAllByCreatedAtAtOrBefore_Boundary_DeletesAtCutoffKeepsAfter() {
+        // given
+        Notification beforeCutoff = notificationJpaRepository.save(notification(receiverId, "기준선 이전"));
+        Notification atCutoff = notificationJpaRepository.save(notification(null, "기준선"));
+        Notification afterCutoff = notificationJpaRepository.save(notification(receiverId, "기준선 직후"));
+        setCreatedAt(beforeCutoff, cutoff.minusDays(1));
+        setCreatedAt(atCutoff, cutoff);
+        setCreatedAt(afterCutoff, justAfterCutoff);
+
+        // when
+        int deleted = notificationJpaRepository.deleteAllByCreatedAtAtOrBefore(cutoff);
+
+        // then
+        assertThat(deleted).isEqualTo(2);
+        assertThat(notificationJpaRepository.findAll()).extracting(Notification::getTitle)
+                .containsExactly("기준선 직후");
+    }
+
     private Notification notification(Long receiverId, String title) {
         return Notification.builder()
                 .receiverId(receiverId)
