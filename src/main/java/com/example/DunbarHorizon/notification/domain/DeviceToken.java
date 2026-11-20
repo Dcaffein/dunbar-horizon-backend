@@ -13,17 +13,13 @@ import lombok.NoArgsConstructor;
 public class DeviceToken extends BaseTimeEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String token;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(unique = true, nullable = false)
-    private String fcmToken;
-
-    public DeviceToken(Long userId, String fcmToken) {
+    public DeviceToken(Long userId, String token) {
         this.userId = userId;
-        this.fcmToken = fcmToken;
+        this.token = token;
     }
 }

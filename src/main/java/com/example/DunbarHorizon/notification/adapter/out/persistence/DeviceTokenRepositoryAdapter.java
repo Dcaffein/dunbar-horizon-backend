@@ -21,28 +21,28 @@ public class DeviceTokenRepositoryAdapter implements DeviceTokenRepository {
 
     @Override
     public boolean existsByFcmToken(String fcmToken) {
-        return deviceTokenJpaRepository.existsByFcmToken(fcmToken);
+        return deviceTokenJpaRepository.existsByToken(fcmToken);
     }
 
     @Override
     public void deleteByFcmToken(String fcmToken) {
-        deviceTokenJpaRepository.deleteByFcmToken(fcmToken);
+        deviceTokenJpaRepository.deleteByToken(fcmToken);
     }
 
     @Override
     public void deleteAllByFcmTokenIn(List<String> fcmTokens) {
         if (fcmTokens == null || fcmTokens.isEmpty()) return;
-        deviceTokenJpaRepository.deleteAllByFcmTokenIn(fcmTokens);
+        deviceTokenJpaRepository.deleteAllByTokenIn(fcmTokens);
     }
 
     @Override
     public List<String> findAllFcmTokensByUserIdIn(List<Long> userIds) {
-        return deviceTokenJpaRepository.findAllFcmTokensByUserIdIn(userIds);
+        return deviceTokenJpaRepository.findAllTokensByUserIdIn(userIds);
     }
 
     @Override
     public boolean existsByUserIdAndFcmToken(Long userId, String fcmToken) {
-        return deviceTokenJpaRepository.existsByUserIdAndFcmToken(userId, fcmToken);
+        return deviceTokenJpaRepository.existsByUserIdAndToken(userId, fcmToken);
     }
 
     @Override

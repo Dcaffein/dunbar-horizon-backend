@@ -33,7 +33,7 @@ class DeviceTokenRepositoryAdapterTest {
         adapter.deleteAllByFcmTokenIn(tokens);
 
         // then
-        verify(jpaRepository).deleteAllByFcmTokenIn(tokens);
+        verify(jpaRepository).deleteAllByTokenIn(tokens);
     }
 
     @Test

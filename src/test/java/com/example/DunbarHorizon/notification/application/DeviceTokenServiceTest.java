@@ -47,7 +47,7 @@ class DeviceTokenServiceTest {
         ArgumentCaptor<DeviceToken> captor = ArgumentCaptor.forClass(DeviceToken.class);
         verify(deviceTokenRepository).save(captor.capture());
         assertThat(captor.getValue().getUserId()).isEqualTo(1L);
-        assertThat(captor.getValue().getFcmToken()).isEqualTo("new-token");
+        assertThat(captor.getValue().getToken()).isEqualTo("new-token");
 
         verify(eventPublisher).publishEvent(any(DeviceTokenRegisteredEvent.class));
     }
