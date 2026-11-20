@@ -26,10 +26,12 @@ class NotificationJpaRepositoryTest {
     private EntityManager entityManager;
 
     private final Long receiverId = 100L;
+    private final LocalDateTime cutoff = LocalDateTime.of(2026, 1, 1, 0, 0);
+    private final LocalDateTime justAfterCutoff = cutoff.plusNanos(1_000);
 
     @Test
     @DisplayName("수신자의 알림을 생성 시각 최신순으로 Slice 조회한다")
-    void findAllByReceiverIdOrderByCreatedAtDesc_Success_LatestFirst() {
+    void findAllByReceiverIdAndCreatedAtAfterOrderByCreatedAtDesc_Success_LatestFirst() {
         // given
         Notification oldest = notificationJpaRepository.save(notification(receiverId, "제목1"));
         Notification middle = notificationJpaRepository.save(notification(receiverId, "제목2"));
@@ -40,7 +42,7 @@ class NotificationJpaRepositoryTest {
 
         // when
         Slice<Notification> result = notificationJpaRepository
-                .findAllByReceiverIdOrderByCreatedAtDesc(receiverId, PageRequest.of(0, 2));
+                .findAllByReceiverIdAndCreatedAtAfterOrderByCreatedAtDesc(receiverId, cutoff, PageRequest.of(0, 2));
 
         // then
         assertThat(result.getContent()).extracting(Notification::getTitle).containsExactly("제목3", "제목2");
@@ -49,7 +51,7 @@ class NotificationJpaRepositoryTest {
 
     @Test
     @DisplayName("전체 공지와 다른 수신자의 알림은 수신자 목록에 포함되지 않는다")
-    void findAllByReceiverIdOrderByCreatedAtDesc_Success_ExcludesAnnouncementAndOthers() {
+    void findAllByReceiverIdAndCreatedAtAfterOrderByCreatedAtDesc_Success_ExcludesAnnouncementAndOthers() {
         // given
         notificationJpaRepository.save(notification(receiverId, "내 알림"));
         notificationJpaRepository.save(notification(null, "전체 공지"));
@@ -57,7 +59,7 @@ class NotificationJpaRepositoryTest {
 
         // when
         Slice<Notification> result = notificationJpaRepository
-                .findAllByReceiverIdOrderByCreatedAtDesc(receiverId, PageRequest.of(0, 20));
+                .findAllByReceiverIdAndCreatedAtAfterOrderByCreatedAtDesc(receiverId, cutoff, PageRequest.of(0, 20));
 
         // then
         assertThat(result.getContent()).extracting(Notification::getTitle).containsExactly("내 알림");
@@ -65,7 +67,7 @@ class NotificationJpaRepositoryTest {
 
     @Test
     @DisplayName("미읽음 집계는 수신자의 읽지 않은 알림만 센다")
-    void countByReceiverIdAndIsReadFalse_Success_CountsOnlyOwnUnread() {
+    void countByReceiverIdAndIsReadFalseAndCreatedAtAfter_Success_CountsOnlyOwnUnread() {
         // given
         notificationJpaRepository.save(notification(receiverId, "안 읽음"));
         notificationJpaRepository.save(Notification.builder()
@@ -75,7 +77,7 @@ class NotificationJpaRepositoryTest {
         notificationJpaRepository.save(notification(200L, "남의 알림"));
 
         // when
-        long unreadCount = notificationJpaRepository.countByReceiverIdAndIsReadFalse(receiverId);
+        long unreadCount = notificationJpaRepository.countByReceiverIdAndIsReadFalseAndCreatedAtAfter(receiverId, cutoff);
 
         // then
         assertThat(unreadCount).isEqualTo(1L);
@@ -107,6 +109,71 @@ class NotificationJpaRepositoryTest {
         assertThat(found.getType()).isEqualTo(NotificationType.FLAG_INVITATION);
         assertThat(objectMapper.readTree(objectMapper.writeValueAsString(found.getMetadata())))
                 .isEqualTo(objectMapper.readTree(objectMapper.writeValueAsString(metadata)));
+    }
+
+    @Test
+    @DisplayName("목록은 기준선과 같은 시각에 생성된 알림을 빼고 기준선 직후 알림만 담는다")
+    void findAllByReceiverIdAndCreatedAtAfterOrderByCreatedAtDesc_Boundary_ExcludesAtCutoff() {
+        // given
+        Notification atCutoff = notificationJpaRepository.save(notification(receiverId, "기준선"));
+        Notification afterCutoff = notificationJpaRepository.save(notification(receiverId, "기준선 직후"));
+        setCreatedAt(atCutoff, cutoff);
+        setCreatedAt(afterCutoff, justAfterCutoff);
+
+        // when
+        Slice<Notification> result = notificationJpaRepository
+                .findAllByReceiverIdAndCreatedAtAfterOrderByCreatedAtDesc(receiverId, cutoff, PageRequest.of(0, 20));
+
+        // then
+        assertThat(result.getContent()).extracting(Notification::getTitle).containsExactly("기준선 직후");
+    }
+
+    @Test
+    @DisplayName("미읽음 집계는 기준선과 같은 시각에 생성된 알림을 세지 않는다")
+    void countByReceiverIdAndIsReadFalseAndCreatedAtAfter_Boundary_ExcludesAtCutoff() {
+        // given
+        Notification atCutoff = notificationJpaRepository.save(notification(receiverId, "기준선"));
+        Notification afterCutoff = notificationJpaRepository.save(notification(receiverId, "기준선 직후"));
+        setCreatedAt(atCutoff, cutoff);
+        setCreatedAt(afterCutoff, justAfterCutoff);
+
+        // when
+        long unreadCount = notificationJpaRepository.countByReceiverIdAndIsReadFalseAndCreatedAtAfter(receiverId, cutoff);
+
+        // then
+        assertThat(unreadCount).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("단건 조회는 기준선과 같은 시각에 생성된 알림을 찾지 않는다")
+    void findByIdAndCreatedAtAfter_Boundary_ExcludesAtCutoff() {
+        // given
+        Notification atCutoff = notificationJpaRepository.save(notification(receiverId, "기준선"));
+        Notification afterCutoff = notificationJpaRepository.save(notification(receiverId, "기준선 직후"));
+        setCreatedAt(atCutoff, cutoff);
+        setCreatedAt(afterCutoff, justAfterCutoff);
+
+        // when & then
+        assertThat(notificationJpaRepository.findByIdAndCreatedAtAfter(atCutoff.getId(), cutoff)).isEmpty();
+        assertThat(notificationJpaRepository.findByIdAndCreatedAtAfter(afterCutoff.getId(), cutoff)).isPresent();
+    }
+
+    @Test
+    @DisplayName("읽음 갱신은 기준선과 같은 시각에 생성된 알림을 0행으로 건너뛴다")
+    void updateIsReadTrueByIdAndCreatedAtAfter_Boundary_SkipsAtCutoff() {
+        // given
+        Notification atCutoff = notificationJpaRepository.save(notification(receiverId, "기준선"));
+        Notification afterCutoff = notificationJpaRepository.save(notification(receiverId, "기준선 직후"));
+        setCreatedAt(atCutoff, cutoff);
+        setCreatedAt(afterCutoff, justAfterCutoff);
+
+        // when
+        int atCutoffUpdated = notificationJpaRepository.updateIsReadTrueByIdAndCreatedAtAfter(atCutoff.getId(), cutoff);
+        int afterCutoffUpdated = notificationJpaRepository.updateIsReadTrueByIdAndCreatedAtAfter(afterCutoff.getId(), cutoff);
+
+        // then
+        assertThat(atCutoffUpdated).isZero();
+        assertThat(afterCutoffUpdated).isEqualTo(1);
     }
 
     private Notification notification(Long receiverId, String title) {

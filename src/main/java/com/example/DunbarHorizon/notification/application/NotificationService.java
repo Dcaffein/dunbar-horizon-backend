@@ -12,6 +12,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -73,10 +74,11 @@ public class NotificationService {
 
     @Transactional
     public Notification readNotification(Long notificationId, Long currentUserId) {
-        Notification notice = notificationRepository.findById(notificationId)
+        LocalDateTime asOf = LocalDateTime.now();
+        Notification notice = notificationRepository.findRetainedById(notificationId, asOf)
                 .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
         notice.requireOwnership(currentUserId);
-        if (notificationRepository.markAsRead(notificationId) == 0) {
+        if (notificationRepository.markAsRead(notificationId, asOf) == 0) {
             throw new IllegalArgumentException("알림을 찾을 수 없습니다.");
         }
         notice.read(currentUserId);
@@ -84,11 +86,11 @@ public class NotificationService {
     }
 
     public Slice<Notification> getMyNotifications(Long userId, Pageable pageable) {
-        return notificationRepository.findAllByReceiverId(userId, pageable);
+        return notificationRepository.findAllRetainedByReceiverId(userId, LocalDateTime.now(), pageable);
     }
 
     public long countUnreadNotifications(Long userId) {
-        return notificationRepository.countByReceiverIdAndIsReadFalse(userId);
+        return notificationRepository.countRetainedUnreadByReceiverId(userId, LocalDateTime.now());
     }
 
     public void deleteNotification(Long notificationId, Long currentUserId) {

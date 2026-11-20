@@ -9,6 +9,7 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -20,6 +21,8 @@ import java.util.Map;
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notification {
+
+    private static final Duration RETENTION_PERIOD = Duration.ofDays(30);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -47,6 +50,10 @@ public class Notification {
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public static LocalDateTime retentionCutoff(LocalDateTime asOf) {
+        return asOf.minus(RETENTION_PERIOD);
+    }
 
     public void read(Long currentUserId) {
         if (!isOwnedBy(currentUserId)) {

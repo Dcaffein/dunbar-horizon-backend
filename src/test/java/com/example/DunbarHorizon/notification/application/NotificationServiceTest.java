@@ -15,12 +15,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -171,8 +173,8 @@ class NotificationServiceTest {
     void readNotification_읽음만_갱신한다() {
         // given
         Notification notice = Notification.builder().receiverId(1L).build();
-        given(notificationRepository.findById(5L)).willReturn(Optional.of(notice));
-        given(notificationRepository.markAsRead(5L)).willReturn(1);
+        given(notificationRepository.findRetainedById(eq(5L), any(LocalDateTime.class))).willReturn(Optional.of(notice));
+        given(notificationRepository.markAsRead(eq(5L), any(LocalDateTime.class))).willReturn(1);
 
         // when
         Notification result = notificationService.readNotification(5L, 1L);
@@ -187,11 +189,42 @@ class NotificationServiceTest {
     void readNotification_남의_알림이면_거부한다() {
         // given
         Notification notice = Notification.builder().receiverId(2L).build();
-        given(notificationRepository.findById(5L)).willReturn(Optional.of(notice));
+        given(notificationRepository.findRetainedById(eq(5L), any(LocalDateTime.class))).willReturn(Optional.of(notice));
 
         // when & then
         assertThatThrownBy(() -> notificationService.readNotification(5L, 1L))
                 .isInstanceOf(NotificationAccessDeniedException.class);
-        verify(notificationRepository, never()).markAsRead(any());
+        verify(notificationRepository, never()).markAsRead(any(), any());
+    }
+
+    @Test
+    @DisplayName("readNotification: 보관 기간이 지난 알림이면 찾을 수 없음으로 끝내고 읽음 갱신을 하지 않는다")
+    void readNotification_보관_기간이_지나면_찾을_수_없다() {
+        // given
+        given(notificationRepository.findRetainedById(eq(5L), any(LocalDateTime.class))).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> notificationService.readNotification(5L, 1L))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(notificationRepository, never()).markAsRead(any(), any());
+    }
+
+    @Test
+    @DisplayName("readNotification: 조회와 읽음 갱신은 같은 기준 시각을 쓴다")
+    void readNotification_조회와_갱신이_같은_기준_시각을_쓴다() {
+        // given
+        Notification notice = Notification.builder().receiverId(1L).build();
+        given(notificationRepository.findRetainedById(eq(5L), any(LocalDateTime.class))).willReturn(Optional.of(notice));
+        given(notificationRepository.markAsRead(eq(5L), any(LocalDateTime.class))).willReturn(1);
+
+        // when
+        notificationService.readNotification(5L, 1L);
+
+        // then
+        ArgumentCaptor<LocalDateTime> lookupAsOf = ArgumentCaptor.forClass(LocalDateTime.class);
+        ArgumentCaptor<LocalDateTime> updateAsOf = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(notificationRepository).findRetainedById(eq(5L), lookupAsOf.capture());
+        verify(notificationRepository).markAsRead(eq(5L), updateAsOf.capture());
+        assertThat(updateAsOf.getValue()).isEqualTo(lookupAsOf.getValue());
     }
 }

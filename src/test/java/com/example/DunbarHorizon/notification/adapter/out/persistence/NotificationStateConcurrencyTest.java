@@ -50,7 +50,7 @@ class NotificationStateConcurrencyTest {
         Notification saved = notificationService.savePendingNotification(notification());
         CountDownLatch loaded = new CountDownLatch(1);
         CountDownLatch resume = new CountDownLatch(1);
-        pauseFirstFindById(loaded, resume);
+        pauseFirstRetainedLookup(loaded, resume);
 
         // when
         try (var workers = Executors.newSingleThreadExecutor()) {
@@ -93,7 +93,7 @@ class NotificationStateConcurrencyTest {
         Notification saved = notificationService.savePendingNotification(notification());
         CountDownLatch loaded = new CountDownLatch(1);
         CountDownLatch resume = new CountDownLatch(1);
-        pauseFirstFindById(loaded, resume);
+        pauseFirstRetainedLookup(loaded, resume);
 
         // when
         Throwable failure;
@@ -115,7 +115,7 @@ class NotificationStateConcurrencyTest {
                 "SELECT COUNT(*) FROM notifications WHERE id = ?", Long.class, saved.getId())).isZero();
     }
 
-    private void pauseFirstFindById(CountDownLatch loaded, CountDownLatch resume) {
+    private void pauseFirstRetainedLookup(CountDownLatch loaded, CountDownLatch resume) {
         AtomicBoolean firstFind = new AtomicBoolean(true);
         doAnswer(invocation -> {
             Object found = invocation.callRealMethod();
@@ -124,7 +124,7 @@ class NotificationStateConcurrencyTest {
                 await(resume);
             }
             return found;
-        }).when(notificationRepositoryAdapter).findById(any());
+        }).when(notificationRepositoryAdapter).findRetainedById(any(), any());
     }
 
     private Map<String, Object> stateOf(Long id) {
