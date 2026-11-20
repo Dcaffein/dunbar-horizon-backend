@@ -40,7 +40,7 @@ public class NotificationEventListener {
                 .toList();
         List<Notification> savedNotifications = notificationService.savePendingNotifications(notifications);
 
-        List<String> tokens = deviceTokenService.findFcmTokensByUserIds(event.receiverIds());
+        List<String> tokens = deviceTokenService.findTokensByUserIds(event.receiverIds());
 
         if (tokens.isEmpty()) {
             log.info("유효한 FCM 토큰이 없어 FCM 발송을 생략합니다. 대상: {}", event.receiverIds());
@@ -69,14 +69,14 @@ public class NotificationEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void handleDeviceTokenDeregistration(DeviceTokenDeregisteredEvent event) {
-        deviceTokenService.removeDeviceToken(event.fcmToken());
+        deviceTokenService.removeDeviceToken(event.token());
     }
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleDeviceTokenDeregistrationAsync(DeviceTokenDeregisteredEvent event) {
         try {
-            notificationSender.unsubscribeFromTopic(event.fcmToken(), "notice");
+            notificationSender.unsubscribeFromTopic(event.token(), "notice");
         } catch (Exception e) {
             log.error("FCM 토픽 해지 중 에러 발생: {}", e.getMessage());
         }

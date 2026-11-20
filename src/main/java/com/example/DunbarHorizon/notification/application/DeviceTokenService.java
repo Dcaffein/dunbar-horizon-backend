@@ -19,7 +19,7 @@ public class DeviceTokenService {
 
     @Transactional
     public void registerDeviceToken(Long userId, String token) {
-        if (deviceTokenRepository.existsByUserIdAndFcmToken(userId, token)) {
+        if (deviceTokenRepository.existsByUserIdAndToken(userId, token)) {
             return;
         }
         deviceTokenRepository.deleteAllByUserId(userId);
@@ -28,8 +28,8 @@ public class DeviceTokenService {
     }
 
     @Transactional
-    public void removeDeviceToken(String fcmToken) {
-        deviceTokenRepository.deleteByFcmToken(fcmToken);
+    public void removeDeviceToken(String token) {
+        deviceTokenRepository.deleteByToken(token);
     }
 
     @Transactional
@@ -37,17 +37,17 @@ public class DeviceTokenService {
         deviceTokenRepository.deleteAllByUserId(userId);
     }
 
-    public boolean isTokenRegisteredForUser(Long userId, String fcmToken) {
-        return deviceTokenRepository.existsByUserIdAndFcmToken(userId, fcmToken);
+    public boolean isTokenRegisteredForUser(Long userId, String token) {
+        return deviceTokenRepository.existsByUserIdAndToken(userId, token);
     }
 
-    public List<String> findFcmTokensByUserIds(List<Long> userIds) {
-        return deviceTokenRepository.findAllFcmTokensByUserIdIn(userIds);
+    public List<String> findTokensByUserIds(List<Long> userIds) {
+        return deviceTokenRepository.findAllTokensByUserIdIn(userIds);
     }
 
     @Transactional
     public void cleanupInvalidTokens(List<String> invalidTokens) {
         if (invalidTokens == null || invalidTokens.isEmpty()) return;
-        deviceTokenRepository.deleteAllByFcmTokenIn(invalidTokens);
+        deviceTokenRepository.deleteAllByTokenIn(invalidTokens);
     }
 }

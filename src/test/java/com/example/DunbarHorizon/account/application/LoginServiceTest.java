@@ -194,10 +194,10 @@ class LoginServiceTest {
     }
 
     @Test
-    @DisplayName("로그아웃 시 refreshToken과 fcmToken이 모두 있으면 토큰 삭제 후 이벤트를 발행한다")
-    void logout_refreshToken과_fcmToken이_있으면_삭제하고_이벤트_발행() {
+    @DisplayName("로그아웃 시 refreshToken과 기기 토큰이 모두 있으면 토큰 삭제 후 이벤트를 발행한다")
+    void logout_refreshToken과_기기_토큰이_있으면_삭제하고_이벤트_발행() {
         // when
-        loginService.logout("refresh-token-value", "fcm-token-value");
+        loginService.logout("refresh-token-value", "device-token-value");
 
         // then
         verify(refreshTokenRepository).deleteByTokenValue("refresh-token-value");
@@ -205,12 +205,12 @@ class LoginServiceTest {
         ArgumentCaptor<DeviceTokenDeregisteredEvent> captor =
                 ArgumentCaptor.forClass(DeviceTokenDeregisteredEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
-        assertThat(captor.getValue().fcmToken()).isEqualTo("fcm-token-value");
+        assertThat(captor.getValue().token()).isEqualTo("device-token-value");
     }
 
     @Test
-    @DisplayName("로그아웃 시 fcmToken이 없으면 refreshToken만 삭제하고 이벤트를 발행하지 않는다")
-    void logout_fcmToken이_없으면_refreshToken만_삭제() {
+    @DisplayName("로그아웃 시 기기 토큰이 없으면 refreshToken만 삭제하고 이벤트를 발행하지 않는다")
+    void logout_기기_토큰이_없으면_refreshToken만_삭제() {
         // when
         loginService.logout("refresh-token-value", null);
 
@@ -220,10 +220,10 @@ class LoginServiceTest {
     }
 
     @Test
-    @DisplayName("로그아웃 시 refreshToken이 없어도 fcmToken이 있으면 이벤트를 발행한다")
-    void logout_refreshToken이_없어도_fcmToken이_있으면_이벤트_발행() {
+    @DisplayName("로그아웃 시 refreshToken이 없어도 기기 토큰이 있으면 이벤트를 발행한다")
+    void logout_refreshToken이_없어도_기기_토큰이_있으면_이벤트_발행() {
         // when
-        loginService.logout(null, "fcm-token-value");
+        loginService.logout(null, "device-token-value");
 
         // then
         verify(refreshTokenRepository, never()).deleteByTokenValue(any());

@@ -36,7 +36,7 @@ class DeviceTokenServiceTest {
     @DisplayName("registerDeviceToken: 신규 토큰이면 기존 토큰을 삭제하고 저장 후 이벤트를 발행한다")
     void registerDeviceToken_신규_토큰이면_기존_삭제_후_저장하고_이벤트를_발행한다() {
         // given
-        given(deviceTokenRepository.existsByUserIdAndFcmToken(1L, "new-token")).willReturn(false);
+        given(deviceTokenRepository.existsByUserIdAndToken(1L, "new-token")).willReturn(false);
 
         // when
         deviceTokenService.registerDeviceToken(1L, "new-token");
@@ -56,7 +56,7 @@ class DeviceTokenServiceTest {
     @DisplayName("registerDeviceToken: 동일 유저의 동일 토큰이면 no-op")
     void registerDeviceToken_동일_유저의_동일_토큰이면_무시한다() {
         // given
-        given(deviceTokenRepository.existsByUserIdAndFcmToken(1L, "existing-token")).willReturn(true);
+        given(deviceTokenRepository.existsByUserIdAndToken(1L, "existing-token")).willReturn(true);
 
         // when
         deviceTokenService.registerDeviceToken(1L, "existing-token");
@@ -81,7 +81,7 @@ class DeviceTokenServiceTest {
     @DisplayName("isTokenRegisteredForUser: userId와 토큰이 모두 일치하면 true를 반환한다")
     void isTokenRegisteredForUser_일치하면_true() {
         // given
-        given(deviceTokenRepository.existsByUserIdAndFcmToken(1L, "registered-token")).willReturn(true);
+        given(deviceTokenRepository.existsByUserIdAndToken(1L, "registered-token")).willReturn(true);
 
         // when
         boolean result = deviceTokenService.isTokenRegisteredForUser(1L, "registered-token");
@@ -94,7 +94,7 @@ class DeviceTokenServiceTest {
     @DisplayName("isTokenRegisteredForUser: 토큰이 없거나 userId가 다르면 false를 반환한다")
     void isTokenRegisteredForUser_불일치하면_false() {
         // given
-        given(deviceTokenRepository.existsByUserIdAndFcmToken(1L, "unknown-token")).willReturn(false);
+        given(deviceTokenRepository.existsByUserIdAndToken(1L, "unknown-token")).willReturn(false);
 
         // when
         boolean result = deviceTokenService.isTokenRegisteredForUser(1L, "unknown-token");
@@ -110,7 +110,7 @@ class DeviceTokenServiceTest {
         deviceTokenService.removeDeviceToken("token-to-remove");
 
         // then
-        verify(deviceTokenRepository).deleteByFcmToken("token-to-remove");
+        verify(deviceTokenRepository).deleteByToken("token-to-remove");
     }
 
     @Test
@@ -123,7 +123,7 @@ class DeviceTokenServiceTest {
         deviceTokenService.cleanupInvalidTokens(invalidTokens);
 
         // then
-        verify(deviceTokenRepository).deleteAllByFcmTokenIn(invalidTokens);
+        verify(deviceTokenRepository).deleteAllByTokenIn(invalidTokens);
     }
 
     @Test
@@ -133,18 +133,18 @@ class DeviceTokenServiceTest {
         deviceTokenService.cleanupInvalidTokens(List.of());
 
         // then
-        verify(deviceTokenRepository, never()).deleteAllByFcmTokenIn(any());
+        verify(deviceTokenRepository, never()).deleteAllByTokenIn(any());
     }
 
     @Test
-    @DisplayName("findFcmTokensByUserIds: 사용자들의 FCM 토큰을 조회한다")
-    void findFcmTokensByUserIds_사용자들의_토큰을_조회한다() {
+    @DisplayName("findTokensByUserIds: 사용자들의 기기 토큰을 조회한다")
+    void findTokensByUserIds_사용자들의_토큰을_조회한다() {
         // given
-        given(deviceTokenRepository.findAllFcmTokensByUserIdIn(List.of(1L, 2L)))
+        given(deviceTokenRepository.findAllTokensByUserIdIn(List.of(1L, 2L)))
                 .willReturn(List.of("token-1", "token-2"));
 
         // when
-        List<String> tokens = deviceTokenService.findFcmTokensByUserIds(List.of(1L, 2L));
+        List<String> tokens = deviceTokenService.findTokensByUserIds(List.of(1L, 2L));
 
         // then
         assertThat(tokens).containsExactly("token-1", "token-2");

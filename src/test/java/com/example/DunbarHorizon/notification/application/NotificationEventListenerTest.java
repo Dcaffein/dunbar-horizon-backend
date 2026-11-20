@@ -50,7 +50,7 @@ class NotificationEventListenerTest {
                 .metadata(null)
                 .build();
 
-        given(deviceTokenService.findFcmTokensByUserIds(event.receiverIds()))
+        given(deviceTokenService.findTokensByUserIds(event.receiverIds()))
                 .willReturn(List.of("token-1", "token-2"));
 
         Notification saved = Notification.builder().receiverId(1L).build();
@@ -85,7 +85,7 @@ class NotificationEventListenerTest {
                 .build();
 
         given(notificationService.savePendingNotifications(anyList())).willReturn(List.of());
-        given(deviceTokenService.findFcmTokensByUserIds(event.receiverIds()))
+        given(deviceTokenService.findTokensByUserIds(event.receiverIds()))
                 .willReturn(List.of());
 
         // when

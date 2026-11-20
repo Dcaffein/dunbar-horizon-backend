@@ -20,29 +20,29 @@ public class DeviceTokenRepositoryAdapter implements DeviceTokenRepository {
     }
 
     @Override
-    public boolean existsByFcmToken(String fcmToken) {
-        return deviceTokenJpaRepository.existsByToken(fcmToken);
+    public boolean existsByToken(String token) {
+        return deviceTokenJpaRepository.existsByToken(token);
     }
 
     @Override
-    public void deleteByFcmToken(String fcmToken) {
-        deviceTokenJpaRepository.deleteByToken(fcmToken);
+    public void deleteByToken(String token) {
+        deviceTokenJpaRepository.deleteByToken(token);
     }
 
     @Override
-    public void deleteAllByFcmTokenIn(List<String> fcmTokens) {
-        if (fcmTokens == null || fcmTokens.isEmpty()) return;
-        deviceTokenJpaRepository.deleteAllByTokenIn(fcmTokens);
+    public void deleteAllByTokenIn(List<String> tokens) {
+        if (tokens == null || tokens.isEmpty()) return;
+        deviceTokenJpaRepository.deleteAllByTokenIn(tokens);
     }
 
     @Override
-    public List<String> findAllFcmTokensByUserIdIn(List<Long> userIds) {
+    public List<String> findAllTokensByUserIdIn(List<Long> userIds) {
         return deviceTokenJpaRepository.findAllTokensByUserIdIn(userIds);
     }
 
     @Override
-    public boolean existsByUserIdAndFcmToken(Long userId, String fcmToken) {
-        return deviceTokenJpaRepository.existsByUserIdAndToken(userId, fcmToken);
+    public boolean existsByUserIdAndToken(Long userId, String token) {
+        return deviceTokenJpaRepository.existsByUserIdAndToken(userId, token);
     }
 
     @Override

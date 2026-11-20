@@ -48,8 +48,8 @@ public class AccountController {
             @CookieValue(name = "refresh_token", required = false) String refreshToken,
             @RequestBody(required = false) LogoutRequest logoutRequest,
             HttpServletResponse response) {
-        String fcmToken = logoutRequest != null ? logoutRequest.fcmToken() : null;
-        loginService.logout(refreshToken, fcmToken);
+        String deviceToken = logoutRequest != null ? logoutRequest.fcmToken() : null;
+        loginService.logout(refreshToken, deviceToken);
         authCookieManager.addExpiredTokenCookie(response);
         return ResponseEntity.noContent().build();
     }

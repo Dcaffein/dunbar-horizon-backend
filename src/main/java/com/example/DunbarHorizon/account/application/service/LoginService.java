@@ -113,12 +113,12 @@ public class LoginService {
         return new AuthTokenResult(newAccessToken, newRefreshToken);
     }
 
-    public void logout(String refreshTokenValue, String fcmToken) {
+    public void logout(String refreshTokenValue, String deviceToken) {
         if (refreshTokenValue != null && !refreshTokenValue.isBlank()) {
             refreshTokenRepository.deleteByTokenValue(refreshTokenValue);
         }
-        if (fcmToken != null && !fcmToken.isBlank()) {
-            eventPublisher.publishEvent(new DeviceTokenDeregisteredEvent(fcmToken));
+        if (deviceToken != null && !deviceToken.isBlank()) {
+            eventPublisher.publishEvent(new DeviceTokenDeregisteredEvent(deviceToken));
         }
     }
 
