@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
 import com.example.DunbarHorizon.social.domain.network.DunbarCircle;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface SocialNetworkRepository {
     List<NodeGraphResult> getDefaultNetworkGraph(Long userId, DunbarCircle circleSize, int pruningMin, int pruningRange);
@@ -12,4 +13,6 @@ public interface SocialNetworkRepository {
 
     List<MutualFriendEdgeResult> getDirectFriendEdgesForTarget(Long userId, Long targetId, List<Long> baseNetworkFriendIds, int dynamicLimit);
     List<MutualFriendEdgeResult> getTwoHopContactEdgesForTarget(Long userId, Long targetId, List<Long> baseNetworkFriendIds, int strangerLimit);
+
+    Optional<Double> findIntimacy(Long userId, Long friendId);
 }

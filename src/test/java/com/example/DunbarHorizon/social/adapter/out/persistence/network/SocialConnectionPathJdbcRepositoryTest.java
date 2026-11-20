@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.network;
 
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.FriendshipPersistenceAdapter;
 import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult.IntermediaryResult;
 import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.network.SocialConnectionPathQueryService;
@@ -19,8 +18,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
-@Import({SocialConnectionPathJdbcRepository.class, SocialConnectionPathQueryService.class,
-        FriendshipPersistenceAdapter.class})
+@Import({SocialConnectionPathJdbcRepository.class, SocialConnectionPathQueryService.class})
 class SocialConnectionPathJdbcRepositoryTest {
 
     @Autowired private SocialConnectionPathJdbcRepository socialConnectionPathJdbcRepository;
@@ -108,6 +106,27 @@ class SocialConnectionPathJdbcRepositoryTest {
         var empty = new ConnectionPathResult(false, 0, List.of());
         assertThat(socialConnectionPathQueryService.getConnectionPath(me.getId(), target.getId())).isEqualTo(empty);
         assertThat(socialConnectionPathQueryService.getConnectionPath(me.getId(), me.getId())).isEqualTo(empty);
+    }
+
+    @Test
+    @DisplayName("활성 사용자 쌍의 친구 관계만 ID 순서와 무관하게 참이다")
+    void existsFriendship_TrueOnlyForActivePair_EitherOrder() {
+        // given
+        User me = user("me");
+        User friend = user("friend");
+        User inactive = user("inactive");
+        User stranger = user("stranger");
+        connect(me, friend, 0.8, true, true);
+        connect(me, inactive, 0.8, true, true);
+        inactive.deactivate();
+        em.flush();
+
+        // when & then
+        assertThat(socialConnectionPathJdbcRepository.existsFriendship(me.getId(), friend.getId())).isTrue();
+        assertThat(socialConnectionPathJdbcRepository.existsFriendship(friend.getId(), me.getId())).isTrue();
+        assertThat(socialConnectionPathJdbcRepository.existsFriendship(me.getId(), inactive.getId())).isFalse();
+        assertThat(socialConnectionPathJdbcRepository.existsFriendship(me.getId(), stranger.getId())).isFalse();
+        assertThat(socialConnectionPathJdbcRepository.existsFriendship(me.getId(), me.getId())).isFalse();
     }
 
     private User user(String nickname) {

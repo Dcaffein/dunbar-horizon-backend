@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -67,6 +68,14 @@ public class SocialExpansionJdbcRepository implements SocialExpansionRepository 
     private static final String RELATED_QUERY = ANCHOR_QUERY.formatted(IN_MY_FRIENDS);
     private static final String RECOMMENDED_QUERY = ANCHOR_QUERY.formatted("NOT " + IN_MY_FRIENDS);
 
+    private static final String INTIMACY = """
+            SELECT f.intimacy
+            FROM friendships f
+            JOIN users low_user ON low_user.user_id = f.low_user_id AND low_user.status = 'ACTIVE'
+            JOIN users high_user ON high_user.user_id = f.high_user_id AND high_user.status = 'ACTIVE'
+            WHERE f.low_user_id = LEAST(:userId, :friendId) AND f.high_user_id = GREATEST(:userId, :friendId)
+            """;
+
     private final NamedParameterJdbcTemplate jdbc;
 
     @Override
@@ -85,5 +94,11 @@ public class SocialExpansionJdbcRepository implements SocialExpansionRepository 
         return jdbc.query(sql, Map.of("meId", meId, "anchorId", anchorId,
                         "threshold", threshold, "limitCount", limitCount),
                 (row, index) -> new AnchorExpansionResult(row.getLong("id"), row.getString("nickname")));
+    }
+
+    @Override
+    public Optional<Double> findIntimacy(Long userId, Long friendId) {
+        return jdbc.queryForList(INTIMACY, Map.of("userId", userId, "friendId", friendId), Double.class)
+                .stream().findFirst();
     }
 }

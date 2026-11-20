@@ -40,6 +40,16 @@ public class SocialConnectionPathJdbcRepository implements SocialConnectionPathR
             LIMIT :rowLimit
             """;
 
+    private static final String EXISTS_FRIENDSHIP = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM friendships f
+                JOIN users low_user ON low_user.user_id = f.low_user_id AND low_user.status = 'ACTIVE'
+                JOIN users high_user ON high_user.user_id = f.high_user_id AND high_user.status = 'ACTIVE'
+                WHERE f.low_user_id = LEAST(:userId, :friendId) AND f.high_user_id = GREATEST(:userId, :friendId)
+            )
+            """;
+
     private final NamedParameterJdbcTemplate jdbc;
 
     @Override
@@ -60,5 +70,11 @@ public class SocialConnectionPathJdbcRepository implements SocialConnectionPathR
                     } while (rows.next());
                     return new Intermediaries(List.copyOf(items), totalCount);
                 });
+    }
+
+    @Override
+    public boolean existsFriendship(Long userId, Long friendId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject(EXISTS_FRIENDSHIP,
+                Map.of("userId", userId, "friendId", friendId), Boolean.class));
     }
 }

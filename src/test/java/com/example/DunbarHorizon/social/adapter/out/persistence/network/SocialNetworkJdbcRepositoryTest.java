@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.network;
 
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.FriendshipPersistenceAdapter;
 import com.example.DunbarHorizon.social.application.network.dto.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
@@ -22,7 +21,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
-@Import({SocialNetworkJdbcRepository.class, SocialNetworkQueryService.class, FriendshipPersistenceAdapter.class,
+@Import({SocialNetworkJdbcRepository.class, SocialNetworkQueryService.class,
         NetworkEdgeLimits.class})
 class SocialNetworkJdbcRepositoryTest {
 
@@ -137,6 +136,28 @@ class SocialNetworkJdbcRepositoryTest {
         em.flush();
         assertThat(socialNetworkQueryService.getNetworkEdges(me.getId(), target.getId(), candidates)).isEmpty();
         assertThat(socialNetworkQueryService.getNetworkEdges(me.getId(), target.getId(), List.of())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("활성 사용자 쌍의 친밀도만 ID 순서와 무관하게 조회한다")
+    void findIntimacy_ReturnsOnlyActivePair_EitherOrder() {
+        // given
+        User me = createUser("me");
+        User friend = createUser("friend");
+        User inactive = createUser("inactive");
+        User stranger = createUser("stranger");
+        connect(me, friend, 0.5);
+        connect(me, inactive, 0.5);
+        inactive.deleteAccount();
+        em.flush();
+
+        // when & then
+        assertThat(socialNetworkJdbcRepository.findIntimacy(me.getId(), friend.getId())).isPresent();
+        assertThat(socialNetworkJdbcRepository.findIntimacy(friend.getId(), me.getId()))
+                .isEqualTo(socialNetworkJdbcRepository.findIntimacy(me.getId(), friend.getId()));
+        assertThat(socialNetworkJdbcRepository.findIntimacy(me.getId(), inactive.getId())).isEmpty();
+        assertThat(socialNetworkJdbcRepository.findIntimacy(me.getId(), stranger.getId())).isEmpty();
+        assertThat(socialNetworkJdbcRepository.findIntimacy(me.getId(), me.getId())).isEmpty();
     }
 
     private User createUser(String nickname) {

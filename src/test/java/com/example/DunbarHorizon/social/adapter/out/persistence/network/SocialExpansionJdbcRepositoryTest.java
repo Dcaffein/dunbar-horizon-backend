@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.social.adapter.out.persistence.network;
 import com.example.DunbarHorizon.account.domain.User;
 import com.example.DunbarHorizon.buzz.adapter.out.social.AnchorRecipientStrategyAdapter;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
-import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.FriendshipPersistenceAdapter;
 import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
 import com.example.DunbarHorizon.social.application.network.SocialExpansionQueryService;
 import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
@@ -18,10 +17,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 
 @JpaRepositoryTest
-@Import({SocialExpansionJdbcRepository.class, SocialExpansionQueryService.class,
-        FriendshipPersistenceAdapter.class, AnchorRecipientStrategyAdapter.class})
+@Import({SocialExpansionJdbcRepository.class, SocialExpansionQueryService.class, AnchorRecipientStrategyAdapter.class})
 class SocialExpansionJdbcRepositoryTest {
 
     @Autowired private SocialExpansionJdbcRepository socialExpansionJdbcRepository;
@@ -121,6 +120,29 @@ class SocialExpansionJdbcRepositoryTest {
         assertThat(socialExpansionQueryService.getAnchorExpansion(me.getId(), anchor.getId(), 1.0)).isEmpty();
         assertThatThrownBy(() -> socialExpansionQueryService.getRecommendationsByAnchor(me.getId(), outside.getId()))
                 .isInstanceOf(FriendshipNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("활성 사용자 쌍의 친밀도만 ID 순서와 무관하게 조회한다")
+    void findIntimacy_ReturnsOnlyActivePair_EitherOrder() {
+        // given
+        User me = user("me");
+        User friend = user("friend");
+        User inactive = user("inactive");
+        User stranger = user("stranger");
+        connect(me, friend, 0.9, true, true);
+        connect(me, inactive, 0.7, true, true);
+        inactive.deactivate();
+        em.flush();
+
+        // when & then
+        assertThat(socialExpansionJdbcRepository.findIntimacy(me.getId(), friend.getId()))
+                .hasValueSatisfying(intimacy -> assertThat(intimacy).isCloseTo(0.9, within(1e-9)));
+        assertThat(socialExpansionJdbcRepository.findIntimacy(friend.getId(), me.getId()))
+                .hasValueSatisfying(intimacy -> assertThat(intimacy).isCloseTo(0.9, within(1e-9)));
+        assertThat(socialExpansionJdbcRepository.findIntimacy(me.getId(), inactive.getId())).isEmpty();
+        assertThat(socialExpansionJdbcRepository.findIntimacy(me.getId(), stranger.getId())).isEmpty();
+        assertThat(socialExpansionJdbcRepository.findIntimacy(me.getId(), me.getId())).isEmpty();
     }
 
     private User user(String nickname) {
