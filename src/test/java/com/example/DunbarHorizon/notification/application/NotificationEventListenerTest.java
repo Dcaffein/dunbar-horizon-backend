@@ -5,7 +5,6 @@ import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
 import com.example.DunbarHorizon.notification.domain.Notification;
-import com.example.DunbarHorizon.notification.domain.repository.DeviceTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +36,7 @@ class NotificationEventListenerTest {
     private NotificationService notificationService;
 
     @Mock
-    private DeviceTokenRepository deviceTokenRepository;
+    private DeviceTokenService deviceTokenService;
 
     @Test
     @DisplayName("멀티캐스트: 수신자들의 토큰을 조회하여 발송하고 죽은 토큰을 정리한다")
@@ -51,7 +50,7 @@ class NotificationEventListenerTest {
                 .metadata(null)
                 .build();
 
-        given(deviceTokenRepository.findAllFcmTokensByUserIdIn(event.receiverIds()))
+        given(deviceTokenService.findFcmTokensByUserIds(event.receiverIds()))
                 .willReturn(List.of("token-1", "token-2"));
 
         Notification saved = Notification.builder().receiverId(1L).build();
@@ -70,7 +69,7 @@ class NotificationEventListenerTest {
         assertThat(tokenCaptor.getValue()).containsExactlyInAnyOrder("token-1", "token-2");
 
         verify(notificationService).markAllAsSent(List.of(11L));
-        verify(notificationService).cleanupInvalidTokens(invalidTokens);
+        verify(deviceTokenService).cleanupInvalidTokens(invalidTokens);
     }
 
     @Test
@@ -86,7 +85,7 @@ class NotificationEventListenerTest {
                 .build();
 
         given(notificationService.savePendingNotifications(anyList())).willReturn(List.of());
-        given(deviceTokenRepository.findAllFcmTokensByUserIdIn(event.receiverIds()))
+        given(deviceTokenService.findFcmTokensByUserIds(event.receiverIds()))
                 .willReturn(List.of());
 
         // when
@@ -127,6 +126,6 @@ class NotificationEventListenerTest {
         eventListener.handleDeviceTokenDeregistration(event);
 
         // then
-        verify(notificationService).removeDeviceToken("token-to-remove");
+        verify(deviceTokenService).removeDeviceToken("token-to-remove");
     }
 }

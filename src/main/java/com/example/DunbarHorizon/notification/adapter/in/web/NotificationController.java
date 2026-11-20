@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import com.example.DunbarHorizon.notification.adapter.in.web.dto.DeviceTokenRequest;
 import com.example.DunbarHorizon.notification.adapter.in.web.dto.DeviceTokenStatusResponse;
 import com.example.DunbarHorizon.notification.adapter.in.web.dto.NotificationResponse;
+import com.example.DunbarHorizon.notification.application.DeviceTokenService;
 import com.example.DunbarHorizon.notification.application.NotificationService;
 import com.example.DunbarHorizon.notification.domain.Notification;
 import jakarta.validation.Valid;
@@ -20,19 +21,20 @@ import org.springframework.web.bind.annotation.*;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    private final DeviceTokenService deviceTokenService;
 
     @PostMapping("/device-token")
     public ResponseEntity<Void> registerDeviceToken(
             @CurrentUserId Long currentUserId,
             @Valid @RequestBody DeviceTokenRequest dto) {
-        notificationService.registerDeviceToken(currentUserId, dto.token());
+        deviceTokenService.registerDeviceToken(currentUserId, dto.token());
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/device-token")
     public ResponseEntity<Void> removeDeviceToken(
             @CurrentUserId Long currentUserId) {
-        notificationService.removeDeviceTokenByUserId(currentUserId);
+        deviceTokenService.removeDeviceTokenByUserId(currentUserId);
         return ResponseEntity.ok().build();
     }
 
@@ -40,7 +42,7 @@ public class NotificationController {
     public ResponseEntity<DeviceTokenStatusResponse> getDeviceTokenStatus(
             @CurrentUserId Long currentUserId,
             @RequestParam String token) {
-        boolean registered = notificationService.isTokenRegisteredForUser(currentUserId, token);
+        boolean registered = deviceTokenService.isTokenRegisteredForUser(currentUserId, token);
         return ResponseEntity.ok(new DeviceTokenStatusResponse(registered));
     }
 
