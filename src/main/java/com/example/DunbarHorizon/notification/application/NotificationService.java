@@ -54,7 +54,7 @@ public class NotificationService {
         return notificationRepository.saveAll(notifications);
     }
 
-    public void markAsSent(String notificationId) {
+    public void markAsSent(Long notificationId) {
         notificationRepository.findById(notificationId)
                 .ifPresent(notice -> {
                     notice.markAsSent();
@@ -73,7 +73,7 @@ public class NotificationService {
         deviceTokenRepository.deleteAllByFcmTokenIn(invalidTokens);
     }
 
-    public Notification readNotification(String notificationId, Long currentUserId) {
+    public Notification readNotification(Long notificationId, Long currentUserId) {
         Notification notice = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
         notice.read(currentUserId);
@@ -88,7 +88,7 @@ public class NotificationService {
         return notificationRepository.countByReceiverIdAndIsReadFalse(userId);
     }
 
-    public void deleteNotification(String notificationId, Long currentUserId) {
+    public void deleteNotification(Long notificationId, Long currentUserId) {
         Notification notice = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
         notice.requireOwnership(currentUserId);

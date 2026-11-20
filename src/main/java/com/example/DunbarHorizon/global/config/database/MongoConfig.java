@@ -6,8 +6,7 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 
 @Configuration
 @EnableMongoRepositories(
-        basePackages = {"com.example.DunbarHorizon.notification.adapter.out.persistence.mongo",
-                "com.example.DunbarHorizon.buzz.adapter.out.persistence.mongo"}
+        basePackages = "com.example.DunbarHorizon.buzz.adapter.out.persistence.mongo"
 )
 @EnableMongoAuditing
 public class MongoConfig {

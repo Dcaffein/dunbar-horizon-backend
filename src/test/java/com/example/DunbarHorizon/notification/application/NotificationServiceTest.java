@@ -146,10 +146,10 @@ class NotificationServiceTest {
     void markAsSent_발송_완료_상태로_변경한다() {
         // given
         Notification notice = Notification.builder().receiverId(1L).isSent(false).build();
-        given(notificationRepository.findById("notice-id")).willReturn(Optional.of(notice));
+        given(notificationRepository.findById(1L)).willReturn(Optional.of(notice));
 
         // when
-        notificationService.markAsSent("notice-id");
+        notificationService.markAsSent(1L);
 
         // then
         assertThat(notice.isSent()).isTrue();

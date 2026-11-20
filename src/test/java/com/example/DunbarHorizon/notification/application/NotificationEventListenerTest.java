@@ -104,7 +104,7 @@ class NotificationEventListenerTest {
         );
 
         Notification savedNotice = Notification.builder().receiverId(null).title("공지 제목").build();
-        ReflectionTestUtils.setField(savedNotice, "id", "broadcast-id");
+        ReflectionTestUtils.setField(savedNotice, "id", 1L);
         given(notificationService.savePendingNotification(any(Notification.class))).willReturn(savedNotice);
 
         // when
@@ -113,7 +113,7 @@ class NotificationEventListenerTest {
         // then
         verify(notificationService).savePendingNotification(any(Notification.class));
         verify(notificationSender).sendBroadcast(event);
-        verify(notificationService).markAsSent("broadcast-id");
+        verify(notificationService).markAsSent(1L);
     }
 
     @Test

@@ -46,7 +46,7 @@ public class NotificationController {
 
     @PatchMapping("/{notificationId}/read")
     public ResponseEntity<NotificationResponse> readNotification(
-            @PathVariable String notificationId,
+            @PathVariable Long notificationId,
             @CurrentUserId Long currentUserId) {
         Notification updatedNotification = notificationService.readNotification(notificationId, currentUserId);
         return ResponseEntity.ok(NotificationResponse.from(updatedNotification));
@@ -70,7 +70,7 @@ public class NotificationController {
 
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<Void> deleteNotification(
-            @PathVariable String notificationId,
+            @PathVariable Long notificationId,
             @CurrentUserId Long currentUserId) {
         notificationService.deleteNotification(notificationId, currentUserId);
         return ResponseEntity.noContent().build();
