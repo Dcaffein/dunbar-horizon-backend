@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.notification.adapter.out.fcm;
 
-import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
+import com.example.DunbarHorizon.notification.application.port.out.PushMessage;
 import com.google.firebase.messaging.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,24 +17,24 @@ public class FcmAdapter implements NotificationSender {
     private final FirebaseMessaging firebaseMessaging;
 
     @Override
-    public List<String> sendMulticast(NotificationEvent event, List<String> tokens) {
+    public List<String> send(PushMessage message, List<String> tokens) {
         if (tokens == null || tokens.isEmpty()) return Collections.emptyList();
 
         List<String> invalidTokens = new ArrayList<>();
 
-        Notification fcmNotification = createFcmNotification(event);
-        Map<String, String> fcmData = createDataPayload(event);
+        Notification fcmNotification = createFcmNotification(message);
+        Map<String, String> fcmData = createDataPayload(message);
 
         for (int i = 0; i < tokens.size(); i += 500) {
             List<String> chunk = tokens.subList(i, Math.min(i + 500, tokens.size()));
 
-            MulticastMessage message = MulticastMessage.builder()
+            MulticastMessage multicastMessage = MulticastMessage.builder()
                     .setNotification(fcmNotification)
                     .putAllData(fcmData)
                     .addAllTokens(chunk)
                     .build();
 
-            invalidTokens.addAll(dispatchMulticastChunk(message, chunk));
+            invalidTokens.addAll(dispatchMulticastChunk(multicastMessage, chunk));
         }
         return invalidTokens;
     }
@@ -62,21 +62,16 @@ public class FcmAdapter implements NotificationSender {
         return invalidTokensInChunk;
     }
 
-    // Builder 반환 대신 Notification 객체 자체를 반환하도록 분리
-    private Notification createFcmNotification(NotificationEvent event) {
+    private Notification createFcmNotification(PushMessage message) {
         return Notification.builder()
-                .setTitle(event.title())
-                .setBody(event.content())
+                .setTitle(message.title())
+                .setBody(message.body())
                 .build();
     }
 
-    // Builder 반환 대신 Data Map 자체를 반환하도록 분리
-    private Map<String, String> createDataPayload(NotificationEvent event) {
+    private Map<String, String> createDataPayload(PushMessage message) {
         Map<String, String> data = new HashMap<>();
-        data.put("type", event.type().name());
-        if (event.metadata() != null) {
-            event.metadata().forEach((key, value) -> data.put(key, String.valueOf(value)));
-        }
+        message.data().forEach((key, value) -> data.put(key, String.valueOf(value)));
         return data;
     }
 }

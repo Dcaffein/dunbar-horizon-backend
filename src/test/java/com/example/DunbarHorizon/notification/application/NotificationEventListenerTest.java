@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.global.event.DeviceTokenDeregisteredEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
+import com.example.DunbarHorizon.notification.application.port.out.PushMessage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -45,21 +47,23 @@ class NotificationEventListenerTest {
                 .title("제목")
                 .content("내용")
                 .type(NotificationType.BUZZ_ARRIVAL)
-                .metadata(null)
+                .metadata(Map.of("buzzId", 7L))
                 .build();
 
         given(deviceTokenService.findTokensByUserIds(event.receiverIds()))
                 .willReturn(List.of("token-1", "token-2"));
 
         List<String> invalidTokens = List.of("token-2");
-        given(notificationSender.sendMulticast(eq(event), anyList())).willReturn(invalidTokens);
+        given(notificationSender.send(any(PushMessage.class), anyList())).willReturn(invalidTokens);
 
         // when
         eventListener.handleNotificationRequest(event);
 
         // then
         ArgumentCaptor<List<String>> tokenCaptor = ArgumentCaptor.forClass(List.class);
-        verify(notificationSender).sendMulticast(eq(event), tokenCaptor.capture());
+        verify(notificationSender).send(
+                eq(new PushMessage("제목", "내용", Map.of("type", "BUZZ_ARRIVAL", "buzzId", 7L))),
+                tokenCaptor.capture());
         assertThat(tokenCaptor.getValue()).containsExactlyInAnyOrder("token-1", "token-2");
 
         verify(deviceTokenService).cleanupInvalidTokens(invalidTokens);
@@ -84,7 +88,7 @@ class NotificationEventListenerTest {
         eventListener.handleNotificationRequest(event);
 
         // then
-        verify(notificationSender, never()).sendMulticast(any(), any());
+        verify(notificationSender, never()).send(any(), any());
     }
 
     @Test

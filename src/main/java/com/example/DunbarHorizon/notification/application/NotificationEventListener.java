@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.notification.application;
 import com.example.DunbarHorizon.global.event.DeviceTokenDeregisteredEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
+import com.example.DunbarHorizon.notification.application.port.out.PushMessage;
 import com.example.DunbarHorizon.notification.domain.Notification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +12,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -38,7 +41,7 @@ public class NotificationEventListener {
         }
 
         try {
-            List<String> invalidTokens = notificationSender.sendMulticast(event, tokens);
+            List<String> invalidTokens = notificationSender.send(pushMessage(event), tokens);
             deviceTokenService.cleanupInvalidTokens(invalidTokens);
         } catch (Exception e) {
             log.error("FCM 벌크 전송 중 시스템 에러: {}", e.getMessage());
@@ -48,6 +51,15 @@ public class NotificationEventListener {
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void handleDeviceTokenDeregistration(DeviceTokenDeregisteredEvent event) {
         deviceTokenService.removeDeviceToken(event.token());
+    }
+
+    private PushMessage pushMessage(NotificationEvent event) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("type", event.type().name());
+        if (event.metadata() != null) {
+            data.putAll(event.metadata());
+        }
+        return new PushMessage(event.title(), event.content(), data);
     }
 
     private Notification createSingleNotification(Long receiverId, NotificationEvent event) {
