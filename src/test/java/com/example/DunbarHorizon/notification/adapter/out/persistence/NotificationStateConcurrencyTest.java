@@ -72,6 +72,46 @@ class NotificationStateConcurrencyTest {
                 "SELECT COUNT(*) FROM notifications WHERE id = ?", Long.class, saved.getId())).isZero();
     }
 
+    @Test
+    @DisplayName("삭제가 알림을 조회한 뒤 다른 삭제가 커밋돼도 늦은 삭제는 성공으로 끝나고 행은 지워진 채 남는다")
+    void delete_Succeeds_OtherDeleteCommittedAfterLoaded() throws Exception {
+        // given
+        Notification saved = notificationService.saveNotifications(List.of(notification())).get(0);
+        CountDownLatch loaded = new CountDownLatch(1);
+        CountDownLatch resume = new CountDownLatch(1);
+        pauseFirstLookup(loaded, resume);
+
+        // when
+        Throwable failure;
+        try (var workers = Executors.newSingleThreadExecutor()) {
+            var lateDelete = workers.submit(() -> notificationService.deleteNotification(saved.getId(), receiverId));
+            try {
+                await(loaded);
+                notificationService.deleteNotification(saved.getId(), receiverId);
+            } finally {
+                resume.countDown();
+            }
+            failure = catchThrowable(() -> lateDelete.get(10, TimeUnit.SECONDS));
+        }
+
+        // then
+        assertThat(failure).isNull();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM notifications WHERE id = ?", Long.class, saved.getId())).isZero();
+    }
+
+    private void pauseFirstLookup(CountDownLatch loaded, CountDownLatch resume) {
+        AtomicBoolean firstFind = new AtomicBoolean(true);
+        doAnswer(invocation -> {
+            Object found = invocation.callRealMethod();
+            if (firstFind.getAndSet(false)) {
+                loaded.countDown();
+                await(resume);
+            }
+            return found;
+        }).when(notificationRepositoryAdapter).findById(any());
+    }
+
     private void pauseFirstRetainedLookup(CountDownLatch loaded, CountDownLatch resume) {
         AtomicBoolean firstFind = new AtomicBoolean(true);
         doAnswer(invocation -> {

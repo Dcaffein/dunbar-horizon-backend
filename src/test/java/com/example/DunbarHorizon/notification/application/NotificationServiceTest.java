@@ -86,7 +86,7 @@ class NotificationServiceTest {
         notificationService.deleteNotification(5L, 1L);
 
         // then
-        verify(notificationRepository).deleteById(5L);
+        verify(notificationRepository).delete(notification);
     }
 
     @Test
@@ -99,7 +99,7 @@ class NotificationServiceTest {
         // when & then
         assertThatThrownBy(() -> notificationService.deleteNotification(5L, 1L))
                 .isInstanceOf(NotificationAccessDeniedException.class);
-        verify(notificationRepository, never()).deleteById(any());
+        verify(notificationRepository, never()).delete(any());
     }
 
     @Test
@@ -111,7 +111,7 @@ class NotificationServiceTest {
         // when & then
         assertThatThrownBy(() -> notificationService.deleteNotification(5L, 1L))
                 .isInstanceOf(NotificationNotFoundException.class);
-        verify(notificationRepository, never()).deleteById(any());
+        verify(notificationRepository, never()).delete(any());
     }
 
     @Test

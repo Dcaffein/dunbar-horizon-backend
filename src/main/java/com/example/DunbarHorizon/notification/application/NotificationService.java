@@ -46,7 +46,7 @@ public class NotificationService {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new NotificationNotFoundException(notificationId));
         notification.requireOwnership(currentUserId);
-        notificationRepository.deleteById(notificationId);
+        notificationRepository.delete(notification);
     }
 
     @Transactional
