@@ -5,7 +5,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,7 +15,6 @@ public interface NotificationRepository {
     Optional<Notification> findRetainedById(Long id, LocalDateTime asOf);
     List<Notification> saveAll(List<Notification> notifications);
     void deleteById(Long id);
-    int markAllAsSent(Collection<Long> ids);
     int markAsRead(Long id, LocalDateTime asOf);
     int purgeExpired(LocalDateTime asOf);
 }

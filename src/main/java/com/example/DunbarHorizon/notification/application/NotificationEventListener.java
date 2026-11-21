@@ -28,7 +28,7 @@ public class NotificationEventListener {
         List<Notification> notifications = event.receiverIds().stream()
                 .map(id -> createSingleNotification(id, event))
                 .toList();
-        List<Notification> savedNotifications = notificationService.savePendingNotifications(notifications);
+        notificationService.saveNotifications(notifications);
 
         List<String> tokens = deviceTokenService.findTokensByUserIds(event.receiverIds());
 
@@ -39,7 +39,6 @@ public class NotificationEventListener {
 
         try {
             List<String> invalidTokens = notificationSender.sendMulticast(event, tokens);
-            notificationService.markAllAsSent(savedNotifications.stream().map(Notification::getId).toList());
             deviceTokenService.cleanupInvalidTokens(invalidTokens);
         } catch (Exception e) {
             log.error("FCM 벌크 전송 중 시스템 에러: {}", e.getMessage());
@@ -58,7 +57,6 @@ public class NotificationEventListener {
                 .content(event.content())
                 .type(event.type())
                 .metadata(event.metadata())
-                .isSent(false)
                 .build();
     }
 }

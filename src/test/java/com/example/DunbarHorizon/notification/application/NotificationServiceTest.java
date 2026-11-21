@@ -32,17 +32,6 @@ class NotificationServiceTest {
     private NotificationRepository notificationRepository;
 
     @Test
-    @DisplayName("markAllAsSent: 다수의 알림을 ID로 일괄 발송 완료 갱신한다")
-    void markAllAsSent_ID로_일괄_갱신한다() {
-        // when
-        notificationService.markAllAsSent(List.of(1L, 2L));
-
-        // then
-        verify(notificationRepository).markAllAsSent(List.of(1L, 2L));
-        verify(notificationRepository, never()).saveAll(any());
-    }
-
-    @Test
     @DisplayName("readNotification: 소유자 확인 뒤 읽음만 갱신하고 읽은 상태로 돌려준다")
     void readNotification_읽음만_갱신한다() {
         // given

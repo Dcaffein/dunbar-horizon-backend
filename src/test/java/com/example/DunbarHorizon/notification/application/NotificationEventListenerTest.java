@@ -4,7 +4,6 @@ import com.example.DunbarHorizon.global.event.DeviceTokenDeregisteredEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
-import com.example.DunbarHorizon.notification.domain.Notification;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,7 +11,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
@@ -53,10 +51,6 @@ class NotificationEventListenerTest {
         given(deviceTokenService.findTokensByUserIds(event.receiverIds()))
                 .willReturn(List.of("token-1", "token-2"));
 
-        Notification saved = Notification.builder().receiverId(1L).build();
-        ReflectionTestUtils.setField(saved, "id", 11L);
-        given(notificationService.savePendingNotifications(anyList())).willReturn(List.of(saved));
-
         List<String> invalidTokens = List.of("token-2");
         given(notificationSender.sendMulticast(eq(event), anyList())).willReturn(invalidTokens);
 
@@ -68,7 +62,6 @@ class NotificationEventListenerTest {
         verify(notificationSender).sendMulticast(eq(event), tokenCaptor.capture());
         assertThat(tokenCaptor.getValue()).containsExactlyInAnyOrder("token-1", "token-2");
 
-        verify(notificationService).markAllAsSent(List.of(11L));
         verify(deviceTokenService).cleanupInvalidTokens(invalidTokens);
     }
 
@@ -84,7 +77,6 @@ class NotificationEventListenerTest {
                 .metadata(null)
                 .build();
 
-        given(notificationService.savePendingNotifications(anyList())).willReturn(List.of());
         given(deviceTokenService.findTokensByUserIds(event.receiverIds()))
                 .willReturn(List.of());
 
