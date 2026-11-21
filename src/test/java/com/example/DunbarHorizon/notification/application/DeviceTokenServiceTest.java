@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.notification.application;
 
 import com.example.DunbarHorizon.notification.domain.DeviceToken;
 import com.example.DunbarHorizon.notification.domain.event.DeviceTokenRegisteredEvent;
+import com.example.DunbarHorizon.notification.domain.event.DeviceTokenRemovedEvent;
 import com.example.DunbarHorizon.notification.domain.repository.DeviceTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,8 +34,8 @@ class DeviceTokenServiceTest {
     private ApplicationEventPublisher eventPublisher;
 
     @Test
-    @DisplayName("registerDeviceToken: 신규 토큰이면 기존 토큰을 삭제하고 저장 후 이벤트를 발행한다")
-    void registerDeviceToken_신규_토큰이면_기존_삭제_후_저장하고_이벤트를_발행한다() {
+    @DisplayName("registerDeviceToken: 신규 토큰이면 사용자의 다른 토큰은 두고 저장 후 이벤트를 발행한다")
+    void registerDeviceToken_신규_토큰이면_다른_토큰은_두고_저장하고_이벤트를_발행한다() {
         // given
         given(deviceTokenRepository.existsByUserIdAndToken(1L, "new-token")).willReturn(false);
 
@@ -42,7 +43,7 @@ class DeviceTokenServiceTest {
         deviceTokenService.registerDeviceToken(1L, "new-token");
 
         // then
-        verify(deviceTokenRepository).deleteAllByUserId(1L);
+        verify(deviceTokenRepository, never()).deleteByToken(any());
 
         ArgumentCaptor<DeviceToken> captor = ArgumentCaptor.forClass(DeviceToken.class);
         verify(deviceTokenRepository).save(captor.capture());
@@ -62,19 +63,36 @@ class DeviceTokenServiceTest {
         deviceTokenService.registerDeviceToken(1L, "existing-token");
 
         // then
-        verify(deviceTokenRepository, never()).deleteAllByUserId(any());
         verify(deviceTokenRepository, never()).save(any());
         verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
-    @DisplayName("removeDeviceTokenByUserId: userId 기준으로 토큰을 삭제한다")
-    void removeDeviceTokenByUserId_userId_기준으로_삭제한다() {
+    @DisplayName("deregisterDeviceToken: 내 토큰이면 삭제하고 토픽 해지 이벤트를 발행한다")
+    void deregisterDeviceToken_내_토큰이면_삭제하고_이벤트를_발행한다() {
+        // given
+        given(deviceTokenRepository.deleteByUserIdAndToken(1L, "my-token")).willReturn(1);
+
         // when
-        deviceTokenService.removeDeviceTokenByUserId(1L);
+        deviceTokenService.deregisterDeviceToken(1L, "my-token");
 
         // then
-        verify(deviceTokenRepository).deleteAllByUserId(1L);
+        ArgumentCaptor<DeviceTokenRemovedEvent> captor = ArgumentCaptor.forClass(DeviceTokenRemovedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().token()).isEqualTo("my-token");
+    }
+
+    @Test
+    @DisplayName("deregisterDeviceToken: 지워진 행이 없으면 이벤트를 발행하지 않는다")
+    void deregisterDeviceToken_지워진_행이_없으면_이벤트를_발행하지_않는다() {
+        // given
+        given(deviceTokenRepository.deleteByUserIdAndToken(1L, "other-token")).willReturn(0);
+
+        // when
+        deviceTokenService.deregisterDeviceToken(1L, "other-token");
+
+        // then
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test

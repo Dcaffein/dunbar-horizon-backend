@@ -10,9 +10,11 @@ import java.util.List;
 
 public interface DeviceTokenJpaRepository extends JpaRepository<DeviceToken, String> {
 
-    boolean existsByToken(String token);
-
     void deleteByToken(String token);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM DeviceToken d WHERE d.userId = :userId AND d.token = :token")
+    int deleteByUserIdAndToken(@Param("userId") Long userId, @Param("token") String token);
 
     @Modifying
     @Query("DELETE FROM DeviceToken d WHERE d.token IN :tokens")
@@ -22,8 +24,4 @@ public interface DeviceTokenJpaRepository extends JpaRepository<DeviceToken, Str
     List<String> findAllTokensByUserIdIn(@Param("userIds") List<Long> userIds);
 
     boolean existsByUserIdAndToken(Long userId, String token);
-
-    @Modifying
-    @Query("DELETE FROM DeviceToken d WHERE d.userId = :userId")
-    void deleteAllByUserId(@Param("userId") Long userId);
 }

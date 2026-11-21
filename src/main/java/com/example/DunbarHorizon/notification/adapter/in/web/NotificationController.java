@@ -33,8 +33,9 @@ public class NotificationController {
 
     @DeleteMapping("/device-token")
     public ResponseEntity<Void> removeDeviceToken(
-            @CurrentUserId Long currentUserId) {
-        deviceTokenService.removeDeviceTokenByUserId(currentUserId);
+            @CurrentUserId Long currentUserId,
+            @RequestParam String token) {
+        deviceTokenService.deregisterDeviceToken(currentUserId, token);
         return ResponseEntity.ok().build();
     }
 

@@ -20,13 +20,13 @@ public class DeviceTokenRepositoryAdapter implements DeviceTokenRepository {
     }
 
     @Override
-    public boolean existsByToken(String token) {
-        return deviceTokenJpaRepository.existsByToken(token);
+    public void deleteByToken(String token) {
+        deviceTokenJpaRepository.deleteByToken(token);
     }
 
     @Override
-    public void deleteByToken(String token) {
-        deviceTokenJpaRepository.deleteByToken(token);
+    public int deleteByUserIdAndToken(Long userId, String token) {
+        return deviceTokenJpaRepository.deleteByUserIdAndToken(userId, token);
     }
 
     @Override
@@ -43,10 +43,5 @@ public class DeviceTokenRepositoryAdapter implements DeviceTokenRepository {
     @Override
     public boolean existsByUserIdAndToken(Long userId, String token) {
         return deviceTokenJpaRepository.existsByUserIdAndToken(userId, token);
-    }
-
-    @Override
-    public void deleteAllByUserId(Long userId) {
-        deviceTokenJpaRepository.deleteAllByUserId(userId);
     }
 }

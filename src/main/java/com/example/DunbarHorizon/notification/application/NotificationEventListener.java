@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
 import com.example.DunbarHorizon.notification.domain.Notification;
 import com.example.DunbarHorizon.notification.domain.event.DeviceTokenRegisteredEvent;
+import com.example.DunbarHorizon.notification.domain.event.DeviceTokenRemovedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -75,8 +76,18 @@ public class NotificationEventListener {
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleDeviceTokenDeregistrationAsync(DeviceTokenDeregisteredEvent event) {
+        unsubscribeFromNotice(event.token());
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleDeviceTokenRemoval(DeviceTokenRemovedEvent event) {
+        unsubscribeFromNotice(event.token());
+    }
+
+    private void unsubscribeFromNotice(String token) {
         try {
-            notificationSender.unsubscribeFromTopic(event.token(), "notice");
+            notificationSender.unsubscribeFromTopic(token, "notice");
         } catch (Exception e) {
             log.error("FCM 토픽 해지 중 에러 발생: {}", e.getMessage());
         }

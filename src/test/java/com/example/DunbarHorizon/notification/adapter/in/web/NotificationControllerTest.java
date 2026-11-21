@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.SliceImpl;
+import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -18,9 +19,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -74,6 +77,54 @@ class NotificationControllerTest extends BaseControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(notificationService).deleteNotification(42L, 1L);
+    }
+
+    @Test
+    @WithMockCustomUser
+    @DisplayName("기기 토큰을 등록한다")
+    void registerDeviceToken_Success() throws Exception {
+        // when & then
+        mockMvc.perform(post("/api/v1/notifications/device-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"device-token\"}"))
+                .andExpect(status().isOk());
+
+        verify(deviceTokenService).registerDeviceToken(1L, "device-token");
+    }
+
+    @Test
+    @WithMockCustomUser
+    @DisplayName("토큰을 지정해 이 기기의 알림만 끈다")
+    void removeDeviceToken_Success_GivenToken() throws Exception {
+        // when & then
+        mockMvc.perform(delete("/api/v1/notifications/device-token").param("token", "device-token"))
+                .andExpect(status().isOk());
+
+        verify(deviceTokenService).deregisterDeviceToken(1L, "device-token");
+    }
+
+    @Test
+    @WithMockCustomUser
+    @DisplayName("토큰 없이 기기 알림 끄기를 요청하면 400이다")
+    void removeDeviceToken_BadRequest_MissingToken() throws Exception {
+        // when & then
+        mockMvc.perform(delete("/api/v1/notifications/device-token"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(deviceTokenService);
+    }
+
+    @Test
+    @WithMockCustomUser
+    @DisplayName("이 기기의 토큰 등록 여부를 조회한다")
+    void getDeviceTokenStatus_Success() throws Exception {
+        // given
+        given(deviceTokenService.isTokenRegisteredForUser(1L, "device-token")).willReturn(true);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/notifications/device-token/status").param("token", "device-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.registered").value(true));
     }
 
     private Notification notification(Long id, Map<String, Object> metadata) {

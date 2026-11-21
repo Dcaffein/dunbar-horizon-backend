@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.notification.application;
 
 import com.example.DunbarHorizon.notification.domain.DeviceToken;
 import com.example.DunbarHorizon.notification.domain.event.DeviceTokenRegisteredEvent;
+import com.example.DunbarHorizon.notification.domain.event.DeviceTokenRemovedEvent;
 import com.example.DunbarHorizon.notification.domain.repository.DeviceTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -22,7 +23,6 @@ public class DeviceTokenService {
         if (deviceTokenRepository.existsByUserIdAndToken(userId, token)) {
             return;
         }
-        deviceTokenRepository.deleteAllByUserId(userId);
         deviceTokenRepository.save(new DeviceToken(userId, token));
         eventPublisher.publishEvent(new DeviceTokenRegisteredEvent(token));
     }
@@ -33,8 +33,11 @@ public class DeviceTokenService {
     }
 
     @Transactional
-    public void removeDeviceTokenByUserId(Long userId) {
-        deviceTokenRepository.deleteAllByUserId(userId);
+    public void deregisterDeviceToken(Long userId, String token) {
+        if (deviceTokenRepository.deleteByUserIdAndToken(userId, token) == 0) {
+            return;
+        }
+        eventPublisher.publishEvent(new DeviceTokenRemovedEvent(token));
     }
 
     public boolean isTokenRegisteredForUser(Long userId, String token) {

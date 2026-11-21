@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
 import com.example.DunbarHorizon.notification.domain.Notification;
+import com.example.DunbarHorizon.notification.domain.event.DeviceTokenRemovedEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -127,5 +128,16 @@ class NotificationEventListenerTest {
 
         // then
         verify(deviceTokenService).removeDeviceToken("token-to-remove");
+    }
+
+    @Test
+    @DisplayName("handleDeviceTokenRemoval: 지워진 토큰을 notice 토픽에서 해지한다")
+    void handleDeviceTokenRemoval_토픽을_해지한다() {
+        // when
+        eventListener.handleDeviceTokenRemoval(new DeviceTokenRemovedEvent("token-removed"));
+
+        // then
+        verify(notificationSender).unsubscribeFromTopic("token-removed", "notice");
+        verifyNoInteractions(deviceTokenService);
     }
 }
