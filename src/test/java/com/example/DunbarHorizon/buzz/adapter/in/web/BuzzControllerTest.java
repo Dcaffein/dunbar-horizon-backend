@@ -99,34 +99,9 @@ class BuzzControllerTest extends BaseControllerTest {
 
         @Test
         @WithMockCustomUser
-        @DisplayName("수신자가 151명이면 400을 반환한다")
-        void createBuzz_Fail_RecipientOverLimit() throws Exception {
+        @DisplayName("수신자가 151명이어도 인원수 상한 없이 요청이 서비스까지 전달된다")
+        void createBuzz_Success_RecipientsOver150() throws Exception {
             String memberIds = LongStream.rangeClosed(1, 151)
-                    .mapToObj(String::valueOf)
-                    .collect(Collectors.joining(","));
-
-            String body = """
-                    {
-                      "text": "안녕하세요",
-                      "recipient": {
-                        "type": "MANUAL",
-                        "memberIds": [%s]
-                      }
-                    }
-                    """.formatted(memberIds);
-
-            mockMvc.perform(post("/api/v1/buzzes")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.validation['recipient.memberIds']").exists());
-        }
-
-        @Test
-        @WithMockCustomUser
-        @DisplayName("수신자가 정확히 150명이면 요청이 서비스까지 전달된다")
-        void createBuzz_Success_MaxRecipients() throws Exception {
-            String memberIds = LongStream.rangeClosed(1, 150)
                     .mapToObj(String::valueOf)
                     .collect(Collectors.joining(","));
 
