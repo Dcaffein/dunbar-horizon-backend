@@ -32,18 +32,6 @@ class NotificationServiceTest {
     private NotificationRepository notificationRepository;
 
     @Test
-    @DisplayName("markAsSent: 알림을 읽지 않고 발송 완료만 갱신한다")
-    void markAsSent_발송_완료만_갱신한다() {
-        // when
-        notificationService.markAsSent(1L);
-
-        // then
-        verify(notificationRepository).markAllAsSent(List.of(1L));
-        verify(notificationRepository, never()).findById(any());
-        verify(notificationRepository, never()).save(any());
-    }
-
-    @Test
     @DisplayName("markAllAsSent: 다수의 알림을 ID로 일괄 발송 완료 갱신한다")
     void markAllAsSent_ID로_일괄_갱신한다() {
         // when
@@ -67,7 +55,6 @@ class NotificationServiceTest {
 
         // then
         assertThat(result.isRead()).isTrue();
-        verify(notificationRepository, never()).save(any());
     }
 
     @Test

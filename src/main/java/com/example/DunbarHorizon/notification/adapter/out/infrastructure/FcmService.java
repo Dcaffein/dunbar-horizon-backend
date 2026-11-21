@@ -40,21 +40,6 @@ public class FcmService implements NotificationSender {
     }
 
     @Override
-    public void sendBroadcast(NotificationEvent event) {
-        // 단건 전송용 Message 빌드
-        Message message = Message.builder()
-                .setNotification(createFcmNotification(event))
-                .putAllData(createDataPayload(event))
-                .setTopic("notice")
-                .build();
-        try {
-            firebaseMessaging.send(message);
-        } catch (FirebaseMessagingException e) {
-            log.error("FCM 브로드캐스트 전송 실패: {}", e.getMessage());
-        }
-    }
-
-    @Override
     public void subscribeToTopic(String token, String topic) {
         try {
             firebaseMessaging.subscribeToTopic(Collections.singletonList(token), topic);

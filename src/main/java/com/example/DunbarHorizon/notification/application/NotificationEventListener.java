@@ -27,15 +27,6 @@ public class NotificationEventListener {
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handleNotificationRequest(NotificationEvent event) {
-
-        if (event.isAnnouncement()) {
-            Notification notice = createSingleNotification(null, event);
-            notice = notificationService.savePendingNotification(notice);
-            notificationSender.sendBroadcast(event);
-            notificationService.markAsSent(notice.getId());
-            return;
-        }
-
         List<Notification> notifications = event.receiverIds().stream()
                 .map(id -> createSingleNotification(id, event))
                 .toList();

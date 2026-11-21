@@ -97,27 +97,6 @@ class NotificationEventListenerTest {
     }
 
     @Test
-    @DisplayName("브로드캐스트: 단건 저장 후 토픽으로 발송하고 상태를 업데이트한다")
-    void handleNotificationRequest_브로드캐스트_저장_후_발송() {
-        // given
-        NotificationEvent event = NotificationEvent.toAll(
-                "공지 제목", "공지 내용", NotificationType.NOTICE, null
-        );
-
-        Notification savedNotice = Notification.builder().receiverId(null).title("공지 제목").build();
-        ReflectionTestUtils.setField(savedNotice, "id", 1L);
-        given(notificationService.savePendingNotification(any(Notification.class))).willReturn(savedNotice);
-
-        // when
-        eventListener.handleNotificationRequest(event);
-
-        // then
-        verify(notificationService).savePendingNotification(any(Notification.class));
-        verify(notificationSender).sendBroadcast(event);
-        verify(notificationService).markAsSent(1L);
-    }
-
-    @Test
     @DisplayName("handleDeviceTokenDeregistration: BEFORE_COMMIT 핸들러에서 토큰을 삭제한다")
     void handleDeviceTokenDeregistration_토큰을_삭제한다() {
         // given

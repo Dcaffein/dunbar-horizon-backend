@@ -47,7 +47,7 @@ class NotificationStateConcurrencyTest {
     @DisplayName("읽음이 알림을 조회한 뒤 발송 완료가 커밋돼도 읽음과 발송 완료가 모두 남는다")
     void read_KeepsSent_SentCommittedAfterReadLoaded() throws Exception {
         // given
-        Notification saved = notificationService.savePendingNotification(notification());
+        Notification saved = notificationService.savePendingNotifications(List.of(notification())).get(0);
         CountDownLatch loaded = new CountDownLatch(1);
         CountDownLatch resume = new CountDownLatch(1);
         pauseFirstRetainedLookup(loaded, resume);
@@ -57,7 +57,7 @@ class NotificationStateConcurrencyTest {
             var read = workers.submit(() -> notificationService.readNotification(saved.getId(), receiverId));
             try {
                 await(loaded);
-                notificationService.markAsSent(saved.getId());
+                notificationService.markAllAsSent(List.of(saved.getId()));
             } finally {
                 resume.countDown();
             }
@@ -90,7 +90,7 @@ class NotificationStateConcurrencyTest {
     @DisplayName("읽음이 알림을 조회한 뒤 삭제가 커밋되면 읽음은 찾을 수 없음으로 끝나고 행을 되살리지 않는다")
     void read_NotFound_DeleteCommittedAfterReadLoaded() throws Exception {
         // given
-        Notification saved = notificationService.savePendingNotification(notification());
+        Notification saved = notificationService.savePendingNotifications(List.of(notification())).get(0);
         CountDownLatch loaded = new CountDownLatch(1);
         CountDownLatch resume = new CountDownLatch(1);
         pauseFirstRetainedLookup(loaded, resume);

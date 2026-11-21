@@ -32,11 +32,6 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     }
 
     @Override
-    public Notification save(Notification notification) {
-        return notificationJpaRepository.save(notification);
-    }
-
-    @Override
     public Optional<Notification> findById(Long id) {
         return notificationJpaRepository.findById(id);
     }

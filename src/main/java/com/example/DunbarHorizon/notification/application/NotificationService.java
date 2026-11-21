@@ -19,17 +19,8 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
 
-    public Notification savePendingNotification(Notification notification) {
-        return notificationRepository.save(notification);
-    }
-
     public List<Notification> savePendingNotifications(List<Notification> notifications) {
         return notificationRepository.saveAll(notifications);
-    }
-
-    @Transactional
-    public void markAsSent(Long notificationId) {
-        notificationRepository.markAllAsSent(List.of(notificationId));
     }
 
     @Transactional
