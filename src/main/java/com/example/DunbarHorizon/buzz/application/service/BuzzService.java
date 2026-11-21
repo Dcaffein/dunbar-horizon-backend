@@ -73,6 +73,18 @@ public class BuzzService {
         buzzThreadRepository.deleteAllByBuzzId(buzzId);
     }
 
+    public int purgeExpiredBuzzes(LocalDateTime now) {
+        List<String> expiredBuzzIds = buzzRepository.findExpiredIds(now);
+        if (expiredBuzzIds.isEmpty()) {
+            return 0;
+        }
+        buzzRepository.deleteAllByIds(expiredBuzzIds);
+        buzzAudienceMemberRepository.deleteAllByBuzzIds(expiredBuzzIds);
+        buzzCommentRepository.deleteAllByBuzzIds(expiredBuzzIds);
+        buzzThreadRepository.deleteAllByBuzzIds(expiredBuzzIds);
+        return expiredBuzzIds.size();
+    }
+
     @Transactional(readOnly = true)
     public Slice<BuzzSummaryResult> getReceivedBuzzes(Long userId, Pageable pageable) {
         LocalDateTime now = LocalDateTime.now();

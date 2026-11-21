@@ -329,4 +329,44 @@ class BuzzServiceTest {
             verify(buzzRepository, never()).deleteById(any());
         }
     }
+
+    @Nested
+    @DisplayName("만료 정리")
+    class PurgeExpired {
+
+        @Test
+        @DisplayName("만료된 버즈 행을 먼저 지운 뒤 멤버, 답글, 스레드를 지우고 지운 버즈 수를 돌려준다")
+        void purgeExpiredBuzzes_DeletesBuzzesThenChildren() {
+            // given
+            LocalDateTime now = LocalDateTime.now();
+            List<String> expiredIds = List.of("buzz-1", "buzz-2");
+            given(buzzRepository.findExpiredIds(now)).willReturn(expiredIds);
+
+            // when
+            int purged = buzzService.purgeExpiredBuzzes(now);
+
+            // then
+            assertThat(purged).isEqualTo(2);
+            InOrder order = inOrder(buzzRepository, buzzAudienceMemberRepository, buzzCommentRepository, buzzThreadRepository);
+            order.verify(buzzRepository).deleteAllByIds(expiredIds);
+            order.verify(buzzAudienceMemberRepository).deleteAllByBuzzIds(expiredIds);
+            order.verify(buzzCommentRepository).deleteAllByBuzzIds(expiredIds);
+            order.verify(buzzThreadRepository).deleteAllByBuzzIds(expiredIds);
+        }
+
+        @Test
+        @DisplayName("만료된 버즈가 없으면 아무것도 지우지 않는다")
+        void purgeExpiredBuzzes_NothingExpired() {
+            // given
+            LocalDateTime now = LocalDateTime.now();
+            given(buzzRepository.findExpiredIds(now)).willReturn(List.of());
+
+            // when
+            int purged = buzzService.purgeExpiredBuzzes(now);
+
+            // then
+            assertThat(purged).isZero();
+            verify(buzzRepository, never()).deleteAllByIds(any());
+        }
+    }
 }
