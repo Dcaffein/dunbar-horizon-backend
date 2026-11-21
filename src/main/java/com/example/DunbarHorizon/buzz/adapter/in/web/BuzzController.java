@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web;
 
-import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzCommentRequest;
 import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzCreateRequest;
 import com.example.DunbarHorizon.buzz.application.service.BuzzService;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
@@ -69,36 +68,6 @@ public class BuzzController {
     @GetMapping("/senders/unread")
     public ResponseEntity<List<Long>> getUnreadSenders(@CurrentUserId Long currentUserId) {
         return ResponseEntity.ok(buzzService.getUnreadSenderIds(currentUserId));
-    }
-
-    @PostMapping("/{buzzId}/comments")
-    public ResponseEntity<Void> comment(
-            @CurrentUserId Long currentUserId,
-            @PathVariable String buzzId,
-            @RequestBody @Valid BuzzCommentRequest dto) {
-        List<String> imageKeys = dto.imageKeys() != null ? dto.imageKeys() : List.of();
-        buzzService.commentOnBuzz(currentUserId, buzzId, dto.text(), imageKeys, dto.isPublic());
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
-    @PatchMapping("/{buzzId}/comments/{commentId}")
-    public ResponseEntity<Void> updateComment(
-            @CurrentUserId Long currentUserId,
-            @PathVariable String buzzId,
-            @PathVariable String commentId,
-            @RequestBody @Valid BuzzCommentRequest dto) {
-        List<String> imageKeys = dto.imageKeys() != null ? dto.imageKeys() : List.of();
-        buzzService.updateComment(currentUserId, buzzId, commentId, dto.text(), imageKeys);
-        return ResponseEntity.noContent().build();
-    }
-
-    @DeleteMapping("/{buzzId}/comments/{commentId}")
-    public ResponseEntity<Void> deleteComment(
-            @CurrentUserId Long currentUserId,
-            @PathVariable String buzzId,
-            @PathVariable String commentId) {
-        buzzService.deleteComment(currentUserId, buzzId, commentId);
-        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{buzzId}")

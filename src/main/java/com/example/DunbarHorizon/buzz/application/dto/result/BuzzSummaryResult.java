@@ -11,7 +11,6 @@ public record BuzzSummaryResult(
         BuzzProfileResult author,
         String text,
         List<String> imageUrls,
-        int commentCount,
         long remainingMinutes,
         boolean isUnread,
         boolean isCreator
@@ -22,7 +21,6 @@ public record BuzzSummaryResult(
                 new BuzzProfileResult(buzz.getCreatorId(), buzz.getCreatorNickname(), buzz.getCreatorProfileImageUrl()),
                 buzz.getText(),
                 buzz.getImageUrls(),
-                buzz.getComments().size(),
                 Math.max(0L, Duration.between(LocalDateTime.now(), buzz.getExpiresAt()).toMinutes()),
                 buzz.isUnreadBy(currentUserId),
                 buzz.isCreator(currentUserId)

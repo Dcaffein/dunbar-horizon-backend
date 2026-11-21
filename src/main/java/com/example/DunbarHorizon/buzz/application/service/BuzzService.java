@@ -9,12 +9,9 @@ import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
-import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzCommentNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -59,47 +56,6 @@ public class BuzzService {
         eventPublisher.publishEvent(new BuzzCreatedEvent(savedBuzz.getId(), command.creatorId(), recipientIds));
     }
 
-    public void commentOnBuzz(Long commenterId, String buzzId, String commentText, List<String> imageKeys, boolean isPublic) {
-        BuzzCreatorInfo commenterProfile = buzzSocialPort.getCreatorProfiles(List.of(commenterId))
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new EntityNotFoundException("사용자 정보를 찾을 수 없습니다."));
-
-        Buzz buzz = getBuzzOrThrow(buzzId);
-        buzz.validateCommentCreation(commenterId);
-        List<String> imageUrls = imageStoragePort.resolveUrls(imageKeys);
-
-        BuzzComment comment = BuzzComment.create(
-                commenterId,
-                commenterProfile.nickname(),
-                commenterProfile.profileImageUrl(),
-                commentText,
-                imageUrls,
-                isPublic
-        );
-        buzzRepository.addComment(buzzId, comment, buzz.isRecipient(commenterId));
-        eventPublisher.publishEvent(new BuzzCommentedEvent(buzzId, buzz.getCreatorId(), commenterId));
-    }
-
-    public void updateComment(Long requesterId, String buzzId, String commentId, String commentText, List<String> imageKeys) {
-        Buzz buzz = getBuzzOrThrow(buzzId);
-        buzz.validateNotExpired();
-        BuzzComment comment = getCommentOrThrow(buzzId, commentId);
-
-        List<String> imageUrls = imageStoragePort.resolveUrls(imageKeys);
-        comment.update(requesterId, commentText, imageUrls);
-        buzzRepository.updateComment(buzzId, commentId, comment.getText(), comment.getImageUrls());
-    }
-
-    public void deleteComment(Long requesterId, String buzzId, String commentId) {
-        Buzz buzz = getBuzzOrThrow(buzzId);
-        buzz.validateNotExpired();
-        BuzzComment comment = getCommentOrThrow(buzzId, commentId);
-
-        comment.validateDeletionAuthority(requesterId, buzz.getCreatorId());
-        buzzRepository.removeComment(buzzId, commentId);
-    }
-
     public void deleteBuzz(Long requesterId, String buzzId) {
         Buzz buzz = getBuzzOrThrow(buzzId);
         buzz.validateDeletion(requesterId);
@@ -118,7 +74,7 @@ public class BuzzService {
     }
 
     public BuzzDetailResult getBuzzDetail(Long userId, String buzzId) {
-        Buzz buzz = getBuzzWithCommentsOrThrow(buzzId);
+        Buzz buzz = getBuzzOrThrow(buzzId);
         buzz.validateAccess(userId);
         buzzRepository.addReadRecipient(buzzId, userId);
         List<BuzzProfileResult> recipients = buzzSocialPort.getCreatorProfiles(buzz.getRecipientIds()).stream()
@@ -136,19 +92,10 @@ public class BuzzService {
         return requireBuzz(buzzRepository.findById(buzzId), buzzId);
     }
 
-    private Buzz getBuzzWithCommentsOrThrow(String buzzId) {
-        return requireBuzz(buzzRepository.findByIdWithRecentComments(buzzId), buzzId);
-    }
-
     private Buzz requireBuzz(Buzz buzz, String buzzId) {
         if (buzz == null) {
             throw new BuzzNotFoundException(buzzId);
         }
         return buzz;
-    }
-
-    private BuzzComment getCommentOrThrow(String buzzId, String commentId) {
-        return buzzRepository.findComment(buzzId, commentId)
-                .orElseThrow(() -> new BuzzCommentNotFoundException(buzzId, commentId));
     }
 }

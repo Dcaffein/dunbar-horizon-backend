@@ -39,8 +39,6 @@ public class Buzz {
 
     private List<Long> readRecipientIds = new ArrayList<>();
 
-    private List<BuzzComment> comments = new ArrayList<>();
-
     private LocalDateTime createdAt;
 
     @Indexed(expireAfter = "1s")
@@ -94,19 +92,6 @@ public class Buzz {
         if (!isCreator(requesterId)) {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_CREATOR_ONLY, ErrorContext.of("buzzId", id).and("userId", requesterId));
         }
-    }
-
-    public void validateCommentCreation(Long commenterId) {
-        validateNotExpired();
-        if (!isRecipient(commenterId) && !isCreator(commenterId)) {
-            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_NOT_RECIPIENT, ErrorContext.of("buzzId", id).and("userId", commenterId));
-        }
-    }
-
-    public List<BuzzComment> getVisibleComments(Long viewerId) {
-        return comments.stream()
-                .filter(c -> c.isPublic() || isCreator(viewerId) || c.getCommenterId().equals(viewerId))
-                .toList();
     }
 
     private void validateRecipientIds(List<Long> recipientIds) {

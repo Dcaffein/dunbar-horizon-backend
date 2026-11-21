@@ -93,9 +93,6 @@ class ErrorMessageSeparationTest {
     @DisplayName("잘못 분류돼 있던 status가 교정됐다")
     void correctedStatuses() {
         // given - 굵은 코드에 여러 조건을 몰아넣은 탓에 드러나지 않던 분류 오류
-        assertThat(BuzzErrorCode.BUZZ_COMMENT_NOT_FOUND.status())
-                .as("댓글을 못 찾은 것은 400이 아니라 404다")
-                .isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(FlagErrorCode.FLAG_HOST_REQUIRED.status())
                 .as("필수값 누락은 409가 아니라 400이다")
                 .isEqualTo(HttpStatus.BAD_REQUEST);

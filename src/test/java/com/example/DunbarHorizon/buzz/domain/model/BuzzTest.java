@@ -1,7 +1,6 @@
 package com.example.DunbarHorizon.buzz.domain.model;
 
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,7 +9,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.LongStream;
 
@@ -127,56 +125,6 @@ class BuzzTest {
     }
 
     @Nested
-    @DisplayName("댓글 작성 자격 검증 테스트")
-    class CommentCreationTest {
-        private Buzz buzz;
-
-        @BeforeEach
-        void setUp() {
-            buzz = Buzz.builder()
-                    .creatorId(creatorId)
-                    .creatorNickname(creatorNickname)
-                    .creatorProfileImageUrl(creatorProfile)
-                    .text("Test Buzz")
-                    .recipientIds(List.of(recipientId))
-                    .build();
-        }
-
-        @Test
-        @DisplayName("수신자는 댓글을 작성할 수 있다")
-        void validateCommentCreation_Success_ByRecipient() {
-            // when & then
-            buzz.validateCommentCreation(recipientId);
-        }
-
-        @Test
-        @DisplayName("버즈 작성자 본인도 댓글을 작성할 수 있다")
-        void validateCommentCreation_Success_ByCreator() {
-            // when & then
-            buzz.validateCommentCreation(creatorId);
-        }
-
-        @Test
-        @DisplayName("수신자도 작성자도 아닌 제3자가 댓글을 시도하면 예외가 발생한다")
-        void validateCommentCreation_Fail_ByStranger() {
-            // when & then
-            assertThatThrownBy(() -> buzz.validateCommentCreation(strangerId))
-                    .isInstanceOf(BuzzAccessDeniedException.class);
-        }
-
-        @Test
-        @DisplayName("만료된 버즈에 댓글을 시도하면 예외가 발생한다")
-        void validateCommentCreation_Fail_Expired() {
-            // given
-            ReflectionTestUtils.setField(buzz, "expiresAt", buzz.getCreatedAt().minusMinutes(1));
-
-            // when & then
-            assertThatThrownBy(() -> buzz.validateCommentCreation(recipientId))
-                    .isInstanceOf(BuzzInvalidStateException.class);
-        }
-    }
-
-    @Nested
     @DisplayName("만료 검증 테스트")
     class ExpiryValidationTest {
         private Buzz buzz;
@@ -286,63 +234,6 @@ class BuzzTest {
         @DisplayName("creatorId와 다른 userId이면 isCreator가 false이다")
         void isCreator_WithOtherId_ReturnsFalse() {
             assertThat(buzz.isCreator(recipientId)).isFalse();
-        }
-    }
-
-    @Nested
-    @DisplayName("isPublic 댓글 필터링 테스트")
-    class VisibleCommentsTest {
-        private Buzz buzz;
-        private final Long otherRecipientId = 3L;
-
-        @BeforeEach
-        void setUp() {
-            buzz = Buzz.builder()
-                    .creatorId(creatorId)
-                    .creatorNickname(creatorNickname)
-                    .creatorProfileImageUrl(creatorProfile)
-                    .text("Test")
-                    .recipientIds(List.of(recipientId, otherRecipientId))
-                    .build();
-
-            List<BuzzComment> comments = new ArrayList<>();
-            comments.add(BuzzComment.builder()
-                    .commentId("c1").commenterId(recipientId).commenterNickname("수신자")
-                    .commenterProfileImageUrl("u.png").text("공개댓글").imageUrls(List.of())
-                    .isPublic(true).build());
-            comments.add(BuzzComment.builder()
-                    .commentId("c2").commenterId(recipientId).commenterNickname("수신자")
-                    .commenterProfileImageUrl("u.png").text("비공개댓글").imageUrls(List.of())
-                    .isPublic(false).build());
-            ReflectionTestUtils.setField(buzz, "comments", comments);
-        }
-
-        @Test
-        @DisplayName("공개 댓글은 모든 접근자에게 보인다")
-        void getVisibleComments_Public_VisibleToAll() {
-            assertThat(buzz.getVisibleComments(otherRecipientId))
-                    .anyMatch(c -> c.getCommentId().equals("c1"));
-        }
-
-        @Test
-        @DisplayName("비공개 댓글은 댓글 작성자 본인에게 보인다")
-        void getVisibleComments_Private_VisibleToCommenter() {
-            assertThat(buzz.getVisibleComments(recipientId))
-                    .anyMatch(c -> c.getCommentId().equals("c2"));
-        }
-
-        @Test
-        @DisplayName("비공개 댓글은 버즈 작성자에게 보인다")
-        void getVisibleComments_Private_VisibleToCreator() {
-            assertThat(buzz.getVisibleComments(creatorId))
-                    .anyMatch(c -> c.getCommentId().equals("c2"));
-        }
-
-        @Test
-        @DisplayName("비공개 댓글은 다른 수신자에게 보이지 않는다")
-        void getVisibleComments_Private_HiddenFromOtherRecipient() {
-            assertThat(buzz.getVisibleComments(otherRecipientId))
-                    .noneMatch(c -> c.getCommentId().equals("c2"));
         }
     }
 }

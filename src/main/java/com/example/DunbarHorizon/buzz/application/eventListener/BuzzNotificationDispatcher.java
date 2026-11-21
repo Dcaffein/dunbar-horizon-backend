@@ -1,8 +1,7 @@
 package com.example.DunbarHorizon.buzz.application.eventListener;
 
 
-import java.util.Map;import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
-import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
+import java.util.Map;import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -32,23 +31,5 @@ public class BuzzNotificationDispatcher {
 
             eventPublisher.publishEvent(notification);
         });
-    }
-
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void dispatch(BuzzCommentedEvent event) {
-        if (event.creatorId().equals(event.commenterId())) return;
-        NotificationEvent notification = NotificationEvent.builder()
-                .receiverId(event.creatorId())
-                .title("Buzz 댓글")
-                .content("누군가 내 Buzz에 댓글을 남겼습니다")
-                .type(NotificationType.BUZZ_RESPONSE)
-                .metadata(Map.of(
-                        "buzzId", event.buzzId(),
-                        "commenterId", event.commenterId()
-                ))
-                .build();
-
-        eventPublisher.publishEvent(notification);
     }
 }

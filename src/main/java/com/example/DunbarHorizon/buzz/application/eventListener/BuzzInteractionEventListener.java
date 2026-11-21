@@ -1,6 +1,5 @@
 package com.example.DunbarHorizon.buzz.application.eventListener;
 
-import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
@@ -24,14 +23,5 @@ public class BuzzInteractionEventListener {
                         InteractionType.BUZZ_SEND
                 ))
         );
-    }
-
-    @EventListener
-    public void onBuzzCommented(BuzzCommentedEvent event) {
-        eventPublisher.publishEvent(new UserInteractionEvent(
-                event.commenterId(),
-                event.creatorId(),
-                InteractionType.BUZZ_REPLY
-        ));
     }
 }
