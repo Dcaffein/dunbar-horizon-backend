@@ -67,6 +67,47 @@ class BuzzThreadTest {
     }
 
     @Nested
+    @DisplayName("첫 글 수정과 스레드 삭제")
+    class ModificationTest {
+
+        @Test
+        @DisplayName("시작자는 첫 글을 수정할 수 있다")
+        void update_ByStarter() {
+            BuzzThread thread = thread(ThreadVisibility.PUBLIC);
+
+            thread.update(starterId, "수정한 글", List.of());
+
+            assertThat(thread.getText()).isEqualTo("수정한 글");
+            assertThat(thread.getImageKeys()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("게시자도 첫 글을 수정할 수 없다")
+        void update_ByCreator_Denied() {
+            assertThatThrownBy(() -> thread(ThreadVisibility.PUBLIC).update(creatorId, "수정", List.of()))
+                    .isInstanceOf(BuzzAccessDeniedException.class);
+        }
+
+        @Test
+        @DisplayName("수정한 첫 글도 길이 규칙을 지켜야 한다")
+        void update_InvalidText_Rejected() {
+            assertThatThrownBy(() -> thread(ThreadVisibility.PUBLIC).update(starterId, " ", List.of()))
+                    .isInstanceOf(BuzzInvalidStateException.class);
+        }
+
+        @Test
+        @DisplayName("시작자와 게시자는 스레드를 삭제할 수 있고 다른 멤버는 거절된다")
+        void validateDeletion() {
+            BuzzThread thread = thread(ThreadVisibility.PUBLIC);
+
+            thread.validateDeletion(starterId, creatorId);
+            thread.validateDeletion(creatorId, creatorId);
+            assertThatThrownBy(() -> thread.validateDeletion(otherMemberId, creatorId))
+                    .isInstanceOf(BuzzAccessDeniedException.class);
+        }
+    }
+
+    @Nested
     @DisplayName("공개 스레드 접근")
     class PublicAccessTest {
 

@@ -92,6 +92,23 @@ public class BuzzThread {
         return isPublic() && !isStarter(viewerId) && !buzzCreatorId.equals(viewerId);
     }
 
+    public void update(Long requesterId, String text, List<String> imageKeys) {
+        if (!isStarter(requesterId)) {
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_THREAD_STARTER_ONLY,
+                    ErrorContext.of("threadId", id).and("userId", requesterId));
+        }
+        validateText(text);
+        this.text = text;
+        this.imageKeys = copyOf(imageKeys);
+    }
+
+    public void validateDeletion(Long requesterId, Long buzzCreatorId) {
+        if (!isStarter(requesterId) && !buzzCreatorId.equals(requesterId)) {
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_THREAD_DELETION_DENIED,
+                    ErrorContext.of("threadId", id).and("userId", requesterId));
+        }
+    }
+
     public void validateAccess(Long viewerId, Long buzzCreatorId, boolean isFriendOfStarter) {
         if (!isAccessibleBy(viewerId, buzzCreatorId, isFriendOfStarter)) {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_THREAD_ACCESS_DENIED,
