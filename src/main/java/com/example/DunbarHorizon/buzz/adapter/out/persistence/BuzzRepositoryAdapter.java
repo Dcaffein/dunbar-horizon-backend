@@ -6,6 +6,9 @@ import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -32,5 +35,15 @@ public class BuzzRepositoryAdapter implements BuzzRepository {
     @Override
     public void deleteById(String buzzId) {
         buzzJpaRepository.deleteById(buzzId);
+    }
+
+    @Override
+    public List<String> findExpiredIds(LocalDateTime now) {
+        return buzzJpaRepository.findIdsByExpiresAtAtOrBefore(now);
+    }
+
+    @Override
+    public void deleteAllByIds(Collection<String> buzzIds) {
+        buzzJpaRepository.deleteAllByIdIn(buzzIds);
     }
 }

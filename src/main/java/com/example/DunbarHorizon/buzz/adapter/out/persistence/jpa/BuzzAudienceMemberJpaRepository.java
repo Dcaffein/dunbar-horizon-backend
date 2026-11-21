@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,4 +20,8 @@ public interface BuzzAudienceMemberJpaRepository extends JpaRepository<BuzzAudie
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM BuzzAudienceMember m WHERE m.buzzId = :buzzId")
     int deleteAllByBuzzId(@Param("buzzId") String buzzId);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM BuzzAudienceMember m WHERE m.buzzId IN :buzzIds")
+    int deleteAllByBuzzIdIn(@Param("buzzIds") Collection<String> buzzIds);
 }

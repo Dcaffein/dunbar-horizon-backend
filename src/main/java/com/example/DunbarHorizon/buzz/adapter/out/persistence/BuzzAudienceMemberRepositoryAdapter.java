@@ -6,6 +6,7 @@ import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberReposi
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,5 +34,10 @@ public class BuzzAudienceMemberRepositoryAdapter implements BuzzAudienceMemberRe
     @Override
     public void deleteAllByBuzzId(String buzzId) {
         buzzAudienceMemberJpaRepository.deleteAllByBuzzId(buzzId);
+    }
+
+    @Override
+    public void deleteAllByBuzzIds(Collection<String> buzzIds) {
+        buzzAudienceMemberJpaRepository.deleteAllByBuzzIdIn(buzzIds);
     }
 }

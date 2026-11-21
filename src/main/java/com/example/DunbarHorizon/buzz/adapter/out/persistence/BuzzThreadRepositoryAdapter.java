@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,6 +56,11 @@ public class BuzzThreadRepositoryAdapter implements BuzzThreadRepository {
     @Override
     public void deleteAllByBuzzId(String buzzId) {
         buzzThreadJpaRepository.deleteAllByBuzzId(buzzId);
+    }
+
+    @Override
+    public void deleteAllByBuzzIds(Collection<String> buzzIds) {
+        buzzThreadJpaRepository.deleteAllByBuzzIdIn(buzzIds);
     }
 
     private static boolean isStarterVisibilityDuplicate(DataIntegrityViolationException e) {

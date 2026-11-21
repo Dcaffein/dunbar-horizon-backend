@@ -6,6 +6,7 @@ import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,5 +44,10 @@ public class BuzzCommentRepositoryAdapter implements BuzzCommentRepository {
     @Override
     public void deleteAllByBuzzId(String buzzId) {
         buzzCommentJpaRepository.deleteAllByThreadBuzzId(buzzId);
+    }
+
+    @Override
+    public void deleteAllByBuzzIds(Collection<String> buzzIds) {
+        buzzCommentJpaRepository.deleteAllByThreadBuzzIdIn(buzzIds);
     }
 }

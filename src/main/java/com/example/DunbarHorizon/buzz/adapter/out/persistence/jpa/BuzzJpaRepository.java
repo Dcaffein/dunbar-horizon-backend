@@ -26,6 +26,13 @@ public interface BuzzJpaRepository extends JpaRepository<Buzz, String> {
     @Query("DELETE FROM Buzz b WHERE b.id = :id")
     void deleteById(@Param("id") String id);
 
+    @Query("SELECT b.id FROM Buzz b WHERE b.expiresAt <= :now")
+    List<String> findIdsByExpiresAtAtOrBefore(@Param("now") LocalDateTime now);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM Buzz b WHERE b.id IN :ids")
+    int deleteAllByIdIn(@Param("ids") Collection<String> ids);
+
     @Query("""
             SELECT new com.example.DunbarHorizon.buzz.application.dto.info.ReceivedBuzz(b, m.isRead)
             FROM Buzz b JOIN BuzzAudienceMember m ON m.buzzId = b.id
