@@ -1,18 +1,21 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
 import com.example.DunbarHorizon.buzz.application.dto.command.OpenBuzzThreadCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzThreadCommand;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzThreadDetailResult;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
+import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
+import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +24,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -35,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -44,6 +49,7 @@ class BuzzThreadServiceTest {
     @Mock private BuzzRepository buzzRepository;
     @Mock private BuzzAudienceMemberRepository buzzAudienceMemberRepository;
     @Mock private BuzzThreadRepository buzzThreadRepository;
+    @Mock private BuzzCommentRepository buzzCommentRepository;
     @Mock private BuzzSocialPort buzzSocialPort;
     @Mock private ImageStoragePort imageStoragePort;
 
@@ -58,6 +64,8 @@ class BuzzThreadServiceTest {
     @BeforeEach
     void setUp() {
         buzzThreadService = new BuzzThreadService(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository,
+                buzzCommentRepository,
+                new BuzzThreadAccess(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository, buzzSocialPort),
                 buzzSocialPort, new BuzzProfileAssembler(buzzSocialPort), imageStoragePort);
         buzz = Buzz.create(creatorId, "본문", List.of(),
                 Set.of(starterId, friendMemberId, otherMemberId), LocalDateTime.now());
@@ -225,6 +233,92 @@ class BuzzThreadServiceTest {
             given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), userId))
                     .willReturn(Optional.of(BuzzAudienceMember.create(buzz.getId(), userId)));
         }
+    }
+
+    @Nested
+    @DisplayName("첫 글 수정과 스레드 삭제")
+    class Modification {
+
+        @Test
+        @DisplayName("시작자가 첫 글을 수정하면 스레드의 본문과 이미지 키가 바뀐다")
+        void updateThread_ByStarter() {
+            // given
+            BuzzThread thread = thread(ThreadVisibility.PUBLIC);
+            given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
+            given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(thread));
+
+            // when
+            buzzThreadService.updateThread(new UpdateBuzzThreadCommand(
+                    starterId, buzz.getId(), 10L, "수정한 글", List.of("buzz/b")));
+
+            // then
+            assertThat(thread.getText()).isEqualTo("수정한 글");
+            assertThat(thread.getImageKeys()).containsExactly("buzz/b");
+        }
+
+        @Test
+        @DisplayName("게시자가 스레드를 삭제하면 스레드를 먼저 지운 뒤 답글을 지운다")
+        void deleteThread_ByCreator_DeletesThreadThenComments() {
+            // given
+            given(buzzRepository.findByIdForShare(buzz.getId())).willReturn(Optional.of(buzz));
+            given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(thread(ThreadVisibility.PRIVATE)));
+
+            // when
+            buzzThreadService.deleteThread(creatorId, buzz.getId(), 10L);
+
+            // then
+            InOrder order = inOrder(buzzThreadRepository, buzzCommentRepository);
+            order.verify(buzzThreadRepository).deleteById(10L);
+            order.verify(buzzCommentRepository).deleteAllByThreadId(10L);
+        }
+
+        @Test
+        @DisplayName("시작자도 게시자도 아닌 멤버는 스레드를 삭제할 수 없다")
+        void deleteThread_ByOtherMember_Denied() {
+            // given
+            given(buzzRepository.findByIdForShare(buzz.getId())).willReturn(Optional.of(buzz));
+            given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(thread(ThreadVisibility.PUBLIC)));
+
+            // when & then
+            assertThatThrownBy(() -> buzzThreadService.deleteThread(friendMemberId, buzz.getId(), 10L))
+                    .isInstanceOf(BuzzAccessDeniedException.class);
+            verify(buzzThreadRepository, never()).deleteById(any());
+        }
+
+        @Test
+        @DisplayName("만료된 버즈의 스레드는 수정할 수 없다")
+        void updateThread_Expired_Rejected() {
+            // given
+            Buzz expired = Buzz.create(creatorId, "본문", List.of(), Set.of(starterId), LocalDateTime.now().minusHours(7));
+            given(buzzRepository.findById(expired.getId())).willReturn(Optional.of(expired));
+
+            // when & then
+            assertThatThrownBy(() -> buzzThreadService.updateThread(new UpdateBuzzThreadCommand(
+                    starterId, expired.getId(), 10L, "수정", List.of())))
+                    .isInstanceOf(BuzzInvalidStateException.class);
+        }
+    }
+
+    @Test
+    @DisplayName("스레드 조회는 답글을 작성자 프로필과 본인 여부와 함께 돌려준다")
+    void getThread_IncludesComments() {
+        // given
+        given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
+        given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(thread(ThreadVisibility.PRIVATE)));
+        BuzzComment mine = BuzzComment.write(10L, creatorId, "게시자 답글", List.of(), LocalDateTime.now());
+        BuzzComment starterReply = BuzzComment.write(10L, starterId, "시작자 답글", List.of(), LocalDateTime.now());
+        given(buzzCommentRepository.findAllByThreadId(10L)).willReturn(List.of(mine, starterReply));
+        given(buzzSocialPort.getCreatorProfiles(anyList())).willReturn(List.of(
+                new BuzzCreatorInfo(creatorId, "게시자", null),
+                new BuzzCreatorInfo(starterId, "시작자", null)));
+
+        // when
+        BuzzThreadDetailResult result = buzzThreadService.getThread(creatorId, buzz.getId(), 10L);
+
+        // then
+        assertThat(result.comments()).extracting("text").containsExactly("게시자 답글", "시작자 답글");
+        assertThat(result.comments()).extracting("isMine").containsExactly(true, false);
+        assertThat(result.comments().get(1).author().nickname()).isEqualTo("시작자");
     }
 
     private BuzzThread thread(ThreadVisibility visibility) {

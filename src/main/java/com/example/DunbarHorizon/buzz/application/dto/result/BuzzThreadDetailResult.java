@@ -15,10 +15,12 @@ public record BuzzThreadDetailResult(
         List<String> imageUrls,
         LocalDateTime createdAt,
         boolean isMine,
-        List<BuzzProfileResult> viewers
+        List<BuzzProfileResult> viewers,
+        List<BuzzCommentResult> comments
 ) {
     public static BuzzThreadDetailResult of(BuzzThread thread, BuzzProfileResult starter, List<String> imageUrls,
-                                            Long viewerId, List<BuzzProfileResult> viewers) {
+                                            Long viewerId, List<BuzzProfileResult> viewers,
+                                            List<BuzzCommentResult> comments) {
         return new BuzzThreadDetailResult(
                 thread.getId(),
                 thread.getBuzzId(),
@@ -28,7 +30,8 @@ public record BuzzThreadDetailResult(
                 imageUrls,
                 thread.getCreatedAt(),
                 thread.isStarter(viewerId),
-                viewers
+                viewers,
+                comments
         );
     }
 }

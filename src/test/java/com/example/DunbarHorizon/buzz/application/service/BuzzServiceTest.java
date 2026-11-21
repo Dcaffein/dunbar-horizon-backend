@@ -19,6 +19,7 @@ import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
+import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +59,7 @@ class BuzzServiceTest {
     @Mock private BuzzRepository buzzRepository;
     @Mock private BuzzAudienceMemberRepository buzzAudienceMemberRepository;
     @Mock private BuzzThreadRepository buzzThreadRepository;
+    @Mock private BuzzCommentRepository buzzCommentRepository;
     @Mock private BuzzQueryRepository buzzQueryRepository;
     @Mock private BuzzSocialPort buzzSocialPort;
     @Mock private ImageStoragePort imageStoragePort;
@@ -73,7 +75,7 @@ class BuzzServiceTest {
     @BeforeEach
     void setUp() {
         buzzService = new BuzzService(recipientStrategyProvider, buzzRepository, buzzAudienceMemberRepository,
-                buzzThreadRepository, buzzQueryRepository, buzzSocialPort, new BuzzProfileAssembler(buzzSocialPort),
+                buzzThreadRepository, buzzCommentRepository, buzzQueryRepository, buzzSocialPort, new BuzzProfileAssembler(buzzSocialPort),
                 imageStoragePort, applicationEventPublisher);
     }
 
@@ -297,7 +299,7 @@ class BuzzServiceTest {
     class DeleteBuzz {
 
         @Test
-        @DisplayName("게시자가 삭제하면 버즈 행을 먼저 지운 뒤 공개 대상 멤버와 스레드를 지운다")
+        @DisplayName("게시자가 삭제하면 버즈 행을 먼저 지운 뒤 공개 대상 멤버, 답글, 스레드를 지운다")
         void deleteBuzz_ByCreator_DeletesBuzzThenMembers() {
             // given
             Buzz buzz = buzz(List.of());
@@ -307,9 +309,10 @@ class BuzzServiceTest {
             buzzService.deleteBuzz(creatorId, buzz.getId());
 
             // then
-            InOrder order = inOrder(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository);
+            InOrder order = inOrder(buzzRepository, buzzAudienceMemberRepository, buzzCommentRepository, buzzThreadRepository);
             order.verify(buzzRepository).deleteById(buzz.getId());
             order.verify(buzzAudienceMemberRepository).deleteAllByBuzzId(buzz.getId());
+            order.verify(buzzCommentRepository).deleteAllByBuzzId(buzz.getId());
             order.verify(buzzThreadRepository).deleteAllByBuzzId(buzz.getId());
         }
 

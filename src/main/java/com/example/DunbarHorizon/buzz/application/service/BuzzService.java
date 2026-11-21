@@ -16,6 +16,7 @@ import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
+import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,7 @@ public class BuzzService {
     private final BuzzRepository buzzRepository;
     private final BuzzAudienceMemberRepository buzzAudienceMemberRepository;
     private final BuzzThreadRepository buzzThreadRepository;
+    private final BuzzCommentRepository buzzCommentRepository;
     private final BuzzQueryRepository buzzQueryRepository;
     private final BuzzSocialPort buzzSocialPort;
     private final BuzzProfileAssembler buzzProfileAssembler;
@@ -67,6 +69,7 @@ public class BuzzService {
 
         buzzRepository.deleteById(buzzId);
         buzzAudienceMemberRepository.deleteAllByBuzzId(buzzId);
+        buzzCommentRepository.deleteAllByBuzzId(buzzId);
         buzzThreadRepository.deleteAllByBuzzId(buzzId);
     }
 
