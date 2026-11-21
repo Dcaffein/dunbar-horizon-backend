@@ -13,11 +13,14 @@ import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
+import com.example.DunbarHorizon.buzz.domain.BuzzThread;
+import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
+import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -54,6 +57,7 @@ class BuzzServiceTest {
     @Mock private RecipientStrategyProvider recipientStrategyProvider;
     @Mock private BuzzRepository buzzRepository;
     @Mock private BuzzAudienceMemberRepository buzzAudienceMemberRepository;
+    @Mock private BuzzThreadRepository buzzThreadRepository;
     @Mock private BuzzQueryRepository buzzQueryRepository;
     @Mock private BuzzSocialPort buzzSocialPort;
     @Mock private ImageStoragePort imageStoragePort;
@@ -69,7 +73,8 @@ class BuzzServiceTest {
     @BeforeEach
     void setUp() {
         buzzService = new BuzzService(recipientStrategyProvider, buzzRepository, buzzAudienceMemberRepository,
-                buzzQueryRepository, buzzSocialPort, imageStoragePort, applicationEventPublisher);
+                buzzThreadRepository, buzzQueryRepository, buzzSocialPort, new BuzzProfileAssembler(buzzSocialPort),
+                imageStoragePort, applicationEventPublisher);
     }
 
     private Buzz buzz(List<String> imageKeys) {
@@ -186,6 +191,52 @@ class BuzzServiceTest {
             assertThatThrownBy(() -> buzzService.getBuzzDetail(strangerId, buzz.getId()))
                     .isInstanceOf(BuzzAccessDeniedException.class);
         }
+
+        @Test
+        @DisplayName("상세에는 열람자가 접근할 수 있는 스레드만 시작자와 함께 담긴다")
+        void getBuzzDetail_ListsOnlyAccessibleThreads() {
+            // given
+            Long friendStarterId = 3L;
+            Long strangerStarterId = 4L;
+            BuzzThread own = thread(recipientId, ThreadVisibility.PRIVATE, 1L);
+            BuzzThread friendPublic = thread(friendStarterId, ThreadVisibility.PUBLIC, 2L);
+            BuzzThread friendPrivate = thread(friendStarterId, ThreadVisibility.PRIVATE, 3L);
+            BuzzThread strangerPublic = thread(strangerStarterId, ThreadVisibility.PUBLIC, 4L);
+            given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), recipientId))
+                    .willReturn(Optional.of(BuzzAudienceMember.create(buzz.getId(), recipientId)));
+            given(buzzThreadRepository.findAllByBuzzId(buzz.getId()))
+                    .willReturn(List.of(own, friendPublic, friendPrivate, strangerPublic));
+            given(buzzSocialPort.getFriendIdsIn(recipientId, Set.of(friendStarterId, strangerStarterId)))
+                    .willReturn(Set.of(friendStarterId));
+
+            // when
+            BuzzDetailResult result = buzzService.getBuzzDetail(recipientId, buzz.getId());
+
+            // then
+            assertThat(result.threads()).extracting("threadId").containsExactly(1L, 2L);
+        }
+
+        @Test
+        @DisplayName("게시자는 친구 관계 확인 없이 모든 스레드를 본다")
+        void getBuzzDetail_CreatorSeesAllThreads() {
+            // given
+            given(buzzThreadRepository.findAllByBuzzId(buzz.getId())).willReturn(List.of(
+                    thread(recipientId, ThreadVisibility.PUBLIC, 1L),
+                    thread(recipientId, ThreadVisibility.PRIVATE, 2L)));
+
+            // when
+            BuzzDetailResult result = buzzService.getBuzzDetail(creatorId, buzz.getId());
+
+            // then
+            assertThat(result.threads()).extracting("threadId").containsExactly(1L, 2L);
+            verify(buzzSocialPort, never()).getFriendIdsIn(any(), any());
+        }
+
+        private BuzzThread thread(Long starterId, ThreadVisibility visibility, Long id) {
+            BuzzThread thread = BuzzThread.open(buzz.getId(), starterId, visibility, "첫 글", List.of(), LocalDateTime.now());
+            org.springframework.test.util.ReflectionTestUtils.setField(thread, "id", id);
+            return thread;
+        }
     }
 
     @Test
@@ -246,7 +297,7 @@ class BuzzServiceTest {
     class DeleteBuzz {
 
         @Test
-        @DisplayName("게시자가 삭제하면 버즈 행을 먼저 지운 뒤 공개 대상 멤버를 지운다")
+        @DisplayName("게시자가 삭제하면 버즈 행을 먼저 지운 뒤 공개 대상 멤버와 스레드를 지운다")
         void deleteBuzz_ByCreator_DeletesBuzzThenMembers() {
             // given
             Buzz buzz = buzz(List.of());
@@ -256,9 +307,10 @@ class BuzzServiceTest {
             buzzService.deleteBuzz(creatorId, buzz.getId());
 
             // then
-            InOrder order = inOrder(buzzRepository, buzzAudienceMemberRepository);
+            InOrder order = inOrder(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository);
             order.verify(buzzRepository).deleteById(buzz.getId());
             order.verify(buzzAudienceMemberRepository).deleteAllByBuzzId(buzz.getId());
+            order.verify(buzzThreadRepository).deleteAllByBuzzId(buzz.getId());
         }
 
         @Test

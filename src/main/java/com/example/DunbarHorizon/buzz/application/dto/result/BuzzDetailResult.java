@@ -14,11 +14,13 @@ public record BuzzDetailResult(
         long remainingMinutes,
         boolean isUnread,
         boolean isCreator,
-        List<BuzzProfileResult> recipients
+        List<BuzzProfileResult> recipients,
+        List<BuzzThreadSummaryResult> threads
 ) {
     public static BuzzDetailResult of(Buzz buzz, BuzzProfileResult author, List<String> imageUrls,
                                       boolean isUnread, boolean isCreator,
-                                      List<BuzzProfileResult> recipients, LocalDateTime now) {
+                                      List<BuzzProfileResult> recipients,
+                                      List<BuzzThreadSummaryResult> threads, LocalDateTime now) {
         return new BuzzDetailResult(
                 buzz.getId(),
                 author,
@@ -27,7 +29,8 @@ public record BuzzDetailResult(
                 Math.max(0L, Duration.between(now, buzz.getExpiresAt()).toMinutes()),
                 isUnread,
                 isCreator,
-                recipients
+                recipients,
+                threads
         );
     }
 }
