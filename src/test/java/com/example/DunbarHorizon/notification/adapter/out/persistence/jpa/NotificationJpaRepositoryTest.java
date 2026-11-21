@@ -157,24 +157,6 @@ class NotificationJpaRepositoryTest {
     }
 
     @Test
-    @DisplayName("읽음 갱신은 기준선과 같은 시각에 생성된 알림을 0행으로 건너뛴다")
-    void updateIsReadTrueByIdAndCreatedAtAfter_Boundary_SkipsAtCutoff() {
-        // given
-        Notification atCutoff = notificationJpaRepository.save(notification(receiverId, "기준선"));
-        Notification afterCutoff = notificationJpaRepository.save(notification(receiverId, "기준선 직후"));
-        setCreatedAt(atCutoff, cutoff);
-        setCreatedAt(afterCutoff, justAfterCutoff);
-
-        // when
-        int atCutoffUpdated = notificationJpaRepository.updateIsReadTrueByIdAndCreatedAtAfter(atCutoff.getId(), cutoff);
-        int afterCutoffUpdated = notificationJpaRepository.updateIsReadTrueByIdAndCreatedAtAfter(afterCutoff.getId(), cutoff);
-
-        // then
-        assertThat(atCutoffUpdated).isZero();
-        assertThat(afterCutoffUpdated).isEqualTo(1);
-    }
-
-    @Test
     @DisplayName("정리는 기준선과 같거나 이전에 생성된 알림을 지우고 기준선 직후 알림은 남긴다")
     void deleteAllByCreatedAtAtOrBefore_Boundary_DeletesAtCutoffKeepsAfter() {
         // given

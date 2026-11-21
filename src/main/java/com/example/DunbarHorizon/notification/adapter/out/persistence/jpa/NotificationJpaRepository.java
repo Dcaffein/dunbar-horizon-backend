@@ -20,10 +20,6 @@ public interface NotificationJpaRepository extends JpaRepository<Notification, L
     Optional<Notification> findByIdAndCreatedAtAfter(Long id, LocalDateTime cutoff);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE Notification n SET n.isRead = true WHERE n.id = :id AND n.createdAt > :cutoff")
-    int updateIsReadTrueByIdAndCreatedAtAfter(@Param("id") Long id, @Param("cutoff") LocalDateTime cutoff);
-
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM Notification n WHERE n.createdAt <= :cutoff")
     int deleteAllByCreatedAtAtOrBefore(@Param("cutoff") LocalDateTime cutoff);
 }

@@ -13,8 +13,8 @@ public interface NotificationRepository {
     long countRetainedUnreadByReceiverId(Long receiverId, LocalDateTime asOf);
     Optional<Notification> findById(Long id);
     Optional<Notification> findRetainedById(Long id, LocalDateTime asOf);
+    Notification save(Notification notification);
     List<Notification> saveAll(List<Notification> notifications);
     void deleteById(Long id);
-    int markAsRead(Long id, LocalDateTime asOf);
     int purgeExpired(LocalDateTime asOf);
 }

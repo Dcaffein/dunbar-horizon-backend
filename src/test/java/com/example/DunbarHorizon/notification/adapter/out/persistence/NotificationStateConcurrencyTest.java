@@ -3,13 +3,13 @@ package com.example.DunbarHorizon.notification.adapter.out.persistence;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.notification.application.NotificationService;
 import com.example.DunbarHorizon.notification.domain.Notification;
-import com.example.DunbarHorizon.notification.domain.exception.NotificationNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Propagation;
@@ -44,8 +44,8 @@ class NotificationStateConcurrencyTest {
     }
 
     @Test
-    @DisplayName("읽음이 알림을 조회한 뒤 삭제가 커밋되면 읽음은 찾을 수 없음으로 끝나고 행을 되살리지 않는다")
-    void read_NotFound_DeleteCommittedAfterReadLoaded() throws Exception {
+    @DisplayName("읽음이 알림을 조회한 뒤 삭제가 커밋되면 읽음은 동시 수정 실패로 끝나고 행을 되살리지 않는다")
+    void read_ConcurrentModification_DeleteCommittedAfterReadLoaded() throws Exception {
         // given
         Notification saved = notificationService.saveNotifications(List.of(notification())).get(0);
         CountDownLatch loaded = new CountDownLatch(1);
@@ -67,7 +67,7 @@ class NotificationStateConcurrencyTest {
 
         // then
         assertThat(failure).isInstanceOf(ExecutionException.class)
-                .cause().isInstanceOf(NotificationNotFoundException.class);
+                .cause().isInstanceOf(OptimisticLockingFailureException.class);
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM notifications WHERE id = ?", Long.class, saved.getId())).isZero();
     }

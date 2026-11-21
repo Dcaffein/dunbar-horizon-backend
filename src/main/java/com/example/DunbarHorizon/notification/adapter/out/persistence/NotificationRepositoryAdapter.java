@@ -41,6 +41,11 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     }
 
     @Override
+    public Notification save(Notification notification) {
+        return notificationJpaRepository.save(notification);
+    }
+
+    @Override
     public List<Notification> saveAll(List<Notification> notifications) {
         return notificationJpaRepository.saveAll(notifications);
     }
@@ -48,11 +53,6 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     @Override
     public void deleteById(Long id) {
         notificationJpaRepository.deleteById(id);
-    }
-
-    @Override
-    public int markAsRead(Long id, LocalDateTime asOf) {
-        return notificationJpaRepository.updateIsReadTrueByIdAndCreatedAtAfter(id, Notification.retentionCutoff(asOf));
     }
 
     @Override

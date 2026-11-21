@@ -29,12 +29,8 @@ public class NotificationService {
         LocalDateTime asOf = LocalDateTime.now();
         Notification notification = notificationRepository.findRetainedById(notificationId, asOf)
                 .orElseThrow(() -> new NotificationNotFoundException(notificationId));
-        notification.requireOwnership(currentUserId);
-        if (notificationRepository.markAsRead(notificationId, asOf) == 0) {
-            throw new NotificationNotFoundException(notificationId);
-        }
         notification.read(currentUserId);
-        return notification;
+        return notificationRepository.save(notification);
     }
 
     public Slice<Notification> getMyNotifications(Long userId, Pageable pageable) {
