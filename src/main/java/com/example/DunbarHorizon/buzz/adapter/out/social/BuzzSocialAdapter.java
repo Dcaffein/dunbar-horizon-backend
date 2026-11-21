@@ -7,6 +7,7 @@ import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQu
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -27,5 +28,13 @@ public class BuzzSocialAdapter implements BuzzSocialPort {
     @Override
     public Set<Long> getNonReceivableFriendIds(Long memberId) {
         return friendshipQueryUseCase.getMutedIds(memberId);
+    }
+
+    @Override
+    public Set<Long> getFriendIdsIn(Long userId, Collection<Long> targetIds) {
+        if (targetIds.isEmpty()) {
+            return Set.of();
+        }
+        return friendshipQueryUseCase.getFriendIdsIn(userId, targetIds);
     }
 }

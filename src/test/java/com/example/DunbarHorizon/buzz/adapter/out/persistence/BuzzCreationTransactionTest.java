@@ -6,6 +6,7 @@ import com.example.DunbarHorizon.buzz.application.dto.info.recipient.ManualRecip
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
+import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
 import com.example.DunbarHorizon.buzz.application.service.BuzzService;
 import com.example.DunbarHorizon.buzz.application.service.RecipientStrategyProvider;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
@@ -35,7 +36,8 @@ import static org.mockito.Mockito.doThrow;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class,
-        BuzzQueryRepositoryAdapter.class, BuzzService.class})
+        BuzzQueryRepositoryAdapter.class, BuzzThreadRepositoryAdapter.class, BuzzProfileAssembler.class,
+        BuzzService.class})
 class BuzzCreationTransactionTest {
 
     @Autowired private BuzzService buzzService;

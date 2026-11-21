@@ -3,6 +3,8 @@ package com.example.DunbarHorizon.buzz.adapter.in.web;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzProfileResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
+import com.example.DunbarHorizon.buzz.application.dto.result.BuzzThreadSummaryResult;
+import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
@@ -13,6 +15,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.http.MediaType;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
@@ -41,13 +44,17 @@ class BuzzControllerTest extends BaseControllerTest {
                     "buzz-id",
                     new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
                     "테스트 버즈", List.of(), 25L, false, true,
-                    List.of()
+                    List.of(),
+                    List.of(new BuzzThreadSummaryResult(10L, new BuzzProfileResult(2L, "시작자", null),
+                            ThreadVisibility.PRIVATE, LocalDateTime.of(2026, 11, 22, 12, 0)))
             );
             given(buzzService.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
 
             mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.isCreator").value(true));
+                    .andExpect(jsonPath("$.isCreator").value(true))
+                    .andExpect(jsonPath("$.threads[0].threadId").value(10))
+                    .andExpect(jsonPath("$.threads[0].visibility").value("PRIVATE"));
         }
 
         @Test
@@ -58,7 +65,8 @@ class BuzzControllerTest extends BaseControllerTest {
                     "buzz-id",
                     new BuzzProfileResult(2L, "작성자", null),
                     "테스트 버즈", List.of(), 25L, true, false,
-                    List.of(new BuzzProfileResult(CURRENT_USER_ID, "나", null))
+                    List.of(new BuzzProfileResult(CURRENT_USER_ID, "나", null)),
+                    List.of()
             );
             given(buzzService.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
 
