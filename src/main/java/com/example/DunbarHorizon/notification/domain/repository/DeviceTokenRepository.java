@@ -6,10 +6,9 @@ import java.util.List;
 
 public interface DeviceTokenRepository {
     DeviceToken save(DeviceToken deviceToken);
-    boolean existsByFcmToken(String fcmToken);
-    void deleteByFcmToken(String fcmToken);
-    void deleteAllByFcmTokenIn(List<String> fcmTokens);
-    List<String> findAllFcmTokensByUserIdIn(List<Long> userIds);
-    boolean existsByUserIdAndFcmToken(Long userId, String fcmToken);
-    void deleteAllByUserId(Long userId);
+    void deleteByToken(String token);
+    void deleteByUserIdAndToken(Long userId, String token);
+    void deleteAllByTokenIn(List<String> tokens);
+    List<String> findAllTokensByUserIdIn(List<Long> userIds);
+    boolean existsByUserIdAndToken(Long userId, String token);
 }

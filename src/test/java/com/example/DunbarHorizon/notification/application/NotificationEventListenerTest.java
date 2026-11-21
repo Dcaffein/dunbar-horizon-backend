@@ -4,8 +4,6 @@ import com.example.DunbarHorizon.global.event.DeviceTokenDeregisteredEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
-import com.example.DunbarHorizon.notification.domain.Notification;
-import com.example.DunbarHorizon.notification.domain.repository.DeviceTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,7 +11,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
@@ -37,7 +34,7 @@ class NotificationEventListenerTest {
     private NotificationService notificationService;
 
     @Mock
-    private DeviceTokenRepository deviceTokenRepository;
+    private DeviceTokenService deviceTokenService;
 
     @Test
     @DisplayName("멀티캐스트: 수신자들의 토큰을 조회하여 발송하고 죽은 토큰을 정리한다")
@@ -51,12 +48,8 @@ class NotificationEventListenerTest {
                 .metadata(null)
                 .build();
 
-        given(deviceTokenRepository.findAllFcmTokensByUserIdIn(event.receiverIds()))
+        given(deviceTokenService.findTokensByUserIds(event.receiverIds()))
                 .willReturn(List.of("token-1", "token-2"));
-
-        Notification saved = Notification.builder().receiverId(1L).build();
-        ReflectionTestUtils.setField(saved, "id", 11L);
-        given(notificationService.savePendingNotifications(anyList())).willReturn(List.of(saved));
 
         List<String> invalidTokens = List.of("token-2");
         given(notificationSender.sendMulticast(eq(event), anyList())).willReturn(invalidTokens);
@@ -69,8 +62,7 @@ class NotificationEventListenerTest {
         verify(notificationSender).sendMulticast(eq(event), tokenCaptor.capture());
         assertThat(tokenCaptor.getValue()).containsExactlyInAnyOrder("token-1", "token-2");
 
-        verify(notificationService).markAllAsSent(List.of(11L));
-        verify(notificationService).cleanupInvalidTokens(invalidTokens);
+        verify(deviceTokenService).cleanupInvalidTokens(invalidTokens);
     }
 
     @Test
@@ -85,8 +77,7 @@ class NotificationEventListenerTest {
                 .metadata(null)
                 .build();
 
-        given(notificationService.savePendingNotifications(anyList())).willReturn(List.of());
-        given(deviceTokenRepository.findAllFcmTokensByUserIdIn(event.receiverIds()))
+        given(deviceTokenService.findTokensByUserIds(event.receiverIds()))
                 .willReturn(List.of());
 
         // when
@@ -94,27 +85,6 @@ class NotificationEventListenerTest {
 
         // then
         verify(notificationSender, never()).sendMulticast(any(), any());
-    }
-
-    @Test
-    @DisplayName("브로드캐스트: 단건 저장 후 토픽으로 발송하고 상태를 업데이트한다")
-    void handleNotificationRequest_브로드캐스트_저장_후_발송() {
-        // given
-        NotificationEvent event = NotificationEvent.toAll(
-                "공지 제목", "공지 내용", NotificationType.NOTICE, null
-        );
-
-        Notification savedNotice = Notification.builder().receiverId(null).title("공지 제목").build();
-        ReflectionTestUtils.setField(savedNotice, "id", 1L);
-        given(notificationService.savePendingNotification(any(Notification.class))).willReturn(savedNotice);
-
-        // when
-        eventListener.handleNotificationRequest(event);
-
-        // then
-        verify(notificationService).savePendingNotification(any(Notification.class));
-        verify(notificationSender).sendBroadcast(event);
-        verify(notificationService).markAsSent(1L);
     }
 
     @Test
@@ -127,6 +97,6 @@ class NotificationEventListenerTest {
         eventListener.handleDeviceTokenDeregistration(event);
 
         // then
-        verify(notificationService).removeDeviceToken("token-to-remove");
+        verify(deviceTokenService).removeDeviceToken("token-to-remove");
     }
 }

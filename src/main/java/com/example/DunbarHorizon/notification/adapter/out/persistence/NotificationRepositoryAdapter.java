@@ -9,7 +9,6 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,20 +19,15 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     private final NotificationJpaRepository notificationJpaRepository;
 
     @Override
-    public Slice<Notification> findAllRetainedByReceiverId(Long receiverId, LocalDateTime asOf, Pageable pageable) {
+    public Slice<Notification> findAllRetainedByReceiverId(Long receiverId, LocalDateTime now, Pageable pageable) {
         return notificationJpaRepository.findAllByReceiverIdAndCreatedAtAfterOrderByCreatedAtDesc(
-                receiverId, Notification.retentionCutoff(asOf), pageable);
+                receiverId, Notification.retentionCutoff(now), pageable);
     }
 
     @Override
-    public long countRetainedUnreadByReceiverId(Long receiverId, LocalDateTime asOf) {
+    public long countRetainedUnreadByReceiverId(Long receiverId, LocalDateTime now) {
         return notificationJpaRepository.countByReceiverIdAndIsReadFalseAndCreatedAtAfter(
-                receiverId, Notification.retentionCutoff(asOf));
-    }
-
-    @Override
-    public Notification save(Notification notification) {
-        return notificationJpaRepository.save(notification);
+                receiverId, Notification.retentionCutoff(now));
     }
 
     @Override
@@ -42,8 +36,13 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     }
 
     @Override
-    public Optional<Notification> findRetainedById(Long id, LocalDateTime asOf) {
-        return notificationJpaRepository.findByIdAndCreatedAtAfter(id, Notification.retentionCutoff(asOf));
+    public Optional<Notification> findRetainedById(Long id, LocalDateTime now) {
+        return notificationJpaRepository.findByIdAndCreatedAtAfter(id, Notification.retentionCutoff(now));
+    }
+
+    @Override
+    public Notification save(Notification notification) {
+        return notificationJpaRepository.save(notification);
     }
 
     @Override
@@ -57,17 +56,7 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     }
 
     @Override
-    public int markAllAsSent(Collection<Long> ids) {
-        return notificationJpaRepository.updateIsSentTrueByIdIn(ids);
-    }
-
-    @Override
-    public int markAsRead(Long id, LocalDateTime asOf) {
-        return notificationJpaRepository.updateIsReadTrueByIdAndCreatedAtAfter(id, Notification.retentionCutoff(asOf));
-    }
-
-    @Override
-    public int purgeExpired(LocalDateTime asOf) {
-        return notificationJpaRepository.deleteAllByCreatedAtAtOrBefore(Notification.retentionCutoff(asOf));
+    public int purgeExpired(LocalDateTime now) {
+        return notificationJpaRepository.deleteAllByCreatedAtAtOrBefore(Notification.retentionCutoff(now));
     }
 }

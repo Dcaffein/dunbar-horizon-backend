@@ -13,10 +13,10 @@ class NotificationTest {
     @DisplayName("보관 기준선은 기준 시각에서 30일 전이다")
     void retentionCutoff_Success_ThirtyDaysBeforeAsOf() {
         // given
-        LocalDateTime asOf = LocalDateTime.of(2026, 3, 31, 12, 0);
+        LocalDateTime now = LocalDateTime.of(2026, 3, 31, 12, 0);
 
         // when
-        LocalDateTime cutoff = Notification.retentionCutoff(asOf);
+        LocalDateTime cutoff = Notification.retentionCutoff(now);
 
         // then
         assertThat(cutoff).isEqualTo(LocalDateTime.of(2026, 3, 1, 12, 0));

@@ -8,22 +8,20 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface DeviceTokenJpaRepository extends JpaRepository<DeviceToken, Long> {
+public interface DeviceTokenJpaRepository extends JpaRepository<DeviceToken, String> {
 
-    boolean existsByFcmToken(String fcmToken);
+    void deleteByToken(String token);
 
-    void deleteByFcmToken(String fcmToken);
-
-    @Modifying
-    @Query("DELETE FROM DeviceToken d WHERE d.fcmToken IN :fcmTokens")
-    void deleteAllByFcmTokenIn(@Param("fcmTokens") List<String> fcmTokens);
-
-    @Query("SELECT d.fcmToken FROM DeviceToken d WHERE d.userId IN :userIds")
-    List<String> findAllFcmTokensByUserIdIn(@Param("userIds") List<Long> userIds);
-
-    boolean existsByUserIdAndFcmToken(Long userId, String fcmToken);
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM DeviceToken d WHERE d.userId = :userId AND d.token = :token")
+    int deleteByUserIdAndToken(@Param("userId") Long userId, @Param("token") String token);
 
     @Modifying
-    @Query("DELETE FROM DeviceToken d WHERE d.userId = :userId")
-    void deleteAllByUserId(@Param("userId") Long userId);
+    @Query("DELETE FROM DeviceToken d WHERE d.token IN :tokens")
+    void deleteAllByTokenIn(@Param("tokens") List<String> tokens);
+
+    @Query("SELECT d.token FROM DeviceToken d WHERE d.userId IN :userIds")
+    List<String> findAllTokensByUserIdIn(@Param("userIds") List<Long> userIds);
+
+    boolean existsByUserIdAndToken(Long userId, String token);
 }

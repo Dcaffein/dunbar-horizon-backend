@@ -24,33 +24,33 @@ class DeviceTokenRepositoryAdapterTest {
     private DeviceTokenJpaRepository jpaRepository;
 
     @Test
-    @DisplayName("deleteAllByFcmTokenIn: 정상 토큰 리스트가 주어지면 JPA 레포지토리를 호출한다")
-    void deleteAllByFcmTokenIn_정상_리스트면_JPA_호출() {
+    @DisplayName("deleteAllByTokenIn: 정상 토큰 리스트가 주어지면 JPA 레포지토리를 호출한다")
+    void deleteAllByTokenIn_정상_리스트면_JPA_호출() {
         // given
         List<String> tokens = List.of("token-1", "token-2");
 
         // when
-        adapter.deleteAllByFcmTokenIn(tokens);
+        adapter.deleteAllByTokenIn(tokens);
 
         // then
-        verify(jpaRepository).deleteAllByFcmTokenIn(tokens);
+        verify(jpaRepository).deleteAllByTokenIn(tokens);
     }
 
     @Test
-    @DisplayName("deleteAllByFcmTokenIn: 빈 리스트가 주어지면 DB 쿼리 없이 종료한다")
-    void deleteAllByFcmTokenIn_빈_리스트면_JPA_호출_안함() {
+    @DisplayName("deleteAllByTokenIn: 빈 리스트가 주어지면 DB 쿼리 없이 종료한다")
+    void deleteAllByTokenIn_빈_리스트면_JPA_호출_안함() {
         // when
-        adapter.deleteAllByFcmTokenIn(Collections.emptyList());
+        adapter.deleteAllByTokenIn(Collections.emptyList());
 
         // then
         verifyNoInteractions(jpaRepository);
     }
 
     @Test
-    @DisplayName("deleteAllByFcmTokenIn: null이 주어지면 DB 쿼리 없이 종료한다")
-    void deleteAllByFcmTokenIn_null이면_JPA_호출_안함() {
+    @DisplayName("deleteAllByTokenIn: null이 주어지면 DB 쿼리 없이 종료한다")
+    void deleteAllByTokenIn_null이면_JPA_호출_안함() {
         // when
-        adapter.deleteAllByFcmTokenIn(null);
+        adapter.deleteAllByTokenIn(null);
 
         // then
         verifyNoInteractions(jpaRepository);

@@ -28,6 +28,7 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private Long receiverId;
 
     @Column(nullable = false)
@@ -45,14 +46,12 @@ public class Notification {
 
     private boolean isRead;
 
-    private boolean isSent;
-
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public static LocalDateTime retentionCutoff(LocalDateTime asOf) {
-        return asOf.minus(RETENTION_PERIOD);
+    public static LocalDateTime retentionCutoff(LocalDateTime now) {
+        return now.minus(RETENTION_PERIOD);
     }
 
     public void read(Long currentUserId) {
@@ -69,6 +68,6 @@ public class Notification {
     }
 
     private boolean isOwnedBy(Long userId) {
-        return this.receiverId != null && this.receiverId.equals(userId);
+        return this.receiverId.equals(userId);
     }
 }

@@ -50,11 +50,10 @@ class NotificationJpaRepositoryTest {
     }
 
     @Test
-    @DisplayName("전체 공지와 다른 수신자의 알림은 수신자 목록에 포함되지 않는다")
-    void findAllByReceiverIdAndCreatedAtAfterOrderByCreatedAtDesc_Success_ExcludesAnnouncementAndOthers() {
+    @DisplayName("다른 수신자의 알림은 수신자 목록에 포함되지 않는다")
+    void findAllByReceiverIdAndCreatedAtAfterOrderByCreatedAtDesc_Success_ExcludesOthers() {
         // given
         notificationJpaRepository.save(notification(receiverId, "내 알림"));
-        notificationJpaRepository.save(notification(null, "전체 공지"));
         notificationJpaRepository.save(notification(200L, "남의 알림"));
 
         // when
@@ -73,7 +72,6 @@ class NotificationJpaRepositoryTest {
         notificationJpaRepository.save(Notification.builder()
                 .receiverId(receiverId).title("읽음").content("내용")
                 .type(NotificationType.BUZZ_ARRIVAL).isRead(true).build());
-        notificationJpaRepository.save(notification(null, "전체 공지"));
         notificationJpaRepository.save(notification(200L, "남의 알림"));
 
         // when
@@ -159,29 +157,11 @@ class NotificationJpaRepositoryTest {
     }
 
     @Test
-    @DisplayName("읽음 갱신은 기준선과 같은 시각에 생성된 알림을 0행으로 건너뛴다")
-    void updateIsReadTrueByIdAndCreatedAtAfter_Boundary_SkipsAtCutoff() {
-        // given
-        Notification atCutoff = notificationJpaRepository.save(notification(receiverId, "기준선"));
-        Notification afterCutoff = notificationJpaRepository.save(notification(receiverId, "기준선 직후"));
-        setCreatedAt(atCutoff, cutoff);
-        setCreatedAt(afterCutoff, justAfterCutoff);
-
-        // when
-        int atCutoffUpdated = notificationJpaRepository.updateIsReadTrueByIdAndCreatedAtAfter(atCutoff.getId(), cutoff);
-        int afterCutoffUpdated = notificationJpaRepository.updateIsReadTrueByIdAndCreatedAtAfter(afterCutoff.getId(), cutoff);
-
-        // then
-        assertThat(atCutoffUpdated).isZero();
-        assertThat(afterCutoffUpdated).isEqualTo(1);
-    }
-
-    @Test
     @DisplayName("정리는 기준선과 같거나 이전에 생성된 알림을 지우고 기준선 직후 알림은 남긴다")
     void deleteAllByCreatedAtAtOrBefore_Boundary_DeletesAtCutoffKeepsAfter() {
         // given
         Notification beforeCutoff = notificationJpaRepository.save(notification(receiverId, "기준선 이전"));
-        Notification atCutoff = notificationJpaRepository.save(notification(null, "기준선"));
+        Notification atCutoff = notificationJpaRepository.save(notification(200L, "기준선"));
         Notification afterCutoff = notificationJpaRepository.save(notification(receiverId, "기준선 직후"));
         setCreatedAt(beforeCutoff, cutoff.minusDays(1));
         setCreatedAt(atCutoff, cutoff);
