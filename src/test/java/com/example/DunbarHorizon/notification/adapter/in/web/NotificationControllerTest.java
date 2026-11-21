@@ -87,7 +87,7 @@ class NotificationControllerTest extends BaseControllerTest {
         mockMvc.perform(post("/api/v1/notifications/device-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"token\":\"device-token\"}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         verify(deviceTokenService).registerDeviceToken(1L, "device-token");
     }
@@ -98,7 +98,7 @@ class NotificationControllerTest extends BaseControllerTest {
     void removeDeviceToken_Success_GivenToken() throws Exception {
         // when & then
         mockMvc.perform(delete("/api/v1/notifications/device-token").param("token", "device-token"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         verify(deviceTokenService).deregisterDeviceToken(1L, "device-token");
     }

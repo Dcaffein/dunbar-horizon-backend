@@ -28,7 +28,7 @@ public class NotificationController {
             @CurrentUserId Long currentUserId,
             @Valid @RequestBody DeviceTokenRequest dto) {
         deviceTokenService.registerDeviceToken(currentUserId, dto.token());
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/device-token")
@@ -36,7 +36,7 @@ public class NotificationController {
             @CurrentUserId Long currentUserId,
             @RequestParam String token) {
         deviceTokenService.deregisterDeviceToken(currentUserId, token);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/device-token/status")
