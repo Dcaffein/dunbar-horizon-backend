@@ -41,6 +41,7 @@ public class NotificationService {
         return notificationRepository.countRetainedUnreadByReceiverId(userId, LocalDateTime.now());
     }
 
+    @Transactional
     public void deleteNotification(Long notificationId, Long currentUserId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new NotificationNotFoundException(notificationId));

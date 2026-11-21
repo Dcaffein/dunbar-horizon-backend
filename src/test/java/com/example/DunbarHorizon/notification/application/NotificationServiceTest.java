@@ -76,6 +76,33 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("deleteNotification: 내 알림이면 지운다")
+    void deleteNotification_내_알림이면_지운다() {
+        // given
+        Notification notification = Notification.builder().receiverId(1L).build();
+        given(notificationRepository.findById(5L)).willReturn(Optional.of(notification));
+
+        // when
+        notificationService.deleteNotification(5L, 1L);
+
+        // then
+        verify(notificationRepository).deleteById(5L);
+    }
+
+    @Test
+    @DisplayName("deleteNotification: 남의 알림이면 지우지 않고 거부한다")
+    void deleteNotification_남의_알림이면_거부한다() {
+        // given
+        Notification notification = Notification.builder().receiverId(2L).build();
+        given(notificationRepository.findById(5L)).willReturn(Optional.of(notification));
+
+        // when & then
+        assertThatThrownBy(() -> notificationService.deleteNotification(5L, 1L))
+                .isInstanceOf(NotificationAccessDeniedException.class);
+        verify(notificationRepository, never()).deleteById(any());
+    }
+
+    @Test
     @DisplayName("deleteNotification: 없는 알림이면 찾을 수 없음으로 끝내고 삭제하지 않는다")
     void deleteNotification_없는_알림이면_찾을_수_없다() {
         // given
