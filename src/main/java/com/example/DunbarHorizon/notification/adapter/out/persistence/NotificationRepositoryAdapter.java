@@ -51,8 +51,8 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     }
 
     @Override
-    public void deleteById(Long id) {
-        notificationJpaRepository.deleteById(id);
+    public void delete(Notification notification) {
+        notificationJpaRepository.deleteById(notification.getId());
     }
 
     @Override

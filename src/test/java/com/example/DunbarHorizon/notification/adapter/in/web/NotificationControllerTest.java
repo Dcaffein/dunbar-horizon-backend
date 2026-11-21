@@ -108,6 +108,20 @@ class NotificationControllerTest extends BaseControllerTest {
 
     @Test
     @WithMockCustomUser
+    @DisplayName("255자를 넘는 기기 토큰은 등록하지 않고 400으로 응답한다")
+    void registerDeviceToken_BadRequest_GivenTooLongToken() throws Exception {
+        // when & then
+        mockMvc.perform(post("/api/v1/notifications/device-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + "a".repeat(256) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validation.token").exists());
+
+        verifyNoInteractions(deviceTokenService);
+    }
+
+    @Test
+    @WithMockCustomUser
     @DisplayName("토큰을 지정해 이 기기의 알림만 끈다")
     void removeDeviceToken_Success_GivenToken() throws Exception {
         // when & then

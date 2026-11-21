@@ -15,6 +15,6 @@ public interface NotificationRepository {
     Optional<Notification> findRetainedById(Long id, LocalDateTime now);
     Notification save(Notification notification);
     List<Notification> saveAll(List<Notification> notifications);
-    void deleteById(Long id);
+    void delete(Notification notification);
     int purgeExpired(LocalDateTime now);
 }
