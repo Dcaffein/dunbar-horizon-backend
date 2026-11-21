@@ -12,6 +12,7 @@ import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
+import com.example.DunbarHorizon.buzz.domain.event.BuzzThreadOpenedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
@@ -19,6 +20,7 @@ import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +43,7 @@ public class BuzzThreadService {
     private final BuzzSocialPort buzzSocialPort;
     private final BuzzProfileAssembler buzzProfileAssembler;
     private final ImageStoragePort imageStoragePort;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public Long openThread(OpenBuzzThreadCommand command) {
         LocalDateTime now = LocalDateTime.now();
@@ -53,6 +56,9 @@ public class BuzzThreadService {
         BuzzThread thread = buzzThreadRepository.save(BuzzThread.open(
                 buzz.getId(), command.starterId(), command.visibility(), command.text(), command.imageKeys(), now));
         member.ifPresent(BuzzAudienceMember::markAsRead);
+
+        applicationEventPublisher.publishEvent(new BuzzThreadOpenedEvent(
+                buzz.getId(), thread.getId(), buzz.getCreatorId(), command.starterId()));
         return thread.getId();
     }
 

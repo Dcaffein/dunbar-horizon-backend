@@ -7,6 +7,7 @@ import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
+import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzCommentNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadNotFoundException;
@@ -14,6 +15,7 @@ import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,7 @@ public class BuzzCommentService {
     private final BuzzThreadRepository buzzThreadRepository;
     private final BuzzCommentRepository buzzCommentRepository;
     private final BuzzThreadAccess buzzThreadAccess;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public Long writeComment(WriteBuzzCommentCommand command) {
         LocalDateTime now = LocalDateTime.now();
@@ -37,6 +40,10 @@ public class BuzzCommentService {
         BuzzComment comment = buzzCommentRepository.save(BuzzComment.write(
                 context.thread().getId(), command.authorId(), command.text(), command.imageKeys(), now));
         context.member().ifPresent(BuzzAudienceMember::markAsRead);
+
+        applicationEventPublisher.publishEvent(new BuzzCommentedEvent(
+                context.buzz().getId(), context.thread().getId(), context.buzz().getCreatorId(),
+                context.thread().getStarterId(), command.authorId()));
         return comment.getId();
     }
 

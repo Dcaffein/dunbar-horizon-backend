@@ -8,6 +8,7 @@ import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
+import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzCommentNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -45,6 +47,7 @@ class BuzzCommentServiceTest {
     @Mock private BuzzThreadRepository buzzThreadRepository;
     @Mock private BuzzCommentRepository buzzCommentRepository;
     @Mock private BuzzSocialPort buzzSocialPort;
+    @Mock private ApplicationEventPublisher applicationEventPublisher;
 
     private BuzzCommentService buzzCommentService;
 
@@ -58,7 +61,8 @@ class BuzzCommentServiceTest {
     @BeforeEach
     void setUp() {
         buzzCommentService = new BuzzCommentService(buzzRepository, buzzThreadRepository, buzzCommentRepository,
-                new BuzzThreadAccess(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository, buzzSocialPort));
+                new BuzzThreadAccess(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository, buzzSocialPort),
+                applicationEventPublisher);
         buzz = Buzz.create(creatorId, "본문", List.of(),
                 Set.of(starterId, friendMemberId, otherMemberId), LocalDateTime.now());
         thread = BuzzThread.open(buzz.getId(), starterId, ThreadVisibility.PUBLIC, "첫 글", List.of(), LocalDateTime.now());
@@ -94,6 +98,8 @@ class BuzzCommentServiceTest {
             assertThat(commentCaptor.getValue().getThreadId()).isEqualTo(10L);
             assertThat(commentCaptor.getValue().getAuthorId()).isEqualTo(friendMemberId);
             assertThat(member.isUnread()).isFalse();
+            verify(applicationEventPublisher).publishEvent(
+                    new BuzzCommentedEvent(buzz.getId(), 10L, creatorId, starterId, friendMemberId));
         }
 
         @Test
@@ -109,6 +115,7 @@ class BuzzCommentServiceTest {
             assertThatThrownBy(() -> buzzCommentService.writeComment(command(otherMemberId)))
                     .isInstanceOf(BuzzAccessDeniedException.class);
             verify(buzzCommentRepository, never()).save(any());
+            verify(applicationEventPublisher, never()).publishEvent(any());
         }
 
         @Test

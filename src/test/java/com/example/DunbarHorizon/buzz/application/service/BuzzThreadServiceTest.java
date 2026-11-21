@@ -13,6 +13,8 @@ import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
+import com.example.DunbarHorizon.buzz.domain.event.BuzzThreadOpenedEvent;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyOpenedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
@@ -27,6 +29,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -52,6 +55,7 @@ class BuzzThreadServiceTest {
     @Mock private BuzzCommentRepository buzzCommentRepository;
     @Mock private BuzzSocialPort buzzSocialPort;
     @Mock private ImageStoragePort imageStoragePort;
+    @Mock private ApplicationEventPublisher applicationEventPublisher;
 
     private BuzzThreadService buzzThreadService;
 
@@ -66,7 +70,7 @@ class BuzzThreadServiceTest {
         buzzThreadService = new BuzzThreadService(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository,
                 buzzCommentRepository,
                 new BuzzThreadAccess(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository, buzzSocialPort),
-                buzzSocialPort, new BuzzProfileAssembler(buzzSocialPort), imageStoragePort);
+                buzzSocialPort, new BuzzProfileAssembler(buzzSocialPort), imageStoragePort, applicationEventPublisher);
         buzz = Buzz.create(creatorId, "본문", List.of(),
                 Set.of(starterId, friendMemberId, otherMemberId), LocalDateTime.now());
     }
@@ -94,6 +98,24 @@ class BuzzThreadServiceTest {
             assertThat(threadCaptor.getValue().getVisibility()).isEqualTo(ThreadVisibility.PRIVATE);
             assertThat(threadCaptor.getValue().getImageKeys()).containsExactly("buzz/a");
             assertThat(member.isUnread()).isFalse();
+            verify(applicationEventPublisher).publishEvent(
+                    new BuzzThreadOpenedEvent(buzz.getId(), null, creatorId, starterId));
+        }
+
+        @Test
+        @DisplayName("스레드 저장이 실패하면 시작 이벤트를 발행하지 않는다")
+        void openThread_SaveFails_NoEvent() {
+            // given
+            given(buzzRepository.findByIdForShare(buzz.getId())).willReturn(Optional.of(buzz));
+            given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), starterId))
+                    .willReturn(Optional.of(BuzzAudienceMember.create(buzz.getId(), starterId)));
+            given(buzzThreadRepository.save(any()))
+                    .willThrow(new BuzzThreadAlreadyOpenedException(buzz.getId(), starterId, ThreadVisibility.PUBLIC));
+
+            // when & then
+            assertThatThrownBy(() -> buzzThreadService.openThread(command(starterId, ThreadVisibility.PUBLIC)))
+                    .isInstanceOf(BuzzThreadAlreadyOpenedException.class);
+            verify(applicationEventPublisher, never()).publishEvent(any());
         }
 
         @Test
