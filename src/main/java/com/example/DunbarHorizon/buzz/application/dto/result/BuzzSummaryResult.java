@@ -15,15 +15,16 @@ public record BuzzSummaryResult(
         boolean isUnread,
         boolean isCreator
 ) {
-    public static BuzzSummaryResult from(Buzz buzz, Long currentUserId) {
+    public static BuzzSummaryResult of(Buzz buzz, BuzzProfileResult author, List<String> imageUrls,
+                                       boolean isUnread, boolean isCreator, LocalDateTime now) {
         return new BuzzSummaryResult(
                 buzz.getId(),
-                new BuzzProfileResult(buzz.getCreatorId(), buzz.getCreatorNickname(), buzz.getCreatorProfileImageUrl()),
+                author,
                 buzz.getText(),
-                buzz.getImageUrls(),
-                Math.max(0L, Duration.between(LocalDateTime.now(), buzz.getExpiresAt()).toMinutes()),
-                buzz.isUnreadBy(currentUserId),
-                buzz.isCreator(currentUserId)
+                imageUrls,
+                Math.max(0L, Duration.between(now, buzz.getExpiresAt()).toMinutes()),
+                isUnread,
+                isCreator
         );
     }
 }

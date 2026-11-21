@@ -16,15 +16,17 @@ public record BuzzDetailResult(
         boolean isCreator,
         List<BuzzProfileResult> recipients
 ) {
-    public static BuzzDetailResult from(Buzz buzz, Long currentUserId, List<BuzzProfileResult> recipients) {
+    public static BuzzDetailResult of(Buzz buzz, BuzzProfileResult author, List<String> imageUrls,
+                                      boolean isUnread, boolean isCreator,
+                                      List<BuzzProfileResult> recipients, LocalDateTime now) {
         return new BuzzDetailResult(
                 buzz.getId(),
-                new BuzzProfileResult(buzz.getCreatorId(), buzz.getCreatorNickname(), buzz.getCreatorProfileImageUrl()),
+                author,
                 buzz.getText(),
-                buzz.getImageUrls(),
-                Math.max(0L, Duration.between(LocalDateTime.now(), buzz.getExpiresAt()).toMinutes()),
-                buzz.isUnreadBy(currentUserId),
-                buzz.isCreator(currentUserId),
+                imageUrls,
+                Math.max(0L, Duration.between(now, buzz.getExpiresAt()).toMinutes()),
+                isUnread,
+                isCreator,
                 recipients
         );
     }
