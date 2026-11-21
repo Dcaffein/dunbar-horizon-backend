@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.notification.adapter.out.infrastructure;
+package com.example.DunbarHorizon.notification.adapter.out.fcm;
 
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
@@ -12,7 +12,7 @@ import java.util.*;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class FcmService implements NotificationSender {
+public class FcmAdapter implements NotificationSender {
 
     private final FirebaseMessaging firebaseMessaging;
 

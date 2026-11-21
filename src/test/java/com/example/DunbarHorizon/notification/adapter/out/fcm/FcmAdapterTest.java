@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.notification.adapter.out.infrastructure;
+package com.example.DunbarHorizon.notification.adapter.out.fcm;
 
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
@@ -23,10 +23,10 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
-class FcmServiceTest {
+class FcmAdapterTest {
 
     @InjectMocks
-    private FcmService fcmService;
+    private FcmAdapter fcmAdapter;
 
     @Mock
     private FirebaseMessaging firebaseMessaging;
@@ -47,7 +47,7 @@ class FcmServiceTest {
         given(firebaseMessaging.sendEachForMulticast(any(MulticastMessage.class))).willReturn(batch);
 
         // when
-        List<String> invalidTokens = fcmService.sendMulticast(event(), tokens);
+        List<String> invalidTokens = fcmAdapter.sendMulticast(event(), tokens);
 
         // then
         assertThat(invalidTokens).containsExactlyInAnyOrder("unregistered", "sender-mismatch");
