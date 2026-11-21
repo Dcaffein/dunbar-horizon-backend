@@ -114,6 +114,38 @@ class BuzzTest {
     }
 
     @Nested
+    @DisplayName("스레드 열기 자격")
+    class ThreadOpeningTest {
+
+        @Test
+        @DisplayName("공개 대상 멤버는 만료 전에 스레드를 열 수 있다")
+        void validateThreadOpening_Success_AudienceMember() {
+            buzz().validateThreadOpening(recipientId, true, NOW.plusHours(1));
+        }
+
+        @Test
+        @DisplayName("게시자는 스레드를 열 수 없다")
+        void validateThreadOpening_Fail_Creator() {
+            assertThatThrownBy(() -> buzz().validateThreadOpening(creatorId, false, NOW.plusHours(1)))
+                    .isInstanceOf(BuzzAccessDeniedException.class);
+        }
+
+        @Test
+        @DisplayName("공개 대상이 아니면 스레드를 열 수 없다")
+        void validateThreadOpening_Fail_Stranger() {
+            assertThatThrownBy(() -> buzz().validateThreadOpening(strangerId, false, NOW.plusHours(1)))
+                    .isInstanceOf(BuzzAccessDeniedException.class);
+        }
+
+        @Test
+        @DisplayName("만료된 버즈에는 스레드를 열 수 없다")
+        void validateThreadOpening_Fail_Expired() {
+            assertThatThrownBy(() -> buzz().validateThreadOpening(recipientId, true, NOW.plusHours(6)))
+                    .isInstanceOf(BuzzInvalidStateException.class);
+        }
+    }
+
+    @Nested
     @DisplayName("접근 및 삭제 권한")
     class AccessValidationTest {
 
