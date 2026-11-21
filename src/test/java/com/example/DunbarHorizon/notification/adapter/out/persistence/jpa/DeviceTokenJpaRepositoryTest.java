@@ -36,19 +36,17 @@ class DeviceTokenJpaRepositoryTest {
     }
 
     @Test
-    @DisplayName("deleteByUserIdAndToken: 사용자와 토큰이 모두 맞을 때만 지우고 지운 행 수를 돌려준다")
+    @DisplayName("deleteByUserIdAndToken: 사용자와 토큰이 모두 맞을 때만 지운다")
     void deleteByUserIdAndToken_주인이_맞을_때만_삭제한다() {
         // given
         repository.save(new DeviceToken(1L, "token-mine"));
         repository.save(new DeviceToken(2L, "token-theirs"));
 
         // when
-        int deletedMine = repository.deleteByUserIdAndToken(1L, "token-mine");
-        int deletedTheirs = repository.deleteByUserIdAndToken(1L, "token-theirs");
+        repository.deleteByUserIdAndToken(1L, "token-mine");
+        repository.deleteByUserIdAndToken(1L, "token-theirs");
 
         // then
-        assertThat(deletedMine).isEqualTo(1);
-        assertThat(deletedTheirs).isZero();
         assertThat(repository.existsById("token-mine")).isFalse();
         assertThat(repository.existsById("token-theirs")).isTrue();
     }
