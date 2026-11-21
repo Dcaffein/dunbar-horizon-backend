@@ -39,24 +39,6 @@ public class FcmService implements NotificationSender {
         return invalidTokens;
     }
 
-    @Override
-    public void subscribeToTopic(String token, String topic) {
-        try {
-            firebaseMessaging.subscribeToTopic(Collections.singletonList(token), topic);
-        } catch (Exception e) {
-            log.error("토픽 구독 실패: {}", e.getMessage());
-        }
-    }
-
-    @Override
-    public void unsubscribeFromTopic(String token, String topic) {
-        try {
-            firebaseMessaging.unsubscribeFromTopic(Collections.singletonList(token), topic);
-        } catch (Exception e) {
-            log.error("토픽 해지 실패: {}", e.getMessage());
-        }
-    }
-
     // --- 내부 헬퍼 메서드 ---
 
     private List<String> dispatchMulticastChunk(MulticastMessage message, List<String> chunk) {

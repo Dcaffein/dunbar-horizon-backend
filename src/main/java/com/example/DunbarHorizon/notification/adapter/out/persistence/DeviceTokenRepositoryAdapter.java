@@ -25,8 +25,8 @@ public class DeviceTokenRepositoryAdapter implements DeviceTokenRepository {
     }
 
     @Override
-    public int deleteByUserIdAndToken(Long userId, String token) {
-        return deviceTokenJpaRepository.deleteByUserIdAndToken(userId, token);
+    public void deleteByUserIdAndToken(Long userId, String token) {
+        deviceTokenJpaRepository.deleteByUserIdAndToken(userId, token);
     }
 
     @Override

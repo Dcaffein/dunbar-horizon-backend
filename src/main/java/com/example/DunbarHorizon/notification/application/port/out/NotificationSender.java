@@ -5,6 +5,4 @@ import java.util.List;
 
 public interface NotificationSender {
     List<String> sendMulticast(NotificationEvent event, List<String> tokens);
-    void subscribeToTopic(String token, String topic);
-    void unsubscribeFromTopic(String token, String topic);
 }

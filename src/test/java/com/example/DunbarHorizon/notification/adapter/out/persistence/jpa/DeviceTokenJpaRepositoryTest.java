@@ -120,4 +120,22 @@ class DeviceTokenJpaRepositoryTest {
         assertThat(repository.findAllTokensByUserIdIn(List.of(1L)))
                 .containsExactlyInAnyOrder("token-phone", "token-pc");
     }
+
+    @Test
+    @DisplayName("save: 같은 사용자가 같은 토큰을 다시 저장해도 한 행으로 남는다")
+    void save_같은_사용자_같은_토큰이면_한_행() {
+        // given
+        repository.save(new DeviceToken(1L, "token-again"));
+        entityManager.flush();
+        entityManager.clear();
+
+        // when
+        repository.save(new DeviceToken(1L, "token-again"));
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        assertThat(repository.count()).isEqualTo(1L);
+        assertThat(repository.findAllTokensByUserIdIn(List.of(1L))).containsExactly("token-again");
+    }
 }
