@@ -37,7 +37,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 도메인 모듈:
 - `account/` — 가입, 로그인, 이메일 인증, OAuth2 Google
-- `buzz/` — 콘텐츠 캐스팅(핵심 소셜 기능), MongoDB
+- `buzz/` — 콘텐츠 캐스팅(핵심 소셜 기능), 공개 대상·스레드·답글 (MySQL)
 - `flag/` — Flag, FlagComment, Memorial
 - `social/` — Friendship, 친구 요청, Label, 관계망 분석 (MySQL)
 - `notification/` — Firebase FCM 푸시, MongoDB
@@ -49,7 +49,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Database | Config | Base packages |
 |----------|--------|---------------|
 | MySQL (JPA/Hibernate) | `global/config/database/JpaConfig.java` | `account`, `buzz`, `trace`, `flag`, `notification.adapter.out.persistence.jpa`, `social.adapter.out.persistence` |
-| MongoDB | `global/config/database/MongoConfig.java` | `notification.adapter.out.persistence.mongo`, `buzz.adapter.out.persistence.mongo` |
+| MongoDB | `global/config/database/MongoConfig.java` | 저장소 없음. 기동 시 `buzz.adapter.out.persistence.legacy.LegacyBuzzMigrator`가 옛 버즈를 MySQL로 옮길 때만 쓴다 |
 
 로컬 기본값:
 - MySQL: `localhost:3306/dunbar_horizon`
