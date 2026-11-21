@@ -28,6 +28,7 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private Long receiverId;
 
     @Column(nullable = false)
@@ -69,6 +70,6 @@ public class Notification {
     }
 
     private boolean isOwnedBy(Long userId) {
-        return this.receiverId != null && this.receiverId.equals(userId);
+        return this.receiverId.equals(userId);
     }
 }
