@@ -13,7 +13,6 @@ public enum BuzzErrorCode implements ErrorCode {
     BUZZ_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 버즈입니다."),
     BUZZ_INVALID_TEXT(HttpStatus.BAD_REQUEST, Buzz.TEXT_LENGTH_MESSAGE),
     BUZZ_RECIPIENTS_REQUIRED(HttpStatus.BAD_REQUEST, "수신자를 한 명 이상 지정해주세요."),
-    BUZZ_RECIPIENTS_EXCEEDED(HttpStatus.BAD_REQUEST, "수신자는 최대 150명까지 지정할 수 있습니다."),
 
     BUZZ_NOT_RECIPIENT(HttpStatus.FORBIDDEN, "이 버즈의 수신자가 아닙니다."),
     BUZZ_CREATOR_ONLY(HttpStatus.FORBIDDEN, "작성자만 할 수 있는 작업입니다.");

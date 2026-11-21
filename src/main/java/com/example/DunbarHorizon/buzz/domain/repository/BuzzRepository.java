@@ -1,18 +1,12 @@
 package com.example.DunbarHorizon.buzz.domain.repository;
 
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
 
-import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 
 public interface BuzzRepository {
     Buzz save(Buzz buzz);
-    Buzz findById(String id);
+    Optional<Buzz> findById(String buzzId);
+    Optional<Buzz> findByIdForShare(String buzzId);
     void deleteById(String buzzId);
-    Slice<Buzz> findAllByRecipientId(Long userId, Set<Long> excludedIds, Pageable pageable);
-    Slice<Buzz> findAllByCreatorId(Long userId, Pageable pageable);
-    List<Long> findUnreadSenderIds(Long userId, Set<Long> excludedIds);
-    void addReadRecipient(String buzzId, Long userId);
 }
