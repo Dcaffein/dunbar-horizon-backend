@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.notification.application;
 
 import com.example.DunbarHorizon.notification.domain.Notification;
+import com.example.DunbarHorizon.notification.domain.exception.NotificationNotFoundException;
 import com.example.DunbarHorizon.notification.domain.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,14 +27,14 @@ public class NotificationService {
     @Transactional
     public Notification readNotification(Long notificationId, Long currentUserId) {
         LocalDateTime asOf = LocalDateTime.now();
-        Notification notice = notificationRepository.findRetainedById(notificationId, asOf)
-                .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
-        notice.requireOwnership(currentUserId);
+        Notification notification = notificationRepository.findRetainedById(notificationId, asOf)
+                .orElseThrow(() -> new NotificationNotFoundException(notificationId));
+        notification.requireOwnership(currentUserId);
         if (notificationRepository.markAsRead(notificationId, asOf) == 0) {
-            throw new IllegalArgumentException("알림을 찾을 수 없습니다.");
+            throw new NotificationNotFoundException(notificationId);
         }
-        notice.read(currentUserId);
-        return notice;
+        notification.read(currentUserId);
+        return notification;
     }
 
     public Slice<Notification> getMyNotifications(Long userId, Pageable pageable) {
@@ -45,9 +46,9 @@ public class NotificationService {
     }
 
     public void deleteNotification(Long notificationId, Long currentUserId) {
-        Notification notice = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
-        notice.requireOwnership(currentUserId);
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new NotificationNotFoundException(notificationId));
+        notification.requireOwnership(currentUserId);
         notificationRepository.deleteById(notificationId);
     }
 

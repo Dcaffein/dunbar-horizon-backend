@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.notification.application;
 
 import com.example.DunbarHorizon.notification.domain.Notification;
 import com.example.DunbarHorizon.notification.domain.exception.NotificationAccessDeniedException;
+import com.example.DunbarHorizon.notification.domain.exception.NotificationNotFoundException;
 import com.example.DunbarHorizon.notification.domain.repository.NotificationRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -67,7 +68,7 @@ class NotificationServiceTest {
 
         // when & then
         assertThatThrownBy(() -> notificationService.readNotification(5L, 1L))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(NotificationNotFoundException.class);
         verify(notificationRepository, never()).markAsRead(any(), any());
     }
 
@@ -88,6 +89,18 @@ class NotificationServiceTest {
         verify(notificationRepository).findRetainedById(eq(5L), lookupAsOf.capture());
         verify(notificationRepository).markAsRead(eq(5L), updateAsOf.capture());
         assertThat(updateAsOf.getValue()).isEqualTo(lookupAsOf.getValue());
+    }
+
+    @Test
+    @DisplayName("deleteNotification: 없는 알림이면 찾을 수 없음으로 끝내고 삭제하지 않는다")
+    void deleteNotification_없는_알림이면_찾을_수_없다() {
+        // given
+        given(notificationRepository.findById(5L)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> notificationService.deleteNotification(5L, 1L))
+                .isInstanceOf(NotificationNotFoundException.class);
+        verify(notificationRepository, never()).deleteById(any());
     }
 
     @Test

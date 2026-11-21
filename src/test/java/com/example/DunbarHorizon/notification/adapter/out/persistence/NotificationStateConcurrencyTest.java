@@ -3,6 +3,7 @@ package com.example.DunbarHorizon.notification.adapter.out.persistence;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.notification.application.NotificationService;
 import com.example.DunbarHorizon.notification.domain.Notification;
+import com.example.DunbarHorizon.notification.domain.exception.NotificationNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -66,7 +67,7 @@ class NotificationStateConcurrencyTest {
 
         // then
         assertThat(failure).isInstanceOf(ExecutionException.class)
-                .cause().isInstanceOf(IllegalArgumentException.class);
+                .cause().isInstanceOf(NotificationNotFoundException.class);
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM notifications WHERE id = ?", Long.class, saved.getId())).isZero();
     }

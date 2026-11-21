@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.notification.adapter.in.web;
 
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import com.example.DunbarHorizon.notification.domain.Notification;
+import com.example.DunbarHorizon.notification.domain.exception.NotificationNotFoundException;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
@@ -66,6 +67,19 @@ class NotificationControllerTest extends BaseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(42))
                 .andExpect(jsonPath("$.isRead").value(true));
+    }
+
+    @Test
+    @WithMockCustomUser
+    @DisplayName("없는 알림을 읽음 처리하면 404로 응답한다")
+    void readNotification_NotFound_GivenMissingNotification() throws Exception {
+        // given
+        given(notificationService.readNotification(42L, 1L)).willThrow(new NotificationNotFoundException(42L));
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/notifications/42/read"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("NOTIFICATION_NOT_FOUND"));
     }
 
     @Test
