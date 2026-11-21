@@ -50,8 +50,8 @@ public class Notification {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public static LocalDateTime retentionCutoff(LocalDateTime asOf) {
-        return asOf.minus(RETENTION_PERIOD);
+    public static LocalDateTime retentionCutoff(LocalDateTime now) {
+        return now.minus(RETENTION_PERIOD);
     }
 
     public void read(Long currentUserId) {

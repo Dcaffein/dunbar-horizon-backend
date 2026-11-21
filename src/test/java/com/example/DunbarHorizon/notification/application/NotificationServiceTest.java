@@ -98,8 +98,8 @@ class NotificationServiceTest {
         notificationService.purgeExpiredNotifications();
 
         // then
-        ArgumentCaptor<LocalDateTime> asOf = ArgumentCaptor.forClass(LocalDateTime.class);
-        verify(notificationRepository).purgeExpired(asOf.capture());
-        assertThat(asOf.getValue()).isBetween(before, LocalDateTime.now());
+        ArgumentCaptor<LocalDateTime> now = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(notificationRepository).purgeExpired(now.capture());
+        assertThat(now.getValue()).isBetween(before, LocalDateTime.now());
     }
 }

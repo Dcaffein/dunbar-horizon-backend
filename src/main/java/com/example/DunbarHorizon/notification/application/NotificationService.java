@@ -26,8 +26,8 @@ public class NotificationService {
 
     @Transactional
     public Notification readNotification(Long notificationId, Long currentUserId) {
-        LocalDateTime asOf = LocalDateTime.now();
-        Notification notification = notificationRepository.findRetainedById(notificationId, asOf)
+        LocalDateTime now = LocalDateTime.now();
+        Notification notification = notificationRepository.findRetainedById(notificationId, now)
                 .orElseThrow(() -> new NotificationNotFoundException(notificationId));
         notification.read(currentUserId);
         return notificationRepository.save(notification);

@@ -9,12 +9,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface NotificationRepository {
-    Slice<Notification> findAllRetainedByReceiverId(Long receiverId, LocalDateTime asOf, Pageable pageable);
-    long countRetainedUnreadByReceiverId(Long receiverId, LocalDateTime asOf);
+    Slice<Notification> findAllRetainedByReceiverId(Long receiverId, LocalDateTime now, Pageable pageable);
+    long countRetainedUnreadByReceiverId(Long receiverId, LocalDateTime now);
     Optional<Notification> findById(Long id);
-    Optional<Notification> findRetainedById(Long id, LocalDateTime asOf);
+    Optional<Notification> findRetainedById(Long id, LocalDateTime now);
     Notification save(Notification notification);
     List<Notification> saveAll(List<Notification> notifications);
     void deleteById(Long id);
-    int purgeExpired(LocalDateTime asOf);
+    int purgeExpired(LocalDateTime now);
 }
