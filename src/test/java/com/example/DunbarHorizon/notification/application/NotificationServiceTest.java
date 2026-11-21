@@ -1,5 +1,8 @@
 package com.example.DunbarHorizon.notification.application;
 
+import com.example.DunbarHorizon.global.event.notification.NotificationType;
+import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
+import com.example.DunbarHorizon.notification.application.port.out.PushMessage;
 import com.example.DunbarHorizon.notification.domain.Notification;
 import com.example.DunbarHorizon.notification.domain.exception.NotificationAccessDeniedException;
 import com.example.DunbarHorizon.notification.domain.exception.NotificationNotFoundException;
@@ -14,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,6 +35,62 @@ class NotificationServiceTest {
 
     @Mock
     private NotificationRepository notificationRepository;
+
+    @Mock
+    private DeviceTokenService deviceTokenService;
+
+    @Mock
+    private NotificationSender notificationSender;
+
+    @Test
+    @DisplayName("send: 수신자마다 알림을 저장하고 기기들에 푸시를 보낸 뒤 무효 토큰을 정리한다")
+    void send_알림을_저장하고_푸시를_보낸_뒤_무효_토큰을_정리한다() {
+        // given
+        given(deviceTokenService.findTokensByUserIds(List.of(1L, 2L))).willReturn(List.of("token-1", "token-2"));
+        given(notificationSender.send(any(PushMessage.class), eq(List.of("token-1", "token-2"))))
+                .willReturn(List.of("token-2"));
+
+        // when
+        notificationService.send(List.of(1L, 2L), "제목", "내용", NotificationType.BUZZ_ARRIVAL, Map.of("buzzId", 7L));
+
+        // then
+        ArgumentCaptor<List<Notification>> saved = ArgumentCaptor.forClass(List.class);
+        verify(notificationRepository).saveAll(saved.capture());
+        assertThat(saved.getValue()).extracting(Notification::getReceiverId).containsExactly(1L, 2L);
+        verify(notificationSender).send(
+                new PushMessage("제목", "내용", Map.of("type", "BUZZ_ARRIVAL", "buzzId", 7L)),
+                List.of("token-1", "token-2"));
+        verify(deviceTokenService).cleanupInvalidTokens(List.of("token-2"));
+    }
+
+    @Test
+    @DisplayName("send: 등록된 기기 토큰이 없으면 알림만 저장하고 푸시는 보내지 않는다")
+    void send_기기_토큰이_없으면_푸시를_보내지_않는다() {
+        // given
+        given(deviceTokenService.findTokensByUserIds(List.of(1L))).willReturn(List.of());
+
+        // when
+        notificationService.send(List.of(1L), "제목", "내용", NotificationType.BUZZ_ARRIVAL, null);
+
+        // then
+        verify(notificationRepository).saveAll(any());
+        verify(notificationSender, never()).send(any(), any());
+    }
+
+    @Test
+    @DisplayName("send: 푸시 발송이 실패해도 저장한 알림은 남기고 예외를 밖으로 내지 않는다")
+    void send_푸시_실패는_밖으로_내지_않는다() {
+        // given
+        given(deviceTokenService.findTokensByUserIds(List.of(1L))).willReturn(List.of("token-1"));
+        given(notificationSender.send(any(PushMessage.class), any())).willThrow(new IllegalStateException("FCM down"));
+
+        // when
+        notificationService.send(List.of(1L), "제목", "내용", NotificationType.BUZZ_ARRIVAL, null);
+
+        // then
+        verify(notificationRepository).saveAll(any());
+        verify(deviceTokenService, never()).cleanupInvalidTokens(any());
+    }
 
     @Test
     @DisplayName("readNotification: 내 알림을 읽음으로 바꿔 저장하고 돌려준다")

@@ -3,12 +3,9 @@ package com.example.DunbarHorizon.notification.application;
 import com.example.DunbarHorizon.global.event.DeviceTokenDeregisteredEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
-import com.example.DunbarHorizon.notification.application.port.out.NotificationSender;
-import com.example.DunbarHorizon.notification.application.port.out.PushMessage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -16,12 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationEventListenerTest {
@@ -30,65 +22,29 @@ class NotificationEventListenerTest {
     private NotificationEventListener eventListener;
 
     @Mock
-    private NotificationSender notificationSender;
-
-    @Mock
     private NotificationService notificationService;
 
     @Mock
     private DeviceTokenService deviceTokenService;
 
     @Test
-    @DisplayName("멀티캐스트: 수신자들의 토큰을 조회하여 발송하고 죽은 토큰을 정리한다")
-    void handleNotificationRequest_멀티캐스트_발송_후_죽은_토큰_정리() {
+    @DisplayName("handleNotificationRequest: 알림 요청 이벤트를 알림 발송으로 넘긴다")
+    void handleNotificationRequest_알림_발송으로_넘긴다() {
         // given
         NotificationEvent event = NotificationEvent.builder()
-                .receiverIds(List.of(1L, 2L, 3L))
+                .receiverIds(List.of(1L, 2L))
                 .title("제목")
                 .content("내용")
                 .type(NotificationType.BUZZ_ARRIVAL)
                 .metadata(Map.of("buzzId", 7L))
                 .build();
 
-        given(deviceTokenService.findTokensByUserIds(event.receiverIds()))
-                .willReturn(List.of("token-1", "token-2"));
-
-        List<String> invalidTokens = List.of("token-2");
-        given(notificationSender.send(any(PushMessage.class), anyList())).willReturn(invalidTokens);
-
         // when
         eventListener.handleNotificationRequest(event);
 
         // then
-        ArgumentCaptor<List<String>> tokenCaptor = ArgumentCaptor.forClass(List.class);
-        verify(notificationSender).send(
-                eq(new PushMessage("제목", "내용", Map.of("type", "BUZZ_ARRIVAL", "buzzId", 7L))),
-                tokenCaptor.capture());
-        assertThat(tokenCaptor.getValue()).containsExactlyInAnyOrder("token-1", "token-2");
-
-        verify(deviceTokenService).cleanupInvalidTokens(invalidTokens);
-    }
-
-    @Test
-    @DisplayName("멀티캐스트: 등록된 토큰이 없으면 FCM 발송을 생략한다")
-    void handleNotificationRequest_토큰없으면_FCM_발송_생략() {
-        // given
-        NotificationEvent event = NotificationEvent.builder()
-                .receiverIds(List.of(1L))
-                .title("제목")
-                .content("내용")
-                .type(NotificationType.BUZZ_ARRIVAL)
-                .metadata(null)
-                .build();
-
-        given(deviceTokenService.findTokensByUserIds(event.receiverIds()))
-                .willReturn(List.of());
-
-        // when
-        eventListener.handleNotificationRequest(event);
-
-        // then
-        verify(notificationSender, never()).send(any(), any());
+        verify(notificationService).send(List.of(1L, 2L), "제목", "내용",
+                NotificationType.BUZZ_ARRIVAL, Map.of("buzzId", 7L));
     }
 
     @Test
