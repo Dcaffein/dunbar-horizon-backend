@@ -5,6 +5,7 @@ import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
 import com.example.DunbarHorizon.buzz.application.service.BuzzService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzThreadAccess;
 import com.example.DunbarHorizon.buzz.application.service.BuzzThreadService;
 import com.example.DunbarHorizon.buzz.application.service.RecipientStrategyProvider;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
@@ -43,7 +44,8 @@ import static org.mockito.Mockito.doAnswer;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class, BuzzQueryRepositoryAdapter.class,
-        BuzzThreadRepositoryAdapter.class, BuzzProfileAssembler.class, BuzzService.class, BuzzThreadService.class})
+        BuzzThreadRepositoryAdapter.class, BuzzCommentRepositoryAdapter.class, BuzzProfileAssembler.class,
+        BuzzThreadAccess.class, BuzzService.class, BuzzThreadService.class})
 class BuzzThreadOpenConcurrencyTest {
 
     private static final long WAIT_SECONDS = 5;

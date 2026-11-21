@@ -38,6 +38,16 @@ public class BuzzThreadRepositoryAdapter implements BuzzThreadRepository {
     }
 
     @Override
+    public Optional<BuzzThread> findByIdForShare(Long threadId) {
+        return buzzThreadJpaRepository.findByIdForShare(threadId);
+    }
+
+    @Override
+    public void deleteById(Long threadId) {
+        buzzThreadJpaRepository.deleteById(threadId);
+    }
+
+    @Override
     public List<BuzzThread> findAllByBuzzId(String buzzId) {
         return buzzThreadJpaRepository.findAllByBuzzIdOrderByCreatedAtAscIdAsc(buzzId);
     }

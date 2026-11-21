@@ -36,7 +36,7 @@ import static org.mockito.Mockito.doThrow;
 @JpaRepositoryTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class,
-        BuzzQueryRepositoryAdapter.class, BuzzThreadRepositoryAdapter.class, BuzzProfileAssembler.class,
+        BuzzQueryRepositoryAdapter.class, BuzzThreadRepositoryAdapter.class, BuzzCommentRepositoryAdapter.class, BuzzProfileAssembler.class,
         BuzzService.class})
 class BuzzCreationTransactionTest {
 

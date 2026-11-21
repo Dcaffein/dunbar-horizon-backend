@@ -1,6 +1,10 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web;
 
 import com.example.DunbarHorizon.buzz.application.dto.command.OpenBuzzThreadCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommentCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzThreadCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.WriteBuzzCommentCommand;
+import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyOpenedException;
@@ -16,6 +20,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -66,6 +72,66 @@ class BuzzThreadControllerTest extends BaseControllerTest {
                         .content(body))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.validation.text").value(BuzzThread.TEXT_LENGTH_MESSAGE));
+    }
+
+    @Test
+    @WithMockCustomUser
+    @DisplayName("답글을 쓰면 201을 반환하고 스레드와 본문을 서비스에 넘긴다")
+    void writeComment_Returns201() throws Exception {
+        mockMvc.perform(post("/api/v1/buzzes/buzz-1/threads/10/comments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ \"text\": \"답글\" }"))
+                .andExpect(status().isCreated());
+
+        verify(buzzCommentService).writeComment(new WriteBuzzCommentCommand(
+                CURRENT_USER_ID, "buzz-1", 10L, "답글", List.of()));
+    }
+
+    @Test
+    @WithMockCustomUser
+    @DisplayName("답글이 300자를 넘으면 400과 validation.text를 반환한다")
+    void writeComment_TextOverLimit_Returns400() throws Exception {
+        String body = """
+                { "text": "%s" }
+                """.formatted("가".repeat(BuzzComment.TEXT_MAX_LENGTH + 1));
+
+        mockMvc.perform(post("/api/v1/buzzes/buzz-1/threads/10/comments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validation.text").value(BuzzComment.TEXT_LENGTH_MESSAGE));
+    }
+
+    @Test
+    @WithMockCustomUser
+    @DisplayName("첫 글 수정과 답글 수정은 204를 반환한다")
+    void update_Returns204() throws Exception {
+        mockMvc.perform(patch("/api/v1/buzzes/buzz-1/threads/10")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ \"text\": \"수정한 글\", \"imageKeys\": [\"buzz/b\"] }"))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(patch("/api/v1/buzzes/buzz-1/threads/10/comments/100")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ \"text\": \"수정한 답글\" }"))
+                .andExpect(status().isNoContent());
+
+        verify(buzzThreadService).updateThread(new UpdateBuzzThreadCommand(
+                CURRENT_USER_ID, "buzz-1", 10L, "수정한 글", List.of("buzz/b")));
+        verify(buzzCommentService).updateComment(new UpdateBuzzCommentCommand(
+                CURRENT_USER_ID, "buzz-1", 10L, 100L, "수정한 답글", List.of()));
+    }
+
+    @Test
+    @WithMockCustomUser
+    @DisplayName("스레드 삭제와 답글 삭제는 204를 반환한다")
+    void delete_Returns204() throws Exception {
+        mockMvc.perform(delete("/api/v1/buzzes/buzz-1/threads/10"))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/v1/buzzes/buzz-1/threads/10/comments/100"))
+                .andExpect(status().isNoContent());
+
+        verify(buzzThreadService).deleteThread(CURRENT_USER_ID, "buzz-1", 10L);
+        verify(buzzCommentService).deleteComment(CURRENT_USER_ID, "buzz-1", 10L, 100L);
     }
 
     @Test
