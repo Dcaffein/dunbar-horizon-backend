@@ -39,8 +39,6 @@ public class FcmService implements NotificationSender {
         return invalidTokens;
     }
 
-    // --- 내부 헬퍼 메서드 ---
-
     private List<String> dispatchMulticastChunk(MulticastMessage message, List<String> chunk) {
         List<String> invalidTokensInChunk = new ArrayList<>();
         try {
@@ -52,7 +50,6 @@ public class FcmService implements NotificationSender {
                         MessagingErrorCode code = responses.get(i).getException().getMessagingErrorCode();
                         log.warn("FCM 토큰 전송 실패 [{}]: {}", code, chunk.get(i));
                         if (code == MessagingErrorCode.UNREGISTERED
-                                || code == MessagingErrorCode.INVALID_ARGUMENT
                                 || code == MessagingErrorCode.SENDER_ID_MISMATCH) {
                             invalidTokensInChunk.add(chunk.get(i));
                         }
