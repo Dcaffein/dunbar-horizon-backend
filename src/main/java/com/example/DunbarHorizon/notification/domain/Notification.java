@@ -46,8 +46,6 @@ public class Notification {
 
     private boolean isRead;
 
-    private boolean isSent;
-
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
