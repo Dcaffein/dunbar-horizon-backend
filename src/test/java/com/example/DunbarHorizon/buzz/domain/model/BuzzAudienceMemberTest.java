@@ -17,14 +17,14 @@ class BuzzAudienceMemberTest {
     }
 
     @Test
-    @DisplayName("읽음 처리를 반복해도 읽음 상태로 남는다")
-    void markAsRead_Idempotent() {
+    @DisplayName("읽기를 반복해도 읽음 상태로 남는다")
+    void read_Idempotent() {
         // given
         BuzzAudienceMember member = BuzzAudienceMember.create(1L, 2L);
 
         // when
-        member.markAsRead();
-        member.markAsRead();
+        member.read();
+        member.read();
 
         // then
         assertThat(member.isUnread()).isFalse();

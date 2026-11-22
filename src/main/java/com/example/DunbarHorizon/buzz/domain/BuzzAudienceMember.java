@@ -39,7 +39,7 @@ public class BuzzAudienceMember {
         return new BuzzAudienceMember(buzzId, userId);
     }
 
-    public void markAsRead() {
+    public void read() {
         this.isRead = true;
     }
 
