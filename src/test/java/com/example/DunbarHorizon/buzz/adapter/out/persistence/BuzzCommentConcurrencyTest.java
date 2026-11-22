@@ -220,7 +220,7 @@ class BuzzCommentConcurrencyTest {
         });
         createdBuzzIds.add(buzz.getId());
         return buzzThreadRepositoryAdapter.save(BuzzThread.create(
-                buzz.getId(), starterId, ThreadVisibility.PUBLIC, "첫 글", List.of(), LocalDateTime.now()));
+                buzz, starterId, true, ThreadVisibility.PUBLIC, "첫 글", List.of(), LocalDateTime.now()));
     }
 
     private WriteBuzzCommentCommand command(BuzzThread thread) {

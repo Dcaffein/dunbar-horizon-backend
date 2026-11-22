@@ -116,7 +116,7 @@ class BuzzThreadCreationConcurrencyTest {
         // given
         Buzz buzz = saveBuzz();
         buzzThreadRepositoryAdapter.save(BuzzThread.create(
-                buzz.getId(), starterId, ThreadVisibility.PRIVATE, "먼저 생성한 글", List.of(), LocalDateTime.now()));
+                buzz, starterId, true, ThreadVisibility.PRIVATE, "먼저 생성한 글", List.of(), LocalDateTime.now()));
 
         // when & then
         assertThatThrownBy(() -> buzzThreadService.createThread(command(buzz, ThreadVisibility.PRIVATE)))

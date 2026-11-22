@@ -242,7 +242,8 @@ class BuzzThreadServiceTest {
         @DisplayName("다른 버즈의 스레드 ID로 조회하면 찾을 수 없다")
         void getThread_OtherBuzzThread_NotFound() {
             // given
-            BuzzThread otherBuzzThread = BuzzThread.create("other-buzz", starterId, ThreadVisibility.PUBLIC,
+            Buzz otherBuzz = Buzz.create(creatorId, "다른 본문", List.of(), Set.of(starterId), LocalDateTime.now());
+            BuzzThread otherBuzzThread = BuzzThread.create(otherBuzz, starterId, true, ThreadVisibility.PUBLIC,
                     "첫 글", List.of(), LocalDateTime.now());
             given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(otherBuzzThread));
 
@@ -314,9 +315,10 @@ class BuzzThreadServiceTest {
     void getThread_IncludesComments() {
         // given
         given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
-        given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(thread(ThreadVisibility.PRIVATE)));
-        BuzzComment mine = BuzzComment.write(10L, creatorId, "게시자 답글", List.of(), LocalDateTime.now());
-        BuzzComment starterReply = BuzzComment.write(10L, starterId, "시작자 답글", List.of(), LocalDateTime.now());
+        BuzzThread thread = thread(ThreadVisibility.PRIVATE);
+        given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(thread));
+        BuzzComment mine = BuzzComment.write(buzz, thread, creatorId, "게시자 답글", List.of(), LocalDateTime.now());
+        BuzzComment starterReply = BuzzComment.write(buzz, thread, starterId, "시작자 답글", List.of(), LocalDateTime.now());
         given(buzzCommentRepository.findAllByThreadId(10L)).willReturn(List.of(mine, starterReply));
         given(buzzSocialPort.getCreatorProfiles(anyList())).willReturn(List.of(
                 new BuzzCreatorInfo(creatorId, "게시자", null),
@@ -332,7 +334,7 @@ class BuzzThreadServiceTest {
     }
 
     private BuzzThread thread(ThreadVisibility visibility) {
-        BuzzThread thread = BuzzThread.create(buzz.getId(), starterId, visibility, "첫 글", List.of(), LocalDateTime.now());
+        BuzzThread thread = BuzzThread.create(buzz, starterId, true, visibility, "첫 글", List.of(), LocalDateTime.now());
         ReflectionTestUtils.setField(thread, "id", 10L);
         return thread;
     }

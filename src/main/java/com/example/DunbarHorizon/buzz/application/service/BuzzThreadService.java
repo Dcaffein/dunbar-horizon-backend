@@ -46,15 +46,14 @@ public class BuzzThreadService {
     private final ApplicationEventPublisher applicationEventPublisher;
 
     public Long createThread(CreateBuzzThreadCommand command) {
-        LocalDateTime now = LocalDateTime.now();
         Buzz buzz = buzzRepository.findByIdForShare(command.buzzId())
                 .orElseThrow(() -> new BuzzNotFoundException(command.buzzId()));
         Optional<BuzzAudienceMember> member =
                 buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), command.starterId());
-        buzz.validateThreadCreation(command.starterId(), member.isPresent(), now);
 
         BuzzThread thread = buzzThreadRepository.save(BuzzThread.create(
-                buzz.getId(), command.starterId(), command.visibility(), command.text(), command.imageKeys(), now));
+                buzz, command.starterId(), member.isPresent(), command.visibility(), command.text(),
+                command.imageKeys(), LocalDateTime.now()));
         member.ifPresent(BuzzAudienceMember::markAsRead);
 
         applicationEventPublisher.publishEvent(new BuzzThreadCreatedEvent(

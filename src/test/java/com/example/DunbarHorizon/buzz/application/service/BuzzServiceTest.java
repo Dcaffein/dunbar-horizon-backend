@@ -236,7 +236,7 @@ class BuzzServiceTest {
         }
 
         private BuzzThread thread(Long starterId, ThreadVisibility visibility, Long id) {
-            BuzzThread thread = BuzzThread.create(buzz.getId(), starterId, visibility, "첫 글", List.of(), LocalDateTime.now());
+            BuzzThread thread = BuzzThread.create(buzz, starterId, true, visibility, "첫 글", List.of(), LocalDateTime.now());
             org.springframework.test.util.ReflectionTestUtils.setField(thread, "id", id);
             return thread;
         }

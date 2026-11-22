@@ -33,12 +33,11 @@ public class BuzzCommentService {
     private final ApplicationEventPublisher applicationEventPublisher;
 
     public Long writeComment(WriteBuzzCommentCommand command) {
-        LocalDateTime now = LocalDateTime.now();
-        ThreadContext context = buzzThreadAccess.forWriting(
-                command.authorId(), command.buzzId(), command.threadId(), now);
+        ThreadContext context = buzzThreadAccess.forWriting(command.authorId(), command.buzzId(), command.threadId());
 
         BuzzComment comment = buzzCommentRepository.save(BuzzComment.write(
-                context.thread().getId(), command.authorId(), command.text(), command.imageKeys(), now));
+                context.buzz(), context.thread(), command.authorId(), command.text(), command.imageKeys(),
+                LocalDateTime.now()));
         context.member().ifPresent(BuzzAudienceMember::markAsRead);
 
         applicationEventPublisher.publishEvent(new BuzzCommentedEvent(

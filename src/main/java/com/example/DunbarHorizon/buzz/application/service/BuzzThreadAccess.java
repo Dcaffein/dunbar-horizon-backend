@@ -37,10 +37,9 @@ public class BuzzThreadAccess {
         return new ThreadContext(buzz, thread, member);
     }
 
-    public ThreadContext forWriting(Long writerId, String buzzId, Long threadId, LocalDateTime now) {
+    public ThreadContext forWriting(Long writerId, String buzzId, Long threadId) {
         Buzz buzz = buzzRepository.findByIdForShare(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
-        buzz.validateNotExpired(now);
         Optional<BuzzAudienceMember> member = memberOf(buzz, writerId);
         buzz.validateAccess(writerId, member.isPresent());
 
