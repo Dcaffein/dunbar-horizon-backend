@@ -251,16 +251,17 @@ class BuzzCommentConcurrencyTest {
         throw new AssertionError(action + "이 " + WAIT_SECONDS + "초 안에 끝나지도 잠금 대기에 들어가지도 않았습니다.");
     }
 
+    // PK 등치 DELETE는 잠금을 기다려도 innodb_trx에 LOCK WAIT로 드러나지 않을 때가 있다.
+    // 잠금 시스템의 대기 목록(data_lock_waits)을 먼저 보고, 실행 중인 잠금 조회·삭제 문장도 대기로 본다.
     private boolean isAnyTransactionWaitingForLock() {
-        Integer waiting = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM information_schema.innodb_trx WHERE trx_state = 'LOCK WAIT'",
-                Integer.class);
+        Integer lockWaits = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM performance_schema.data_lock_waits", Integer.class);
         Integer lockingQueries = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.processlist WHERE command = 'Query' "
                         + "AND id <> CONNECTION_ID() AND (info LIKE '%for update%' OR info LIKE '%for share%' "
-                        + "OR info LIKE '%delete from buzz_threads%')",
+                        + "OR info LIKE 'delete %')",
                 Integer.class);
-        return (waiting != null && waiting > 0) || (lockingQueries != null && lockingQueries > 0);
+        return (lockWaits != null && lockWaits > 0) || (lockingQueries != null && lockingQueries > 0);
     }
 
     private static void await(CountDownLatch latch, String action) {
