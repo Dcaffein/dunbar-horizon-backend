@@ -176,6 +176,26 @@ class BuzzPersistenceAdapterTest {
         assertThat(buzzAudienceMemberRepositoryAdapter.findUserIdsByBuzzId(other.getId())).containsExactly(recipientId);
     }
 
+    @Test
+    @DisplayName("고친 본문·이미지 키와 수정 시각이 저장된다")
+    void update_PersistsChangesAndEditedAt() {
+        // given
+        Buzz saved = saveBuzz(creatorId, NOW, recipientId);
+        Buzz loaded = buzzRepositoryAdapter.findById(saved.getId()).orElseThrow();
+
+        // when
+        loaded.update(creatorId, "고친 본문", List.of("buzz/b"), NOW.plusMinutes(10));
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        Buzz reloaded = buzzRepositoryAdapter.findById(saved.getId()).orElseThrow();
+        assertThat(reloaded.getText()).isEqualTo("고친 본문");
+        assertThat(reloaded.getImageKeys()).containsExactly("buzz/b");
+        assertThat(reloaded.getEditedAt()).isEqualTo(NOW.plusMinutes(10));
+        assertThat(reloaded.getCreatedAt()).isEqualTo(NOW);
+    }
+
     private void markAsRead(String buzzId, Long userId) {
         buzzAudienceMemberRepositoryAdapter.findByBuzzIdAndUserId(buzzId, userId).orElseThrow().markAsRead();
         entityManager.flush();

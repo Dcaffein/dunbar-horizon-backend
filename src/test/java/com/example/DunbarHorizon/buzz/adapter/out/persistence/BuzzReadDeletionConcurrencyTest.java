@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 
+import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
@@ -149,6 +151,32 @@ class BuzzReadDeletionConcurrencyTest {
             continueDeletion.countDown();
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    @DisplayName("수정이 버즈를 읽은 뒤 삭제가 커밋되면 수정은 동시 수정 실패로 끝나고 버즈를 되살리지 않는다")
+    void updateAfterDeletionCommitted_FailsWithoutResurrecting() {
+        // given
+        Buzz buzz = saveBuzz();
+        AtomicBoolean deleteOnce = new AtomicBoolean(true);
+        doAnswer(invocation -> {
+            Object loaded = invocation.callRealMethod();
+            if (deleteOnce.compareAndSet(true, false)) {
+                try (var otherConnection = Executors.newSingleThreadExecutor()) {
+                    otherConnection.submit(() -> jdbcTemplate.update("DELETE FROM buzzes WHERE id = ?", buzz.getId()))
+                            .get(WAIT_SECONDS, TimeUnit.SECONDS);
+                }
+            }
+            return loaded;
+        }).when(buzzRepositoryAdapter).findById(buzz.getId());
+
+        // when
+        Throwable failure = org.assertj.core.api.Assertions.catchThrowable(() -> buzzService.updateBuzz(
+                new UpdateBuzzCommand(creatorId, buzz.getId(), "고친 본문", List.of())));
+
+        // then
+        assertThat(failure).isInstanceOf(OptimisticLockingFailureException.class);
+        assertThat(countRows("buzzes", "id", buzz.getId())).isZero();
     }
 
     private Buzz saveBuzz() {

@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web;
 
+import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzProfileResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
@@ -23,7 +24,9 @@ import java.util.stream.LongStream;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -43,7 +46,7 @@ class BuzzControllerTest extends BaseControllerTest {
             BuzzDetailResult detail = new BuzzDetailResult(
                     "buzz-id",
                     new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
-                    "테스트 버즈", List.of(), 25L, false, true,
+                    "테스트 버즈", List.of(), LocalDateTime.of(2026, 11, 22, 12, 30), 25L, false, true,
                     List.of(),
                     List.of(new BuzzThreadSummaryResult(10L, new BuzzProfileResult(2L, "시작자", null),
                             ThreadVisibility.PRIVATE, LocalDateTime.of(2026, 11, 22, 12, 0)))
@@ -53,6 +56,7 @@ class BuzzControllerTest extends BaseControllerTest {
             mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.isCreator").value(true))
+                    .andExpect(jsonPath("$.editedAt").exists())
                     .andExpect(jsonPath("$.threads[0].threadId").value(10))
                     .andExpect(jsonPath("$.threads[0].visibility").value("PRIVATE"));
         }
@@ -64,7 +68,7 @@ class BuzzControllerTest extends BaseControllerTest {
             BuzzDetailResult detail = new BuzzDetailResult(
                     "buzz-id",
                     new BuzzProfileResult(2L, "작성자", null),
-                    "테스트 버즈", List.of(), 25L, true, false,
+                    "테스트 버즈", List.of(), null, 25L, true, false,
                     List.of(new BuzzProfileResult(CURRENT_USER_ID, "나", null)),
                     List.of()
             );
@@ -89,7 +93,7 @@ class BuzzControllerTest extends BaseControllerTest {
             BuzzSummaryResult summary = new BuzzSummaryResult(
                     "buzz-1",
                     new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
-                    "내가 보낸 버즈", List.of(), 10L, false, true
+                    "내가 보낸 버즈", List.of(), null, 10L, false, true
             );
             given(buzzService.getSentBuzzes(eq(CURRENT_USER_ID), any()))
                     .willReturn(new SliceImpl<>(List.of(summary), PageRequest.of(0, 20), false));
@@ -142,6 +146,40 @@ class BuzzControllerTest extends BaseControllerTest {
                     """.formatted(longText);
 
             mockMvc.perform(post("/api/v1/buzzes")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.validation.text").value(Buzz.TEXT_LENGTH_MESSAGE));
+        }
+    }
+
+    @Nested
+    @DisplayName("버즈 수정 요청")
+    class UpdateBuzz {
+
+        private static final Long CURRENT_USER_ID = 1L;
+
+        @Test
+        @WithMockCustomUser
+        @DisplayName("본문과 이미지 키를 받아 204를 반환한다")
+        void updateBuzz_Returns204() throws Exception {
+            mockMvc.perform(patch("/api/v1/buzzes/buzz-1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{ \"text\": \"고친 본문\", \"imageKeys\": [\"buzz/b\"] }"))
+                    .andExpect(status().isNoContent());
+
+            verify(buzzService).updateBuzz(new UpdateBuzzCommand(CURRENT_USER_ID, "buzz-1", "고친 본문", List.of("buzz/b")));
+        }
+
+        @Test
+        @WithMockCustomUser
+        @DisplayName("본문이 1000자를 넘으면 400과 validation.text를 반환한다")
+        void updateBuzz_TextOverLimit_Returns400() throws Exception {
+            String body = """
+                    { "text": "%s" }
+                    """.formatted("가".repeat(Buzz.TEXT_MAX_LENGTH + 1));
+
+            mockMvc.perform(patch("/api/v1/buzzes/buzz-1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest())
