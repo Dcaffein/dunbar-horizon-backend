@@ -69,8 +69,8 @@ class BuzzReadDeletionConcurrencyTest {
     }
 
     @Test
-    @DisplayName("멤버의 읽음 처리가 버즈를 공유 락으로 읽은 뒤 삭제가 들어오면 삭제가 읽음 처리 커밋을 기다렸다가 삭제 표시를 남기고 정리가 멤버를 지운다")
-    void markAsReadLocksBuzzFirst_DeletionWaitsThenPurgeRemovesMembers() throws InterruptedException {
+    @DisplayName("멤버의 버즈 읽기가 버즈를 공유 락으로 읽은 뒤 삭제가 들어오면 삭제가 읽기 커밋을 기다렸다가 삭제 표시를 남기고 정리가 멤버를 지운다")
+    void readLocksBuzzFirst_DeletionWaitsThenPurgeRemovesMembers() throws InterruptedException {
         // given
         Buzz buzz = saveBuzz();
         CountDownLatch buzzLocked = new CountDownLatch(1);
@@ -84,13 +84,13 @@ class BuzzReadDeletionConcurrencyTest {
             Object locked = invocation.callRealMethod();
             if (blockOnce.compareAndSet(true, false)) {
                 buzzLocked.countDown();
-                await(continueRead, "읽음 처리 재개");
+                await(continueRead, "읽기 재개");
             }
             return locked;
         }).when(buzzRepositoryAdapter).findByIdForShare(buzz.getId());
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        submit(executor, () -> buzzService.markAsRead(recipientId, buzz.getId()), readFailure, readFinished);
+        submit(executor, () -> buzzService.readBuzz(recipientId, buzz.getId()), readFailure, readFinished);
 
         try {
             // when
@@ -118,8 +118,8 @@ class BuzzReadDeletionConcurrencyTest {
     }
 
     @Test
-    @DisplayName("삭제가 버즈를 배타 락으로 먼저 읽으면 읽음 처리는 삭제 커밋을 기다렸다가 버즈를 찾지 못하고 읽음을 남기지 않는다")
-    void deletionLocksBuzzFirst_MarkAsReadFailsWithNotFound() throws InterruptedException {
+    @DisplayName("삭제가 버즈를 배타 락으로 먼저 읽으면 버즈 읽기는 삭제 커밋을 기다렸다가 버즈를 찾지 못하고 읽음을 남기지 않는다")
+    void deletionLocksBuzzFirst_ReadFailsWithNotFound() throws InterruptedException {
         // given
         Buzz buzz = saveBuzz();
         CountDownLatch buzzDeleted = new CountDownLatch(1);
@@ -144,7 +144,7 @@ class BuzzReadDeletionConcurrencyTest {
         try {
             // when
             assertThat(buzzDeleted.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-            submit(executor, () -> buzzService.markAsRead(recipientId, buzz.getId()), readFailure, readFinished);
+            submit(executor, () -> buzzService.readBuzz(recipientId, buzz.getId()), readFailure, readFinished);
             awaitFinishedOrLockWait(readFinished, "버즈 열람");
             continueDeletion.countDown();
             assertThat(deletionFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();

@@ -68,11 +68,11 @@ public class BuzzController {
         return ResponseEntity.ok(buzzQueryService.getBuzzDetail(currentUserId, buzzId));
     }
 
-    @PutMapping("/{buzzId}/read")
-    public ResponseEntity<Void> markAsRead(
+    @PutMapping("/{buzzId}/readers/me")
+    public ResponseEntity<Void> readBuzz(
             @CurrentUserId Long currentUserId,
             @PathVariable Long buzzId) {
-        buzzService.markAsRead(currentUserId, buzzId);
+        buzzService.readBuzz(currentUserId, buzzId);
         return ResponseEntity.noContent().build();
     }
 

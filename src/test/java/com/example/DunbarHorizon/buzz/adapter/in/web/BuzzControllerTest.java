@@ -156,12 +156,12 @@ class BuzzControllerTest extends BaseControllerTest {
 
     @Test
     @WithMockCustomUser
-    @DisplayName("PUT /api/v1/buzzes/{buzzId}/read 는 현재 사용자의 읽음을 처리하고 204를 반환한다")
-    void markAsRead_Returns204() throws Exception {
-        mockMvc.perform(put("/api/v1/buzzes/1/read"))
+    @DisplayName("PUT /api/v1/buzzes/{buzzId}/readers/me 는 현재 사용자가 버즈를 읽은 것으로 남기고 204를 반환한다")
+    void readBuzz_Returns204() throws Exception {
+        mockMvc.perform(put("/api/v1/buzzes/1/readers/me"))
                 .andExpect(status().isNoContent());
 
-        verify(buzzService).markAsRead(1L, 1L);
+        verify(buzzService).readBuzz(1L, 1L);
     }
 
     @Nested

@@ -73,7 +73,7 @@ class BuzzPersistenceAdapterTest {
         saveBuzz(creatorId, NOW.minusHours(6), recipientId);
         saveBuzz(otherCreatorId, NOW.minusHours(1), recipientId);
         saveBuzz(creatorId, NOW.minusHours(1), 3L);
-        markAsRead(older.getId(), recipientId);
+        readBuzz(older.getId(), recipientId);
 
         // when
         Slice<ReceivedBuzz> result = buzzQueryRepositoryAdapter.findReceived(
@@ -134,7 +134,7 @@ class BuzzPersistenceAdapterTest {
         // given
         saveBuzz(creatorId, NOW.minusHours(1), recipientId);
         Buzz read = saveBuzz(10L, NOW.minusHours(1), recipientId);
-        markAsRead(read.getId(), recipientId);
+        readBuzz(read.getId(), recipientId);
         saveBuzz(11L, NOW.minusHours(7), recipientId);
         saveBuzz(otherCreatorId, NOW.minusHours(1), recipientId);
 
@@ -147,13 +147,13 @@ class BuzzPersistenceAdapterTest {
     }
 
     @Test
-    @DisplayName("읽음 처리는 그 멤버의 행만 바꾼다")
-    void markAsRead_ChangesOnlyThatMember() {
+    @DisplayName("멤버가 읽으면 그 멤버의 행만 바뀐다")
+    void read_ChangesOnlyThatMember() {
         // given
         Buzz buzz = saveBuzz(creatorId, NOW, recipientId, 3L);
 
         // when
-        markAsRead(buzz.getId(), recipientId);
+        readBuzz(buzz.getId(), recipientId);
 
         // then
         assertThat(readStates(buzz.getId())).isEqualTo(java.util.Map.of(recipientId, true, 3L, false));
@@ -258,8 +258,8 @@ class BuzzPersistenceAdapterTest {
         return count == null ? 0 : count;
     }
 
-    private void markAsRead(Long buzzId, Long userId) {
-        buzzAudienceMemberRepositoryAdapter.findByBuzzIdAndUserId(buzzId, userId).orElseThrow().markAsRead();
+    private void readBuzz(Long buzzId, Long userId) {
+        buzzAudienceMemberRepositoryAdapter.findByBuzzIdAndUserId(buzzId, userId).orElseThrow().read();
         entityManager.flush();
         entityManager.clear();
     }
