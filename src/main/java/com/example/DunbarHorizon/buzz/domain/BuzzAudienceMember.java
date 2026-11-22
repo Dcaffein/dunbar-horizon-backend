@@ -4,16 +4,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
-import jakarta.persistence.PostLoad;
-import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.domain.Persistable;
 
 import java.io.Serializable;
 
@@ -22,7 +18,7 @@ import java.io.Serializable;
 @IdClass(BuzzAudienceMember.Key.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class BuzzAudienceMember implements Persistable<BuzzAudienceMember.Key> {
+public class BuzzAudienceMember {
 
     @Id
     @Column(length = 36)
@@ -34,14 +30,10 @@ public class BuzzAudienceMember implements Persistable<BuzzAudienceMember.Key> {
     @Column(nullable = false)
     private boolean isRead;
 
-    @Transient
-    private boolean isNew;
-
     private BuzzAudienceMember(String buzzId, Long userId) {
         this.buzzId = buzzId;
         this.userId = userId;
         this.isRead = false;
-        this.isNew = true;
     }
 
     public static BuzzAudienceMember create(String buzzId, Long userId) {
@@ -56,20 +48,8 @@ public class BuzzAudienceMember implements Persistable<BuzzAudienceMember.Key> {
         return !isRead;
     }
 
-    @Override
     public Key getId() {
         return new Key(buzzId, userId);
-    }
-
-    @Override
-    public boolean isNew() {
-        return isNew;
-    }
-
-    @PostPersist
-    @PostLoad
-    void markNotNew() {
-        this.isNew = false;
     }
 
     @NoArgsConstructor

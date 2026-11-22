@@ -14,7 +14,6 @@ class BuzzAudienceMemberTest {
         BuzzAudienceMember member = BuzzAudienceMember.create("buzz-1", 2L);
 
         assertThat(member.isUnread()).isTrue();
-        assertThat(member.isNew()).isTrue();
     }
 
     @Test

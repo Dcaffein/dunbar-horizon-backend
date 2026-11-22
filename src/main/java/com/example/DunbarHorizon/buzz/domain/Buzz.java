@@ -8,16 +8,12 @@ import com.example.DunbarHorizon.global.util.UuidUtil;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.PostLoad;
-import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import org.springframework.data.domain.Persistable;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -28,7 +24,7 @@ import java.util.List;
 @Table(name = "buzzes")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Buzz implements Persistable<String> {
+public class Buzz {
 
     public static final int TEXT_MAX_LENGTH = 1000;
     public static final String TEXT_LENGTH_MESSAGE = "본문은 1자 이상 1000자 이하로 입력해주세요.";
@@ -55,9 +51,6 @@ public class Buzz implements Persistable<String> {
     @Column(nullable = false, updatable = false)
     private LocalDateTime expiresAt;
 
-    @Transient
-    private boolean isNew;
-
     private Buzz(String id, Long creatorId, String text, List<String> imageKeys, LocalDateTime createdAt) {
         this.id = id;
         this.creatorId = creatorId;
@@ -65,7 +58,6 @@ public class Buzz implements Persistable<String> {
         this.imageKeys = imageKeys;
         this.createdAt = createdAt;
         this.expiresAt = createdAt.plus(LIFETIME);
-        this.isNew = true;
     }
 
     public static Buzz create(Long creatorId, String text, List<String> imageKeys,
@@ -115,16 +107,5 @@ public class Buzz implements Persistable<String> {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_CREATOR_ONLY,
                     ErrorContext.of("buzzId", id).and("userId", requesterId));
         }
-    }
-
-    @Override
-    public boolean isNew() {
-        return isNew;
-    }
-
-    @PostPersist
-    @PostLoad
-    void markNotNew() {
-        this.isNew = false;
     }
 }

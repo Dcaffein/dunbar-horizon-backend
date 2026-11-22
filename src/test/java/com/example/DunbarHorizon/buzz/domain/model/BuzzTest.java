@@ -84,7 +84,6 @@ class BuzzTest {
             assertThat(buzz.getCreatedAt()).isEqualTo(NOW);
             assertThat(buzz.getExpiresAt()).isEqualTo(NOW.plusHours(6));
             assertThat(buzz.getImageKeys()).containsExactly("buzz/a");
-            assertThat(buzz.isNew()).isTrue();
         }
 
         @Test
