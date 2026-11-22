@@ -28,6 +28,20 @@ public interface BuzzJpaRepository extends JpaRepository<Buzz, Long> {
     @Query("SELECT b FROM Buzz b WHERE b.id = :id AND b.deletedAt IS NULL")
     Optional<Buzz> findByIdAndDeletedAtIsNullForUpdate(@Param("id") Long id);
 
+    @Query("""
+            SELECT new com.example.DunbarHorizon.buzz.adapter.out.persistence.jpa.BuzzDetailRow(
+                b.id, b.creatorId, b.text, b.imageKeys, b.editedAt, b.expiresAt,
+                t.id, t.starterId, t.visibility, t.createdAt)
+            FROM Buzz b LEFT JOIN BuzzThread t ON t.buzzId = b.id
+            WHERE b.id = :id
+              AND b.expiresAt > :now
+              AND b.deletedAt IS NULL
+            ORDER BY t.createdAt ASC, t.id ASC
+            """)
+    List<BuzzDetailRow> findWithThreadsByIdAndExpiresAtAfterAndDeletedAtIsNull(
+            @Param("id") Long id,
+            @Param("now") LocalDateTime now);
+
     @Query("SELECT b.id FROM Buzz b WHERE b.expiresAt <= :now")
     List<Long> findIdsByExpiresAtAtOrBefore(@Param("now") LocalDateTime now);
 

@@ -49,11 +49,6 @@ public class BuzzThreadRepositoryAdapter implements BuzzThreadRepository {
     }
 
     @Override
-    public List<BuzzThread> findAllByBuzzId(Long buzzId) {
-        return buzzThreadJpaRepository.findAllByBuzzIdOrderByCreatedAtAscIdAsc(buzzId);
-    }
-
-    @Override
     public List<Long> findIdsByBuzzIds(Collection<Long> buzzIds) {
         return buzzThreadJpaRepository.findIdsByBuzzIdIn(buzzIds);
     }

@@ -14,7 +14,6 @@ import java.util.Optional;
 
 public interface BuzzThreadJpaRepository extends JpaRepository<BuzzThread, Long> {
 
-    List<BuzzThread> findAllByBuzzIdOrderByCreatedAtAscIdAsc(Long buzzId);
 
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("SELECT t FROM BuzzThread t WHERE t.id = :id")

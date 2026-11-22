@@ -5,7 +5,6 @@ import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyExistsException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +24,6 @@ class BuzzThreadPersistenceAdapterTest {
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 11, 22, 12, 0);
 
     @Autowired private BuzzThreadRepositoryAdapter buzzThreadRepositoryAdapter;
-    @Autowired private EntityManager entityManager;
 
     private final Buzz firstBuzz = withId(Buzz.create(1L, "본문", List.of(), Set.of(2L, 3L), NOW), 900_001L);
     private final Buzz secondBuzz = withId(Buzz.create(1L, "본문", List.of(), Set.of(2L, 3L), NOW), 900_002L);
@@ -43,7 +41,7 @@ class BuzzThreadPersistenceAdapterTest {
         create(firstBuzz, 2L, ThreadVisibility.PRIVATE, NOW);
 
         // then
-        assertThat(buzzThreadRepositoryAdapter.findAllByBuzzId(firstBuzz.getId())).hasSize(2);
+        assertThat(buzzThreadRepositoryAdapter.findIdsByBuzzIds(List.of(firstBuzz.getId()))).hasSize(2);
     }
 
     @Test
@@ -55,22 +53,6 @@ class BuzzThreadPersistenceAdapterTest {
         // when & then
         assertThatThrownBy(() -> create(firstBuzz, 2L, ThreadVisibility.PUBLIC, NOW))
                 .isInstanceOf(BuzzThreadAlreadyExistsException.class);
-    }
-
-    @Test
-    @DisplayName("버즈의 스레드는 생성한 순서대로 조회되고 다른 버즈의 스레드는 섞이지 않는다")
-    void findAllByBuzzId_OrderedByCreatedAt() {
-        // given
-        BuzzThread later = create(firstBuzz, 3L, ThreadVisibility.PUBLIC, NOW.plusMinutes(5));
-        BuzzThread earlier = create(firstBuzz, 2L, ThreadVisibility.PUBLIC, NOW);
-        create(secondBuzz, 2L, ThreadVisibility.PUBLIC, NOW);
-        entityManager.clear();
-
-        // when
-        List<BuzzThread> threads = buzzThreadRepositoryAdapter.findAllByBuzzId(firstBuzz.getId());
-
-        // then
-        assertThat(threads).extracting(BuzzThread::getId).containsExactly(earlier.getId(), later.getId());
     }
 
     @Test
@@ -86,10 +68,8 @@ class BuzzThreadPersistenceAdapterTest {
 
         // then
         assertThat(threadIds).containsExactly(target.getId());
-
-        // then
-        assertThat(buzzThreadRepositoryAdapter.findAllByBuzzId(firstBuzz.getId())).isEmpty();
-        assertThat(buzzThreadRepositoryAdapter.findAllByBuzzId(secondBuzz.getId())).hasSize(1);
+        assertThat(buzzThreadRepositoryAdapter.findIdsByBuzzIds(List.of(firstBuzz.getId()))).isEmpty();
+        assertThat(buzzThreadRepositoryAdapter.findIdsByBuzzIds(List.of(secondBuzz.getId()))).hasSize(1);
     }
 
     private static Buzz withId(Buzz buzz, long id) {

@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.buzz.adapter.out.persistence.jpa;
 
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzAudienceInfo;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -16,6 +17,14 @@ public interface BuzzAudienceMemberJpaRepository extends JpaRepository<BuzzAudie
 
     @Query("SELECT m.userId FROM BuzzAudienceMember m WHERE m.buzzId = :buzzId ORDER BY m.userId")
     List<Long> findUserIdsByBuzzId(@Param("buzzId") Long buzzId);
+
+    @Query("""
+            SELECT new com.example.DunbarHorizon.buzz.application.dto.info.BuzzAudienceInfo(m.userId, m.isRead)
+            FROM BuzzAudienceMember m
+            WHERE m.buzzId = :buzzId
+            ORDER BY m.userId
+            """)
+    List<BuzzAudienceInfo> findAllByBuzzId(@Param("buzzId") Long buzzId);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM BuzzAudienceMember m WHERE m.buzzId IN :buzzIds")
