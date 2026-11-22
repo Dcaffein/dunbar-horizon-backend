@@ -10,4 +10,6 @@ public interface BuzzSocialPort {
     List<BuzzCreatorInfo> getCreatorProfiles(List<Long> userIds);
     Set<Long> getNonReceivableFriendIds(Long memberId);
     Set<Long> getFriendIdsIn(Long userId, Collection<Long> targetIds);
+    Set<Long> getLabelMemberIds(Long ownerId, List<String> labelIds);
+    Set<Long> getAnchorExpansionIds(Long userId, Long anchorFriendId, Double expansionValue);
 }

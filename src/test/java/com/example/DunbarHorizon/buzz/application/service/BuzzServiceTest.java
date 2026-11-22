@@ -4,14 +4,14 @@ import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.ReceivedBuzz;
-import com.example.DunbarHorizon.buzz.application.dto.info.RecipientType;
+import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.ManualRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzQueryRepository;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
-import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
@@ -56,7 +56,6 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class BuzzServiceTest {
 
-    @Mock private RecipientStrategyProvider recipientStrategyProvider;
     @Mock private BuzzRepository buzzRepository;
     @Mock private BuzzAudienceMemberRepository buzzAudienceMemberRepository;
     @Mock private BuzzThreadRepository buzzThreadRepository;
@@ -65,7 +64,6 @@ class BuzzServiceTest {
     @Mock private BuzzSocialPort buzzSocialPort;
     @Mock private ImageStoragePort imageStoragePort;
     @Mock private ApplicationEventPublisher applicationEventPublisher;
-    @Mock private RecipientStrategyPort recipientStrategyPort;
 
     private BuzzService buzzService;
 
@@ -75,7 +73,7 @@ class BuzzServiceTest {
 
     @BeforeEach
     void setUp() {
-        buzzService = new BuzzService(recipientStrategyProvider, buzzRepository, buzzAudienceMemberRepository,
+        buzzService = new BuzzService(buzzRepository, buzzAudienceMemberRepository,
                 buzzThreadRepository, buzzCommentRepository, buzzQueryRepository, buzzSocialPort, new BuzzProfileAssembler(buzzSocialPort),
                 imageStoragePort, applicationEventPublisher);
     }
@@ -90,8 +88,7 @@ class BuzzServiceTest {
 
         @BeforeEach
         void setUp() {
-            given(recipientStrategyProvider.getStrategy(RecipientType.MANUAL)).willReturn(recipientStrategyPort);
-            given(recipientStrategyPort.fetchRecipientIds(eq(creatorId), any())).willReturn(Set.of(recipientId, 3L));
+            given(buzzSocialPort.getFriendIdsIn(creatorId, List.of(recipientId, 3L))).willReturn(Set.of(recipientId, 3L));
         }
 
         @Test
@@ -130,6 +127,58 @@ class BuzzServiceTest {
 
         private CreateBuzzCommand command() {
             return new CreateBuzzCommand(creatorId, "텍스트", new ManualRecipientSpec(List.of(recipientId, 3L)));
+        }
+    }
+
+    @Nested
+    @DisplayName("공개 대상 지정")
+    class AudienceSpec {
+
+        @Test
+        @DisplayName("직접 지정하면 게시자 본인을 빼고 게시자의 친구만 공개 대상이 된다")
+        void createBuzz_Manual_ExcludesCreatorAndNonFriends() {
+            // given
+            given(buzzSocialPort.getFriendIdsIn(creatorId, List.of(recipientId, 5L))).willReturn(Set.of(recipientId));
+
+            // when
+            buzzService.createBuzz(new CreateBuzzCommand(creatorId, "텍스트",
+                    new ManualRecipientSpec(List.of(creatorId, recipientId, 5L))), List.of());
+
+            // then
+            verify(applicationEventPublisher).publishEvent(any(BuzzCreatedEvent.class));
+            verify(buzzSocialPort).getFriendIdsIn(creatorId, List.of(recipientId, 5L));
+        }
+
+        @Test
+        @DisplayName("라벨로 지정하면 게시자 라벨의 멤버가 공개 대상이 된다")
+        void createBuzz_Label_UsesLabelMembers() {
+            // given
+            given(buzzSocialPort.getLabelMemberIds(creatorId, List.of("label-1"))).willReturn(Set.of(recipientId));
+
+            // when
+            buzzService.createBuzz(new CreateBuzzCommand(creatorId, "텍스트",
+                    new LabelRecipientSpec(List.of("label-1"))), List.of());
+
+            // then
+            ArgumentCaptor<BuzzCreatedEvent> eventCaptor = ArgumentCaptor.forClass(BuzzCreatedEvent.class);
+            verify(applicationEventPublisher).publishEvent(eventCaptor.capture());
+            assertThat(eventCaptor.getValue().recipientIds()).containsExactly(recipientId);
+        }
+
+        @Test
+        @DisplayName("앵커로 지정하면 앵커 친구를 통한 확장 결과가 공개 대상이 된다")
+        void createBuzz_Anchor_UsesExpansion() {
+            // given
+            given(buzzSocialPort.getAnchorExpansionIds(creatorId, 7L, 0.5)).willReturn(Set.of(recipientId, 8L));
+
+            // when
+            buzzService.createBuzz(new CreateBuzzCommand(creatorId, "텍스트",
+                    new AnchorRecipientSpec(7L, 0.5)), List.of());
+
+            // then
+            ArgumentCaptor<BuzzCreatedEvent> eventCaptor = ArgumentCaptor.forClass(BuzzCreatedEvent.class);
+            verify(applicationEventPublisher).publishEvent(eventCaptor.capture());
+            assertThat(eventCaptor.getValue().recipientIds()).containsExactlyInAnyOrder(recipientId, 8L);
         }
     }
 

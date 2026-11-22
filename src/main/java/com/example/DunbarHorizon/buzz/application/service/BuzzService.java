@@ -3,13 +3,16 @@ package com.example.DunbarHorizon.buzz.application.service;
 import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.info.ReceivedBuzz;
+import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.info.recipient.ManualRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.info.recipient.RecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzThreadSummaryResult;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzQueryRepository;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
-import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
 import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler.Profiles;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
@@ -39,7 +42,6 @@ import java.util.stream.Collectors;
 @Transactional
 public class BuzzService {
 
-    private final RecipientStrategyProvider recipientStrategyProvider;
     private final BuzzRepository buzzRepository;
     private final BuzzAudienceMemberRepository buzzAudienceMemberRepository;
     private final BuzzThreadRepository buzzThreadRepository;
@@ -51,8 +53,7 @@ public class BuzzService {
     private final ApplicationEventPublisher applicationEventPublisher;
 
     public void createBuzz(CreateBuzzCommand command, List<String> imageKeys) {
-        RecipientStrategyPort strategy = recipientStrategyProvider.getStrategy(command.spec().getType());
-        Set<Long> audienceIds = strategy.fetchRecipientIds(command.creatorId(), command.spec());
+        Set<Long> audienceIds = audienceIdsOf(command.creatorId(), command.spec());
 
         Buzz buzz = Buzz.create(command.creatorId(), command.text(), imageKeys, audienceIds, LocalDateTime.now());
         buzzRepository.save(buzz);
@@ -164,6 +165,16 @@ public class BuzzService {
     public List<Long> getUnreadSenderIds(Long userId) {
         Set<Long> excludedCreatorIds = buzzSocialPort.getNonReceivableFriendIds(userId);
         return buzzQueryRepository.findUnexpiredUnreadCreatorIds(userId, excludedCreatorIds, LocalDateTime.now());
+    }
+
+    private Set<Long> audienceIdsOf(Long creatorId, RecipientSpec spec) {
+        return switch (spec) {
+            case ManualRecipientSpec(List<Long> memberIds) -> buzzSocialPort.getFriendIdsIn(creatorId,
+                    memberIds.stream().filter(memberId -> !memberId.equals(creatorId)).toList());
+            case LabelRecipientSpec(List<String> labelIds) -> buzzSocialPort.getLabelMemberIds(creatorId, labelIds);
+            case AnchorRecipientSpec(Long anchorFriendId, Double expansionValue) ->
+                    buzzSocialPort.getAnchorExpansionIds(creatorId, anchorFriendId, expansionValue);
+        };
     }
 
     private List<BuzzThread> accessibleThreads(Buzz buzz, Long userId) {
