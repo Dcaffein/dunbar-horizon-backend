@@ -92,15 +92,15 @@ public class BuzzThread {
         return visibility == ThreadVisibility.PUBLIC;
     }
 
-    public boolean isAccessibleBy(Long viewerId, Long buzzCreatorId, boolean isFriendOfStarter) {
-        if (isStarter(viewerId) || buzzCreatorId.equals(viewerId)) {
+    public boolean isAccessibleBy(Long viewerId, Buzz buzz, boolean isFriendOfStarter) {
+        if (isStarter(viewerId) || buzz.isCreator(viewerId)) {
             return true;
         }
         return isPublic() && isFriendOfStarter;
     }
 
-    public boolean needsFriendshipToAccess(Long viewerId, Long buzzCreatorId) {
-        return isPublic() && !isStarter(viewerId) && !buzzCreatorId.equals(viewerId);
+    public boolean needsFriendshipToAccess(Long viewerId, Buzz buzz) {
+        return isPublic() && !isStarter(viewerId) && !buzz.isCreator(viewerId);
     }
 
     public void update(Long requesterId, String text, List<String> imageKeys) {
@@ -113,15 +113,15 @@ public class BuzzThread {
         this.imageKeys = copyOf(imageKeys);
     }
 
-    public void validateDeletion(Long requesterId, Long buzzCreatorId) {
-        if (!isStarter(requesterId) && !buzzCreatorId.equals(requesterId)) {
+    public void validateDeletion(Long requesterId, Buzz buzz) {
+        if (!isStarter(requesterId) && !buzz.isCreator(requesterId)) {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_THREAD_DELETION_DENIED,
                     ErrorContext.of("threadId", id).and("userId", requesterId));
         }
     }
 
-    public void validateAccess(Long viewerId, Long buzzCreatorId, boolean isFriendOfStarter) {
-        if (!isAccessibleBy(viewerId, buzzCreatorId, isFriendOfStarter)) {
+    public void validateAccess(Long viewerId, Buzz buzz, boolean isFriendOfStarter) {
+        if (!isAccessibleBy(viewerId, buzz, isFriendOfStarter)) {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_THREAD_ACCESS_DENIED,
                     ErrorContext.of("threadId", id).and("userId", viewerId));
         }

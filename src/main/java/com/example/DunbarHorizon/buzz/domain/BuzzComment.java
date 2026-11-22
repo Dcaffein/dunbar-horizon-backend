@@ -79,8 +79,8 @@ public class BuzzComment {
         this.imageKeys = copyOf(imageKeys);
     }
 
-    public void validateDeletion(Long requesterId, Long buzzCreatorId) {
-        if (!isAuthor(requesterId) && !buzzCreatorId.equals(requesterId)) {
+    public void validateDeletion(Long requesterId, Buzz buzz) {
+        if (!isAuthor(requesterId) && !buzz.isCreator(requesterId)) {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_COMMENT_DELETION_DENIED,
                     ErrorContext.of("commentId", id).and("userId", requesterId));
         }

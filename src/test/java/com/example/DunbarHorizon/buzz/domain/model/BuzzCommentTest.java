@@ -88,9 +88,9 @@ class BuzzCommentTest {
     void validateDeletion() {
         BuzzComment comment = comment();
 
-        comment.validateDeletion(authorId, creatorId);
-        comment.validateDeletion(creatorId, creatorId);
-        assertThatThrownBy(() -> comment.validateDeletion(otherId, creatorId))
+        comment.validateDeletion(authorId, buzz);
+        comment.validateDeletion(creatorId, buzz);
+        assertThatThrownBy(() -> comment.validateDeletion(otherId, buzz))
                 .isInstanceOf(BuzzAccessDeniedException.class);
     }
 }

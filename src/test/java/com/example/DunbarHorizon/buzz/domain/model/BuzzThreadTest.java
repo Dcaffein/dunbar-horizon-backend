@@ -127,9 +127,9 @@ class BuzzThreadTest {
         void validateDeletion() {
             BuzzThread thread = thread(ThreadVisibility.PUBLIC);
 
-            thread.validateDeletion(starterId, creatorId);
-            thread.validateDeletion(creatorId, creatorId);
-            assertThatThrownBy(() -> thread.validateDeletion(otherMemberId, creatorId))
+            thread.validateDeletion(starterId, buzz);
+            thread.validateDeletion(creatorId, buzz);
+            assertThatThrownBy(() -> thread.validateDeletion(otherMemberId, buzz))
                     .isInstanceOf(BuzzAccessDeniedException.class);
         }
     }
@@ -143,30 +143,30 @@ class BuzzThreadTest {
         @Test
         @DisplayName("시작자와 게시자는 친구 관계와 관계없이 접근한다")
         void starterAndCreator_Access() {
-            assertThat(thread.isAccessibleBy(starterId, creatorId, false)).isTrue();
-            assertThat(thread.isAccessibleBy(creatorId, creatorId, false)).isTrue();
+            assertThat(thread.isAccessibleBy(starterId, buzz, false)).isTrue();
+            assertThat(thread.isAccessibleBy(creatorId, buzz, false)).isTrue();
         }
 
         @Test
         @DisplayName("시작자의 친구인 다른 멤버는 접근한다")
         void friendOfStarter_Access() {
-            assertThat(thread.isAccessibleBy(otherMemberId, creatorId, true)).isTrue();
+            assertThat(thread.isAccessibleBy(otherMemberId, buzz, true)).isTrue();
         }
 
         @Test
         @DisplayName("시작자의 친구가 아닌 다른 멤버는 접근이 거절된다")
         void nonFriend_Denied() {
-            assertThat(thread.isAccessibleBy(otherMemberId, creatorId, false)).isFalse();
-            assertThatThrownBy(() -> thread.validateAccess(otherMemberId, creatorId, false))
+            assertThat(thread.isAccessibleBy(otherMemberId, buzz, false)).isFalse();
+            assertThatThrownBy(() -> thread.validateAccess(otherMemberId, buzz, false))
                     .isInstanceOf(BuzzAccessDeniedException.class);
         }
 
         @Test
         @DisplayName("시작자·게시자가 아닌 사람만 친구 관계 확인이 필요하다")
         void needsFriendship_OnlyForOthers() {
-            assertThat(thread.needsFriendshipToAccess(otherMemberId, creatorId)).isTrue();
-            assertThat(thread.needsFriendshipToAccess(starterId, creatorId)).isFalse();
-            assertThat(thread.needsFriendshipToAccess(creatorId, creatorId)).isFalse();
+            assertThat(thread.needsFriendshipToAccess(otherMemberId, buzz)).isTrue();
+            assertThat(thread.needsFriendshipToAccess(starterId, buzz)).isFalse();
+            assertThat(thread.needsFriendshipToAccess(creatorId, buzz)).isFalse();
         }
     }
 
@@ -179,20 +179,20 @@ class BuzzThreadTest {
         @Test
         @DisplayName("시작자와 게시자만 접근한다")
         void onlyStarterAndCreator() {
-            assertThat(thread.isAccessibleBy(starterId, creatorId, false)).isTrue();
-            assertThat(thread.isAccessibleBy(creatorId, creatorId, false)).isTrue();
+            assertThat(thread.isAccessibleBy(starterId, buzz, false)).isTrue();
+            assertThat(thread.isAccessibleBy(creatorId, buzz, false)).isTrue();
         }
 
         @Test
         @DisplayName("시작자의 친구인 멤버도 접근이 거절된다")
         void friendOfStarter_Denied() {
-            assertThat(thread.isAccessibleBy(otherMemberId, creatorId, true)).isFalse();
+            assertThat(thread.isAccessibleBy(otherMemberId, buzz, true)).isFalse();
         }
 
         @Test
         @DisplayName("친구 관계 확인이 필요하지 않다")
         void needsFriendship_Never() {
-            assertThat(thread.needsFriendshipToAccess(otherMemberId, creatorId)).isFalse();
+            assertThat(thread.needsFriendshipToAccess(otherMemberId, buzz)).isFalse();
         }
     }
 }
