@@ -2,23 +2,17 @@ package com.example.DunbarHorizon.buzz.application.service;
 
 import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.ManualRecipientSpec;
-import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
-import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
-import com.example.DunbarHorizon.buzz.domain.BuzzThread;
-import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -38,7 +32,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -48,9 +41,7 @@ class BuzzServiceTest {
 
     @Mock private BuzzRepository buzzRepository;
     @Mock private BuzzAudienceMemberRepository buzzAudienceMemberRepository;
-    @Mock private BuzzThreadRepository buzzThreadRepository;
     @Mock private BuzzSocialPort buzzSocialPort;
-    @Mock private ImageStoragePort imageStoragePort;
     @Mock private ApplicationEventPublisher applicationEventPublisher;
 
     private BuzzService buzzService;
@@ -61,9 +52,8 @@ class BuzzServiceTest {
 
     @BeforeEach
     void setUp() {
-        buzzService = new BuzzService(buzzRepository, buzzAudienceMemberRepository,
-                buzzThreadRepository, buzzSocialPort, new BuzzProfileAssembler(buzzSocialPort),
-                imageStoragePort, applicationEventPublisher);
+        buzzService = new BuzzService(buzzRepository, buzzAudienceMemberRepository, buzzSocialPort,
+                applicationEventPublisher);
     }
 
     private Buzz buzz(List<String> imageKeys) {
@@ -89,7 +79,6 @@ class BuzzServiceTest {
             ArgumentCaptor<Buzz> buzzCaptor = ArgumentCaptor.forClass(Buzz.class);
             verify(buzzRepository).save(buzzCaptor.capture());
             assertThat(buzzCaptor.getValue().getImageKeys()).containsExactly("buzz/photo");
-            verify(imageStoragePort, never()).resolveUrls(anyList());
         }
 
         @Test
@@ -171,123 +160,59 @@ class BuzzServiceTest {
     }
 
     @Nested
-    @DisplayName("버즈 상세 조회")
-    class GetBuzzDetail {
+    @DisplayName("읽음 처리")
+    class MarkAsRead {
 
         private Buzz buzz;
 
         @BeforeEach
         void setUp() {
-            buzz = buzz(List.of("buzz/photo"));
+            buzz = buzz(List.of());
             given(buzzRepository.findByIdForShare(buzz.getId())).willReturn(Optional.of(buzz));
         }
 
         @Test
-        @DisplayName("미읽음 멤버가 열람하면 미읽음으로 응답하고 그 멤버를 읽음으로 바꾼다")
-        void getBuzzDetail_UnreadMember_MarksAsRead() {
+        @DisplayName("공개 대상 멤버가 읽음 처리하면 그 멤버가 읽음으로 바뀐다")
+        void markAsRead_Member_MarksRead() {
             // given
             BuzzAudienceMember member = BuzzAudienceMember.create(buzz.getId(), recipientId);
             given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), recipientId))
                     .willReturn(Optional.of(member));
-            given(buzzAudienceMemberRepository.findUserIdsByBuzzId(buzz.getId())).willReturn(List.of(recipientId));
-            given(buzzSocialPort.getCreatorProfiles(anyList())).willReturn(List.of(
-                    new BuzzCreatorInfo(creatorId, "작성자", "signed-creator"),
-                    new BuzzCreatorInfo(recipientId, "수신자", "signed-recipient")));
 
             // when
-            BuzzDetailResult result = buzzService.getBuzzDetail(recipientId, buzz.getId());
+            buzzService.markAsRead(recipientId, buzz.getId());
 
             // then
-            assertThat(result.isUnread()).isTrue();
-            assertThat(result.isCreator()).isFalse();
             assertThat(member.isUnread()).isFalse();
-            assertThat(result.author().profileImageUrl()).isEqualTo("signed-creator");
-            assertThat(result.recipients()).extracting("userId").containsExactly(recipientId);
         }
 
         @Test
-        @DisplayName("응답을 만들 때 저장된 이미지 키를 서명한다")
-        void getBuzzDetail_ResolvesImageKeysAtResponse() {
-            // given
-            given(buzzAudienceMemberRepository.findUserIdsByBuzzId(buzz.getId())).willReturn(List.of(recipientId));
-            given(imageStoragePort.resolveUrls(List.of("buzz/photo"))).willReturn(List.of("signed-photo"));
-
+        @DisplayName("게시자가 읽음 처리하면 멤버를 찾지 않고 아무것도 바꾸지 않는다")
+        void markAsRead_Creator_NoOp() {
             // when
-            BuzzDetailResult result = buzzService.getBuzzDetail(creatorId, buzz.getId());
+            buzzService.markAsRead(creatorId, buzz.getId());
 
             // then
-            assertThat(result.imageUrls()).containsExactly("signed-photo");
-            assertThat(result.isCreator()).isTrue();
-            assertThat(result.isUnread()).isFalse();
             verify(buzzAudienceMemberRepository, never()).findByBuzzIdAndUserId(any(), any());
         }
 
         @Test
-        @DisplayName("게시자도 공개 대상 멤버도 아니면 접근이 거절된다")
-        void getBuzzDetail_Stranger_Denied() {
+        @DisplayName("게시자도 공개 대상 멤버도 아니면 읽음 처리가 거절된다")
+        void markAsRead_Stranger_Denied() {
             given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), strangerId))
                     .willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> buzzService.getBuzzDetail(strangerId, buzz.getId()))
+            assertThatThrownBy(() -> buzzService.markAsRead(strangerId, buzz.getId()))
                     .isInstanceOf(BuzzAccessDeniedException.class);
-        }
-
-        @Test
-        @DisplayName("상세에는 열람자가 접근할 수 있는 스레드만 시작자와 함께 담긴다")
-        void getBuzzDetail_ListsOnlyAccessibleThreads() {
-            // given
-            Long friendStarterId = 3L;
-            Long strangerStarterId = 4L;
-            BuzzThread own = thread(recipientId, ThreadVisibility.PRIVATE, 1L);
-            BuzzThread friendPublic = thread(friendStarterId, ThreadVisibility.PUBLIC, 2L);
-            BuzzThread friendPrivate = thread(friendStarterId, ThreadVisibility.PRIVATE, 3L);
-            BuzzThread strangerPublic = thread(strangerStarterId, ThreadVisibility.PUBLIC, 4L);
-            given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), recipientId))
-                    .willReturn(Optional.of(BuzzAudienceMember.create(buzz.getId(), recipientId)));
-            given(buzzThreadRepository.findAllByBuzzId(buzz.getId()))
-                    .willReturn(List.of(own, friendPublic, friendPrivate, strangerPublic));
-            given(buzzSocialPort.getFriendIdsIn(recipientId, Set.of(friendStarterId, strangerStarterId)))
-                    .willReturn(Set.of(friendStarterId));
-
-            // when
-            BuzzDetailResult result = buzzService.getBuzzDetail(recipientId, buzz.getId());
-
-            // then
-            assertThat(result.threads()).extracting("threadId").containsExactly(1L, 2L);
-        }
-
-        @Test
-        @DisplayName("게시자는 친구 관계 확인 없이 모든 스레드를 본다")
-        void getBuzzDetail_CreatorSeesAllThreads() {
-            // given
-            given(buzzThreadRepository.findAllByBuzzId(buzz.getId())).willReturn(List.of(
-                    thread(recipientId, ThreadVisibility.PUBLIC, 1L),
-                    thread(recipientId, ThreadVisibility.PRIVATE, 2L)));
-
-            // when
-            BuzzDetailResult result = buzzService.getBuzzDetail(creatorId, buzz.getId());
-
-            // then
-            assertThat(result.threads()).extracting("threadId").containsExactly(1L, 2L);
-            verify(buzzSocialPort, never()).getFriendIdsIn(any(), any());
-        }
-
-        private BuzzThread thread(Long starterId, ThreadVisibility visibility, Long id) {
-            BuzzThread thread = BuzzThread.create(buzz, starterId, true, visibility, "첫 글", List.of(), LocalDateTime.now());
-            org.springframework.test.util.ReflectionTestUtils.setField(thread, "id", id);
-            return thread;
         }
     }
 
     @Test
-    @DisplayName("만료된 버즈는 상세 조회에서 찾을 수 없다")
-    void getBuzzDetail_Expired_NotFound() {
-        // given
-        Buzz expired = withId(Buzz.create(creatorId, "본문", List.of(), Set.of(recipientId), LocalDateTime.now().minusHours(7)), 2L);
-        given(buzzRepository.findByIdForShare(expired.getId())).willReturn(Optional.of(expired));
+    @DisplayName("없거나 삭제된 버즈는 읽음 처리할 수 없다")
+    void markAsRead_Missing_NotFound() {
+        given(buzzRepository.findByIdForShare(999L)).willReturn(Optional.empty());
 
-        // when & then
-        assertThatThrownBy(() -> buzzService.getBuzzDetail(creatorId, expired.getId()))
+        assertThatThrownBy(() -> buzzService.markAsRead(recipientId, 999L))
                 .isInstanceOf(BuzzNotFoundException.class);
     }
 
@@ -296,21 +221,19 @@ class BuzzServiceTest {
     class UpdateBuzz {
 
         @Test
-        @DisplayName("게시자가 수정하면 본문·이미지 키가 바뀌고 상세 응답에 수정 시각이 담긴다")
+        @DisplayName("게시자가 수정하면 본문·이미지 키가 바뀌고 수정 시각이 남는다")
         void updateBuzz_ByCreator_ShowsEditedAt() {
             // given
             Buzz buzz = buzz(List.of("buzz/a"));
             given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
-            given(buzzRepository.findByIdForShare(buzz.getId())).willReturn(Optional.of(buzz));
 
             // when
             buzzService.updateBuzz(new UpdateBuzzCommand(creatorId, buzz.getId(), "고친 본문", List.of("buzz/b")));
-            BuzzDetailResult result = buzzService.getBuzzDetail(creatorId, buzz.getId());
 
             // then
             assertThat(buzz.getText()).isEqualTo("고친 본문");
             assertThat(buzz.getImageKeys()).containsExactly("buzz/b");
-            assertThat(result.editedAt()).isNotNull();
+            assertThat(buzz.getEditedAt()).isNotNull();
         }
 
         @Test
@@ -356,7 +279,6 @@ class BuzzServiceTest {
             assertThat(buzz.getDeletedAt()).isNotNull();
             verify(buzzRepository, never()).deleteAllByIds(any());
             verify(buzzAudienceMemberRepository, never()).deleteAllByBuzzIds(any());
-            verify(buzzThreadRepository, never()).deleteAllByBuzzIds(any());
         }
 
         @Test

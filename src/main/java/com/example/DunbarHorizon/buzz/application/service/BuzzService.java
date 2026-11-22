@@ -6,30 +6,22 @@ import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecip
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.ManualRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.RecipientSpec;
-import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
-import com.example.DunbarHorizon.buzz.application.dto.result.BuzzThreadSummaryResult;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
-import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
-import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler.Profiles;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
-import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,10 +30,7 @@ public class BuzzService {
 
     private final BuzzRepository buzzRepository;
     private final BuzzAudienceMemberRepository buzzAudienceMemberRepository;
-    private final BuzzThreadRepository buzzThreadRepository;
     private final BuzzSocialPort buzzSocialPort;
-    private final BuzzProfileAssembler buzzProfileAssembler;
-    private final ImageStoragePort imageStoragePort;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     public void createBuzz(CreateBuzzCommand command, List<String> imageKeys) {
@@ -62,44 +51,21 @@ public class BuzzService {
         buzz.update(command.requesterId(), command.text(), command.imageKeys(), LocalDateTime.now());
     }
 
-    public void deleteBuzz(Long requesterId, Long buzzId) {
-        Buzz buzz = buzzRepository.findByIdForUpdate(buzzId)
-                .orElseThrow(() -> new BuzzNotFoundException(buzzId));
-        buzz.delete(requesterId, LocalDateTime.now());
-    }
-
-    public BuzzDetailResult getBuzzDetail(Long userId, Long buzzId) {
-        LocalDateTime now = LocalDateTime.now();
+    public void markAsRead(Long userId, Long buzzId) {
         Buzz buzz = buzzRepository.findByIdForShare(buzzId)
-                .filter(found -> !found.isExpired(now))
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
-
         Optional<BuzzAudienceMember> member = buzz.isCreator(userId)
                 ? Optional.empty()
                 : buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzzId, userId);
         buzz.validateAccess(userId, member.isPresent());
 
-        boolean isUnread = member.map(BuzzAudienceMember::isUnread).orElse(false);
         member.ifPresent(BuzzAudienceMember::markAsRead);
+    }
 
-        List<Long> audienceIds = buzzAudienceMemberRepository.findUserIdsByBuzzId(buzzId);
-        List<BuzzThread> threads = accessibleThreads(buzz, userId);
-
-        List<Long> profileIds = new ArrayList<>(audienceIds);
-        profileIds.add(buzz.getCreatorId());
-        Profiles profiles = buzzProfileAssembler.profilesOf(profileIds);
-
-        return BuzzDetailResult.of(
-                buzz,
-                profiles.of(buzz.getCreatorId()),
-                imageStoragePort.resolveUrls(buzz.getImageKeys()),
-                isUnread,
-                buzz.isCreator(userId),
-                profiles.foundOf(audienceIds),
-                threads.stream()
-                        .map(thread -> BuzzThreadSummaryResult.of(thread, profiles.of(thread.getStarterId())))
-                        .toList(),
-                now);
+    public void deleteBuzz(Long requesterId, Long buzzId) {
+        Buzz buzz = buzzRepository.findByIdForUpdate(buzzId)
+                .orElseThrow(() -> new BuzzNotFoundException(buzzId));
+        buzz.delete(requesterId, LocalDateTime.now());
     }
 
     private Set<Long> audienceIdsOf(Long creatorId, RecipientSpec spec) {
@@ -110,21 +76,5 @@ public class BuzzService {
             case AnchorRecipientSpec(Long anchorFriendId, Double expansionValue) ->
                     buzzSocialPort.getAnchorExpansionIds(creatorId, anchorFriendId, expansionValue);
         };
-    }
-
-    private List<BuzzThread> accessibleThreads(Buzz buzz, Long userId) {
-        List<BuzzThread> threads = buzzThreadRepository.findAllByBuzzId(buzz.getId());
-        Set<Long> startersToCheck = threads.stream()
-                .filter(thread -> thread.needsFriendshipToAccess(userId, buzz))
-                .map(BuzzThread::getStarterId)
-                .collect(Collectors.toSet());
-        Set<Long> friendStarterIds = startersToCheck.isEmpty()
-                ? Set.of()
-                : buzzSocialPort.getFriendIdsIn(userId, startersToCheck);
-
-        return threads.stream()
-                .filter(thread -> thread.isAccessibleBy(
-                        userId, buzz, friendStarterIds.contains(thread.getStarterId())))
-                .toList();
     }
 }
