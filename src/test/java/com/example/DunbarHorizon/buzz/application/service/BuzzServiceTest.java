@@ -3,13 +3,10 @@ package com.example.DunbarHorizon.buzz.application.service;
 import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.ReceivedBuzz;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.ManualRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
-import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
-import com.example.DunbarHorizon.buzz.application.port.out.BuzzQueryRepository;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
@@ -20,7 +17,6 @@ import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,13 +25,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Slice;
-import org.springframework.data.domain.SliceImpl;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -47,9 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -59,8 +49,6 @@ class BuzzServiceTest {
     @Mock private BuzzRepository buzzRepository;
     @Mock private BuzzAudienceMemberRepository buzzAudienceMemberRepository;
     @Mock private BuzzThreadRepository buzzThreadRepository;
-    @Mock private BuzzCommentRepository buzzCommentRepository;
-    @Mock private BuzzQueryRepository buzzQueryRepository;
     @Mock private BuzzSocialPort buzzSocialPort;
     @Mock private ImageStoragePort imageStoragePort;
     @Mock private ApplicationEventPublisher applicationEventPublisher;
@@ -74,7 +62,7 @@ class BuzzServiceTest {
     @BeforeEach
     void setUp() {
         buzzService = new BuzzService(buzzRepository, buzzAudienceMemberRepository,
-                buzzThreadRepository, buzzCommentRepository, buzzQueryRepository, buzzSocialPort, new BuzzProfileAssembler(buzzSocialPort),
+                buzzThreadRepository, buzzSocialPort, new BuzzProfileAssembler(buzzSocialPort),
                 imageStoragePort, applicationEventPublisher);
     }
 
@@ -303,47 +291,6 @@ class BuzzServiceTest {
                 .isInstanceOf(BuzzNotFoundException.class);
     }
 
-    @Test
-    @DisplayName("받은 목록은 멤버의 읽음 상태와 응답 시점의 작성자 프로필로 만든다")
-    void getReceivedBuzzes_MapsReadStateAndProfile() {
-        // given
-        Buzz buzz = buzz(List.of());
-        PageRequest pageable = PageRequest.of(0, 20);
-        given(buzzSocialPort.getNonReceivableFriendIds(recipientId)).willReturn(Set.of());
-        given(buzzQueryRepository.findReceived(eq(recipientId), eq(Set.of()), any(), eq(pageable)))
-                .willReturn(new SliceImpl<>(List.of(new ReceivedBuzz(buzz, false)), pageable, false));
-        given(buzzSocialPort.getCreatorProfiles(List.of(creatorId)))
-                .willReturn(List.of(new BuzzCreatorInfo(creatorId, "작성자", "signed-creator")));
-
-        // when
-        Slice<BuzzSummaryResult> result = buzzService.getReceivedBuzzes(recipientId, pageable);
-
-        // then
-        BuzzSummaryResult summary = result.getContent().get(0);
-        assertThat(summary.isUnread()).isTrue();
-        assertThat(summary.isCreator()).isFalse();
-        assertThat(summary.author().nickname()).isEqualTo("작성자");
-    }
-
-    @Test
-    @DisplayName("보낸 목록은 게시자 본인 기준으로 읽음 여부 없이 만든다")
-    void getSentBuzzes_ReturnsCreatorView() {
-        // given
-        Buzz buzz = buzz(List.of());
-        PageRequest pageable = PageRequest.of(0, 20);
-        given(buzzQueryRepository.findSent(eq(creatorId), any(), eq(pageable)))
-                .willReturn(new SliceImpl<>(List.of(buzz), pageable, false));
-        given(buzzSocialPort.getCreatorProfiles(List.of(creatorId)))
-                .willReturn(List.of(new BuzzCreatorInfo(creatorId, "작성자", null)));
-
-        // when
-        Slice<BuzzSummaryResult> result = buzzService.getSentBuzzes(creatorId, pageable);
-
-        // then
-        assertThat(result.getContent().get(0).isCreator()).isTrue();
-        assertThat(result.getContent().get(0).isUnread()).isFalse();
-    }
-
     @Nested
     @DisplayName("버즈 수정")
     class UpdateBuzz {
@@ -432,63 +379,6 @@ class BuzzServiceTest {
 
             assertThatThrownBy(() -> buzzService.deleteBuzz(creatorId, 999L))
                     .isInstanceOf(BuzzNotFoundException.class);
-        }
-    }
-
-    @Nested
-    @DisplayName("만료·삭제 정리")
-    class PurgeExpiredAndDeleted {
-
-        @Test
-        @DisplayName("버즈 행을 먼저 지운 뒤 그 버즈들의 스레드 ID로 답글을 지우고 멤버와 스레드를 지운다")
-        void purge_DeletesBuzzesThenChildren() {
-            // given
-            LocalDateTime now = LocalDateTime.now();
-            List<Long> buzzIds = List.of(1L, 2L);
-            given(buzzRepository.findPurgeableIds(now)).willReturn(buzzIds);
-            given(buzzThreadRepository.findIdsByBuzzIds(buzzIds)).willReturn(List.of(10L, 11L));
-
-            // when
-            int purged = buzzService.purgeExpiredAndDeletedBuzzes(now);
-
-            // then
-            assertThat(purged).isEqualTo(2);
-            InOrder order = inOrder(buzzRepository, buzzThreadRepository, buzzAudienceMemberRepository, buzzCommentRepository);
-            order.verify(buzzRepository).deleteAllByIds(buzzIds);
-            order.verify(buzzThreadRepository).findIdsByBuzzIds(buzzIds);
-            order.verify(buzzAudienceMemberRepository).deleteAllByBuzzIds(buzzIds);
-            order.verify(buzzCommentRepository).deleteAllByThreadIds(List.of(10L, 11L));
-            order.verify(buzzThreadRepository).deleteAllByBuzzIds(buzzIds);
-        }
-
-        @Test
-        @DisplayName("스레드가 없으면 답글 삭제를 건너뛴다")
-        void purge_NoThreads_SkipsComments() {
-            // given
-            LocalDateTime now = LocalDateTime.now();
-            given(buzzRepository.findPurgeableIds(now)).willReturn(List.of(1L));
-            given(buzzThreadRepository.findIdsByBuzzIds(List.of(1L))).willReturn(List.of());
-
-            // when
-            buzzService.purgeExpiredAndDeletedBuzzes(now);
-
-            // then
-            verify(buzzCommentRepository, never()).deleteAllByThreadIds(any());
-        }
-
-        @Test
-        @DisplayName("정리할 버즈가 없으면 아무것도 지우지 않는다")
-        void purge_Nothing() {
-            // given
-            LocalDateTime now = LocalDateTime.now();
-            given(buzzRepository.findPurgeableIds(now)).willReturn(List.of());
-
-            // when
-            int purged = buzzService.purgeExpiredAndDeletedBuzzes(now);
-
-            // then
-            assertThat(purged).isZero();
-            verify(buzzRepository, never()).deleteAllByIds(any());
         }
     }
 
