@@ -71,8 +71,8 @@ class BuzzThreadServiceTest {
                 buzzCommentRepository,
                 new BuzzThreadAccess(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository, buzzSocialPort),
                 buzzSocialPort, new BuzzProfileAssembler(buzzSocialPort), imageStoragePort, applicationEventPublisher);
-        buzz = Buzz.create(creatorId, "본문", List.of(),
-                Set.of(starterId, friendMemberId, otherMemberId), LocalDateTime.now());
+        buzz = withId(Buzz.create(creatorId, "본문", List.of(),
+                Set.of(starterId, friendMemberId, otherMemberId), LocalDateTime.now()), 1L);
     }
 
     @Nested
@@ -132,7 +132,7 @@ class BuzzThreadServiceTest {
         @DisplayName("만료된 버즈에는 스레드를 생성할 수 없다")
         void createThread_Expired_Rejected() {
             // given
-            Buzz expired = Buzz.create(creatorId, "본문", List.of(), Set.of(starterId), LocalDateTime.now().minusHours(7));
+            Buzz expired = withId(Buzz.create(creatorId, "본문", List.of(), Set.of(starterId), LocalDateTime.now().minusHours(7)), 2L);
             given(buzzRepository.findByIdForShare(expired.getId())).willReturn(Optional.of(expired));
             given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(expired.getId(), starterId))
                     .willReturn(Optional.of(BuzzAudienceMember.create(expired.getId(), starterId)));
@@ -242,7 +242,7 @@ class BuzzThreadServiceTest {
         @DisplayName("다른 버즈의 스레드 ID로 조회하면 찾을 수 없다")
         void getThread_OtherBuzzThread_NotFound() {
             // given
-            Buzz otherBuzz = Buzz.create(creatorId, "다른 본문", List.of(), Set.of(starterId), LocalDateTime.now());
+            Buzz otherBuzz = withId(Buzz.create(creatorId, "다른 본문", List.of(), Set.of(starterId), LocalDateTime.now()), 3L);
             BuzzThread otherBuzzThread = BuzzThread.create(otherBuzz, starterId, true, ThreadVisibility.PUBLIC,
                     "첫 글", List.of(), LocalDateTime.now());
             given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(otherBuzzThread));
@@ -337,5 +337,10 @@ class BuzzThreadServiceTest {
         BuzzThread thread = BuzzThread.create(buzz, starterId, true, visibility, "첫 글", List.of(), LocalDateTime.now());
         ReflectionTestUtils.setField(thread, "id", 10L);
         return thread;
+    }
+
+    private static Buzz withId(Buzz buzz, long id) {
+        org.springframework.test.util.ReflectionTestUtils.setField(buzz, "id", id);
+        return buzz;
     }
 }

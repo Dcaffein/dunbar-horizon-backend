@@ -79,7 +79,7 @@ class BuzzServiceTest {
     }
 
     private Buzz buzz(List<String> imageKeys) {
-        return Buzz.create(creatorId, "본문", imageKeys, Set.of(recipientId), LocalDateTime.now());
+        return withId(Buzz.create(creatorId, "본문", imageKeys, Set.of(recipientId), LocalDateTime.now()), 1L);
     }
 
     @Nested
@@ -114,7 +114,7 @@ class BuzzServiceTest {
             // then
             ArgumentCaptor<Buzz> buzzCaptor = ArgumentCaptor.forClass(Buzz.class);
             verify(buzzRepository).save(buzzCaptor.capture());
-            String buzzId = buzzCaptor.getValue().getId();
+            Long buzzId = buzzCaptor.getValue().getId();
 
             ArgumentCaptor<List<BuzzAudienceMember>> memberCaptor = ArgumentCaptor.forClass(List.class);
             verify(buzzAudienceMemberRepository).saveAll(memberCaptor.capture());
@@ -295,7 +295,7 @@ class BuzzServiceTest {
     @DisplayName("만료된 버즈는 상세 조회에서 찾을 수 없다")
     void getBuzzDetail_Expired_NotFound() {
         // given
-        Buzz expired = Buzz.create(creatorId, "본문", List.of(), Set.of(recipientId), LocalDateTime.now().minusHours(7));
+        Buzz expired = withId(Buzz.create(creatorId, "본문", List.of(), Set.of(recipientId), LocalDateTime.now().minusHours(7)), 2L);
         given(buzzRepository.findByIdForShare(expired.getId())).willReturn(Optional.of(expired));
 
         // when & then
@@ -383,10 +383,10 @@ class BuzzServiceTest {
         @Test
         @DisplayName("없는 버즈는 수정할 수 없다")
         void updateBuzz_Missing_NotFound() {
-            given(buzzRepository.findById("missing")).willReturn(Optional.empty());
+            given(buzzRepository.findById(999L)).willReturn(Optional.empty());
 
             assertThatThrownBy(() -> buzzService.updateBuzz(
-                    new UpdateBuzzCommand(creatorId, "missing", "고친 본문", List.of())))
+                    new UpdateBuzzCommand(creatorId, 999L, "고친 본문", List.of())))
                     .isInstanceOf(BuzzNotFoundException.class);
         }
     }
@@ -436,7 +436,7 @@ class BuzzServiceTest {
         void purgeExpiredBuzzes_DeletesBuzzesThenChildren() {
             // given
             LocalDateTime now = LocalDateTime.now();
-            List<String> expiredIds = List.of("buzz-1", "buzz-2");
+            List<Long> expiredIds = List.of(1L, 2L);
             given(buzzRepository.findExpiredIds(now)).willReturn(expiredIds);
 
             // when
@@ -465,5 +465,10 @@ class BuzzServiceTest {
             assertThat(purged).isZero();
             verify(buzzRepository, never()).deleteAllByIds(any());
         }
+    }
+
+    private static Buzz withId(Buzz buzz, long id) {
+        org.springframework.test.util.ReflectionTestUtils.setField(buzz, "id", id);
+        return buzz;
     }
 }

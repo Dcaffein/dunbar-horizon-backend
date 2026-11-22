@@ -4,7 +4,7 @@ import java.util.List;
 
 public record WriteBuzzCommentCommand(
         Long authorId,
-        String buzzId,
+        Long buzzId,
         Long threadId,
         String text,
         List<String> imageKeys

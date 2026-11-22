@@ -4,7 +4,7 @@ import java.util.List;
 
 public record UpdateBuzzThreadCommand(
         Long requesterId,
-        String buzzId,
+        Long buzzId,
         Long threadId,
         String text,
         List<String> imageKeys

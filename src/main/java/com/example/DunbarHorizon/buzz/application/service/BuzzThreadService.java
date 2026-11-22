@@ -62,7 +62,7 @@ public class BuzzThreadService {
     }
 
     @Transactional(readOnly = true)
-    public BuzzThreadDetailResult getThread(Long viewerId, String buzzId, Long threadId) {
+    public BuzzThreadDetailResult getThread(Long viewerId, Long buzzId, Long threadId) {
         ThreadContext context = buzzThreadAccess.forReading(viewerId, buzzId, threadId, LocalDateTime.now());
         Buzz buzz = context.buzz();
         BuzzThread thread = context.thread();
@@ -96,7 +96,7 @@ public class BuzzThreadService {
         thread.update(command.requesterId(), command.text(), command.imageKeys());
     }
 
-    public void deleteThread(Long requesterId, String buzzId, Long threadId) {
+    public void deleteThread(Long requesterId, Long buzzId, Long threadId) {
         Buzz buzz = buzzRepository.findByIdForShare(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
         BuzzThread thread = threadOf(buzz, threadId);

@@ -54,7 +54,7 @@ public class BuzzCommentService {
         comment.update(command.requesterId(), command.text(), command.imageKeys());
     }
 
-    public void deleteComment(Long requesterId, String buzzId, Long threadId, Long commentId) {
+    public void deleteComment(Long requesterId, Long buzzId, Long threadId, Long commentId) {
         Buzz buzz = buzzOf(buzzId);
         BuzzThread thread = threadOf(buzz, threadId);
         BuzzComment comment = commentOf(thread, commentId);
@@ -63,7 +63,7 @@ public class BuzzCommentService {
         buzzCommentRepository.deleteById(commentId);
     }
 
-    private Buzz buzzOf(String buzzId) {
+    private Buzz buzzOf(Long buzzId) {
         return buzzRepository.findById(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
     }

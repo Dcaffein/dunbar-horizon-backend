@@ -32,7 +32,7 @@ class BuzzThreadEventListenersTest {
     @DisplayName("스레드를 생성하면 시작자 → 게시자 BUZZ_REPLY를 발행한다")
     void threadCreated_PublishesReplyInteraction() {
         new BuzzInteractionEventListener(applicationEventPublisher)
-                .onThreadCreated(new BuzzThreadCreatedEvent("buzz-1", 10L, creatorId, starterId));
+                .onThreadCreated(new BuzzThreadCreatedEvent(1L, 10L, creatorId, starterId));
 
         verify(applicationEventPublisher).publishEvent(
                 new UserInteractionEvent(starterId, creatorId, InteractionType.BUZZ_REPLY));
@@ -42,7 +42,7 @@ class BuzzThreadEventListenersTest {
     @DisplayName("다른 멤버의 답글은 작성자 → 시작자 BUZZ_REPLY를 발행한다")
     void commented_PublishesReplyInteractionToStarter() {
         new BuzzInteractionEventListener(applicationEventPublisher)
-                .onCommented(new BuzzCommentedEvent("buzz-1", 10L, creatorId, starterId, friendId));
+                .onCommented(new BuzzCommentedEvent(1L, 10L, creatorId, starterId, friendId));
 
         verify(applicationEventPublisher).publishEvent(
                 new UserInteractionEvent(friendId, starterId, InteractionType.BUZZ_REPLY));
@@ -52,21 +52,21 @@ class BuzzThreadEventListenersTest {
     @DisplayName("스레드를 생성하면 게시자에게 스레드 정보가 담긴 BUZZ_RESPONSE 알림을 보낸다")
     void threadCreated_NotifiesCreator() {
         new BuzzNotificationDispatcher(applicationEventPublisher)
-                .dispatch(new BuzzThreadCreatedEvent("buzz-1", 10L, creatorId, starterId));
+                .dispatch(new BuzzThreadCreatedEvent(1L, 10L, creatorId, starterId));
 
         ArgumentCaptor<NotificationEvent> captor = ArgumentCaptor.forClass(NotificationEvent.class);
         verify(applicationEventPublisher).publishEvent(captor.capture());
         assertThat(captor.getValue().receiverIds()).containsExactly(creatorId);
         assertThat(captor.getValue().type()).isEqualTo(NotificationType.BUZZ_RESPONSE);
         assertThat(captor.getValue().metadata())
-                .isEqualTo(Map.of("buzzId", "buzz-1", "threadId", 10L, "authorId", starterId));
+                .isEqualTo(Map.of("buzzId", 1L, "threadId", 10L, "authorId", starterId));
     }
 
     @Test
     @DisplayName("다른 멤버가 답글을 쓰면 게시자와 시작자에게만 알림을 보낸다")
     void commented_NotifiesCreatorAndStarter() {
         new BuzzNotificationDispatcher(applicationEventPublisher)
-                .dispatch(new BuzzCommentedEvent("buzz-1", 10L, creatorId, starterId, friendId));
+                .dispatch(new BuzzCommentedEvent(1L, 10L, creatorId, starterId, friendId));
 
         ArgumentCaptor<NotificationEvent> captor = ArgumentCaptor.forClass(NotificationEvent.class);
         verify(applicationEventPublisher).publishEvent(captor.capture());

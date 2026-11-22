@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record BuzzSummaryResult(
-        String buzzId,
+        Long buzzId,
         BuzzProfileResult author,
         String text,
         List<String> imageUrls,

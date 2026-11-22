@@ -63,8 +63,8 @@ class BuzzCommentServiceTest {
         buzzCommentService = new BuzzCommentService(buzzRepository, buzzThreadRepository, buzzCommentRepository,
                 new BuzzThreadAccess(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository, buzzSocialPort),
                 applicationEventPublisher);
-        buzz = Buzz.create(creatorId, "본문", List.of(),
-                Set.of(starterId, friendMemberId, otherMemberId), LocalDateTime.now());
+        buzz = withId(Buzz.create(creatorId, "본문", List.of(),
+                Set.of(starterId, friendMemberId, otherMemberId), LocalDateTime.now()), 1L);
         thread = BuzzThread.create(buzz, starterId, true, ThreadVisibility.PUBLIC, "첫 글", List.of(), LocalDateTime.now());
         ReflectionTestUtils.setField(thread, "id", 10L);
     }
@@ -143,7 +143,7 @@ class BuzzCommentServiceTest {
     void writeComment_Expired_Rejected() {
         // given
         LocalDateTime createdAt = LocalDateTime.now().minusHours(7);
-        Buzz expired = Buzz.create(creatorId, "본문", List.of(), Set.of(starterId), createdAt);
+        Buzz expired = withId(Buzz.create(creatorId, "본문", List.of(), Set.of(starterId), createdAt), 2L);
         BuzzThread expiredBuzzThread = BuzzThread.create(expired, starterId, true, ThreadVisibility.PUBLIC, "첫 글",
                 List.of(), createdAt);
         ReflectionTestUtils.setField(expiredBuzzThread, "id", 10L);
@@ -226,5 +226,10 @@ class BuzzCommentServiceTest {
                     friendMemberId, buzz.getId(), 10L, 100L, "수정", List.of())))
                     .isInstanceOf(BuzzCommentNotFoundException.class);
         }
+    }
+
+    private static Buzz withId(Buzz buzz, long id) {
+        org.springframework.test.util.ReflectionTestUtils.setField(buzz, "id", id);
+        return buzz;
     }
 }

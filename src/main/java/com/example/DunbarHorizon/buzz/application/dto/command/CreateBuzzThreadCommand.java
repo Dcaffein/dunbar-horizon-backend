@@ -6,7 +6,7 @@ import java.util.List;
 
 public record CreateBuzzThreadCommand(
         Long starterId,
-        String buzzId,
+        Long buzzId,
         ThreadVisibility visibility,
         String text,
         List<String> imageKeys

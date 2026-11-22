@@ -4,7 +4,7 @@ import java.util.List;
 
 public record UpdateBuzzCommentCommand(
         Long requesterId,
-        String buzzId,
+        Long buzzId,
         Long threadId,
         Long commentId,
         String text,

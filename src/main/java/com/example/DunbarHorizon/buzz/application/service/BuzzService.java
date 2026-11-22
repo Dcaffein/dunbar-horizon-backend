@@ -70,7 +70,7 @@ public class BuzzService {
         buzz.update(command.requesterId(), command.text(), command.imageKeys(), LocalDateTime.now());
     }
 
-    public void deleteBuzz(Long requesterId, String buzzId) {
+    public void deleteBuzz(Long requesterId, Long buzzId) {
         Buzz buzz = buzzRepository.findById(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
         buzz.validateDeletion(requesterId);
@@ -82,7 +82,7 @@ public class BuzzService {
     }
 
     public int purgeExpiredBuzzes(LocalDateTime now) {
-        List<String> expiredBuzzIds = buzzRepository.findExpiredIds(now);
+        List<Long> expiredBuzzIds = buzzRepository.findExpiredIds(now);
         if (expiredBuzzIds.isEmpty()) {
             return 0;
         }
@@ -127,7 +127,7 @@ public class BuzzService {
                 now));
     }
 
-    public BuzzDetailResult getBuzzDetail(Long userId, String buzzId) {
+    public BuzzDetailResult getBuzzDetail(Long userId, Long buzzId) {
         LocalDateTime now = LocalDateTime.now();
         Buzz buzz = buzzRepository.findByIdForShare(buzzId)
                 .filter(found -> !found.isExpired(now))

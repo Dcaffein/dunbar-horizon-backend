@@ -25,7 +25,7 @@ public class BuzzThreadAccess {
     private final BuzzThreadRepository buzzThreadRepository;
     private final BuzzSocialPort buzzSocialPort;
 
-    public ThreadContext forReading(Long viewerId, String buzzId, Long threadId, LocalDateTime now) {
+    public ThreadContext forReading(Long viewerId, Long buzzId, Long threadId, LocalDateTime now) {
         Buzz buzz = buzzRepository.findById(buzzId)
                 .filter(found -> !found.isExpired(now))
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
@@ -37,7 +37,7 @@ public class BuzzThreadAccess {
         return new ThreadContext(buzz, thread, member);
     }
 
-    public ThreadContext forWriting(Long writerId, String buzzId, Long threadId) {
+    public ThreadContext forWriting(Long writerId, Long buzzId, Long threadId) {
         Buzz buzz = buzzRepository.findByIdForShare(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
         Optional<BuzzAudienceMember> member = memberOf(buzz, writerId);
@@ -54,7 +54,7 @@ public class BuzzThreadAccess {
                 : buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), userId);
     }
 
-    private static BuzzThread threadOf(Optional<BuzzThread> found, String buzzId, Long threadId) {
+    private static BuzzThread threadOf(Optional<BuzzThread> found, Long buzzId, Long threadId) {
         return found.filter(thread -> thread.getBuzzId().equals(buzzId))
                 .orElseThrow(() -> new BuzzThreadNotFoundException(buzzId, threadId));
     }
