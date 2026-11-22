@@ -184,6 +184,7 @@ class BuzzServiceTest {
 
             // then
             assertThat(member.isUnread()).isFalse();
+            verify(buzzAudienceMemberRepository).save(member);
         }
 
         @Test
@@ -234,6 +235,7 @@ class BuzzServiceTest {
             assertThat(buzz.getText()).isEqualTo("고친 본문");
             assertThat(buzz.getImageKeys()).containsExactly("buzz/b");
             assertThat(buzz.getEditedAt()).isNotNull();
+            verify(buzzRepository).save(buzz);
         }
 
         @Test
@@ -277,6 +279,7 @@ class BuzzServiceTest {
 
             // then
             assertThat(buzz.getDeletedAt()).isNotNull();
+            verify(buzzRepository).save(buzz);
             verify(buzzRepository, never()).deleteAllByIds(any());
             verify(buzzAudienceMemberRepository, never()).deleteAllByBuzzIds(any());
         }

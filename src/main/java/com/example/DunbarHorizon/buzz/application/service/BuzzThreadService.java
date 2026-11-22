@@ -40,7 +40,7 @@ public class BuzzThreadService {
         BuzzThread thread = buzzThreadRepository.save(BuzzThread.create(
                 buzz, command.starterId(), member.isPresent(), command.visibility(), command.text(),
                 command.imageKeys(), LocalDateTime.now()));
-        member.ifPresent(BuzzAudienceMember::read);
+        member.ifPresent(this::read);
 
         applicationEventPublisher.publishEvent(new BuzzThreadCreatedEvent(
                 buzz.getId(), thread.getId(), buzz.getCreatorId(), command.starterId()));
@@ -53,6 +53,7 @@ public class BuzzThreadService {
         BuzzThread thread = threadOf(buzz, command.threadId());
 
         thread.update(command.requesterId(), command.text(), command.imageKeys());
+        buzzThreadRepository.save(thread);
     }
 
     public void deleteThread(Long requesterId, Long buzzId, Long threadId) {
@@ -63,6 +64,11 @@ public class BuzzThreadService {
 
         buzzThreadRepository.deleteById(threadId);
         buzzCommentRepository.deleteAllByThreadId(threadId);
+    }
+
+    private void read(BuzzAudienceMember member) {
+        member.read();
+        buzzAudienceMemberRepository.save(member);
     }
 
     private BuzzThread threadOf(Buzz buzz, Long threadId) {

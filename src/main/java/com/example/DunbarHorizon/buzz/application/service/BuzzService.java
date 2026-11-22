@@ -49,6 +49,7 @@ public class BuzzService {
         Buzz buzz = buzzRepository.findById(command.buzzId())
                 .orElseThrow(() -> new BuzzNotFoundException(command.buzzId()));
         buzz.update(command.requesterId(), command.text(), command.imageKeys(), LocalDateTime.now());
+        buzzRepository.save(buzz);
     }
 
     public void readBuzz(Long readerId, Long buzzId) {
@@ -59,13 +60,19 @@ public class BuzzService {
                 : buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzzId, readerId);
         buzz.validateAccess(readerId, member.isPresent());
 
-        member.ifPresent(BuzzAudienceMember::read);
+        member.ifPresent(this::read);
     }
 
     public void deleteBuzz(Long requesterId, Long buzzId) {
         Buzz buzz = buzzRepository.findByIdForUpdate(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
         buzz.delete(requesterId, LocalDateTime.now());
+        buzzRepository.save(buzz);
+    }
+
+    private void read(BuzzAudienceMember member) {
+        member.read();
+        buzzAudienceMemberRepository.save(member);
     }
 
     private Set<Long> audienceIdsOf(Long creatorId, RecipientSpec spec) {

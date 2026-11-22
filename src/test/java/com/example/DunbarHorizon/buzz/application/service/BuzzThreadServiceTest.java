@@ -87,6 +87,7 @@ class BuzzThreadServiceTest {
             assertThat(threadCaptor.getValue().getVisibility()).isEqualTo(ThreadVisibility.PRIVATE);
             assertThat(threadCaptor.getValue().getImageKeys()).containsExactly("buzz/a");
             assertThat(member.isUnread()).isFalse();
+            verify(buzzAudienceMemberRepository).save(member);
             verify(applicationEventPublisher).publishEvent(
                     new BuzzThreadCreatedEvent(buzz.getId(), null, creatorId, starterId));
         }
@@ -156,6 +157,7 @@ class BuzzThreadServiceTest {
             // then
             assertThat(thread.getText()).isEqualTo("수정한 글");
             assertThat(thread.getImageKeys()).containsExactly("buzz/b");
+            verify(buzzThreadRepository).save(thread);
         }
 
         @Test

@@ -60,7 +60,7 @@ class BuzzCommentServiceTest {
 
     @BeforeEach
     void setUp() {
-        buzzCommentService = new BuzzCommentService(buzzRepository, buzzThreadRepository, buzzCommentRepository,
+        buzzCommentService = new BuzzCommentService(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository, buzzCommentRepository,
                 new BuzzThreadAccess(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository, buzzSocialPort),
                 applicationEventPublisher);
         buzz = withId(Buzz.create(creatorId, "본문", List.of(),
@@ -98,6 +98,7 @@ class BuzzCommentServiceTest {
             assertThat(commentCaptor.getValue().getThreadId()).isEqualTo(10L);
             assertThat(commentCaptor.getValue().getAuthorId()).isEqualTo(friendMemberId);
             assertThat(member.isUnread()).isFalse();
+            verify(buzzAudienceMemberRepository).save(member);
             verify(applicationEventPublisher).publishEvent(
                     new BuzzCommentedEvent(buzz.getId(), 10L, creatorId, starterId, friendMemberId));
         }
@@ -184,6 +185,7 @@ class BuzzCommentServiceTest {
 
             // then
             assertThat(comment.getText()).isEqualTo("수정");
+            verify(buzzCommentRepository).save(comment);
         }
 
         @Test
