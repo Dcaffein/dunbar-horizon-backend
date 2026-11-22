@@ -65,7 +65,15 @@ public class BuzzController {
     public ResponseEntity<BuzzDetailResult> getBuzzDetail(
             @CurrentUserId Long currentUserId,
             @PathVariable Long buzzId) {
-        return ResponseEntity.ok(buzzService.getBuzzDetail(currentUserId, buzzId));
+        return ResponseEntity.ok(buzzQueryService.getBuzzDetail(currentUserId, buzzId));
+    }
+
+    @PutMapping("/{buzzId}/read")
+    public ResponseEntity<Void> markAsRead(
+            @CurrentUserId Long currentUserId,
+            @PathVariable Long buzzId) {
+        buzzService.markAsRead(currentUserId, buzzId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/senders/unread")

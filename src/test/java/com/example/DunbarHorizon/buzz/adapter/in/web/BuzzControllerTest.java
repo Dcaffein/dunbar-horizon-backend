@@ -28,6 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -51,7 +52,7 @@ class BuzzControllerTest extends BaseControllerTest {
                     List.of(new BuzzThreadSummaryResult(10L, new BuzzProfileResult(2L, "시작자", null),
                             ThreadVisibility.PRIVATE, LocalDateTime.of(2026, 11, 22, 12, 0)))
             );
-            given(buzzService.getBuzzDetail(CURRENT_USER_ID, 1L)).willReturn(detail);
+            given(buzzQueryService.getBuzzDetail(CURRENT_USER_ID, 1L)).willReturn(detail);
 
             mockMvc.perform(get("/api/v1/buzzes/1"))
                     .andExpect(status().isOk())
@@ -72,7 +73,7 @@ class BuzzControllerTest extends BaseControllerTest {
                     List.of(new BuzzProfileResult(CURRENT_USER_ID, "나", null)),
                     List.of()
             );
-            given(buzzService.getBuzzDetail(CURRENT_USER_ID, 1L)).willReturn(detail);
+            given(buzzQueryService.getBuzzDetail(CURRENT_USER_ID, 1L)).willReturn(detail);
 
             mockMvc.perform(get("/api/v1/buzzes/1"))
                     .andExpect(status().isOk())
@@ -151,6 +152,16 @@ class BuzzControllerTest extends BaseControllerTest {
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.validation.text").value(Buzz.TEXT_LENGTH_MESSAGE));
         }
+    }
+
+    @Test
+    @WithMockCustomUser
+    @DisplayName("PUT /api/v1/buzzes/{buzzId}/read 는 현재 사용자의 읽음을 처리하고 204를 반환한다")
+    void markAsRead_Returns204() throws Exception {
+        mockMvc.perform(put("/api/v1/buzzes/1/read"))
+                .andExpect(status().isNoContent());
+
+        verify(buzzService).markAsRead(1L, 1L);
     }
 
     @Nested

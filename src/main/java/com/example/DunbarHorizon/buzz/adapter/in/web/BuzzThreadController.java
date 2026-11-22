@@ -7,6 +7,7 @@ import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzThreadCo
 import com.example.DunbarHorizon.buzz.application.dto.command.WriteBuzzCommentCommand;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzThreadDetailResult;
 import com.example.DunbarHorizon.buzz.application.service.BuzzCommentService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzThreadQueryService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzThreadService;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import jakarta.validation.Valid;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class BuzzThreadController {
 
     private final BuzzThreadService buzzThreadService;
+    private final BuzzThreadQueryService buzzThreadQueryService;
     private final BuzzCommentService buzzCommentService;
 
     @PostMapping
@@ -44,7 +46,7 @@ public class BuzzThreadController {
             @CurrentUserId Long currentUserId,
             @PathVariable Long buzzId,
             @PathVariable Long threadId) {
-        return ResponseEntity.ok(buzzThreadService.getThread(currentUserId, buzzId, threadId));
+        return ResponseEntity.ok(buzzThreadQueryService.getThread(currentUserId, buzzId, threadId));
     }
 
     @PatchMapping("/{threadId}")

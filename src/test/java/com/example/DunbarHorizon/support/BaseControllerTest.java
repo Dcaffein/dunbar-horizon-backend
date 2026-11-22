@@ -12,6 +12,7 @@ import com.example.DunbarHorizon.notification.application.NotificationService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzCommentService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzQueryService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzThreadQueryService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzThreadService;
 import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
 import com.example.DunbarHorizon.flag.application.service.flag.FlagModificationService;
@@ -70,6 +71,7 @@ public abstract class BaseControllerTest {
     @MockitoBean protected BuzzService buzzService;
     @MockitoBean protected BuzzQueryService buzzQueryService;
     @MockitoBean protected BuzzThreadService buzzThreadService;
+    @MockitoBean protected BuzzThreadQueryService buzzThreadQueryService;
     @MockitoBean protected BuzzCommentService buzzCommentService;
 
     @MockitoBean protected FlagHostService flagHostService;
