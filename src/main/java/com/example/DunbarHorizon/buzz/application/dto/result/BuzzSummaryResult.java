@@ -11,6 +11,7 @@ public record BuzzSummaryResult(
         BuzzProfileResult author,
         String text,
         List<String> imageUrls,
+        LocalDateTime editedAt,
         long remainingMinutes,
         boolean isUnread,
         boolean isCreator
@@ -22,6 +23,7 @@ public record BuzzSummaryResult(
                 author,
                 buzz.getText(),
                 imageUrls,
+                buzz.getEditedAt(),
                 Math.max(0L, Duration.between(now, buzz.getExpiresAt()).toMinutes()),
                 isUnread,
                 isCreator

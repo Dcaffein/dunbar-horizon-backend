@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
 import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.info.ReceivedBuzz;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
@@ -60,6 +61,12 @@ public class BuzzService {
                 .toList());
 
         applicationEventPublisher.publishEvent(new BuzzCreatedEvent(buzz.getId(), command.creatorId(), audienceIds));
+    }
+
+    public void updateBuzz(UpdateBuzzCommand command) {
+        Buzz buzz = buzzRepository.findById(command.buzzId())
+                .orElseThrow(() -> new BuzzNotFoundException(command.buzzId()));
+        buzz.update(command.requesterId(), command.text(), command.imageKeys(), LocalDateTime.now());
     }
 
     public void deleteBuzz(Long requesterId, String buzzId) {

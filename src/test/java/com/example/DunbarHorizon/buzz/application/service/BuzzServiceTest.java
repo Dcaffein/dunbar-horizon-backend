@@ -1,6 +1,7 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
 import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.ReceivedBuzz;
 import com.example.DunbarHorizon.buzz.application.dto.info.RecipientType;
@@ -292,6 +293,53 @@ class BuzzServiceTest {
         // then
         assertThat(result.getContent().get(0).isCreator()).isTrue();
         assertThat(result.getContent().get(0).isUnread()).isFalse();
+    }
+
+    @Nested
+    @DisplayName("버즈 수정")
+    class UpdateBuzz {
+
+        @Test
+        @DisplayName("게시자가 수정하면 본문·이미지 키가 바뀌고 상세 응답에 수정 시각이 담긴다")
+        void updateBuzz_ByCreator_ShowsEditedAt() {
+            // given
+            Buzz buzz = buzz(List.of("buzz/a"));
+            given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
+            given(buzzRepository.findByIdForShare(buzz.getId())).willReturn(Optional.of(buzz));
+
+            // when
+            buzzService.updateBuzz(new UpdateBuzzCommand(creatorId, buzz.getId(), "고친 본문", List.of("buzz/b")));
+            BuzzDetailResult result = buzzService.getBuzzDetail(creatorId, buzz.getId());
+
+            // then
+            assertThat(buzz.getText()).isEqualTo("고친 본문");
+            assertThat(buzz.getImageKeys()).containsExactly("buzz/b");
+            assertThat(result.editedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("게시자가 아니면 수정이 거절된다")
+        void updateBuzz_ByNonCreator_Denied() {
+            // given
+            Buzz buzz = buzz(List.of());
+            given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
+
+            // when & then
+            assertThatThrownBy(() -> buzzService.updateBuzz(
+                    new UpdateBuzzCommand(recipientId, buzz.getId(), "고친 본문", List.of())))
+                    .isInstanceOf(BuzzAccessDeniedException.class);
+            assertThat(buzz.getText()).isEqualTo("본문");
+        }
+
+        @Test
+        @DisplayName("없는 버즈는 수정할 수 없다")
+        void updateBuzz_Missing_NotFound() {
+            given(buzzRepository.findById("missing")).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> buzzService.updateBuzz(
+                    new UpdateBuzzCommand(creatorId, "missing", "고친 본문", List.of())))
+                    .isInstanceOf(BuzzNotFoundException.class);
+        }
     }
 
     @Nested
