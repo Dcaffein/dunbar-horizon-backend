@@ -87,14 +87,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `friendships`는 낮은 사용자 ID와 높은 사용자 ID를 복합 키로 사용한다. 친밀도와 생성일은 공유하고, 관심도·별명·공개 설정은 사용자별 열에 둔다.
 - `friend_requests`는 복합 키에 요청 발신자와 수신자를 별도로 기록한다. 라벨 소유자는 `labels`, 멤버십은 `label_members`에 저장한다.
 - 조회용 프로필과 계정 상태는 MySQL `users`에서 읽는다. `DunbarCircle`은 관계망 조회 상한 5·15·50·150명을 정한다.
-- 기준 친구 추천과 공통 친구 중개인 조회는 각 SQL에서 해당 사용자의 `isRoutable`을 적용한다.
+- 중개 친구를 통한 추천과 공통 친구 중개인 조회는 각 SQL에서 해당 사용자의 `isRoutable`을 적용한다.
 
 ### Buzz Recipients
 
-수신자 지정 방식 셋 (`RecipientType`: `MANUAL`, `LABEL`, `ANCHOR`):
+수신자 지정 방식 셋 (`RecipientType`: `MANUAL`, `LABEL`, `INTERMEDIARY`):
 - `ManualRecipientSpec` — 사용자 ID 목록을 직접 지정
 - `LabelRecipientSpec` — 라벨 구성원 전체
-- `AnchorRecipientSpec` — 앵커 사용자를 통한 친구의 친구
+- `IntermediaryRecipientSpec` — 중개 친구를 통한 친구의 친구
 
 ### Domain Events
 

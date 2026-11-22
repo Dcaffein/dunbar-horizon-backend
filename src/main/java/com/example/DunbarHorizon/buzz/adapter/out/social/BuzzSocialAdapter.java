@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQueryUseCase;
 import com.example.DunbarHorizon.social.application.label.port.LabelQueryUseCase;
-import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.network.dto.IntermediaryExpansionResult;
 import com.example.DunbarHorizon.social.application.network.port.SocialExpansionQueryUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -50,9 +50,9 @@ public class BuzzSocialAdapter implements BuzzSocialPort {
     }
 
     @Override
-    public Set<Long> getAnchorExpansionIds(Long userId, Long anchorFriendId, Double expansionValue) {
-        return socialExpansionQueryUseCase.getAnchorExpansion(userId, anchorFriendId, expansionValue).stream()
-                .map(AnchorExpansionResult::id)
+    public Set<Long> getIntermediaryExpansionIds(Long userId, Long intermediaryFriendId, Double expansionValue) {
+        return socialExpansionQueryUseCase.getIntermediaryExpansion(userId, intermediaryFriendId, expansionValue).stream()
+                .map(IntermediaryExpansionResult::id)
                 .collect(Collectors.toSet());
     }
 }

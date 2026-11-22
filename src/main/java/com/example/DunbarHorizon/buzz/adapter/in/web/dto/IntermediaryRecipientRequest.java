@@ -1,14 +1,14 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web.dto;
 
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.RecipientSpec;
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.info.recipient.IntermediaryRecipientSpec;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 
-public record AnchorRecipientRequest(
-        @NotNull(message = "기준 친구 ID는 필수입니다.")
-        Long anchorFriendId,
+public record IntermediaryRecipientRequest(
+        @NotNull(message = "중개 친구 ID는 필수입니다.")
+        Long intermediaryFriendId,
 
         @NotNull(message = "expansionValue는 필수입니다.")
         @DecimalMin(value = "0.0", message = "expansionValue는 0.0 ~ 1.0 사이의 값입니다.")
@@ -18,6 +18,6 @@ public record AnchorRecipientRequest(
 
     @Override
     public RecipientSpec toSpec() {
-        return new AnchorRecipientSpec(anchorFriendId, expansionValue);
+        return new IntermediaryRecipientSpec(intermediaryFriendId, expansionValue);
     }
 }
