@@ -64,13 +64,24 @@ public class BuzzThread {
         this.createdAt = createdAt;
     }
 
-    public static BuzzThread create(String buzzId, Long starterId, ThreadVisibility visibility,
-                                  String text, List<String> imageKeys, LocalDateTime now) {
+    public static BuzzThread create(Buzz buzz, Long starterId, boolean isAudienceMember, ThreadVisibility visibility,
+                                    String text, List<String> imageKeys, LocalDateTime now) {
+        if (buzz.isExpired(now)) {
+            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", buzz.getId()));
+        }
+        if (buzz.isCreator(starterId)) {
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_CREATOR_CANNOT_CREATE_THREAD,
+                    ErrorContext.of("buzzId", buzz.getId()).and("userId", starterId));
+        }
+        if (!isAudienceMember) {
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_NOT_RECIPIENT,
+                    ErrorContext.of("buzzId", buzz.getId()).and("userId", starterId));
+        }
         if (visibility == null) {
             throw new IllegalArgumentException("스레드 공개 범위는 필수입니다.");
         }
         validateText(text);
-        return new BuzzThread(buzzId, starterId, visibility, text, copyOf(imageKeys), now);
+        return new BuzzThread(buzz.getId(), starterId, visibility, text, copyOf(imageKeys), now);
     }
 
     public boolean isStarter(Long userId) {

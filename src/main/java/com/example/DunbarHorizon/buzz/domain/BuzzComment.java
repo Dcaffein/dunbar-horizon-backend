@@ -56,10 +56,13 @@ public class BuzzComment {
         this.createdAt = createdAt;
     }
 
-    public static BuzzComment write(Long threadId, Long authorId, String text, List<String> imageKeys,
+    public static BuzzComment write(Buzz buzz, BuzzThread thread, Long authorId, String text, List<String> imageKeys,
                                     LocalDateTime now) {
+        if (buzz.isExpired(now)) {
+            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", buzz.getId()));
+        }
         validateText(text);
-        return new BuzzComment(threadId, authorId, text, copyOf(imageKeys), now);
+        return new BuzzComment(thread.getId(), authorId, text, copyOf(imageKeys), now);
     }
 
     public boolean isAuthor(Long userId) {

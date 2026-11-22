@@ -90,21 +90,6 @@ public class Buzz {
         return creatorId.equals(userId);
     }
 
-    public void validateNotExpired(LocalDateTime now) {
-        if (isExpired(now)) {
-            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", id));
-        }
-    }
-
-    public void validateThreadCreation(Long userId, boolean isAudienceMember, LocalDateTime now) {
-        validateNotExpired(now);
-        if (isCreator(userId)) {
-            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_CREATOR_CANNOT_CREATE_THREAD,
-                    ErrorContext.of("buzzId", id).and("userId", userId));
-        }
-        validateAccess(userId, isAudienceMember);
-    }
-
     public void validateAccess(Long userId, boolean isAudienceMember) {
         if (!isCreator(userId) && !isAudienceMember) {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_NOT_RECIPIENT,

@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.buzz.domain.model;
 
+import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -22,8 +24,10 @@ class BuzzThreadTest {
     private final Long starterId = 2L;
     private final Long otherMemberId = 3L;
 
+    private final Buzz buzz = Buzz.create(creatorId, "본문", List.of(), Set.of(starterId, otherMemberId), NOW);
+
     private BuzzThread thread(ThreadVisibility visibility) {
-        return BuzzThread.create("buzz-1", starterId, visibility, "첫 글", List.of("buzz/a"), NOW);
+        return BuzzThread.create(buzz, starterId, true, visibility, "첫 글", List.of("buzz/a"), NOW);
     }
 
     @Nested
@@ -31,10 +35,11 @@ class BuzzThreadTest {
     class CreateTest {
 
         @Test
-        @DisplayName("첫 글과 공개 범위, 이미지 키를 가진 스레드를 생성한다")
+        @DisplayName("공개 대상 멤버가 만료 전에 첫 글과 공개 범위, 이미지 키를 가진 스레드를 생성한다")
         void create_Success() {
             BuzzThread thread = thread(ThreadVisibility.PRIVATE);
 
+            assertThat(thread.getBuzzId()).isEqualTo(buzz.getId());
             assertThat(thread.getStarterId()).isEqualTo(starterId);
             assertThat(thread.getVisibility()).isEqualTo(ThreadVisibility.PRIVATE);
             assertThat(thread.getText()).isEqualTo("첫 글");
@@ -43,9 +48,31 @@ class BuzzThreadTest {
         }
 
         @Test
+        @DisplayName("게시자는 스레드를 생성할 수 없다")
+        void create_Fail_Creator() {
+            assertThatThrownBy(() -> BuzzThread.create(buzz, creatorId, false, ThreadVisibility.PUBLIC, "첫 글", List.of(), NOW))
+                    .isInstanceOf(BuzzAccessDeniedException.class);
+        }
+
+        @Test
+        @DisplayName("공개 대상이 아니면 스레드를 생성할 수 없다")
+        void create_Fail_NotAudienceMember() {
+            assertThatThrownBy(() -> BuzzThread.create(buzz, 99L, false, ThreadVisibility.PUBLIC, "첫 글", List.of(), NOW))
+                    .isInstanceOf(BuzzAccessDeniedException.class);
+        }
+
+        @Test
+        @DisplayName("만료된 버즈에는 스레드를 생성할 수 없다")
+        void create_Fail_Expired() {
+            assertThatThrownBy(() -> BuzzThread.create(buzz, starterId, true, ThreadVisibility.PUBLIC, "첫 글", List.of(),
+                    NOW.plusHours(6)))
+                    .isInstanceOf(BuzzInvalidStateException.class);
+        }
+
+        @Test
         @DisplayName("첫 글이 비어 있으면 생성할 수 없다")
         void create_Fail_BlankText() {
-            assertThatThrownBy(() -> BuzzThread.create("buzz-1", starterId, ThreadVisibility.PUBLIC, " ", List.of(), NOW))
+            assertThatThrownBy(() -> BuzzThread.create(buzz, starterId, true, ThreadVisibility.PUBLIC, " ", List.of(), NOW))
                     .isInstanceOf(BuzzInvalidStateException.class);
         }
 
@@ -54,14 +81,14 @@ class BuzzThreadTest {
         void create_Fail_TooLongText() {
             String tooLong = "가".repeat(BuzzThread.TEXT_MAX_LENGTH + 1);
 
-            assertThatThrownBy(() -> BuzzThread.create("buzz-1", starterId, ThreadVisibility.PUBLIC, tooLong, List.of(), NOW))
+            assertThatThrownBy(() -> BuzzThread.create(buzz, starterId, true, ThreadVisibility.PUBLIC, tooLong, List.of(), NOW))
                     .isInstanceOf(BuzzInvalidStateException.class);
         }
 
         @Test
         @DisplayName("공개 범위가 없으면 생성할 수 없다")
         void create_Fail_NoVisibility() {
-            assertThatThrownBy(() -> BuzzThread.create("buzz-1", starterId, null, "첫 글", List.of(), NOW))
+            assertThatThrownBy(() -> BuzzThread.create(buzz, starterId, true, null, "첫 글", List.of(), NOW))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
