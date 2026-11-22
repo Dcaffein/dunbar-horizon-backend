@@ -38,11 +38,11 @@ public class Buzz {
     @Column(nullable = false, updatable = false)
     private Long creatorId;
 
-    @Column(nullable = false, updatable = false, length = TEXT_MAX_LENGTH)
+    @Column(nullable = false, length = TEXT_MAX_LENGTH)
     private String text;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false)
     private List<String> imageKeys;
 
     @Column(nullable = false, updatable = false)
@@ -50,6 +50,8 @@ public class Buzz {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime expiresAt;
+
+    private LocalDateTime editedAt;
 
     private Buzz(String id, Long creatorId, String text, List<String> imageKeys, LocalDateTime createdAt) {
         this.id = id;
@@ -65,11 +67,24 @@ public class Buzz {
         if (audienceIds == null || audienceIds.isEmpty()) {
             throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_RECIPIENTS_REQUIRED);
         }
-        if (text == null || text.isBlank() || text.length() > TEXT_MAX_LENGTH) {
-            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_INVALID_TEXT);
+        validateText(text);
+        return new Buzz(UuidUtil.createV7().toString(), creatorId, text, copyOf(imageKeys), now);
+    }
+
+    public void update(Long requesterId, String text, List<String> imageKeys, LocalDateTime now) {
+        validateNotExpired(now);
+        if (!isCreator(requesterId)) {
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_CREATOR_ONLY,
+                    ErrorContext.of("buzzId", id).and("userId", requesterId));
         }
-        List<String> keys = imageKeys != null ? List.copyOf(imageKeys) : List.of();
-        return new Buzz(UuidUtil.createV7().toString(), creatorId, text, keys, now);
+        validateText(text);
+        this.text = text;
+        this.imageKeys = copyOf(imageKeys);
+        this.editedAt = now;
+    }
+
+    public boolean isEdited() {
+        return editedAt != null;
     }
 
     public boolean isExpired(LocalDateTime now) {
@@ -107,5 +122,15 @@ public class Buzz {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_CREATOR_ONLY,
                     ErrorContext.of("buzzId", id).and("userId", requesterId));
         }
+    }
+
+    private static void validateText(String text) {
+        if (text == null || text.isBlank() || text.length() > TEXT_MAX_LENGTH) {
+            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_INVALID_TEXT);
+        }
+    }
+
+    private static List<String> copyOf(List<String> imageKeys) {
+        return imageKeys != null ? List.copyOf(imageKeys) : List.of();
     }
 }

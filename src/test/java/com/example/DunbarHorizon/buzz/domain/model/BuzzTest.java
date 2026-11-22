@@ -96,6 +96,57 @@ class BuzzTest {
     }
 
     @Nested
+    @DisplayName("버즈 수정")
+    class UpdateTest {
+
+        @Test
+        @DisplayName("게시자는 만료 전에 본문과 이미지 키를 고치고 수정 시각이 남는다")
+        void update_ByCreator() {
+            // given
+            Buzz buzz = buzz();
+            LocalDateTime editedAt = NOW.plusHours(1);
+
+            // when
+            buzz.update(creatorId, "고친 본문", List.of("buzz/b"), editedAt);
+
+            // then
+            assertThat(buzz.getText()).isEqualTo("고친 본문");
+            assertThat(buzz.getImageKeys()).containsExactly("buzz/b");
+            assertThat(buzz.getEditedAt()).isEqualTo(editedAt);
+            assertThat(buzz.isEdited()).isTrue();
+        }
+
+        @Test
+        @DisplayName("새로 만든 버즈는 수정되지 않은 상태다")
+        void create_NotEdited() {
+            assertThat(buzz().isEdited()).isFalse();
+        }
+
+        @Test
+        @DisplayName("게시자가 아니면 수정할 수 없다")
+        void update_ByNonCreator_Denied() {
+            assertThatThrownBy(() -> buzz().update(recipientId, "고친 본문", List.of(), NOW.plusHours(1)))
+                    .isInstanceOf(BuzzAccessDeniedException.class);
+        }
+
+        @Test
+        @DisplayName("만료된 버즈는 수정할 수 없다")
+        void update_Expired_Rejected() {
+            assertThatThrownBy(() -> buzz().update(creatorId, "고친 본문", List.of(), NOW.plusHours(6)))
+                    .isInstanceOf(BuzzInvalidStateException.class);
+        }
+
+        @Test
+        @DisplayName("고친 본문도 길이 규칙을 지켜야 한다")
+        void update_InvalidText_Rejected() {
+            assertThatThrownBy(() -> buzz().update(creatorId, " ", List.of(), NOW.plusHours(1)))
+                    .isInstanceOf(BuzzInvalidStateException.class);
+            assertThatThrownBy(() -> buzz().update(creatorId, "가".repeat(Buzz.TEXT_MAX_LENGTH + 1), List.of(), NOW.plusHours(1)))
+                    .isInstanceOf(BuzzInvalidStateException.class);
+        }
+    }
+
+    @Nested
     @DisplayName("만료 판단")
     class ExpiryTest {
 
