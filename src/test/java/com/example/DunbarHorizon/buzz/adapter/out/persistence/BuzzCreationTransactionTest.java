@@ -1,14 +1,11 @@
 package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 
 import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzCommand;
-import com.example.DunbarHorizon.buzz.application.dto.info.RecipientType;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.ManualRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
-import com.example.DunbarHorizon.buzz.application.port.out.RecipientStrategyPort;
 import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
 import com.example.DunbarHorizon.buzz.application.service.BuzzService;
-import com.example.DunbarHorizon.buzz.application.service.RecipientStrategyProvider;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,8 +40,6 @@ class BuzzCreationTransactionTest {
     @Autowired private BuzzService buzzService;
     @Autowired private JdbcTemplate jdbcTemplate;
     @MockitoSpyBean private BuzzAudienceMemberRepositoryAdapter buzzAudienceMemberRepositoryAdapter;
-    @MockitoBean private RecipientStrategyProvider recipientStrategyProvider;
-    @MockitoBean private RecipientStrategyPort recipientStrategyPort;
     @MockitoBean private BuzzSocialPort buzzSocialPort;
     @MockitoBean private ImageStoragePort imageStoragePort;
 
@@ -53,8 +48,7 @@ class BuzzCreationTransactionTest {
 
     @BeforeEach
     void setUp() {
-        given(recipientStrategyProvider.getStrategy(RecipientType.MANUAL)).willReturn(recipientStrategyPort);
-        given(recipientStrategyPort.fetchRecipientIds(eq(creatorId), any())).willReturn(Set.of(recipientId));
+        given(buzzSocialPort.getFriendIdsIn(creatorId, List.of(recipientId))).willReturn(Set.of(recipientId));
     }
 
     @AfterEach

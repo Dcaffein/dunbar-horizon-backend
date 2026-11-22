@@ -1,8 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.network;
 
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.buzz.adapter.out.social.AnchorRecipientStrategyAdapter;
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
 import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
 import com.example.DunbarHorizon.social.application.network.SocialExpansionQueryService;
 import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
@@ -20,12 +18,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
 @JpaRepositoryTest
-@Import({SocialExpansionJdbcAdapter.class, SocialExpansionQueryService.class, AnchorRecipientStrategyAdapter.class})
+@Import({SocialExpansionJdbcAdapter.class, SocialExpansionQueryService.class})
 class SocialExpansionJdbcAdapterTest {
 
     @Autowired private SocialExpansionJdbcAdapter socialExpansionJdbcAdapter;
     @Autowired private SocialExpansionQueryService socialExpansionQueryService;
-    @Autowired private AnchorRecipientStrategyAdapter anchorRecipientStrategyAdapter;
     @Autowired private TestEntityManager em;
     @Autowired private JdbcTemplate jdbc;
 
@@ -90,11 +87,9 @@ class SocialExpansionJdbcAdapterTest {
 
         // when
         var expansion = socialExpansionQueryService.getAnchorExpansion(me.getId(), anchor.getId(), 1.0);
-        var recipients = anchorRecipientStrategyAdapter.fetchRecipientIds(me.getId(), new AnchorRecipientSpec(anchor.getId(), 1.0));
 
         // then
         assertThat(expansion).containsExactly(result(eligible));
-        assertThat(recipients).containsExactly(eligible.getId());
         assertThat(socialExpansionJdbcAdapter.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 1, 10))
                 .containsExactly(result(outside));
     }

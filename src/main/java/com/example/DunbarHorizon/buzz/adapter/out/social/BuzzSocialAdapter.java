@@ -4,12 +4,16 @@ import com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQueryUseCase;
+import com.example.DunbarHorizon.social.application.label.port.LabelQueryUseCase;
+import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.network.port.SocialExpansionQueryUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -17,6 +21,8 @@ public class BuzzSocialAdapter implements BuzzSocialPort {
 
     private final UserQueryUseCase userQueryUseCase;
     private final FriendshipQueryUseCase friendshipQueryUseCase;
+    private final LabelQueryUseCase labelQueryUseCase;
+    private final SocialExpansionQueryUseCase socialExpansionQueryUseCase;
 
     @Override
     public List<BuzzCreatorInfo> getCreatorProfiles(List<Long> userIds) {
@@ -36,5 +42,17 @@ public class BuzzSocialAdapter implements BuzzSocialPort {
             return Set.of();
         }
         return friendshipQueryUseCase.getFriendIdsIn(userId, targetIds);
+    }
+
+    @Override
+    public Set<Long> getLabelMemberIds(Long ownerId, List<String> labelIds) {
+        return labelQueryUseCase.getMemberIdsInOwnedLabels(ownerId, labelIds);
+    }
+
+    @Override
+    public Set<Long> getAnchorExpansionIds(Long userId, Long anchorFriendId, Double expansionValue) {
+        return socialExpansionQueryUseCase.getAnchorExpansion(userId, anchorFriendId, expansionValue).stream()
+                .map(AnchorExpansionResult::id)
+                .collect(Collectors.toSet());
     }
 }

@@ -7,7 +7,6 @@ import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
 import com.example.DunbarHorizon.buzz.application.service.BuzzService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzThreadAccess;
 import com.example.DunbarHorizon.buzz.application.service.BuzzThreadService;
-import com.example.DunbarHorizon.buzz.application.service.RecipientStrategyProvider;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
@@ -59,7 +58,6 @@ class BuzzThreadCreationConcurrencyTest {
     @Autowired private PlatformTransactionManager transactionManager;
     @MockitoSpyBean private BuzzRepositoryAdapter buzzRepositoryAdapter;
     @MockitoSpyBean private BuzzAudienceMemberRepositoryAdapter buzzAudienceMemberRepositoryAdapter;
-    @MockitoBean private RecipientStrategyProvider recipientStrategyProvider;
     @MockitoBean private BuzzSocialPort buzzSocialPort;
     @MockitoBean private ImageStoragePort imageStoragePort;
 

@@ -5,7 +5,6 @@ import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
 import com.example.DunbarHorizon.buzz.application.service.BuzzService;
-import com.example.DunbarHorizon.buzz.application.service.RecipientStrategyProvider;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
@@ -51,7 +50,6 @@ class BuzzReadDeletionConcurrencyTest {
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private PlatformTransactionManager transactionManager;
     @MockitoSpyBean private BuzzRepositoryAdapter buzzRepositoryAdapter;
-    @MockitoBean private RecipientStrategyProvider recipientStrategyProvider;
     @MockitoBean private BuzzSocialPort buzzSocialPort;
     @MockitoBean private ImageStoragePort imageStoragePort;
 
