@@ -33,7 +33,7 @@ public class BuzzThreadController {
     @PostMapping
     public ResponseEntity<Void> createThread(
             @CurrentUserId Long currentUserId,
-            @PathVariable String buzzId,
+            @PathVariable Long buzzId,
             @RequestBody @Valid BuzzThreadCreateRequest request) {
         buzzThreadService.createThread(request.toCommand(currentUserId, buzzId));
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -42,7 +42,7 @@ public class BuzzThreadController {
     @GetMapping("/{threadId}")
     public ResponseEntity<BuzzThreadDetailResult> getThread(
             @CurrentUserId Long currentUserId,
-            @PathVariable String buzzId,
+            @PathVariable Long buzzId,
             @PathVariable Long threadId) {
         return ResponseEntity.ok(buzzThreadService.getThread(currentUserId, buzzId, threadId));
     }
@@ -50,7 +50,7 @@ public class BuzzThreadController {
     @PatchMapping("/{threadId}")
     public ResponseEntity<Void> updateThread(
             @CurrentUserId Long currentUserId,
-            @PathVariable String buzzId,
+            @PathVariable Long buzzId,
             @PathVariable Long threadId,
             @RequestBody @Valid BuzzPostRequest request) {
         buzzThreadService.updateThread(new UpdateBuzzThreadCommand(
@@ -61,7 +61,7 @@ public class BuzzThreadController {
     @DeleteMapping("/{threadId}")
     public ResponseEntity<Void> deleteThread(
             @CurrentUserId Long currentUserId,
-            @PathVariable String buzzId,
+            @PathVariable Long buzzId,
             @PathVariable Long threadId) {
         buzzThreadService.deleteThread(currentUserId, buzzId, threadId);
         return ResponseEntity.noContent().build();
@@ -70,7 +70,7 @@ public class BuzzThreadController {
     @PostMapping("/{threadId}/comments")
     public ResponseEntity<Void> writeComment(
             @CurrentUserId Long currentUserId,
-            @PathVariable String buzzId,
+            @PathVariable Long buzzId,
             @PathVariable Long threadId,
             @RequestBody @Valid BuzzPostRequest request) {
         buzzCommentService.writeComment(new WriteBuzzCommentCommand(
@@ -81,7 +81,7 @@ public class BuzzThreadController {
     @PatchMapping("/{threadId}/comments/{commentId}")
     public ResponseEntity<Void> updateComment(
             @CurrentUserId Long currentUserId,
-            @PathVariable String buzzId,
+            @PathVariable Long buzzId,
             @PathVariable Long threadId,
             @PathVariable Long commentId,
             @RequestBody @Valid BuzzPostRequest request) {
@@ -93,7 +93,7 @@ public class BuzzThreadController {
     @DeleteMapping("/{threadId}/comments/{commentId}")
     public ResponseEntity<Void> deleteComment(
             @CurrentUserId Long currentUserId,
-            @PathVariable String buzzId,
+            @PathVariable Long buzzId,
             @PathVariable Long threadId,
             @PathVariable Long commentId) {
         buzzCommentService.deleteComment(currentUserId, buzzId, threadId, commentId);

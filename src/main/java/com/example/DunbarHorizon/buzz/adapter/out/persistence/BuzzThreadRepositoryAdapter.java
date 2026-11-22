@@ -49,17 +49,17 @@ public class BuzzThreadRepositoryAdapter implements BuzzThreadRepository {
     }
 
     @Override
-    public List<BuzzThread> findAllByBuzzId(String buzzId) {
+    public List<BuzzThread> findAllByBuzzId(Long buzzId) {
         return buzzThreadJpaRepository.findAllByBuzzIdOrderByCreatedAtAscIdAsc(buzzId);
     }
 
     @Override
-    public void deleteAllByBuzzId(String buzzId) {
+    public void deleteAllByBuzzId(Long buzzId) {
         buzzThreadJpaRepository.deleteAllByBuzzId(buzzId);
     }
 
     @Override
-    public void deleteAllByBuzzIds(Collection<String> buzzIds) {
+    public void deleteAllByBuzzIds(Collection<Long> buzzIds) {
         buzzThreadJpaRepository.deleteAllByBuzzIdIn(buzzIds);
     }
 

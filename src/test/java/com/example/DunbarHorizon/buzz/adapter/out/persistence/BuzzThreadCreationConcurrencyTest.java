@@ -63,7 +63,7 @@ class BuzzThreadCreationConcurrencyTest {
 
     private final Long creatorId = 23_001L;
     private final Long starterId = 23_002L;
-    private final List<String> createdBuzzIds = new ArrayList<>();
+    private final List<Long> createdBuzzIds = new ArrayList<>();
 
     @AfterEach
     void tearDown() {
@@ -225,7 +225,7 @@ class BuzzThreadCreationConcurrencyTest {
         return new CreateBuzzThreadCommand(starterId, buzz.getId(), visibility, "첫 글", List.of());
     }
 
-    private long countRows(String table, String column, String buzzId) {
+    private long countRows(String table, String column, Long buzzId) {
         Long count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM " + table + " WHERE " + column + " = ?", Long.class, buzzId);
         return count == null ? 0 : count;

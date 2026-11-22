@@ -39,20 +39,20 @@ class BuzzThreadControllerTest extends BaseControllerTest {
                 """;
         given(buzzThreadService.createThread(any())).willReturn(10L);
 
-        mockMvc.perform(post("/api/v1/buzzes/buzz-1/threads")
+        mockMvc.perform(post("/api/v1/buzzes/1/threads")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isCreated());
 
         verify(buzzThreadService).createThread(new CreateBuzzThreadCommand(
-                CURRENT_USER_ID, "buzz-1", ThreadVisibility.PRIVATE, "첫 글", List.of("buzz/a")));
+                CURRENT_USER_ID, 1L, ThreadVisibility.PRIVATE, "첫 글", List.of("buzz/a")));
     }
 
     @Test
     @WithMockCustomUser
     @DisplayName("공개 범위가 없으면 400을 반환한다")
     void createThread_NoVisibility_Returns400() throws Exception {
-        mockMvc.perform(post("/api/v1/buzzes/buzz-1/threads")
+        mockMvc.perform(post("/api/v1/buzzes/1/threads")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ \"text\": \"첫 글\" }"))
                 .andExpect(status().isBadRequest())
@@ -67,7 +67,7 @@ class BuzzThreadControllerTest extends BaseControllerTest {
                 { "text": "%s", "visibility": "PUBLIC" }
                 """.formatted("가".repeat(BuzzThread.TEXT_MAX_LENGTH + 1));
 
-        mockMvc.perform(post("/api/v1/buzzes/buzz-1/threads")
+        mockMvc.perform(post("/api/v1/buzzes/1/threads")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isBadRequest())
@@ -78,13 +78,13 @@ class BuzzThreadControllerTest extends BaseControllerTest {
     @WithMockCustomUser
     @DisplayName("답글을 쓰면 201을 반환하고 스레드와 본문을 서비스에 넘긴다")
     void writeComment_Returns201() throws Exception {
-        mockMvc.perform(post("/api/v1/buzzes/buzz-1/threads/10/comments")
+        mockMvc.perform(post("/api/v1/buzzes/1/threads/10/comments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ \"text\": \"답글\" }"))
                 .andExpect(status().isCreated());
 
         verify(buzzCommentService).writeComment(new WriteBuzzCommentCommand(
-                CURRENT_USER_ID, "buzz-1", 10L, "답글", List.of()));
+                CURRENT_USER_ID, 1L, 10L, "답글", List.of()));
     }
 
     @Test
@@ -95,7 +95,7 @@ class BuzzThreadControllerTest extends BaseControllerTest {
                 { "text": "%s" }
                 """.formatted("가".repeat(BuzzComment.TEXT_MAX_LENGTH + 1));
 
-        mockMvc.perform(post("/api/v1/buzzes/buzz-1/threads/10/comments")
+        mockMvc.perform(post("/api/v1/buzzes/1/threads/10/comments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isBadRequest())
@@ -106,42 +106,42 @@ class BuzzThreadControllerTest extends BaseControllerTest {
     @WithMockCustomUser
     @DisplayName("첫 글 수정과 답글 수정은 204를 반환한다")
     void update_Returns204() throws Exception {
-        mockMvc.perform(patch("/api/v1/buzzes/buzz-1/threads/10")
+        mockMvc.perform(patch("/api/v1/buzzes/1/threads/10")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ \"text\": \"수정한 글\", \"imageKeys\": [\"buzz/b\"] }"))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(patch("/api/v1/buzzes/buzz-1/threads/10/comments/100")
+        mockMvc.perform(patch("/api/v1/buzzes/1/threads/10/comments/100")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ \"text\": \"수정한 답글\" }"))
                 .andExpect(status().isNoContent());
 
         verify(buzzThreadService).updateThread(new UpdateBuzzThreadCommand(
-                CURRENT_USER_ID, "buzz-1", 10L, "수정한 글", List.of("buzz/b")));
+                CURRENT_USER_ID, 1L, 10L, "수정한 글", List.of("buzz/b")));
         verify(buzzCommentService).updateComment(new UpdateBuzzCommentCommand(
-                CURRENT_USER_ID, "buzz-1", 10L, 100L, "수정한 답글", List.of()));
+                CURRENT_USER_ID, 1L, 10L, 100L, "수정한 답글", List.of()));
     }
 
     @Test
     @WithMockCustomUser
     @DisplayName("스레드 삭제와 답글 삭제는 204를 반환한다")
     void delete_Returns204() throws Exception {
-        mockMvc.perform(delete("/api/v1/buzzes/buzz-1/threads/10"))
+        mockMvc.perform(delete("/api/v1/buzzes/1/threads/10"))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(delete("/api/v1/buzzes/buzz-1/threads/10/comments/100"))
+        mockMvc.perform(delete("/api/v1/buzzes/1/threads/10/comments/100"))
                 .andExpect(status().isNoContent());
 
-        verify(buzzThreadService).deleteThread(CURRENT_USER_ID, "buzz-1", 10L);
-        verify(buzzCommentService).deleteComment(CURRENT_USER_ID, "buzz-1", 10L, 100L);
+        verify(buzzThreadService).deleteThread(CURRENT_USER_ID, 1L, 10L);
+        verify(buzzCommentService).deleteComment(CURRENT_USER_ID, 1L, 10L, 100L);
     }
 
     @Test
     @WithMockCustomUser
     @DisplayName("같은 공개 범위의 스레드를 다시 생성하면 409를 반환한다")
     void createThread_Duplicate_Returns409() throws Exception {
-        willThrow(new BuzzThreadAlreadyExistsException("buzz-1", CURRENT_USER_ID, ThreadVisibility.PUBLIC))
+        willThrow(new BuzzThreadAlreadyExistsException(1L, CURRENT_USER_ID, ThreadVisibility.PUBLIC))
                 .given(buzzThreadService).createThread(any());
 
-        mockMvc.perform(post("/api/v1/buzzes/buzz-1/threads")
+        mockMvc.perform(post("/api/v1/buzzes/1/threads")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ \"text\": \"첫 글\", \"visibility\": \"PUBLIC\" }"))
                 .andExpect(status().isConflict())

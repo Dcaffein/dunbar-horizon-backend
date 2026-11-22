@@ -25,22 +25,22 @@ public class BuzzAudienceMemberRepositoryAdapter implements BuzzAudienceMemberRe
     }
 
     @Override
-    public Optional<BuzzAudienceMember> findByBuzzIdAndUserId(String buzzId, Long userId) {
+    public Optional<BuzzAudienceMember> findByBuzzIdAndUserId(Long buzzId, Long userId) {
         return buzzAudienceMemberJpaRepository.findByBuzzIdAndUserId(buzzId, userId);
     }
 
     @Override
-    public List<Long> findUserIdsByBuzzId(String buzzId) {
+    public List<Long> findUserIdsByBuzzId(Long buzzId) {
         return buzzAudienceMemberJpaRepository.findUserIdsByBuzzId(buzzId);
     }
 
     @Override
-    public void deleteAllByBuzzId(String buzzId) {
+    public void deleteAllByBuzzId(Long buzzId) {
         buzzAudienceMemberJpaRepository.deleteAllByBuzzId(buzzId);
     }
 
     @Override
-    public void deleteAllByBuzzIds(Collection<String> buzzIds) {
+    public void deleteAllByBuzzIds(Collection<Long> buzzIds) {
         buzzAudienceMemberJpaRepository.deleteAllByBuzzIdIn(buzzIds);
     }
 }

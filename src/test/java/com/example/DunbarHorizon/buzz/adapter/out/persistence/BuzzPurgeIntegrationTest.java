@@ -82,7 +82,7 @@ class BuzzPurgeIntegrationTest {
         return buzz;
     }
 
-    private long count(String sql, String buzzId) {
+    private long count(String sql, Long buzzId) {
         Long count = buzzId == null
                 ? jdbcTemplate.queryForObject(sql, Long.class)
                 : jdbcTemplate.queryForObject(sql, Long.class, buzzId);

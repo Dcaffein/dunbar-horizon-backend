@@ -19,7 +19,7 @@ public record BuzzThreadCreateRequest(
 
         List<String> imageKeys
 ) {
-    public CreateBuzzThreadCommand toCommand(Long starterId, String buzzId) {
+    public CreateBuzzThreadCommand toCommand(Long starterId, Long buzzId) {
         return new CreateBuzzThreadCommand(starterId, buzzId, visibility, text,
                 imageKeys != null ? imageKeys : List.of());
     }

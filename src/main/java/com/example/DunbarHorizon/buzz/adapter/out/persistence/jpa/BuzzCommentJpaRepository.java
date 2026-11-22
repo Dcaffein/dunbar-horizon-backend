@@ -23,9 +23,9 @@ public interface BuzzCommentJpaRepository extends JpaRepository<BuzzComment, Lon
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM BuzzComment c WHERE c.threadId IN (SELECT t.id FROM BuzzThread t WHERE t.buzzId = :buzzId)")
-    int deleteAllByThreadBuzzId(@Param("buzzId") String buzzId);
+    int deleteAllByThreadBuzzId(@Param("buzzId") Long buzzId);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM BuzzComment c WHERE c.threadId IN (SELECT t.id FROM BuzzThread t WHERE t.buzzId IN :buzzIds)")
-    int deleteAllByThreadBuzzIdIn(@Param("buzzIds") Collection<String> buzzIds);
+    int deleteAllByThreadBuzzIdIn(@Param("buzzIds") Collection<Long> buzzIds);
 }

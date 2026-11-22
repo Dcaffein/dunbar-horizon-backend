@@ -27,8 +27,8 @@ class BuzzThreadPersistenceAdapterTest {
     @Autowired private BuzzThreadRepositoryAdapter buzzThreadRepositoryAdapter;
     @Autowired private EntityManager entityManager;
 
-    private final Buzz firstBuzz = Buzz.create(1L, "본문", List.of(), Set.of(2L, 3L), NOW);
-    private final Buzz secondBuzz = Buzz.create(1L, "본문", List.of(), Set.of(2L, 3L), NOW);
+    private final Buzz firstBuzz = withId(Buzz.create(1L, "본문", List.of(), Set.of(2L, 3L), NOW), 900_001L);
+    private final Buzz secondBuzz = withId(Buzz.create(1L, "본문", List.of(), Set.of(2L, 3L), NOW), 900_002L);
 
     private BuzzThread create(Buzz buzz, Long starterId, ThreadVisibility visibility, LocalDateTime createdAt) {
         return buzzThreadRepositoryAdapter.save(
@@ -86,5 +86,10 @@ class BuzzThreadPersistenceAdapterTest {
         // then
         assertThat(buzzThreadRepositoryAdapter.findAllByBuzzId(firstBuzz.getId())).isEmpty();
         assertThat(buzzThreadRepositoryAdapter.findAllByBuzzId(secondBuzz.getId())).hasSize(1);
+    }
+
+    private static Buzz withId(Buzz buzz, long id) {
+        org.springframework.test.util.ReflectionTestUtils.setField(buzz, "id", id);
+        return buzz;
     }
 }

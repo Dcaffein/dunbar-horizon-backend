@@ -196,13 +196,13 @@ class BuzzPersistenceAdapterTest {
         assertThat(reloaded.getCreatedAt()).isEqualTo(NOW);
     }
 
-    private void markAsRead(String buzzId, Long userId) {
+    private void markAsRead(Long buzzId, Long userId) {
         buzzAudienceMemberRepositoryAdapter.findByBuzzIdAndUserId(buzzId, userId).orElseThrow().markAsRead();
         entityManager.flush();
         entityManager.clear();
     }
 
-    private java.util.Map<Long, Boolean> readStates(String buzzId) {
+    private java.util.Map<Long, Boolean> readStates(Long buzzId) {
         return jdbcTemplate.queryForList(
                         "SELECT user_id, is_read FROM buzz_audience_members WHERE buzz_id = ?", buzzId).stream()
                 .collect(Collectors.toMap(

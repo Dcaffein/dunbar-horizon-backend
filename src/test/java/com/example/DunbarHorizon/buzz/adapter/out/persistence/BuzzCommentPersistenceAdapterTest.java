@@ -29,8 +29,8 @@ class BuzzCommentPersistenceAdapterTest {
     @Autowired private EntityManager entityManager;
     @Autowired private JdbcTemplate jdbcTemplate;
 
-    private final Buzz firstBuzz = Buzz.create(1L, "본문", List.of(), Set.of(2L, 3L), NOW);
-    private final Buzz secondBuzz = Buzz.create(1L, "본문", List.of(), Set.of(2L, 3L), NOW);
+    private final Buzz firstBuzz = withId(Buzz.create(1L, "본문", List.of(), Set.of(2L, 3L), NOW), 900_001L);
+    private final Buzz secondBuzz = withId(Buzz.create(1L, "본문", List.of(), Set.of(2L, 3L), NOW), 900_002L);
 
     private BuzzThread thread(Buzz buzz) {
         return buzzThreadRepositoryAdapter.save(
@@ -99,5 +99,10 @@ class BuzzCommentPersistenceAdapterTest {
 
         // then
         assertThat(buzzCommentRepositoryAdapter.findAllByThreadId(thread.getId())).isEmpty();
+    }
+
+    private static Buzz withId(Buzz buzz, long id) {
+        org.springframework.test.util.ReflectionTestUtils.setField(buzz, "id", id);
+        return buzz;
     }
 }

@@ -42,12 +42,12 @@ public class BuzzCommentRepositoryAdapter implements BuzzCommentRepository {
     }
 
     @Override
-    public void deleteAllByBuzzId(String buzzId) {
+    public void deleteAllByBuzzId(Long buzzId) {
         buzzCommentJpaRepository.deleteAllByThreadBuzzId(buzzId);
     }
 
     @Override
-    public void deleteAllByBuzzIds(Collection<String> buzzIds) {
+    public void deleteAllByBuzzIds(Collection<Long> buzzIds) {
         buzzCommentJpaRepository.deleteAllByThreadBuzzIdIn(buzzIds);
     }
 }

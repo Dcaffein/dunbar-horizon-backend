@@ -16,22 +16,22 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface BuzzJpaRepository extends JpaRepository<Buzz, String> {
+public interface BuzzJpaRepository extends JpaRepository<Buzz, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("SELECT b FROM Buzz b WHERE b.id = :id")
-    Optional<Buzz> findByIdForShare(@Param("id") String id);
+    Optional<Buzz> findByIdForShare(@Param("id") Long id);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM Buzz b WHERE b.id = :id")
-    void deleteById(@Param("id") String id);
+    void deleteById(@Param("id") Long id);
 
     @Query("SELECT b.id FROM Buzz b WHERE b.expiresAt <= :now")
-    List<String> findIdsByExpiresAtAtOrBefore(@Param("now") LocalDateTime now);
+    List<Long> findIdsByExpiresAtAtOrBefore(@Param("now") LocalDateTime now);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM Buzz b WHERE b.id IN :ids")
-    int deleteAllByIdIn(@Param("ids") Collection<String> ids);
+    int deleteAllByIdIn(@Param("ids") Collection<Long> ids);
 
     @Query("""
             SELECT new com.example.DunbarHorizon.buzz.application.dto.info.ReceivedBuzz(b, m.isRead)

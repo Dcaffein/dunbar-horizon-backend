@@ -55,7 +55,7 @@ class BuzzReadDeletionConcurrencyTest {
 
     private final Long creatorId = 21_001L;
     private final Long recipientId = 21_002L;
-    private final List<String> createdBuzzIds = new ArrayList<>();
+    private final List<Long> createdBuzzIds = new ArrayList<>();
 
     @AfterEach
     void tearDown() {
@@ -187,7 +187,7 @@ class BuzzReadDeletionConcurrencyTest {
         return buzz;
     }
 
-    private long countRows(String table, String column, String buzzId) {
+    private long countRows(String table, String column, Long buzzId) {
         Long count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM " + table + " WHERE " + column + " = ?", Long.class, buzzId);
         return count == null ? 0 : count;

@@ -62,7 +62,7 @@ public class BuzzController {
     @GetMapping("/{buzzId}")
     public ResponseEntity<BuzzDetailResult> getBuzzDetail(
             @CurrentUserId Long currentUserId,
-            @PathVariable String buzzId) {
+            @PathVariable Long buzzId) {
         return ResponseEntity.ok(buzzService.getBuzzDetail(currentUserId, buzzId));
     }
 
@@ -74,7 +74,7 @@ public class BuzzController {
     @PatchMapping("/{buzzId}")
     public ResponseEntity<Void> updateBuzz(
             @CurrentUserId Long currentUserId,
-            @PathVariable String buzzId,
+            @PathVariable Long buzzId,
             @RequestBody @Valid BuzzUpdateRequest request) {
         buzzService.updateBuzz(request.toCommand(currentUserId, buzzId));
         return ResponseEntity.noContent().build();
@@ -83,7 +83,7 @@ public class BuzzController {
     @DeleteMapping("/{buzzId}")
     public ResponseEntity<Void> deleteBuzz(
             @CurrentUserId Long currentUserId,
-            @PathVariable String buzzId) {
+            @PathVariable Long buzzId) {
         buzzService.deleteBuzz(currentUserId, buzzId);
         return ResponseEntity.noContent().build();
     }

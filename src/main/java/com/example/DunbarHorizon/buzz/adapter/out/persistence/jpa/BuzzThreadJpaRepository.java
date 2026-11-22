@@ -14,7 +14,7 @@ import java.util.Optional;
 
 public interface BuzzThreadJpaRepository extends JpaRepository<BuzzThread, Long> {
 
-    List<BuzzThread> findAllByBuzzIdOrderByCreatedAtAscIdAsc(String buzzId);
+    List<BuzzThread> findAllByBuzzIdOrderByCreatedAtAscIdAsc(Long buzzId);
 
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("SELECT t FROM BuzzThread t WHERE t.id = :id")
@@ -26,9 +26,9 @@ public interface BuzzThreadJpaRepository extends JpaRepository<BuzzThread, Long>
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM BuzzThread t WHERE t.buzzId = :buzzId")
-    int deleteAllByBuzzId(@Param("buzzId") String buzzId);
+    int deleteAllByBuzzId(@Param("buzzId") Long buzzId);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM BuzzThread t WHERE t.buzzId IN :buzzIds")
-    int deleteAllByBuzzIdIn(@Param("buzzIds") Collection<String> buzzIds);
+    int deleteAllByBuzzIdIn(@Param("buzzIds") Collection<Long> buzzIds);
 }

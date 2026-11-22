@@ -12,16 +12,16 @@ import java.util.Optional;
 
 public interface BuzzAudienceMemberJpaRepository extends JpaRepository<BuzzAudienceMember, BuzzAudienceMember.Key> {
 
-    Optional<BuzzAudienceMember> findByBuzzIdAndUserId(String buzzId, Long userId);
+    Optional<BuzzAudienceMember> findByBuzzIdAndUserId(Long buzzId, Long userId);
 
     @Query("SELECT m.userId FROM BuzzAudienceMember m WHERE m.buzzId = :buzzId ORDER BY m.userId")
-    List<Long> findUserIdsByBuzzId(@Param("buzzId") String buzzId);
+    List<Long> findUserIdsByBuzzId(@Param("buzzId") Long buzzId);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM BuzzAudienceMember m WHERE m.buzzId = :buzzId")
-    int deleteAllByBuzzId(@Param("buzzId") String buzzId);
+    int deleteAllByBuzzId(@Param("buzzId") Long buzzId);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM BuzzAudienceMember m WHERE m.buzzId IN :buzzIds")
-    int deleteAllByBuzzIdIn(@Param("buzzIds") Collection<String> buzzIds);
+    int deleteAllByBuzzIdIn(@Param("buzzIds") Collection<Long> buzzIds);
 }

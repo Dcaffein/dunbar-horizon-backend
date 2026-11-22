@@ -14,7 +14,7 @@ public record BuzzUpdateRequest(
 
         List<String> imageKeys
 ) {
-    public UpdateBuzzCommand toCommand(Long requesterId, String buzzId) {
+    public UpdateBuzzCommand toCommand(Long requesterId, Long buzzId) {
         return new UpdateBuzzCommand(requesterId, buzzId, text, imageKeys != null ? imageKeys : List.of());
     }
 }

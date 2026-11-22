@@ -65,7 +65,7 @@ class BuzzCommentConcurrencyTest {
 
     private final Long creatorId = 24_001L;
     private final Long starterId = 24_002L;
-    private final List<String> createdBuzzIds = new ArrayList<>();
+    private final List<Long> createdBuzzIds = new ArrayList<>();
 
     @AfterEach
     void tearDown() {

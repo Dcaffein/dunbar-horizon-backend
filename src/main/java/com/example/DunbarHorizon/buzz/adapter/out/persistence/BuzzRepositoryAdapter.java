@@ -26,27 +26,27 @@ public class BuzzRepositoryAdapter implements BuzzRepository {
     }
 
     @Override
-    public Optional<Buzz> findById(String buzzId) {
+    public Optional<Buzz> findById(Long buzzId) {
         return buzzJpaRepository.findById(buzzId);
     }
 
     @Override
-    public Optional<Buzz> findByIdForShare(String buzzId) {
+    public Optional<Buzz> findByIdForShare(Long buzzId) {
         return buzzJpaRepository.findByIdForShare(buzzId);
     }
 
     @Override
-    public void deleteById(String buzzId) {
+    public void deleteById(Long buzzId) {
         buzzJpaRepository.deleteById(buzzId);
     }
 
     @Override
-    public List<String> findExpiredIds(LocalDateTime now) {
+    public List<Long> findExpiredIds(LocalDateTime now) {
         return buzzJpaRepository.findIdsByExpiresAtAtOrBefore(now);
     }
 
     @Override
-    public void deleteAllByIds(Collection<String> buzzIds) {
+    public void deleteAllByIds(Collection<Long> buzzIds) {
         buzzJpaRepository.deleteAllByIdIn(buzzIds);
     }
 }

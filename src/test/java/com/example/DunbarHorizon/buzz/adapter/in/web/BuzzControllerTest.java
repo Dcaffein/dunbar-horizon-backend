@@ -44,16 +44,16 @@ class BuzzControllerTest extends BaseControllerTest {
         @DisplayName("작성자가 상세 조회하면 응답에 isCreator=true가 포함된다")
         void getBuzzDetail_ByCreator_ResponseContainsIsCreatorTrue() throws Exception {
             BuzzDetailResult detail = new BuzzDetailResult(
-                    "buzz-id",
+                    1L,
                     new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
                     "테스트 버즈", List.of(), LocalDateTime.of(2026, 11, 22, 12, 30), 25L, false, true,
                     List.of(),
                     List.of(new BuzzThreadSummaryResult(10L, new BuzzProfileResult(2L, "시작자", null),
                             ThreadVisibility.PRIVATE, LocalDateTime.of(2026, 11, 22, 12, 0)))
             );
-            given(buzzService.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
+            given(buzzService.getBuzzDetail(CURRENT_USER_ID, 1L)).willReturn(detail);
 
-            mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
+            mockMvc.perform(get("/api/v1/buzzes/1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.isCreator").value(true))
                     .andExpect(jsonPath("$.editedAt").exists())
@@ -66,15 +66,15 @@ class BuzzControllerTest extends BaseControllerTest {
         @DisplayName("수신자가 상세 조회하면 응답에 isCreator=false가 포함된다")
         void getBuzzDetail_ByRecipient_ResponseContainsIsCreatorFalse() throws Exception {
             BuzzDetailResult detail = new BuzzDetailResult(
-                    "buzz-id",
+                    1L,
                     new BuzzProfileResult(2L, "작성자", null),
                     "테스트 버즈", List.of(), null, 25L, true, false,
                     List.of(new BuzzProfileResult(CURRENT_USER_ID, "나", null)),
                     List.of()
             );
-            given(buzzService.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
+            given(buzzService.getBuzzDetail(CURRENT_USER_ID, 1L)).willReturn(detail);
 
-            mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
+            mockMvc.perform(get("/api/v1/buzzes/1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.isCreator").value(false));
         }
@@ -91,7 +91,7 @@ class BuzzControllerTest extends BaseControllerTest {
         @DisplayName("GET /api/v1/buzzes/sent 는 작성한 버즈 목록을 반환한다")
         void getSentBuzzes_ReturnsSlice() throws Exception {
             BuzzSummaryResult summary = new BuzzSummaryResult(
-                    "buzz-1",
+                    1L,
                     new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
                     "내가 보낸 버즈", List.of(), null, 10L, false, true
             );
@@ -100,7 +100,7 @@ class BuzzControllerTest extends BaseControllerTest {
 
             mockMvc.perform(get("/api/v1/buzzes/sent"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.content[0].buzzId").value("buzz-1"))
+                    .andExpect(jsonPath("$.content[0].buzzId").value(1L))
                     .andExpect(jsonPath("$.content[0].isCreator").value(true));
         }
     }
@@ -163,12 +163,12 @@ class BuzzControllerTest extends BaseControllerTest {
         @WithMockCustomUser
         @DisplayName("본문과 이미지 키를 받아 204를 반환한다")
         void updateBuzz_Returns204() throws Exception {
-            mockMvc.perform(patch("/api/v1/buzzes/buzz-1")
+            mockMvc.perform(patch("/api/v1/buzzes/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{ \"text\": \"고친 본문\", \"imageKeys\": [\"buzz/b\"] }"))
                     .andExpect(status().isNoContent());
 
-            verify(buzzService).updateBuzz(new UpdateBuzzCommand(CURRENT_USER_ID, "buzz-1", "고친 본문", List.of("buzz/b")));
+            verify(buzzService).updateBuzz(new UpdateBuzzCommand(CURRENT_USER_ID, 1L, "고친 본문", List.of("buzz/b")));
         }
 
         @Test
@@ -179,7 +179,7 @@ class BuzzControllerTest extends BaseControllerTest {
                     { "text": "%s" }
                     """.formatted("가".repeat(Buzz.TEXT_MAX_LENGTH + 1));
 
-            mockMvc.perform(patch("/api/v1/buzzes/buzz-1")
+            mockMvc.perform(patch("/api/v1/buzzes/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest())
