@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.application.network;
 
-import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.network.dto.IntermediaryExpansionResult;
 import com.example.DunbarHorizon.social.application.network.port.SocialExpansionQueryUseCase;
 import com.example.DunbarHorizon.social.application.network.port.SocialExpansionRepository;
 import com.example.DunbarHorizon.social.domain.friendship.exception.FriendshipNotFoundException;
@@ -34,20 +34,20 @@ public class SocialExpansionQueryService implements SocialExpansionQueryUseCase 
     private final SocialExpansionRepository socialExpansionRepository;
 
     @Override
-    public List<AnchorExpansionResult> getAnchorExpansion(Long userId, Long anchorFriendId, Double expansionValue) {
+    public List<IntermediaryExpansionResult> getIntermediaryExpansion(Long userId, Long intermediaryFriendId, Double expansionValue) {
         validateExpansionValue(expansionValue);
         int limit = calculateLimit(expansionValue, BUZZ_MIN_LIMIT, BUZZ_INFLECTION_LIMIT, BUZZ_MAX_LIMIT);
         int threshold = calculateThreshold(expansionValue);
-        return socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorFriendId, threshold, limit);
+        return socialExpansionRepository.getRelatedNetworkByIntermediary(userId, intermediaryFriendId, threshold, limit);
     }
 
-    public List<AnchorExpansionResult> getRecommendationsByAnchor(Long userId, Long anchorFriendId) {
+    public List<IntermediaryExpansionResult> getRecommendationsByIntermediary(Long userId, Long intermediaryFriendId) {
         double intimacy = socialExpansionRepository
-                .findIntimacy(userId, anchorFriendId)
-                .orElseThrow(() -> new FriendshipNotFoundException(userId, anchorFriendId));
+                .findIntimacy(userId, intermediaryFriendId)
+                .orElseThrow(() -> new FriendshipNotFoundException(userId, intermediaryFriendId));
         int limit = calculateLimit(intimacy, REC_MIN_LIMIT, REC_INFLECTION_LIMIT, REC_MAX_LIMIT);
         int threshold = calculateThreshold(intimacy);
-        return socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorFriendId, threshold, limit);
+        return socialExpansionRepository.getRecommendedNetworkByIntermediary(userId, intermediaryFriendId, threshold, limit);
     }
 
     private void validateExpansionValue(Double value) {

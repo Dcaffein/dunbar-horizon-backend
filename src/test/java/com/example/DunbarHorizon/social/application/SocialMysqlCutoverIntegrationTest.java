@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.social.application;
 import com.example.DunbarHorizon.global.event.interaction.BatchMutualInteractionEvent;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.ScoreDirection;
-import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.network.dto.IntermediaryExpansionResult;
 import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult.IntermediaryResult;
 import com.example.DunbarHorizon.social.application.label.dto.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
@@ -54,11 +54,11 @@ class SocialMysqlCutoverIntegrationTest {
     static final MongoDBContainer MONGO = new MongoDBContainer("mongo:7.0");
 
     private static final long ME = 148_001L;
-    private static final long ANCHOR = 148_002L;
+    private static final long INTERMEDIARY = 148_002L;
     private static final long FRIEND = 148_003L;
     private static final long TARGET = 148_004L;
     private static final long REQUESTER = 148_005L;
-    private static final String LABEL_ID = "cutover-anchor-label";
+    private static final String LABEL_ID = "cutover-intermediary-label";
 
     @Autowired private ApplicationContext app;
     @Autowired private JdbcTemplate jdbc;
@@ -84,16 +84,16 @@ class SocialMysqlCutoverIntegrationTest {
     @DisplayName("Neo4j 연결 없이 앱이 기동하고 이관 형식의 데이터에서 Social 읽기와 쓰기가 동작한다")
     void appUsesMySqlForSocial_AfterCutover() {
         // given
-        for (long userId : List.of(ME, ANCHOR, FRIEND, TARGET, REQUESTER)) {
+        for (long userId : List.of(ME, INTERMEDIARY, FRIEND, TARGET, REQUESTER)) {
             jdbc.update("INSERT INTO users (user_id, email, nickname, role, status) VALUES (?, ?, ?, 'USER', 'ACTIVE')",
                     userId, userId + "@cutover.test", "user-" + userId);
         }
-        insertFriendship(ME, ANCHOR, 0.8);
+        insertFriendship(ME, INTERMEDIARY, 0.8);
         insertFriendship(ME, FRIEND, 0.6);
-        insertFriendship(ANCHOR, FRIEND, 0.7);
-        insertFriendship(ANCHOR, TARGET, 0.6);
+        insertFriendship(INTERMEDIARY, FRIEND, 0.7);
+        insertFriendship(INTERMEDIARY, TARGET, 0.6);
         insertFriendship(FRIEND, TARGET, 0.5);
-        jdbc.update("INSERT INTO labels (id, owner_id, name) VALUES (?, ?, '동네')", LABEL_ID, ANCHOR);
+        jdbc.update("INSERT INTO labels (id, owner_id, name) VALUES (?, ?, '동네')", LABEL_ID, INTERMEDIARY);
         jdbc.update("INSERT INTO label_members (label_id, member_id) VALUES (?, ?), (?, ?)", LABEL_ID, ME, LABEL_ID, TARGET);
         jdbc.update("""
                 INSERT INTO friend_requests (requester_id, receiver_id, created_at, status)
@@ -103,22 +103,22 @@ class SocialMysqlCutoverIntegrationTest {
         // when & then
         assertThat(app.containsBean("neo4jDriver")).isFalse();
         assertThat(socialNetworkQueryService.getFriendsNetwork(ME, DunbarCircle.DUNBAR)).extracting(NodeGraphResult::nodeId)
-                .containsExactly(ANCHOR, FRIEND);
-        assertThat(socialNetworkQueryService.getLabelNetwork(ANCHOR, LABEL_ID)).extracting(NodeGraphResult::nodeId)
+                .containsExactly(INTERMEDIARY, FRIEND);
+        assertThat(socialNetworkQueryService.getLabelNetwork(INTERMEDIARY, LABEL_ID)).extracting(NodeGraphResult::nodeId)
                 .containsExactly(ME, TARGET);
-        assertThat(socialExpansionQueryService.getRecommendationsByAnchor(ME, ANCHOR)).extracting(AnchorExpansionResult::id)
+        assertThat(socialExpansionQueryService.getRecommendationsByIntermediary(ME, INTERMEDIARY)).extracting(IntermediaryExpansionResult::id)
                 .containsExactly(TARGET);
         assertThat(socialConnectionPathQueryService.getConnectionPath(ME, TARGET).intermediaries()).extracting(IntermediaryResult::userId)
-                .containsExactly(ANCHOR, FRIEND);
+                .containsExactly(INTERMEDIARY, FRIEND);
         assertThat(friendshipQueryService.getFriendIdsIn(ME, List.of(FRIEND, TARGET))).containsExactly(FRIEND);
         assertThat(friendshipQueryService.getMutedIds(ME)).isEmpty();
-        assertThat(friendshipQueryService.getListenableFriendIds(ME)).containsExactlyInAnyOrder(ANCHOR, FRIEND);
+        assertThat(friendshipQueryService.getListenableFriendIds(ME)).containsExactlyInAnyOrder(INTERMEDIARY, FRIEND);
 
         jdbc.update("UPDATE users SET nickname = 'renamed' WHERE user_id = ?", TARGET);
         assertThat(friendshipQueryService.getSocialProfile(TARGET).nickname()).isEqualTo("renamed");
-        assertThat(labelQueryService.getLabelMembers(ANCHOR, LABEL_ID)).contains(new LabelMemberResult(TARGET, "renamed"));
+        assertThat(labelQueryService.getLabelMembers(INTERMEDIARY, LABEL_ID)).contains(new LabelMemberResult(TARGET, "renamed"));
         jdbc.update("UPDATE users SET status = 'DORMANT' WHERE user_id = ?", TARGET);
-        assertThat(socialExpansionQueryService.getRecommendationsByAnchor(ME, ANCHOR)).isEmpty();
+        assertThat(socialExpansionQueryService.getRecommendationsByIntermediary(ME, INTERMEDIARY)).isEmpty();
         jdbc.update("UPDATE users SET status = 'ACTIVE' WHERE user_id = ?", TARGET);
 
         friendRequestService.updateStatus(ME, REQUESTER, FriendRequestStatus.ACCEPTED);
@@ -131,10 +131,10 @@ class SocialMysqlCutoverIntegrationTest {
         assertThat(friendshipQueryService.getFriend(ME, FRIEND).myInterestScore())
                 .isEqualTo(FriendRecognition.normalize(scoreFor(0.6) + InteractionScores.scoreOf(InteractionType.FLAG_ENDED)));
 
-        assertThat(labelQueryService.getMemberIdsInOwnedLabels(ANCHOR, List.of(LABEL_ID))).containsExactlyInAnyOrder(ME, TARGET);
-        friendshipCommandService.endFriendship(ME, ANCHOR);
-        assertThat(friendshipQueryService.areFriends(ME, ANCHOR)).isFalse();
-        assertThat(labelQueryService.getMemberIdsInOwnedLabels(ANCHOR, List.of(LABEL_ID))).containsExactly(TARGET);
+        assertThat(labelQueryService.getMemberIdsInOwnedLabels(INTERMEDIARY, List.of(LABEL_ID))).containsExactlyInAnyOrder(ME, TARGET);
+        friendshipCommandService.endFriendship(ME, INTERMEDIARY);
+        assertThat(friendshipQueryService.areFriends(ME, INTERMEDIARY)).isFalse();
+        assertThat(labelQueryService.getMemberIdsInOwnedLabels(INTERMEDIARY, List.of(LABEL_ID))).containsExactly(TARGET);
     }
 
     private void insertFriendship(long low, long high, double intimacy) {

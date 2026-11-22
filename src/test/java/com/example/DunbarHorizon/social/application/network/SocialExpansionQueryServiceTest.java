@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.application.network;
 
-import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.network.dto.IntermediaryExpansionResult;
 import com.example.DunbarHorizon.social.application.network.port.SocialExpansionRepository;
 import com.example.DunbarHorizon.social.domain.friendship.exception.FriendshipNotFoundException;
 import org.junit.jupiter.api.DisplayName;
@@ -29,128 +29,128 @@ class SocialExpansionQueryServiceTest {
     @InjectMocks
     private SocialExpansionQueryService socialExpansionQueryService;
 
-    // ── getAnchorExpansion ────────────────────────────────────────────────────
+    // ── getIntermediaryExpansion ────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("getAnchorExpansion: expansionValue=0.0이면 limit=10, threshold=5로 호출된다")
-    void getAnchorExpansion_expansionValue_최솟값_파라미터_검증() {
+    @DisplayName("getIntermediaryExpansion: expansionValue=0.0이면 limit=10, threshold=5로 호출된다")
+    void getIntermediaryExpansion_expansionValue_최솟값_파라미터_검증() {
         // given
-        Long userId = 1L, anchorId = 10L;
-        given(socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorId, 5, 10))
+        Long userId = 1L, intermediaryId = 10L;
+        given(socialExpansionRepository.getRelatedNetworkByIntermediary(userId, intermediaryId, 5, 10))
                 .willReturn(List.of());
 
         // when
-        socialExpansionQueryService.getAnchorExpansion(userId, anchorId, 0.0);
+        socialExpansionQueryService.getIntermediaryExpansion(userId, intermediaryId, 0.0);
 
         // then
-        verify(socialExpansionRepository).getRelatedNetworkByAnchor(userId, anchorId, 5, 10);
+        verify(socialExpansionRepository).getRelatedNetworkByIntermediary(userId, intermediaryId, 5, 10);
     }
 
     @Test
-    @DisplayName("getAnchorExpansion: expansionValue=0.8(변곡점)이면 limit=50, threshold=2로 호출된다")
-    void getAnchorExpansion_expansionValue_변곡점_파라미터_검증() {
+    @DisplayName("getIntermediaryExpansion: expansionValue=0.8(변곡점)이면 limit=50, threshold=2로 호출된다")
+    void getIntermediaryExpansion_expansionValue_변곡점_파라미터_검증() {
         // given
-        Long userId = 1L, anchorId = 10L;
-        given(socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorId, 2, 50))
+        Long userId = 1L, intermediaryId = 10L;
+        given(socialExpansionRepository.getRelatedNetworkByIntermediary(userId, intermediaryId, 2, 50))
                 .willReturn(List.of());
 
         // when
-        socialExpansionQueryService.getAnchorExpansion(userId, anchorId, 0.8);
+        socialExpansionQueryService.getIntermediaryExpansion(userId, intermediaryId, 0.8);
 
         // then
-        verify(socialExpansionRepository).getRelatedNetworkByAnchor(userId, anchorId, 2, 50);
+        verify(socialExpansionRepository).getRelatedNetworkByIntermediary(userId, intermediaryId, 2, 50);
     }
 
     @Test
-    @DisplayName("getAnchorExpansion: expansionValue=1.0이면 limit=150, threshold=1로 호출된다")
-    void getAnchorExpansion_expansionValue_최댓값_파라미터_검증() {
+    @DisplayName("getIntermediaryExpansion: expansionValue=1.0이면 limit=150, threshold=1로 호출된다")
+    void getIntermediaryExpansion_expansionValue_최댓값_파라미터_검증() {
         // given
-        Long userId = 1L, anchorId = 10L;
-        given(socialExpansionRepository.getRelatedNetworkByAnchor(userId, anchorId, 1, 150))
+        Long userId = 1L, intermediaryId = 10L;
+        given(socialExpansionRepository.getRelatedNetworkByIntermediary(userId, intermediaryId, 1, 150))
                 .willReturn(List.of());
 
         // when
-        socialExpansionQueryService.getAnchorExpansion(userId, anchorId, 1.0);
+        socialExpansionQueryService.getIntermediaryExpansion(userId, intermediaryId, 1.0);
 
         // then
-        verify(socialExpansionRepository).getRelatedNetworkByAnchor(userId, anchorId, 1, 150);
+        verify(socialExpansionRepository).getRelatedNetworkByIntermediary(userId, intermediaryId, 1, 150);
     }
 
     @Test
-    @DisplayName("getAnchorExpansion: 범위를 벗어난 expansionValue는 예외를 던진다")
-    void getAnchorExpansion_잘못된_expansionValue_예외() {
+    @DisplayName("getIntermediaryExpansion: 범위를 벗어난 expansionValue는 예외를 던진다")
+    void getIntermediaryExpansion_잘못된_expansionValue_예외() {
         // when & then
-        assertThatThrownBy(() -> socialExpansionQueryService.getAnchorExpansion(1L, 10L, -0.1))
+        assertThatThrownBy(() -> socialExpansionQueryService.getIntermediaryExpansion(1L, 10L, -0.1))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> socialExpansionQueryService.getAnchorExpansion(1L, 10L, 1.1))
+        assertThatThrownBy(() -> socialExpansionQueryService.getIntermediaryExpansion(1L, 10L, 1.1))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> socialExpansionQueryService.getAnchorExpansion(1L, 10L, null))
+        assertThatThrownBy(() -> socialExpansionQueryService.getIntermediaryExpansion(1L, 10L, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    @DisplayName("getAnchorExpansion: Repository 결과를 그대로 반환한다")
-    void getAnchorExpansion_결과_반환() {
+    @DisplayName("getIntermediaryExpansion: Repository 결과를 그대로 반환한다")
+    void getIntermediaryExpansion_결과_반환() {
         // given
-        Long userId = 1L, anchorId = 10L;
-        List<AnchorExpansionResult> expected = List.of(
-                new AnchorExpansionResult(100L, "유저A")
+        Long userId = 1L, intermediaryId = 10L;
+        List<IntermediaryExpansionResult> expected = List.of(
+                new IntermediaryExpansionResult(100L, "유저A")
         );
-        given(socialExpansionRepository.getRelatedNetworkByAnchor(eq(userId), eq(anchorId), anyInt(), anyInt()))
+        given(socialExpansionRepository.getRelatedNetworkByIntermediary(eq(userId), eq(intermediaryId), anyInt(), anyInt()))
                 .willReturn(expected);
 
         // when
-        List<AnchorExpansionResult> result = socialExpansionQueryService.getAnchorExpansion(userId, anchorId, 0.5);
+        List<IntermediaryExpansionResult> result = socialExpansionQueryService.getIntermediaryExpansion(userId, intermediaryId, 0.5);
 
         // then
         assertThat(result).isEqualTo(expected);
     }
 
-    // ── getRecommendationsByAnchor ────────────────────────────────────────────
+    // ── getRecommendationsByIntermediary ────────────────────────────────────────────
 
     @Test
-    @DisplayName("getRecommendationsByAnchor: 기준 친구와의 친밀도를 기반으로 limit/threshold를 계산해 호출된다")
-    void getRecommendationsByAnchor_intimacy_기반_파라미터_검증() {
+    @DisplayName("getRecommendationsByIntermediary: 중개 친구와의 친밀도를 기반으로 limit/threshold를 계산해 호출된다")
+    void getRecommendationsByIntermediary_intimacy_기반_파라미터_검증() {
         // given
-        Long userId = 1L, anchorId = 10L;
+        Long userId = 1L, intermediaryId = 10L;
         double intimacy = 0.5; // limit=7, threshold=3
-        given(socialExpansionRepository.findIntimacy(userId, anchorId)).willReturn(Optional.of(intimacy));
-        given(socialExpansionRepository.getRecommendedNetworkByAnchor(userId, anchorId, 3, 7))
+        given(socialExpansionRepository.findIntimacy(userId, intermediaryId)).willReturn(Optional.of(intimacy));
+        given(socialExpansionRepository.getRecommendedNetworkByIntermediary(userId, intermediaryId, 3, 7))
                 .willReturn(List.of());
 
         // when
-        socialExpansionQueryService.getRecommendationsByAnchor(userId, anchorId);
+        socialExpansionQueryService.getRecommendationsByIntermediary(userId, intermediaryId);
 
         // then
-        verify(socialExpansionRepository).getRecommendedNetworkByAnchor(userId, anchorId, 3, 7);
+        verify(socialExpansionRepository).getRecommendedNetworkByIntermediary(userId, intermediaryId, 3, 7);
     }
 
     @Test
-    @DisplayName("getRecommendationsByAnchor: 친구 관계가 없으면 FriendshipNotFoundException을 던진다")
-    void getRecommendationsByAnchor_친구가_아닌_경우_예외() {
+    @DisplayName("getRecommendationsByIntermediary: 친구 관계가 없으면 FriendshipNotFoundException을 던진다")
+    void getRecommendationsByIntermediary_친구가_아닌_경우_예외() {
         // given
-        Long userId = 1L, anchorId = 10L;
-        given(socialExpansionRepository.findIntimacy(userId, anchorId)).willReturn(Optional.empty());
+        Long userId = 1L, intermediaryId = 10L;
+        given(socialExpansionRepository.findIntimacy(userId, intermediaryId)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> socialExpansionQueryService.getRecommendationsByAnchor(userId, anchorId))
+        assertThatThrownBy(() -> socialExpansionQueryService.getRecommendationsByIntermediary(userId, intermediaryId))
                 .isInstanceOf(FriendshipNotFoundException.class);
     }
 
     @Test
-    @DisplayName("getRecommendationsByAnchor: Repository 결과를 그대로 반환한다")
-    void getRecommendationsByAnchor_결과_반환() {
+    @DisplayName("getRecommendationsByIntermediary: Repository 결과를 그대로 반환한다")
+    void getRecommendationsByIntermediary_결과_반환() {
         // given
-        Long userId = 1L, anchorId = 10L;
-        List<AnchorExpansionResult> expected = List.of(
-                new AnchorExpansionResult(200L, "유저B")
+        Long userId = 1L, intermediaryId = 10L;
+        List<IntermediaryExpansionResult> expected = List.of(
+                new IntermediaryExpansionResult(200L, "유저B")
         );
-        given(socialExpansionRepository.findIntimacy(userId, anchorId)).willReturn(Optional.of(0.9));
-        given(socialExpansionRepository.getRecommendedNetworkByAnchor(eq(userId), eq(anchorId), anyInt(), anyInt()))
+        given(socialExpansionRepository.findIntimacy(userId, intermediaryId)).willReturn(Optional.of(0.9));
+        given(socialExpansionRepository.getRecommendedNetworkByIntermediary(eq(userId), eq(intermediaryId), anyInt(), anyInt()))
                 .willReturn(expected);
 
         // when
-        List<AnchorExpansionResult> result = socialExpansionQueryService.getRecommendationsByAnchor(userId, anchorId);
+        List<IntermediaryExpansionResult> result = socialExpansionQueryService.getRecommendationsByIntermediary(userId, intermediaryId);
 
         // then
         assertThat(result).isEqualTo(expected);
