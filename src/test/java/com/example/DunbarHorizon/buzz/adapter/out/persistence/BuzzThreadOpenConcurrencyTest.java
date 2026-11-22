@@ -23,7 +23,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -54,6 +56,7 @@ class BuzzThreadOpenConcurrencyTest {
     @Autowired private BuzzThreadService buzzThreadService;
     @Autowired private BuzzThreadRepositoryAdapter buzzThreadRepositoryAdapter;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private PlatformTransactionManager transactionManager;
     @MockitoSpyBean private BuzzRepositoryAdapter buzzRepositoryAdapter;
     @MockitoSpyBean private BuzzAudienceMemberRepositoryAdapter buzzAudienceMemberRepositoryAdapter;
     @MockitoBean private RecipientStrategyProvider recipientStrategyProvider;
@@ -212,8 +215,10 @@ class BuzzThreadOpenConcurrencyTest {
 
     private Buzz saveBuzz() {
         Buzz buzz = Buzz.create(creatorId, "본문", List.of(), List.of(starterId), LocalDateTime.now());
-        buzzRepositoryAdapter.save(buzz);
-        buzzAudienceMemberRepositoryAdapter.saveAll(List.of(BuzzAudienceMember.create(buzz.getId(), starterId)));
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            buzzRepositoryAdapter.save(buzz);
+            buzzAudienceMemberRepositoryAdapter.saveAll(List.of(BuzzAudienceMember.create(buzz.getId(), starterId)));
+        });
         createdBuzzIds.add(buzz.getId());
         return buzz;
     }
