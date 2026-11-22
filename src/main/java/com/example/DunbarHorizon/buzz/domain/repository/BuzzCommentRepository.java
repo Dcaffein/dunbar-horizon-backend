@@ -12,6 +12,6 @@ public interface BuzzCommentRepository {
     List<BuzzComment> findAllByThreadId(Long threadId);
     void deleteById(Long commentId);
     void deleteAllByThreadId(Long threadId);
-    void deleteAllByBuzzId(String buzzId);
-    void deleteAllByBuzzIds(Collection<String> buzzIds);
+    void deleteAllByBuzzId(Long buzzId);
+    void deleteAllByBuzzIds(Collection<Long> buzzIds);
 }

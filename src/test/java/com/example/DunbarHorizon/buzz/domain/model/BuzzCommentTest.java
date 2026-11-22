@@ -25,7 +25,7 @@ class BuzzCommentTest {
     private final Long authorId = 2L;
     private final Long otherId = 3L;
 
-    private final Buzz buzz = Buzz.create(creatorId, "본문", List.of(), Set.of(authorId, otherId), NOW);
+    private final Buzz buzz = withId(Buzz.create(creatorId, "본문", List.of(), Set.of(authorId, otherId), NOW), 1L);
     private final BuzzThread thread = thread();
 
     private BuzzThread thread() {
@@ -92,5 +92,10 @@ class BuzzCommentTest {
         comment.validateDeletion(creatorId, buzz);
         assertThatThrownBy(() -> comment.validateDeletion(otherId, buzz))
                 .isInstanceOf(BuzzAccessDeniedException.class);
+    }
+
+    private static Buzz withId(Buzz buzz, long id) {
+        org.springframework.test.util.ReflectionTestUtils.setField(buzz, "id", id);
+        return buzz;
     }
 }

@@ -4,9 +4,10 @@ import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzErrorCode;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import com.example.DunbarHorizon.global.exception.ErrorContext;
-import com.example.DunbarHorizon.global.util.UuidUtil;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -32,8 +33,8 @@ public class Buzz {
     private static final Duration LIFETIME = Duration.ofHours(6);
 
     @Id
-    @Column(length = 36)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(nullable = false, updatable = false)
     private Long creatorId;
@@ -53,8 +54,7 @@ public class Buzz {
 
     private LocalDateTime editedAt;
 
-    private Buzz(String id, Long creatorId, String text, List<String> imageKeys, LocalDateTime createdAt) {
-        this.id = id;
+    private Buzz(Long creatorId, String text, List<String> imageKeys, LocalDateTime createdAt) {
         this.creatorId = creatorId;
         this.text = text;
         this.imageKeys = imageKeys;
@@ -68,7 +68,7 @@ public class Buzz {
             throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_RECIPIENTS_REQUIRED);
         }
         validateText(text);
-        return new Buzz(UuidUtil.createV7().toString(), creatorId, text, copyOf(imageKeys), now);
+        return new Buzz(creatorId, text, copyOf(imageKeys), now);
     }
 
     public void update(Long requesterId, String text, List<String> imageKeys, LocalDateTime now) {

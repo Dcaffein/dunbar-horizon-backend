@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.global.exception.ErrorContext;
 
 public class BuzzNotFoundException extends BuzzException {
 
-    public BuzzNotFoundException(String buzzId) {
+    public BuzzNotFoundException(Long buzzId) {
         super(BuzzErrorCode.BUZZ_NOT_FOUND, ErrorContext.of("buzzId", buzzId));
     }
 }

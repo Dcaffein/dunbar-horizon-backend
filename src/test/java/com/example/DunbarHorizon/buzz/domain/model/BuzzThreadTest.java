@@ -24,7 +24,7 @@ class BuzzThreadTest {
     private final Long starterId = 2L;
     private final Long otherMemberId = 3L;
 
-    private final Buzz buzz = Buzz.create(creatorId, "본문", List.of(), Set.of(starterId, otherMemberId), NOW);
+    private final Buzz buzz = withId(Buzz.create(creatorId, "본문", List.of(), Set.of(starterId, otherMemberId), NOW), 1L);
 
     private BuzzThread thread(ThreadVisibility visibility) {
         return BuzzThread.create(buzz, starterId, true, visibility, "첫 글", List.of("buzz/a"), NOW);
@@ -194,5 +194,10 @@ class BuzzThreadTest {
         void needsFriendship_Never() {
             assertThat(thread.needsFriendshipToAccess(otherMemberId, buzz)).isFalse();
         }
+    }
+
+    private static Buzz withId(Buzz buzz, long id) {
+        org.springframework.test.util.ReflectionTestUtils.setField(buzz, "id", id);
+        return buzz;
     }
 }

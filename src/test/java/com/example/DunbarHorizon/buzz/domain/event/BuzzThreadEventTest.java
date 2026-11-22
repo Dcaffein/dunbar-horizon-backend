@@ -14,7 +14,7 @@ class BuzzThreadEventTest {
     @Test
     @DisplayName("스레드를 생성하면 게시자에게 알리고 시작자가 게시자에게 말을 건 것으로 본다")
     void threadCreated() {
-        BuzzThreadCreatedEvent event = new BuzzThreadCreatedEvent("buzz-1", 10L, creatorId, starterId);
+        BuzzThreadCreatedEvent event = new BuzzThreadCreatedEvent(1L, 10L, creatorId, starterId);
 
         assertThat(event.notificationReceiverId()).isEqualTo(creatorId);
         assertThat(event.interactionTargetId()).isEqualTo(creatorId);
@@ -23,7 +23,7 @@ class BuzzThreadEventTest {
     @Test
     @DisplayName("다른 멤버가 답글을 쓰면 게시자와 시작자에게 알리고 시작자에게 말을 건 것으로 본다")
     void commentedByOtherMember() {
-        BuzzCommentedEvent event = new BuzzCommentedEvent("buzz-1", 10L, creatorId, starterId, friendId);
+        BuzzCommentedEvent event = new BuzzCommentedEvent(1L, 10L, creatorId, starterId, friendId);
 
         assertThat(event.notificationReceiverIds()).containsExactly(creatorId, starterId);
         assertThat(event.interactionTargetId()).isEqualTo(starterId);
@@ -32,7 +32,7 @@ class BuzzThreadEventTest {
     @Test
     @DisplayName("시작자가 답글을 쓰면 게시자에게만 알리고 게시자에게 말을 건 것으로 본다")
     void commentedByStarter() {
-        BuzzCommentedEvent event = new BuzzCommentedEvent("buzz-1", 10L, creatorId, starterId, starterId);
+        BuzzCommentedEvent event = new BuzzCommentedEvent(1L, 10L, creatorId, starterId, starterId);
 
         assertThat(event.notificationReceiverIds()).containsExactly(creatorId);
         assertThat(event.interactionTargetId()).isEqualTo(creatorId);
@@ -41,7 +41,7 @@ class BuzzThreadEventTest {
     @Test
     @DisplayName("게시자가 답글을 쓰면 시작자에게만 알리고 시작자에게 말을 건 것으로 본다")
     void commentedByCreator() {
-        BuzzCommentedEvent event = new BuzzCommentedEvent("buzz-1", 10L, creatorId, starterId, creatorId);
+        BuzzCommentedEvent event = new BuzzCommentedEvent(1L, 10L, creatorId, starterId, creatorId);
 
         assertThat(event.notificationReceiverIds()).containsExactly(starterId);
         assertThat(event.interactionTargetId()).isEqualTo(starterId);

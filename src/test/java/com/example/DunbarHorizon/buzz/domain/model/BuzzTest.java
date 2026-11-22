@@ -47,7 +47,7 @@ class BuzzTest {
 
             // when & then
             Buzz buzz = Buzz.create(creatorId, "Hello", List.of(), audienceIds, NOW);
-            assertThat(buzz.getId()).isNotBlank();
+            assertThat(buzz.getCreatorId()).isEqualTo(creatorId);
         }
 
         @Test

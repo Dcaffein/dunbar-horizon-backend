@@ -34,8 +34,8 @@ public class BuzzThread {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, updatable = false, length = 36)
-    private String buzzId;
+    @Column(nullable = false, updatable = false)
+    private Long buzzId;
 
     @Column(nullable = false, updatable = false)
     private Long starterId;
@@ -54,7 +54,7 @@ public class BuzzThread {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    private BuzzThread(String buzzId, Long starterId, ThreadVisibility visibility,
+    private BuzzThread(Long buzzId, Long starterId, ThreadVisibility visibility,
                        String text, List<String> imageKeys, LocalDateTime createdAt) {
         this.buzzId = buzzId;
         this.starterId = starterId;

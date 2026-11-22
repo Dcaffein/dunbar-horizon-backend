@@ -4,7 +4,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public record BuzzCommentedEvent(
-        String buzzId,
+        Long buzzId,
         Long threadId,
         Long creatorId,
         Long starterId,

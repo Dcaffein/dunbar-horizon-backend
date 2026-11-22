@@ -8,8 +8,8 @@ import java.util.Optional;
 
 public interface BuzzAudienceMemberRepository {
     List<BuzzAudienceMember> saveAll(List<BuzzAudienceMember> buzzAudienceMembers);
-    Optional<BuzzAudienceMember> findByBuzzIdAndUserId(String buzzId, Long userId);
-    List<Long> findUserIdsByBuzzId(String buzzId);
-    void deleteAllByBuzzId(String buzzId);
-    void deleteAllByBuzzIds(Collection<String> buzzIds);
+    Optional<BuzzAudienceMember> findByBuzzIdAndUserId(Long buzzId, Long userId);
+    List<Long> findUserIdsByBuzzId(Long buzzId);
+    void deleteAllByBuzzId(Long buzzId);
+    void deleteAllByBuzzIds(Collection<Long> buzzIds);
 }

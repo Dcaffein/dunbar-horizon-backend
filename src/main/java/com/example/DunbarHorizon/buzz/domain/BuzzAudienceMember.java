@@ -21,8 +21,7 @@ import java.io.Serializable;
 public class BuzzAudienceMember {
 
     @Id
-    @Column(length = 36)
-    private String buzzId;
+    private Long buzzId;
 
     @Id
     private Long userId;
@@ -30,13 +29,13 @@ public class BuzzAudienceMember {
     @Column(nullable = false)
     private boolean isRead;
 
-    private BuzzAudienceMember(String buzzId, Long userId) {
+    private BuzzAudienceMember(Long buzzId, Long userId) {
         this.buzzId = buzzId;
         this.userId = userId;
         this.isRead = false;
     }
 
-    public static BuzzAudienceMember create(String buzzId, Long userId) {
+    public static BuzzAudienceMember create(Long buzzId, Long userId) {
         return new BuzzAudienceMember(buzzId, userId);
     }
 
@@ -52,7 +51,7 @@ public class BuzzAudienceMember {
     @AllArgsConstructor
     @EqualsAndHashCode
     public static class Key implements Serializable {
-        private String buzzId;
+        private Long buzzId;
         private Long userId;
     }
 }

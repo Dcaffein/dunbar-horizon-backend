@@ -9,9 +9,9 @@ import java.util.Optional;
 
 public interface BuzzRepository {
     Buzz save(Buzz buzz);
-    Optional<Buzz> findById(String buzzId);
-    Optional<Buzz> findByIdForShare(String buzzId);
-    void deleteById(String buzzId);
-    List<String> findExpiredIds(LocalDateTime now);
-    void deleteAllByIds(Collection<String> buzzIds);
+    Optional<Buzz> findById(Long buzzId);
+    Optional<Buzz> findByIdForShare(Long buzzId);
+    void deleteById(Long buzzId);
+    List<Long> findExpiredIds(LocalDateTime now);
+    void deleteAllByIds(Collection<Long> buzzIds);
 }

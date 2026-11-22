@@ -10,8 +10,8 @@ public interface BuzzThreadRepository {
     BuzzThread save(BuzzThread buzzThread);
     Optional<BuzzThread> findById(Long threadId);
     Optional<BuzzThread> findByIdForShare(Long threadId);
-    List<BuzzThread> findAllByBuzzId(String buzzId);
+    List<BuzzThread> findAllByBuzzId(Long buzzId);
     void deleteById(Long threadId);
-    void deleteAllByBuzzId(String buzzId);
-    void deleteAllByBuzzIds(Collection<String> buzzIds);
+    void deleteAllByBuzzId(Long buzzId);
+    void deleteAllByBuzzIds(Collection<Long> buzzIds);
 }
