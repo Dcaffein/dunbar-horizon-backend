@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.buzz.application.service;
 
 import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.info.recipient.IntermediaryRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.ManualRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
@@ -143,14 +143,14 @@ class BuzzServiceTest {
         }
 
         @Test
-        @DisplayName("앵커로 지정하면 앵커 친구를 통한 확장 결과가 공개 대상이 된다")
-        void createBuzz_Anchor_UsesExpansion() {
+        @DisplayName("중개 친구로 지정하면 중개 친구를 통한 확장 결과가 공개 대상이 된다")
+        void createBuzz_Intermediary_UsesExpansion() {
             // given
-            given(buzzSocialPort.getAnchorExpansionIds(creatorId, 7L, 0.5)).willReturn(Set.of(recipientId, 8L));
+            given(buzzSocialPort.getIntermediaryExpansionIds(creatorId, 7L, 0.5)).willReturn(Set.of(recipientId, 8L));
 
             // when
             buzzService.createBuzz(new CreateBuzzCommand(creatorId, "텍스트",
-                    new AnchorRecipientSpec(7L, 0.5)), List.of());
+                    new IntermediaryRecipientSpec(7L, 0.5)), List.of());
 
             // then
             ArgumentCaptor<BuzzCreatedEvent> eventCaptor = ArgumentCaptor.forClass(BuzzCreatedEvent.class);

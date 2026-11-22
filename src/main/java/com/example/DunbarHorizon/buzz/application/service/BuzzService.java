@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.buzz.application.service;
 
 import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.info.recipient.IntermediaryRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.ManualRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.dto.info.recipient.RecipientSpec;
@@ -73,8 +73,8 @@ public class BuzzService {
             case ManualRecipientSpec(List<Long> memberIds) -> buzzSocialPort.getFriendIdsIn(creatorId,
                     memberIds.stream().filter(memberId -> !memberId.equals(creatorId)).toList());
             case LabelRecipientSpec(List<String> labelIds) -> buzzSocialPort.getLabelMemberIds(creatorId, labelIds);
-            case AnchorRecipientSpec(Long anchorFriendId, Double expansionValue) ->
-                    buzzSocialPort.getAnchorExpansionIds(creatorId, anchorFriendId, expansionValue);
+            case IntermediaryRecipientSpec(Long intermediaryFriendId, Double expansionValue) ->
+                    buzzSocialPort.getIntermediaryExpansionIds(creatorId, intermediaryFriendId, expansionValue);
         };
     }
 }

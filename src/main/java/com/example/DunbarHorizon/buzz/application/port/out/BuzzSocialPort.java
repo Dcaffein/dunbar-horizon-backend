@@ -11,5 +11,5 @@ public interface BuzzSocialPort {
     Set<Long> getNonReceivableFriendIds(Long memberId);
     Set<Long> getFriendIdsIn(Long userId, Collection<Long> targetIds);
     Set<Long> getLabelMemberIds(Long ownerId, List<String> labelIds);
-    Set<Long> getAnchorExpansionIds(Long userId, Long anchorFriendId, Double expansionValue);
+    Set<Long> getIntermediaryExpansionIds(Long userId, Long intermediaryFriendId, Double expansionValue);
 }
