@@ -179,16 +179,28 @@ class BuzzTest {
         }
 
         @Test
-        @DisplayName("게시자는 버즈를 삭제할 수 있다")
-        void validateDeletion_Success_Creator() {
-            buzz().validateDeletion(creatorId);
+        @DisplayName("게시자가 삭제하면 삭제 시각이 남는다")
+        void delete_ByCreator_MarksDeleted() {
+            // given
+            Buzz buzz = buzz();
+
+            // when
+            buzz.delete(creatorId, NOW.plusHours(1));
+
+            // then
+            assertThat(buzz.getDeletedAt()).isEqualTo(NOW.plusHours(1));
         }
 
         @Test
-        @DisplayName("게시자가 아닌 사람이 삭제하려 하면 예외가 발생한다")
-        void validateDeletion_Fail_NonCreator() {
-            assertThatThrownBy(() -> buzz().validateDeletion(recipientId))
+        @DisplayName("게시자가 아닌 사람이 삭제하려 하면 예외가 발생하고 삭제 표시가 남지 않는다")
+        void delete_ByNonCreator_Denied() {
+            // given
+            Buzz buzz = buzz();
+
+            // when & then
+            assertThatThrownBy(() -> buzz.delete(recipientId, NOW.plusHours(1)))
                     .isInstanceOf(BuzzAccessDeniedException.class);
+            assertThat(buzz.getDeletedAt()).isNull();
         }
 
         @Test

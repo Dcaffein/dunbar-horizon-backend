@@ -13,6 +13,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -23,6 +24,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "buzzes")
+@DynamicUpdate
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Buzz {
@@ -53,6 +55,8 @@ public class Buzz {
     private LocalDateTime expiresAt;
 
     private LocalDateTime editedAt;
+
+    private LocalDateTime deletedAt;
 
     private Buzz(Long creatorId, String text, List<String> imageKeys, LocalDateTime createdAt) {
         this.creatorId = creatorId;
@@ -97,11 +101,12 @@ public class Buzz {
         }
     }
 
-    public void validateDeletion(Long requesterId) {
+    public void delete(Long requesterId, LocalDateTime now) {
         if (!isCreator(requesterId)) {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_CREATOR_ONLY,
                     ErrorContext.of("buzzId", id).and("userId", requesterId));
         }
+        this.deletedAt = now;
     }
 
     private static void validateText(String text) {

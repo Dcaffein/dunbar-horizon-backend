@@ -11,7 +11,7 @@ public interface BuzzRepository {
     Buzz save(Buzz buzz);
     Optional<Buzz> findById(Long buzzId);
     Optional<Buzz> findByIdForShare(Long buzzId);
-    void deleteById(Long buzzId);
-    List<Long> findExpiredIds(LocalDateTime now);
+    Optional<Buzz> findByIdForUpdate(Long buzzId);
+    List<Long> findPurgeableIds(LocalDateTime now);
     void deleteAllByIds(Collection<Long> buzzIds);
 }

@@ -11,7 +11,7 @@ public interface BuzzThreadRepository {
     Optional<BuzzThread> findById(Long threadId);
     Optional<BuzzThread> findByIdForShare(Long threadId);
     List<BuzzThread> findAllByBuzzId(Long buzzId);
+    List<Long> findIdsByBuzzIds(Collection<Long> buzzIds);
     void deleteById(Long threadId);
-    void deleteAllByBuzzId(Long buzzId);
     void deleteAllByBuzzIds(Collection<Long> buzzIds);
 }
