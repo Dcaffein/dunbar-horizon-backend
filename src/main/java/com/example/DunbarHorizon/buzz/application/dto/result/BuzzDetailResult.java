@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.application.dto.result;
 
-import com.example.DunbarHorizon.buzz.domain.Buzz;
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzDetailInfo;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -18,17 +18,17 @@ public record BuzzDetailResult(
         List<BuzzProfileResult> recipients,
         List<BuzzThreadSummaryResult> threads
 ) {
-    public static BuzzDetailResult of(Buzz buzz, BuzzProfileResult author, List<String> imageUrls,
+    public static BuzzDetailResult of(BuzzDetailInfo buzz, BuzzProfileResult author, List<String> imageUrls,
                                       boolean isUnread, boolean isCreator,
                                       List<BuzzProfileResult> recipients,
                                       List<BuzzThreadSummaryResult> threads, LocalDateTime now) {
         return new BuzzDetailResult(
-                buzz.getId(),
+                buzz.buzzId(),
                 author,
-                buzz.getText(),
+                buzz.text(),
                 imageUrls,
-                buzz.getEditedAt(),
-                Math.max(0L, Duration.between(now, buzz.getExpiresAt()).toMinutes()),
+                buzz.editedAt(),
+                Math.max(0L, Duration.between(now, buzz.expiresAt()).toMinutes()),
                 isUnread,
                 isCreator,
                 recipients,
