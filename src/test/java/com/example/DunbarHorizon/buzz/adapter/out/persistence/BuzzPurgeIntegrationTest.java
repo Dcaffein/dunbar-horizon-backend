@@ -1,9 +1,6 @@
 package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 
-import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
-import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
-import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
-import com.example.DunbarHorizon.buzz.application.service.BuzzService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzPurgeService;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
@@ -16,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,21 +21,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class, BuzzQueryRepositoryAdapter.class,
-        BuzzThreadRepositoryAdapter.class, BuzzCommentRepositoryAdapter.class, BuzzProfileAssembler.class,
-        BuzzService.class})
+        BuzzThreadRepositoryAdapter.class, BuzzCommentRepositoryAdapter.class, BuzzPurgeService.class})
 class BuzzPurgeIntegrationTest {
 
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 11, 22, 12, 0);
 
-    @Autowired private BuzzService buzzService;
+    @Autowired private BuzzPurgeService buzzPurgeService;
     @Autowired private BuzzRepositoryAdapter buzzRepositoryAdapter;
     @Autowired private BuzzAudienceMemberRepositoryAdapter buzzAudienceMemberRepositoryAdapter;
     @Autowired private BuzzThreadRepositoryAdapter buzzThreadRepositoryAdapter;
     @Autowired private BuzzCommentRepositoryAdapter buzzCommentRepositoryAdapter;
     @Autowired private EntityManager entityManager;
     @Autowired private JdbcTemplate jdbcTemplate;
-    @MockitoBean private BuzzSocialPort buzzSocialPort;
-    @MockitoBean private ImageStoragePort imageStoragePort;
 
     @Test
     @DisplayName("만료 시각이 기준 시각 이전이거나 같은 버즈와 삭제 표시된 버즈만 멤버·스레드·답글과 함께 지운다")
@@ -54,7 +47,7 @@ class BuzzPurgeIntegrationTest {
         entityManager.clear();
 
         // when
-        int purged = buzzService.purgeExpiredAndDeletedBuzzes(NOW);
+        int purged = buzzPurgeService.purgeExpiredAndDeletedBuzzes(NOW);
 
         // then
         assertThat(purged).isEqualTo(3);

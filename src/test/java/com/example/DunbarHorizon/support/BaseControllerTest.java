@@ -10,6 +10,7 @@ import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.notification.application.DeviceTokenService;
 import com.example.DunbarHorizon.notification.application.NotificationService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzCommentService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzQueryService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzThreadService;
 import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
@@ -67,6 +68,7 @@ public abstract class BaseControllerTest {
     @MockitoBean protected ImageStoragePort imageStoragePort;
 
     @MockitoBean protected BuzzService buzzService;
+    @MockitoBean protected BuzzQueryService buzzQueryService;
     @MockitoBean protected BuzzThreadService buzzThreadService;
     @MockitoBean protected BuzzCommentService buzzCommentService;
 

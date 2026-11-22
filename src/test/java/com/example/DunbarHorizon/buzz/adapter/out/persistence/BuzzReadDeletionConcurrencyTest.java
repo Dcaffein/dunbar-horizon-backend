@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
+import com.example.DunbarHorizon.buzz.application.service.BuzzPurgeService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzService;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
@@ -40,12 +41,13 @@ import static org.mockito.Mockito.doAnswer;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class,
         BuzzQueryRepositoryAdapter.class, BuzzThreadRepositoryAdapter.class, BuzzCommentRepositoryAdapter.class, BuzzProfileAssembler.class,
-        BuzzService.class})
+        BuzzService.class, BuzzPurgeService.class})
 class BuzzReadDeletionConcurrencyTest {
 
     private static final long WAIT_SECONDS = 5;
 
     @Autowired private BuzzService buzzService;
+    @Autowired private BuzzPurgeService buzzPurgeService;
     @Autowired private BuzzAudienceMemberRepositoryAdapter buzzAudienceMemberRepositoryAdapter;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private PlatformTransactionManager transactionManager;
@@ -106,7 +108,7 @@ class BuzzReadDeletionConcurrencyTest {
             assertThat(isDeleted(buzz.getId())).isTrue();
             assertThat(isRead(buzz.getId())).isTrue();
 
-            buzzService.purgeExpiredAndDeletedBuzzes(LocalDateTime.now());
+            buzzPurgeService.purgeExpiredAndDeletedBuzzes(LocalDateTime.now());
             assertThat(countRows("buzzes", "id", buzz.getId())).isZero();
             assertThat(countRows("buzz_audience_members", "buzz_id", buzz.getId())).isZero();
         } finally {

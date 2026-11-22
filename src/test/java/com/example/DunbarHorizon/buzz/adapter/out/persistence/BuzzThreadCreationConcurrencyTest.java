@@ -4,6 +4,7 @@ import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzThreadCo
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
+import com.example.DunbarHorizon.buzz.application.service.BuzzPurgeService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzThreadAccess;
 import com.example.DunbarHorizon.buzz.application.service.BuzzThreadService;
@@ -46,12 +47,13 @@ import static org.mockito.Mockito.doAnswer;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class, BuzzQueryRepositoryAdapter.class,
         BuzzThreadRepositoryAdapter.class, BuzzCommentRepositoryAdapter.class, BuzzProfileAssembler.class,
-        BuzzThreadAccess.class, BuzzService.class, BuzzThreadService.class})
+        BuzzThreadAccess.class, BuzzService.class, BuzzPurgeService.class, BuzzThreadService.class})
 class BuzzThreadCreationConcurrencyTest {
 
     private static final long WAIT_SECONDS = 5;
 
     @Autowired private BuzzService buzzService;
+    @Autowired private BuzzPurgeService buzzPurgeService;
     @Autowired private BuzzThreadService buzzThreadService;
     @Autowired private BuzzThreadRepositoryAdapter buzzThreadRepositoryAdapter;
     @Autowired private JdbcTemplate jdbcTemplate;
@@ -166,7 +168,7 @@ class BuzzThreadCreationConcurrencyTest {
             assertThat(deletionFailure.get()).isNull();
             assertThat(countRows("buzz_threads", "buzz_id", buzz.getId())).isEqualTo(1);
 
-            buzzService.purgeExpiredAndDeletedBuzzes(LocalDateTime.now());
+            buzzPurgeService.purgeExpiredAndDeletedBuzzes(LocalDateTime.now());
             assertThat(countRows("buzz_threads", "buzz_id", buzz.getId())).isZero();
         } finally {
             continueCreation.countDown();

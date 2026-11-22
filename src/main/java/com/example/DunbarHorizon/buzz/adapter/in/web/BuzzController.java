@@ -2,6 +2,7 @@ package com.example.DunbarHorizon.buzz.adapter.in.web;
 
 import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzCreateRequest;
 import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzUpdateRequest;
+import com.example.DunbarHorizon.buzz.application.service.BuzzQueryService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzService;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
@@ -27,6 +28,7 @@ import java.util.List;
 public class BuzzController {
 
     private final BuzzService buzzService;
+    private final BuzzQueryService buzzQueryService;
     private final ImageStoragePort imageStoragePort;
 
     @PostMapping("/images/presign")
@@ -49,14 +51,14 @@ public class BuzzController {
     public ResponseEntity<Slice<BuzzSummaryResult>> getReceivedBuzzes(
             @CurrentUserId Long currentUserId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(buzzService.getReceivedBuzzes(currentUserId, pageable));
+        return ResponseEntity.ok(buzzQueryService.getReceivedBuzzes(currentUserId, pageable));
     }
 
     @GetMapping("/sent")
     public ResponseEntity<Slice<BuzzSummaryResult>> getSentBuzzes(
             @CurrentUserId Long currentUserId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(buzzService.getSentBuzzes(currentUserId, pageable));
+        return ResponseEntity.ok(buzzQueryService.getSentBuzzes(currentUserId, pageable));
     }
 
     @GetMapping("/{buzzId}")
@@ -68,7 +70,7 @@ public class BuzzController {
 
     @GetMapping("/senders/unread")
     public ResponseEntity<List<Long>> getUnreadSenders(@CurrentUserId Long currentUserId) {
-        return ResponseEntity.ok(buzzService.getUnreadSenderIds(currentUserId));
+        return ResponseEntity.ok(buzzQueryService.getUnreadSenderIds(currentUserId));
     }
 
     @PatchMapping("/{buzzId}")

@@ -95,7 +95,7 @@ class BuzzControllerTest extends BaseControllerTest {
                     new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
                     "내가 보낸 버즈", List.of(), null, 10L, false, true
             );
-            given(buzzService.getSentBuzzes(eq(CURRENT_USER_ID), any()))
+            given(buzzQueryService.getSentBuzzes(eq(CURRENT_USER_ID), any()))
                     .willReturn(new SliceImpl<>(List.of(summary), PageRequest.of(0, 20), false));
 
             mockMvc.perform(get("/api/v1/buzzes/sent"))

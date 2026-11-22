@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.adapter.in.scheduler;
 
-import com.example.DunbarHorizon.buzz.application.service.BuzzService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzPurgeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -11,10 +11,10 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class BuzzPurgeScheduler {
 
-    private final BuzzService buzzService;
+    private final BuzzPurgeService buzzPurgeService;
 
     @Scheduled(cron = "0 0 * * * *")
     public void runPurge() {
-        buzzService.purgeExpiredAndDeletedBuzzes(LocalDateTime.now());
+        buzzPurgeService.purgeExpiredAndDeletedBuzzes(LocalDateTime.now());
     }
 }
