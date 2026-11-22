@@ -49,7 +49,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Database | Config | Base packages |
 |----------|--------|---------------|
 | MySQL (JPA/Hibernate) | `global/config/database/JpaConfig.java` | `account`, `buzz`, `trace`, `flag`, `notification.adapter.out.persistence.jpa`, `social.adapter.out.persistence` |
-| MongoDB | `global/config/database/MongoConfig.java` | 저장소 없음. 기동 시 `buzz.adapter.out.persistence.legacy.LegacyBuzzMigrator`가 옛 버즈를 MySQL로 옮길 때만 쓴다 |
+| MongoDB | `global/config/database/MongoConfig.java` | 저장소 없음. 쓰는 곳이 없고 인프라 제거만 남았다 |
 
 로컬 기본값:
 - MySQL: `localhost:3306/dunbar_horizon`
