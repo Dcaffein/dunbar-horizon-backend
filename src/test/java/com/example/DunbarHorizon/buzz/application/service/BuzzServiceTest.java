@@ -310,7 +310,7 @@ class BuzzServiceTest {
         Buzz buzz = buzz(List.of());
         PageRequest pageable = PageRequest.of(0, 20);
         given(buzzSocialPort.getNonReceivableFriendIds(recipientId)).willReturn(Set.of());
-        given(buzzQueryRepository.findUnexpiredReceived(eq(recipientId), eq(Set.of()), any(), eq(pageable)))
+        given(buzzQueryRepository.findReceived(eq(recipientId), eq(Set.of()), any(), eq(pageable)))
                 .willReturn(new SliceImpl<>(List.of(new ReceivedBuzz(buzz, false)), pageable, false));
         given(buzzSocialPort.getCreatorProfiles(List.of(creatorId)))
                 .willReturn(List.of(new BuzzCreatorInfo(creatorId, "작성자", "signed-creator")));
@@ -331,7 +331,7 @@ class BuzzServiceTest {
         // given
         Buzz buzz = buzz(List.of());
         PageRequest pageable = PageRequest.of(0, 20);
-        given(buzzQueryRepository.findUnexpiredSent(eq(creatorId), any(), eq(pageable)))
+        given(buzzQueryRepository.findSent(eq(creatorId), any(), eq(pageable)))
                 .willReturn(new SliceImpl<>(List.of(buzz), pageable, false));
         given(buzzSocialPort.getCreatorProfiles(List.of(creatorId)))
                 .willReturn(List.of(new BuzzCreatorInfo(creatorId, "작성자", null)));
@@ -396,21 +396,20 @@ class BuzzServiceTest {
     class DeleteBuzz {
 
         @Test
-        @DisplayName("게시자가 삭제하면 버즈 행을 먼저 지운 뒤 공개 대상 멤버, 답글, 스레드를 지운다")
-        void deleteBuzz_ByCreator_DeletesBuzzThenMembers() {
+        @DisplayName("게시자가 삭제하면 버즈를 배타 락으로 읽어 삭제 표시만 남기고 자식은 지우지 않는다")
+        void deleteBuzz_ByCreator_MarksDeletedOnly() {
             // given
             Buzz buzz = buzz(List.of());
-            given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
+            given(buzzRepository.findByIdForUpdate(buzz.getId())).willReturn(Optional.of(buzz));
 
             // when
             buzzService.deleteBuzz(creatorId, buzz.getId());
 
             // then
-            InOrder order = inOrder(buzzRepository, buzzAudienceMemberRepository, buzzCommentRepository, buzzThreadRepository);
-            order.verify(buzzRepository).deleteById(buzz.getId());
-            order.verify(buzzAudienceMemberRepository).deleteAllByBuzzId(buzz.getId());
-            order.verify(buzzCommentRepository).deleteAllByBuzzId(buzz.getId());
-            order.verify(buzzThreadRepository).deleteAllByBuzzId(buzz.getId());
+            assertThat(buzz.getDeletedAt()).isNotNull();
+            verify(buzzRepository, never()).deleteAllByIds(any());
+            verify(buzzAudienceMemberRepository, never()).deleteAllByBuzzIds(any());
+            verify(buzzThreadRepository, never()).deleteAllByBuzzIds(any());
         }
 
         @Test
@@ -418,48 +417,74 @@ class BuzzServiceTest {
         void deleteBuzz_ByNonCreator_Denied() {
             // given
             Buzz buzz = buzz(List.of());
-            given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
+            given(buzzRepository.findByIdForUpdate(buzz.getId())).willReturn(Optional.of(buzz));
 
             // when & then
             assertThatThrownBy(() -> buzzService.deleteBuzz(recipientId, buzz.getId()))
                     .isInstanceOf(BuzzAccessDeniedException.class);
-            verify(buzzRepository, never()).deleteById(any());
+            assertThat(buzz.getDeletedAt()).isNull();
+        }
+
+        @Test
+        @DisplayName("없거나 이미 삭제된 버즈는 찾을 수 없다")
+        void deleteBuzz_Missing_NotFound() {
+            given(buzzRepository.findByIdForUpdate(999L)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> buzzService.deleteBuzz(creatorId, 999L))
+                    .isInstanceOf(BuzzNotFoundException.class);
         }
     }
 
     @Nested
-    @DisplayName("만료 정리")
-    class PurgeExpired {
+    @DisplayName("만료·삭제 정리")
+    class PurgeExpiredAndDeleted {
 
         @Test
-        @DisplayName("만료된 버즈 행을 먼저 지운 뒤 멤버, 답글, 스레드를 지우고 지운 버즈 수를 돌려준다")
-        void purgeExpiredBuzzes_DeletesBuzzesThenChildren() {
+        @DisplayName("버즈 행을 먼저 지운 뒤 그 버즈들의 스레드 ID로 답글을 지우고 멤버와 스레드를 지운다")
+        void purge_DeletesBuzzesThenChildren() {
             // given
             LocalDateTime now = LocalDateTime.now();
-            List<Long> expiredIds = List.of(1L, 2L);
-            given(buzzRepository.findExpiredIds(now)).willReturn(expiredIds);
+            List<Long> buzzIds = List.of(1L, 2L);
+            given(buzzRepository.findPurgeableIds(now)).willReturn(buzzIds);
+            given(buzzThreadRepository.findIdsByBuzzIds(buzzIds)).willReturn(List.of(10L, 11L));
 
             // when
-            int purged = buzzService.purgeExpiredBuzzes(now);
+            int purged = buzzService.purgeExpiredAndDeletedBuzzes(now);
 
             // then
             assertThat(purged).isEqualTo(2);
-            InOrder order = inOrder(buzzRepository, buzzAudienceMemberRepository, buzzCommentRepository, buzzThreadRepository);
-            order.verify(buzzRepository).deleteAllByIds(expiredIds);
-            order.verify(buzzAudienceMemberRepository).deleteAllByBuzzIds(expiredIds);
-            order.verify(buzzCommentRepository).deleteAllByBuzzIds(expiredIds);
-            order.verify(buzzThreadRepository).deleteAllByBuzzIds(expiredIds);
+            InOrder order = inOrder(buzzRepository, buzzThreadRepository, buzzAudienceMemberRepository, buzzCommentRepository);
+            order.verify(buzzRepository).deleteAllByIds(buzzIds);
+            order.verify(buzzThreadRepository).findIdsByBuzzIds(buzzIds);
+            order.verify(buzzAudienceMemberRepository).deleteAllByBuzzIds(buzzIds);
+            order.verify(buzzCommentRepository).deleteAllByThreadIds(List.of(10L, 11L));
+            order.verify(buzzThreadRepository).deleteAllByBuzzIds(buzzIds);
         }
 
         @Test
-        @DisplayName("만료된 버즈가 없으면 아무것도 지우지 않는다")
-        void purgeExpiredBuzzes_NothingExpired() {
+        @DisplayName("스레드가 없으면 답글 삭제를 건너뛴다")
+        void purge_NoThreads_SkipsComments() {
             // given
             LocalDateTime now = LocalDateTime.now();
-            given(buzzRepository.findExpiredIds(now)).willReturn(List.of());
+            given(buzzRepository.findPurgeableIds(now)).willReturn(List.of(1L));
+            given(buzzThreadRepository.findIdsByBuzzIds(List.of(1L))).willReturn(List.of());
 
             // when
-            int purged = buzzService.purgeExpiredBuzzes(now);
+            buzzService.purgeExpiredAndDeletedBuzzes(now);
+
+            // then
+            verify(buzzCommentRepository, never()).deleteAllByThreadIds(any());
+        }
+
+        @Test
+        @DisplayName("정리할 버즈가 없으면 아무것도 지우지 않는다")
+        void purge_Nothing() {
+            // given
+            LocalDateTime now = LocalDateTime.now();
+            given(buzzRepository.findPurgeableIds(now)).willReturn(List.of());
+
+            // when
+            int purged = buzzService.purgeExpiredAndDeletedBuzzes(now);
 
             // then
             assertThat(purged).isZero();

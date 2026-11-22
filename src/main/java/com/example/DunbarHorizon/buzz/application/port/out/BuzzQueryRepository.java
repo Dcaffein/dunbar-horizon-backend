@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Set;
 
 public interface BuzzQueryRepository {
-    Slice<ReceivedBuzz> findUnexpiredReceived(Long userId, Set<Long> excludedCreatorIds, LocalDateTime now, Pageable pageable);
-    Slice<Buzz> findUnexpiredSent(Long creatorId, LocalDateTime now, Pageable pageable);
-    List<Long> findUnexpiredUnreadCreatorIds(Long userId, Set<Long> excludedCreatorIds, LocalDateTime now);
+    Slice<ReceivedBuzz> findReceived(Long userId, Set<Long> excludedCreatorIds, LocalDateTime now, Pageable pageable);
+    Slice<Buzz> findSent(Long creatorId, LocalDateTime now, Pageable pageable);
+    List<Long> findUnreadCreatorIds(Long userId, Set<Long> excludedCreatorIds, LocalDateTime now);
 }

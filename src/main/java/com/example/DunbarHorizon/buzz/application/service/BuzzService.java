@@ -71,26 +71,24 @@ public class BuzzService {
     }
 
     public void deleteBuzz(Long requesterId, Long buzzId) {
-        Buzz buzz = buzzRepository.findById(buzzId)
+        Buzz buzz = buzzRepository.findByIdForUpdate(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
-        buzz.validateDeletion(requesterId);
-
-        buzzRepository.deleteById(buzzId);
-        buzzAudienceMemberRepository.deleteAllByBuzzId(buzzId);
-        buzzCommentRepository.deleteAllByBuzzId(buzzId);
-        buzzThreadRepository.deleteAllByBuzzId(buzzId);
+        buzz.delete(requesterId, LocalDateTime.now());
     }
 
-    public int purgeExpiredBuzzes(LocalDateTime now) {
-        List<Long> expiredBuzzIds = buzzRepository.findExpiredIds(now);
-        if (expiredBuzzIds.isEmpty()) {
+    public int purgeExpiredAndDeletedBuzzes(LocalDateTime now) {
+        List<Long> buzzIds = buzzRepository.findPurgeableIds(now);
+        if (buzzIds.isEmpty()) {
             return 0;
         }
-        buzzRepository.deleteAllByIds(expiredBuzzIds);
-        buzzAudienceMemberRepository.deleteAllByBuzzIds(expiredBuzzIds);
-        buzzCommentRepository.deleteAllByBuzzIds(expiredBuzzIds);
-        buzzThreadRepository.deleteAllByBuzzIds(expiredBuzzIds);
-        return expiredBuzzIds.size();
+        buzzRepository.deleteAllByIds(buzzIds);
+        List<Long> threadIds = buzzThreadRepository.findIdsByBuzzIds(buzzIds);
+        buzzAudienceMemberRepository.deleteAllByBuzzIds(buzzIds);
+        if (!threadIds.isEmpty()) {
+            buzzCommentRepository.deleteAllByThreadIds(threadIds);
+        }
+        buzzThreadRepository.deleteAllByBuzzIds(buzzIds);
+        return buzzIds.size();
     }
 
     @Transactional(readOnly = true)
@@ -98,7 +96,7 @@ public class BuzzService {
         LocalDateTime now = LocalDateTime.now();
         Set<Long> excludedCreatorIds = buzzSocialPort.getNonReceivableFriendIds(userId);
         Slice<ReceivedBuzz> receivedBuzzes =
-                buzzQueryRepository.findUnexpiredReceived(userId, excludedCreatorIds, now, pageable);
+                buzzQueryRepository.findReceived(userId, excludedCreatorIds, now, pageable);
 
         Profiles profiles = buzzProfileAssembler.profilesOf(receivedBuzzes.getContent().stream()
                 .map(received -> received.buzz().getCreatorId())
@@ -115,7 +113,7 @@ public class BuzzService {
     @Transactional(readOnly = true)
     public Slice<BuzzSummaryResult> getSentBuzzes(Long userId, Pageable pageable) {
         LocalDateTime now = LocalDateTime.now();
-        Slice<Buzz> sentBuzzes = buzzQueryRepository.findUnexpiredSent(userId, now, pageable);
+        Slice<Buzz> sentBuzzes = buzzQueryRepository.findSent(userId, now, pageable);
 
         Profiles profiles = buzzProfileAssembler.profilesOf(List.of(userId));
         return sentBuzzes.map(buzz -> BuzzSummaryResult.of(
@@ -164,7 +162,7 @@ public class BuzzService {
     @Transactional(readOnly = true)
     public List<Long> getUnreadSenderIds(Long userId) {
         Set<Long> excludedCreatorIds = buzzSocialPort.getNonReceivableFriendIds(userId);
-        return buzzQueryRepository.findUnexpiredUnreadCreatorIds(userId, excludedCreatorIds, LocalDateTime.now());
+        return buzzQueryRepository.findUnreadCreatorIds(userId, excludedCreatorIds, LocalDateTime.now());
     }
 
     private Set<Long> audienceIdsOf(Long creatorId, RecipientSpec spec) {
