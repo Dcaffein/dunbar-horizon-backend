@@ -65,7 +65,7 @@ class BuzzCommentServiceTest {
                 applicationEventPublisher);
         buzz = Buzz.create(creatorId, "본문", List.of(),
                 Set.of(starterId, friendMemberId, otherMemberId), LocalDateTime.now());
-        thread = BuzzThread.open(buzz.getId(), starterId, ThreadVisibility.PUBLIC, "첫 글", List.of(), LocalDateTime.now());
+        thread = BuzzThread.create(buzz.getId(), starterId, ThreadVisibility.PUBLIC, "첫 글", List.of(), LocalDateTime.now());
         ReflectionTestUtils.setField(thread, "id", 10L);
     }
 

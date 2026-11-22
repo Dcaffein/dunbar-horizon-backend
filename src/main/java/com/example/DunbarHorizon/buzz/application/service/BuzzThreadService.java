@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
-import com.example.DunbarHorizon.buzz.application.dto.command.OpenBuzzThreadCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzThreadCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzThreadCommand;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzCommentResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzThreadDetailResult;
@@ -12,7 +12,7 @@ import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
-import com.example.DunbarHorizon.buzz.domain.event.BuzzThreadOpenedEvent;
+import com.example.DunbarHorizon.buzz.domain.event.BuzzThreadCreatedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
@@ -45,19 +45,19 @@ public class BuzzThreadService {
     private final ImageStoragePort imageStoragePort;
     private final ApplicationEventPublisher applicationEventPublisher;
 
-    public Long openThread(OpenBuzzThreadCommand command) {
+    public Long createThread(CreateBuzzThreadCommand command) {
         LocalDateTime now = LocalDateTime.now();
         Buzz buzz = buzzRepository.findByIdForShare(command.buzzId())
                 .orElseThrow(() -> new BuzzNotFoundException(command.buzzId()));
         Optional<BuzzAudienceMember> member =
                 buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), command.starterId());
-        buzz.validateThreadOpening(command.starterId(), member.isPresent(), now);
+        buzz.validateThreadCreation(command.starterId(), member.isPresent(), now);
 
-        BuzzThread thread = buzzThreadRepository.save(BuzzThread.open(
+        BuzzThread thread = buzzThreadRepository.save(BuzzThread.create(
                 buzz.getId(), command.starterId(), command.visibility(), command.text(), command.imageKeys(), now));
         member.ifPresent(BuzzAudienceMember::markAsRead);
 
-        applicationEventPublisher.publishEvent(new BuzzThreadOpenedEvent(
+        applicationEventPublisher.publishEvent(new BuzzThreadCreatedEvent(
                 buzz.getId(), thread.getId(), buzz.getCreatorId(), command.starterId()));
         return thread.getId();
     }
@@ -92,7 +92,6 @@ public class BuzzThreadService {
     public void updateThread(UpdateBuzzThreadCommand command) {
         Buzz buzz = buzzRepository.findById(command.buzzId())
                 .orElseThrow(() -> new BuzzNotFoundException(command.buzzId()));
-        buzz.validateNotExpired(LocalDateTime.now());
         BuzzThread thread = threadOf(buzz, command.threadId());
 
         thread.update(command.requesterId(), command.text(), command.imageKeys());
@@ -101,7 +100,6 @@ public class BuzzThreadService {
     public void deleteThread(Long requesterId, String buzzId, Long threadId) {
         Buzz buzz = buzzRepository.findByIdForShare(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
-        buzz.validateNotExpired(LocalDateTime.now());
         BuzzThread thread = threadOf(buzz, threadId);
         thread.validateDeletion(requesterId, buzz.getCreatorId());
 

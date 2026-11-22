@@ -23,16 +23,16 @@ class BuzzThreadTest {
     private final Long otherMemberId = 3L;
 
     private BuzzThread thread(ThreadVisibility visibility) {
-        return BuzzThread.open("buzz-1", starterId, visibility, "첫 글", List.of("buzz/a"), NOW);
+        return BuzzThread.create("buzz-1", starterId, visibility, "첫 글", List.of("buzz/a"), NOW);
     }
 
     @Nested
-    @DisplayName("스레드 열기")
-    class OpenTest {
+    @DisplayName("스레드 생성")
+    class CreateTest {
 
         @Test
-        @DisplayName("첫 글과 공개 범위, 이미지 키를 가진 스레드를 연다")
-        void open_Success() {
+        @DisplayName("첫 글과 공개 범위, 이미지 키를 가진 스레드를 생성한다")
+        void create_Success() {
             BuzzThread thread = thread(ThreadVisibility.PRIVATE);
 
             assertThat(thread.getStarterId()).isEqualTo(starterId);
@@ -43,25 +43,25 @@ class BuzzThreadTest {
         }
 
         @Test
-        @DisplayName("첫 글이 비어 있으면 열 수 없다")
-        void open_Fail_BlankText() {
-            assertThatThrownBy(() -> BuzzThread.open("buzz-1", starterId, ThreadVisibility.PUBLIC, " ", List.of(), NOW))
+        @DisplayName("첫 글이 비어 있으면 생성할 수 없다")
+        void create_Fail_BlankText() {
+            assertThatThrownBy(() -> BuzzThread.create("buzz-1", starterId, ThreadVisibility.PUBLIC, " ", List.of(), NOW))
                     .isInstanceOf(BuzzInvalidStateException.class);
         }
 
         @Test
-        @DisplayName("첫 글이 300자를 넘으면 열 수 없다")
-        void open_Fail_TooLongText() {
+        @DisplayName("첫 글이 300자를 넘으면 생성할 수 없다")
+        void create_Fail_TooLongText() {
             String tooLong = "가".repeat(BuzzThread.TEXT_MAX_LENGTH + 1);
 
-            assertThatThrownBy(() -> BuzzThread.open("buzz-1", starterId, ThreadVisibility.PUBLIC, tooLong, List.of(), NOW))
+            assertThatThrownBy(() -> BuzzThread.create("buzz-1", starterId, ThreadVisibility.PUBLIC, tooLong, List.of(), NOW))
                     .isInstanceOf(BuzzInvalidStateException.class);
         }
 
         @Test
-        @DisplayName("공개 범위가 없으면 열 수 없다")
-        void open_Fail_NoVisibility() {
-            assertThatThrownBy(() -> BuzzThread.open("buzz-1", starterId, null, "첫 글", List.of(), NOW))
+        @DisplayName("공개 범위가 없으면 생성할 수 없다")
+        void create_Fail_NoVisibility() {
+            assertThatThrownBy(() -> BuzzThread.create("buzz-1", starterId, null, "첫 글", List.of(), NOW))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

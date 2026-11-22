@@ -219,7 +219,7 @@ class BuzzCommentConcurrencyTest {
             buzzAudienceMemberRepositoryAdapter.saveAll(List.of(BuzzAudienceMember.create(buzz.getId(), starterId)));
         });
         createdBuzzIds.add(buzz.getId());
-        return buzzThreadRepositoryAdapter.save(BuzzThread.open(
+        return buzzThreadRepositoryAdapter.save(BuzzThread.create(
                 buzz.getId(), starterId, ThreadVisibility.PUBLIC, "첫 글", List.of(), LocalDateTime.now()));
     }
 

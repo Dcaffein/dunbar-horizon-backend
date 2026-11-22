@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.buzz.application.eventListener;
 
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
-import com.example.DunbarHorizon.buzz.domain.event.BuzzThreadOpenedEvent;
+import com.example.DunbarHorizon.buzz.domain.event.BuzzThreadCreatedEvent;
 import com.example.DunbarHorizon.global.event.interaction.InteractionType;
 import com.example.DunbarHorizon.global.event.interaction.UserInteractionEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
@@ -29,10 +29,10 @@ class BuzzThreadEventListenersTest {
     private final Long friendId = 3L;
 
     @Test
-    @DisplayName("스레드를 열면 시작자 → 게시자 BUZZ_REPLY를 발행한다")
-    void threadOpened_PublishesReplyInteraction() {
+    @DisplayName("스레드를 생성하면 시작자 → 게시자 BUZZ_REPLY를 발행한다")
+    void threadCreated_PublishesReplyInteraction() {
         new BuzzInteractionEventListener(applicationEventPublisher)
-                .onThreadOpened(new BuzzThreadOpenedEvent("buzz-1", 10L, creatorId, starterId));
+                .onThreadCreated(new BuzzThreadCreatedEvent("buzz-1", 10L, creatorId, starterId));
 
         verify(applicationEventPublisher).publishEvent(
                 new UserInteractionEvent(starterId, creatorId, InteractionType.BUZZ_REPLY));
@@ -49,10 +49,10 @@ class BuzzThreadEventListenersTest {
     }
 
     @Test
-    @DisplayName("스레드를 열면 게시자에게 스레드 정보가 담긴 BUZZ_RESPONSE 알림을 보낸다")
-    void threadOpened_NotifiesCreator() {
+    @DisplayName("스레드를 생성하면 게시자에게 스레드 정보가 담긴 BUZZ_RESPONSE 알림을 보낸다")
+    void threadCreated_NotifiesCreator() {
         new BuzzNotificationDispatcher(applicationEventPublisher)
-                .dispatch(new BuzzThreadOpenedEvent("buzz-1", 10L, creatorId, starterId));
+                .dispatch(new BuzzThreadCreatedEvent("buzz-1", 10L, creatorId, starterId));
 
         ArgumentCaptor<NotificationEvent> captor = ArgumentCaptor.forClass(NotificationEvent.class);
         verify(applicationEventPublisher).publishEvent(captor.capture());

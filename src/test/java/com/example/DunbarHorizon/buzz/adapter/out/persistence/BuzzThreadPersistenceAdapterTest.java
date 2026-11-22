@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyOpenedException;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyExistsException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
@@ -25,40 +25,40 @@ class BuzzThreadPersistenceAdapterTest {
     @Autowired private BuzzThreadRepositoryAdapter buzzThreadRepositoryAdapter;
     @Autowired private EntityManager entityManager;
 
-    private BuzzThread open(String buzzId, Long starterId, ThreadVisibility visibility, LocalDateTime createdAt) {
+    private BuzzThread create(String buzzId, Long starterId, ThreadVisibility visibility, LocalDateTime createdAt) {
         return buzzThreadRepositoryAdapter.save(
-                BuzzThread.open(buzzId, starterId, visibility, "첫 글", List.of("buzz/a"), createdAt));
+                BuzzThread.create(buzzId, starterId, visibility, "첫 글", List.of("buzz/a"), createdAt));
     }
 
     @Test
-    @DisplayName("한 멤버는 한 버즈에 공개 스레드와 비공개 스레드를 하나씩 열 수 있다")
+    @DisplayName("한 멤버는 한 버즈에 공개 스레드와 비공개 스레드를 하나씩 생성할 수 있다")
     void save_PublicAndPrivate_BothSaved() {
         // when
-        open("buzz-1", 2L, ThreadVisibility.PUBLIC, NOW);
-        open("buzz-1", 2L, ThreadVisibility.PRIVATE, NOW);
+        create("buzz-1", 2L, ThreadVisibility.PUBLIC, NOW);
+        create("buzz-1", 2L, ThreadVisibility.PRIVATE, NOW);
 
         // then
         assertThat(buzzThreadRepositoryAdapter.findAllByBuzzId("buzz-1")).hasSize(2);
     }
 
     @Test
-    @DisplayName("같은 멤버가 같은 공개 범위의 스레드를 다시 열면 중복 예외로 바뀐다")
+    @DisplayName("같은 멤버가 같은 공개 범위의 스레드를 다시 생성하면 중복 예외로 바뀐다")
     void save_SameVisibilityTwice_Throws() {
         // given
-        open("buzz-1", 2L, ThreadVisibility.PUBLIC, NOW);
+        create("buzz-1", 2L, ThreadVisibility.PUBLIC, NOW);
 
         // when & then
-        assertThatThrownBy(() -> open("buzz-1", 2L, ThreadVisibility.PUBLIC, NOW))
-                .isInstanceOf(BuzzThreadAlreadyOpenedException.class);
+        assertThatThrownBy(() -> create("buzz-1", 2L, ThreadVisibility.PUBLIC, NOW))
+                .isInstanceOf(BuzzThreadAlreadyExistsException.class);
     }
 
     @Test
-    @DisplayName("버즈의 스레드는 연 순서대로 조회되고 다른 버즈의 스레드는 섞이지 않는다")
+    @DisplayName("버즈의 스레드는 생성한 순서대로 조회되고 다른 버즈의 스레드는 섞이지 않는다")
     void findAllByBuzzId_OrderedByCreatedAt() {
         // given
-        BuzzThread later = open("buzz-1", 3L, ThreadVisibility.PUBLIC, NOW.plusMinutes(5));
-        BuzzThread earlier = open("buzz-1", 2L, ThreadVisibility.PUBLIC, NOW);
-        open("buzz-2", 2L, ThreadVisibility.PUBLIC, NOW);
+        BuzzThread later = create("buzz-1", 3L, ThreadVisibility.PUBLIC, NOW.plusMinutes(5));
+        BuzzThread earlier = create("buzz-1", 2L, ThreadVisibility.PUBLIC, NOW);
+        create("buzz-2", 2L, ThreadVisibility.PUBLIC, NOW);
         entityManager.clear();
 
         // when
@@ -72,8 +72,8 @@ class BuzzThreadPersistenceAdapterTest {
     @DisplayName("버즈 단위로 스레드를 지우면 다른 버즈의 스레드는 남는다")
     void deleteAllByBuzzId_KeepsOtherBuzz() {
         // given
-        open("buzz-1", 2L, ThreadVisibility.PUBLIC, NOW);
-        open("buzz-2", 2L, ThreadVisibility.PUBLIC, NOW);
+        create("buzz-1", 2L, ThreadVisibility.PUBLIC, NOW);
+        create("buzz-2", 2L, ThreadVisibility.PUBLIC, NOW);
 
         // when
         buzzThreadRepositoryAdapter.deleteAllByBuzzId("buzz-1");

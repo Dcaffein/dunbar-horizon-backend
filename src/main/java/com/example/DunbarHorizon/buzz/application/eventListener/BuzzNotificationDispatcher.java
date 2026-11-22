@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.buzz.application.eventListener;
 
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
-import com.example.DunbarHorizon.buzz.domain.event.BuzzThreadOpenedEvent;
+import com.example.DunbarHorizon.buzz.domain.event.BuzzThreadCreatedEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,7 @@ public class BuzzNotificationDispatcher {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void dispatch(BuzzThreadOpenedEvent event) {
+    public void dispatch(BuzzThreadCreatedEvent event) {
         eventPublisher.publishEvent(new NotificationEvent(
                 event.notificationReceiverId(), "Buzz 응답", "누군가 내 Buzz에 응답했습니다",
                 NotificationType.BUZZ_RESPONSE,

@@ -1,13 +1,13 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web;
 
-import com.example.DunbarHorizon.buzz.application.dto.command.OpenBuzzThreadCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzThreadCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommentCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzThreadCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.WriteBuzzCommentCommand;
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyOpenedException;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyExistsException;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
@@ -32,26 +32,26 @@ class BuzzThreadControllerTest extends BaseControllerTest {
 
     @Test
     @WithMockCustomUser
-    @DisplayName("스레드를 열면 201을 반환하고 공개 범위와 첫 글을 서비스에 넘긴다")
-    void openThread_Returns201() throws Exception {
+    @DisplayName("스레드를 생성하면 201을 반환하고 공개 범위와 첫 글을 서비스에 넘긴다")
+    void createThread_Returns201() throws Exception {
         String body = """
                 { "text": "첫 글", "visibility": "PRIVATE", "imageKeys": ["buzz/a"] }
                 """;
-        given(buzzThreadService.openThread(any())).willReturn(10L);
+        given(buzzThreadService.createThread(any())).willReturn(10L);
 
         mockMvc.perform(post("/api/v1/buzzes/buzz-1/threads")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isCreated());
 
-        verify(buzzThreadService).openThread(new OpenBuzzThreadCommand(
+        verify(buzzThreadService).createThread(new CreateBuzzThreadCommand(
                 CURRENT_USER_ID, "buzz-1", ThreadVisibility.PRIVATE, "첫 글", List.of("buzz/a")));
     }
 
     @Test
     @WithMockCustomUser
     @DisplayName("공개 범위가 없으면 400을 반환한다")
-    void openThread_NoVisibility_Returns400() throws Exception {
+    void createThread_NoVisibility_Returns400() throws Exception {
         mockMvc.perform(post("/api/v1/buzzes/buzz-1/threads")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ \"text\": \"첫 글\" }"))
@@ -62,7 +62,7 @@ class BuzzThreadControllerTest extends BaseControllerTest {
     @Test
     @WithMockCustomUser
     @DisplayName("첫 글이 300자를 넘으면 400과 validation.text를 반환한다")
-    void openThread_TextOverLimit_Returns400() throws Exception {
+    void createThread_TextOverLimit_Returns400() throws Exception {
         String body = """
                 { "text": "%s", "visibility": "PUBLIC" }
                 """.formatted("가".repeat(BuzzThread.TEXT_MAX_LENGTH + 1));
@@ -136,15 +136,15 @@ class BuzzThreadControllerTest extends BaseControllerTest {
 
     @Test
     @WithMockCustomUser
-    @DisplayName("같은 공개 범위의 스레드를 다시 열면 409를 반환한다")
-    void openThread_Duplicate_Returns409() throws Exception {
-        willThrow(new BuzzThreadAlreadyOpenedException("buzz-1", CURRENT_USER_ID, ThreadVisibility.PUBLIC))
-                .given(buzzThreadService).openThread(any());
+    @DisplayName("같은 공개 범위의 스레드를 다시 생성하면 409를 반환한다")
+    void createThread_Duplicate_Returns409() throws Exception {
+        willThrow(new BuzzThreadAlreadyExistsException("buzz-1", CURRENT_USER_ID, ThreadVisibility.PUBLIC))
+                .given(buzzThreadService).createThread(any());
 
         mockMvc.perform(post("/api/v1/buzzes/buzz-1/threads")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ \"text\": \"첫 글\", \"visibility\": \"PUBLIC\" }"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").value("BUZZ_THREAD_ALREADY_OPENED"));
+                .andExpect(jsonPath("$.error").value("BUZZ_THREAD_ALREADY_EXISTS"));
     }
 }

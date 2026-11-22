@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 
 import com.example.DunbarHorizon.buzz.adapter.out.persistence.jpa.BuzzThreadJpaRepository;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyOpenedException;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyExistsException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -26,7 +26,7 @@ public class BuzzThreadRepositoryAdapter implements BuzzThreadRepository {
             return buzzThreadJpaRepository.saveAndFlush(buzzThread);
         } catch (DataIntegrityViolationException e) {
             if (isStarterVisibilityDuplicate(e)) {
-                throw new BuzzThreadAlreadyOpenedException(
+                throw new BuzzThreadAlreadyExistsException(
                         buzzThread.getBuzzId(), buzzThread.getStarterId(), buzzThread.getVisibility());
             }
             throw e;

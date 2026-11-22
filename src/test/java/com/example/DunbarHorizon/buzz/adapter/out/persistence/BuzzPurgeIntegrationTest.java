@@ -79,7 +79,7 @@ class BuzzPurgeIntegrationTest {
         buzzRepositoryAdapter.save(buzz);
         buzzAudienceMemberRepositoryAdapter.saveAll(List.of(BuzzAudienceMember.create(buzz.getId(), 2L)));
         BuzzThread thread = buzzThreadRepositoryAdapter.save(
-                BuzzThread.open(buzz.getId(), 2L, ThreadVisibility.PUBLIC, "첫 글", List.of(), createdAt));
+                BuzzThread.create(buzz.getId(), 2L, ThreadVisibility.PUBLIC, "첫 글", List.of(), createdAt));
         buzzCommentRepositoryAdapter.save(BuzzComment.write(thread.getId(), 1L, "답글", List.of(), createdAt));
         return buzz;
     }

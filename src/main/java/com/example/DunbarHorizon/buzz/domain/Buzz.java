@@ -72,7 +72,6 @@ public class Buzz {
     }
 
     public void update(Long requesterId, String text, List<String> imageKeys, LocalDateTime now) {
-        validateNotExpired(now);
         if (!isCreator(requesterId)) {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_CREATOR_ONLY,
                     ErrorContext.of("buzzId", id).and("userId", requesterId));
@@ -97,10 +96,10 @@ public class Buzz {
         }
     }
 
-    public void validateThreadOpening(Long userId, boolean isAudienceMember, LocalDateTime now) {
+    public void validateThreadCreation(Long userId, boolean isAudienceMember, LocalDateTime now) {
         validateNotExpired(now);
         if (isCreator(userId)) {
-            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_CREATOR_CANNOT_OPEN_THREAD,
+            throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_CREATOR_CANNOT_CREATE_THREAD,
                     ErrorContext.of("buzzId", id).and("userId", userId));
         }
         validateAccess(userId, isAudienceMember);

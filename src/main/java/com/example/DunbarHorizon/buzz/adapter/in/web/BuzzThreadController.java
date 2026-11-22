@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web;
 
 import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzPostRequest;
-import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzThreadOpenRequest;
+import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzThreadCreateRequest;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommentCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzThreadCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.WriteBuzzCommentCommand;
@@ -31,11 +31,11 @@ public class BuzzThreadController {
     private final BuzzCommentService buzzCommentService;
 
     @PostMapping
-    public ResponseEntity<Void> openThread(
+    public ResponseEntity<Void> createThread(
             @CurrentUserId Long currentUserId,
             @PathVariable String buzzId,
-            @RequestBody @Valid BuzzThreadOpenRequest request) {
-        buzzThreadService.openThread(request.toCommand(currentUserId, buzzId));
+            @RequestBody @Valid BuzzThreadCreateRequest request) {
+        buzzThreadService.createThread(request.toCommand(currentUserId, buzzId));
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

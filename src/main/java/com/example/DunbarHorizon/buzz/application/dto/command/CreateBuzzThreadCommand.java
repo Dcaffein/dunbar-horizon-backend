@@ -4,7 +4,7 @@ import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 
 import java.util.List;
 
-public record OpenBuzzThreadCommand(
+public record CreateBuzzThreadCommand(
         Long starterId,
         String buzzId,
         ThreadVisibility visibility,

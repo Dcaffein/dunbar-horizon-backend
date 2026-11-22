@@ -12,9 +12,9 @@ class BuzzThreadEventTest {
     private final Long friendId = 3L;
 
     @Test
-    @DisplayName("스레드를 열면 게시자에게 알리고 시작자가 게시자에게 말을 건 것으로 본다")
-    void threadOpened() {
-        BuzzThreadOpenedEvent event = new BuzzThreadOpenedEvent("buzz-1", 10L, creatorId, starterId);
+    @DisplayName("스레드를 생성하면 게시자에게 알리고 시작자가 게시자에게 말을 건 것으로 본다")
+    void threadCreated() {
+        BuzzThreadCreatedEvent event = new BuzzThreadCreatedEvent("buzz-1", 10L, creatorId, starterId);
 
         assertThat(event.notificationReceiverId()).isEqualTo(creatorId);
         assertThat(event.interactionTargetId()).isEqualTo(creatorId);

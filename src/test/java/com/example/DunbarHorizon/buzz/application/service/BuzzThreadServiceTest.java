@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
-import com.example.DunbarHorizon.buzz.application.dto.command.OpenBuzzThreadCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzThreadCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzThreadCommand;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzThreadDetailResult;
@@ -13,8 +13,8 @@ import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
-import com.example.DunbarHorizon.buzz.domain.event.BuzzThreadOpenedEvent;
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyOpenedException;
+import com.example.DunbarHorizon.buzz.domain.event.BuzzThreadCreatedEvent;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyExistsException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
@@ -76,12 +76,12 @@ class BuzzThreadServiceTest {
     }
 
     @Nested
-    @DisplayName("스레드 열기")
-    class OpenThread {
+    @DisplayName("스레드 생성")
+    class CreateThread {
 
         @Test
-        @DisplayName("공개 대상 멤버가 스레드를 열면 저장하고 그 멤버를 읽음으로 바꾼다")
-        void openThread_ByMember_SavesAndMarksRead() {
+        @DisplayName("공개 대상 멤버가 스레드를 생성하면 저장하고 그 멤버를 읽음으로 바꾼다")
+        void createThread_ByMember_SavesAndMarksRead() {
             // given
             BuzzAudienceMember member = BuzzAudienceMember.create(buzz.getId(), starterId);
             given(buzzRepository.findByIdForShare(buzz.getId())).willReturn(Optional.of(buzz));
@@ -90,7 +90,7 @@ class BuzzThreadServiceTest {
             given(buzzThreadRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
             // when
-            buzzThreadService.openThread(command(starterId, ThreadVisibility.PRIVATE));
+            buzzThreadService.createThread(command(starterId, ThreadVisibility.PRIVATE));
 
             // then
             ArgumentCaptor<BuzzThread> threadCaptor = ArgumentCaptor.forClass(BuzzThread.class);
@@ -99,38 +99,38 @@ class BuzzThreadServiceTest {
             assertThat(threadCaptor.getValue().getImageKeys()).containsExactly("buzz/a");
             assertThat(member.isUnread()).isFalse();
             verify(applicationEventPublisher).publishEvent(
-                    new BuzzThreadOpenedEvent(buzz.getId(), null, creatorId, starterId));
+                    new BuzzThreadCreatedEvent(buzz.getId(), null, creatorId, starterId));
         }
 
         @Test
         @DisplayName("스레드 저장이 실패하면 시작 이벤트를 발행하지 않는다")
-        void openThread_SaveFails_NoEvent() {
+        void createThread_SaveFails_NoEvent() {
             // given
             given(buzzRepository.findByIdForShare(buzz.getId())).willReturn(Optional.of(buzz));
             given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), starterId))
                     .willReturn(Optional.of(BuzzAudienceMember.create(buzz.getId(), starterId)));
             given(buzzThreadRepository.save(any()))
-                    .willThrow(new BuzzThreadAlreadyOpenedException(buzz.getId(), starterId, ThreadVisibility.PUBLIC));
+                    .willThrow(new BuzzThreadAlreadyExistsException(buzz.getId(), starterId, ThreadVisibility.PUBLIC));
 
             // when & then
-            assertThatThrownBy(() -> buzzThreadService.openThread(command(starterId, ThreadVisibility.PUBLIC)))
-                    .isInstanceOf(BuzzThreadAlreadyOpenedException.class);
+            assertThatThrownBy(() -> buzzThreadService.createThread(command(starterId, ThreadVisibility.PUBLIC)))
+                    .isInstanceOf(BuzzThreadAlreadyExistsException.class);
             verify(applicationEventPublisher, never()).publishEvent(any());
         }
 
         @Test
-        @DisplayName("게시자는 스레드를 열 수 없다")
-        void openThread_ByCreator_Denied() {
+        @DisplayName("게시자는 스레드를 생성할 수 없다")
+        void createThread_ByCreator_Denied() {
             given(buzzRepository.findByIdForShare(buzz.getId())).willReturn(Optional.of(buzz));
 
-            assertThatThrownBy(() -> buzzThreadService.openThread(command(creatorId, ThreadVisibility.PUBLIC)))
+            assertThatThrownBy(() -> buzzThreadService.createThread(command(creatorId, ThreadVisibility.PUBLIC)))
                     .isInstanceOf(BuzzAccessDeniedException.class);
             verify(buzzThreadRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("만료된 버즈에는 스레드를 열 수 없다")
-        void openThread_Expired_Rejected() {
+        @DisplayName("만료된 버즈에는 스레드를 생성할 수 없다")
+        void createThread_Expired_Rejected() {
             // given
             Buzz expired = Buzz.create(creatorId, "본문", List.of(), Set.of(starterId), LocalDateTime.now().minusHours(7));
             given(buzzRepository.findByIdForShare(expired.getId())).willReturn(Optional.of(expired));
@@ -138,13 +138,13 @@ class BuzzThreadServiceTest {
                     .willReturn(Optional.of(BuzzAudienceMember.create(expired.getId(), starterId)));
 
             // when & then
-            assertThatThrownBy(() -> buzzThreadService.openThread(new OpenBuzzThreadCommand(
+            assertThatThrownBy(() -> buzzThreadService.createThread(new CreateBuzzThreadCommand(
                     starterId, expired.getId(), ThreadVisibility.PUBLIC, "첫 글", List.of())))
                     .isInstanceOf(BuzzInvalidStateException.class);
         }
 
-        private OpenBuzzThreadCommand command(Long userId, ThreadVisibility visibility) {
-            return new OpenBuzzThreadCommand(userId, buzz.getId(), visibility, "첫 글", List.of("buzz/a"));
+        private CreateBuzzThreadCommand command(Long userId, ThreadVisibility visibility) {
+            return new CreateBuzzThreadCommand(userId, buzz.getId(), visibility, "첫 글", List.of("buzz/a"));
         }
     }
 
@@ -242,7 +242,7 @@ class BuzzThreadServiceTest {
         @DisplayName("다른 버즈의 스레드 ID로 조회하면 찾을 수 없다")
         void getThread_OtherBuzzThread_NotFound() {
             // given
-            BuzzThread otherBuzzThread = BuzzThread.open("other-buzz", starterId, ThreadVisibility.PUBLIC,
+            BuzzThread otherBuzzThread = BuzzThread.create("other-buzz", starterId, ThreadVisibility.PUBLIC,
                     "첫 글", List.of(), LocalDateTime.now());
             given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(otherBuzzThread));
 
@@ -307,18 +307,6 @@ class BuzzThreadServiceTest {
             verify(buzzThreadRepository, never()).deleteById(any());
         }
 
-        @Test
-        @DisplayName("만료된 버즈의 스레드는 수정할 수 없다")
-        void updateThread_Expired_Rejected() {
-            // given
-            Buzz expired = Buzz.create(creatorId, "본문", List.of(), Set.of(starterId), LocalDateTime.now().minusHours(7));
-            given(buzzRepository.findById(expired.getId())).willReturn(Optional.of(expired));
-
-            // when & then
-            assertThatThrownBy(() -> buzzThreadService.updateThread(new UpdateBuzzThreadCommand(
-                    starterId, expired.getId(), 10L, "수정", List.of())))
-                    .isInstanceOf(BuzzInvalidStateException.class);
-        }
     }
 
     @Test
@@ -344,7 +332,7 @@ class BuzzThreadServiceTest {
     }
 
     private BuzzThread thread(ThreadVisibility visibility) {
-        BuzzThread thread = BuzzThread.open(buzz.getId(), starterId, visibility, "첫 글", List.of(), LocalDateTime.now());
+        BuzzThread thread = BuzzThread.create(buzz.getId(), starterId, visibility, "첫 글", List.of(), LocalDateTime.now());
         ReflectionTestUtils.setField(thread, "id", 10L);
         return thread;
     }

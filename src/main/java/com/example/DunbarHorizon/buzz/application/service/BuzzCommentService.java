@@ -48,7 +48,7 @@ public class BuzzCommentService {
     }
 
     public void updateComment(UpdateBuzzCommentCommand command) {
-        Buzz buzz = unexpiredBuzz(command.buzzId());
+        Buzz buzz = buzzOf(command.buzzId());
         BuzzThread thread = threadOf(buzz, command.threadId());
         BuzzComment comment = commentOf(thread, command.commentId());
 
@@ -56,7 +56,7 @@ public class BuzzCommentService {
     }
 
     public void deleteComment(Long requesterId, String buzzId, Long threadId, Long commentId) {
-        Buzz buzz = unexpiredBuzz(buzzId);
+        Buzz buzz = buzzOf(buzzId);
         BuzzThread thread = threadOf(buzz, threadId);
         BuzzComment comment = commentOf(thread, commentId);
         comment.validateDeletion(requesterId, buzz.getCreatorId());
@@ -64,11 +64,9 @@ public class BuzzCommentService {
         buzzCommentRepository.deleteById(commentId);
     }
 
-    private Buzz unexpiredBuzz(String buzzId) {
-        Buzz buzz = buzzRepository.findById(buzzId)
+    private Buzz buzzOf(String buzzId) {
+        return buzzRepository.findById(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
-        buzz.validateNotExpired(LocalDateTime.now());
-        return buzz;
     }
 
     private BuzzThread threadOf(Buzz buzz, Long threadId) {

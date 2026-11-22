@@ -64,7 +64,7 @@ public class BuzzThread {
         this.createdAt = createdAt;
     }
 
-    public static BuzzThread open(String buzzId, Long starterId, ThreadVisibility visibility,
+    public static BuzzThread create(String buzzId, Long starterId, ThreadVisibility visibility,
                                   String text, List<String> imageKeys, LocalDateTime now) {
         if (visibility == null) {
             throw new IllegalArgumentException("스레드 공개 범위는 필수입니다.");

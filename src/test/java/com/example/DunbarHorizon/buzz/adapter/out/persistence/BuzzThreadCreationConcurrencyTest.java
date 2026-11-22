@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 
-import com.example.DunbarHorizon.buzz.application.dto.command.OpenBuzzThreadCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzThreadCommand;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
@@ -13,7 +13,7 @@ import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyOpenedException;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyExistsException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,7 +48,7 @@ import static org.mockito.Mockito.doAnswer;
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class, BuzzQueryRepositoryAdapter.class,
         BuzzThreadRepositoryAdapter.class, BuzzCommentRepositoryAdapter.class, BuzzProfileAssembler.class,
         BuzzThreadAccess.class, BuzzService.class, BuzzThreadService.class})
-class BuzzThreadOpenConcurrencyTest {
+class BuzzThreadCreationConcurrencyTest {
 
     private static final long WAIT_SECONDS = 5;
 
@@ -78,7 +78,7 @@ class BuzzThreadOpenConcurrencyTest {
     }
 
     @Test
-    @DisplayName("같은 멤버가 같은 공개 범위의 스레드를 동시에 열면 하나만 저장되고 다른 요청은 중복으로 거절된다")
+    @DisplayName("같은 멤버가 같은 공개 범위의 스레드를 동시에 생성하면 하나만 저장되고 다른 요청은 중복으로 거절된다")
     void concurrentSameVisibility_OnlyOneSaved() throws InterruptedException {
         // given
         Buzz buzz = saveBuzz();
@@ -95,8 +95,8 @@ class BuzzThreadOpenConcurrencyTest {
         // when
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
-            submit(executor, () -> buzzThreadService.openThread(command(buzz, ThreadVisibility.PUBLIC)), firstFailure, finished);
-            submit(executor, () -> buzzThreadService.openThread(command(buzz, ThreadVisibility.PUBLIC)), secondFailure, finished);
+            submit(executor, () -> buzzThreadService.createThread(command(buzz, ThreadVisibility.PUBLIC)), firstFailure, finished);
+            submit(executor, () -> buzzThreadService.createThread(command(buzz, ThreadVisibility.PUBLIC)), secondFailure, finished);
             assertThat(finished.await(WAIT_SECONDS * 2, TimeUnit.SECONDS)).isTrue();
         } finally {
             executor.shutdownNow();
@@ -106,49 +106,49 @@ class BuzzThreadOpenConcurrencyTest {
         List<Throwable> failures = new ArrayList<>();
         if (firstFailure.get() != null) failures.add(firstFailure.get());
         if (secondFailure.get() != null) failures.add(secondFailure.get());
-        assertThat(failures).hasSize(1).first().isInstanceOf(BuzzThreadAlreadyOpenedException.class);
+        assertThat(failures).hasSize(1).first().isInstanceOf(BuzzThreadAlreadyExistsException.class);
         assertThat(countRows("buzz_threads", "buzz_id", buzz.getId())).isEqualTo(1);
     }
 
     @Test
     @DisplayName("스레드 저장이 중복으로 실패하면 그 요청의 읽음 변경도 반영되지 않는다")
-    void duplicateOpen_ReadChangeRolledBack() {
+    void duplicateCreation_ReadChangeRolledBack() {
         // given
         Buzz buzz = saveBuzz();
-        buzzThreadRepositoryAdapter.save(BuzzThread.open(
-                buzz.getId(), starterId, ThreadVisibility.PRIVATE, "먼저 연 글", List.of(), LocalDateTime.now()));
+        buzzThreadRepositoryAdapter.save(BuzzThread.create(
+                buzz.getId(), starterId, ThreadVisibility.PRIVATE, "먼저 생성한 글", List.of(), LocalDateTime.now()));
 
         // when & then
-        assertThatThrownBy(() -> buzzThreadService.openThread(command(buzz, ThreadVisibility.PRIVATE)))
-                .isInstanceOf(BuzzThreadAlreadyOpenedException.class);
+        assertThatThrownBy(() -> buzzThreadService.createThread(command(buzz, ThreadVisibility.PRIVATE)))
+                .isInstanceOf(BuzzThreadAlreadyExistsException.class);
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT is_read FROM buzz_audience_members WHERE buzz_id = ? AND user_id = ?",
                 Boolean.class, buzz.getId(), starterId)).isFalse();
     }
 
     @Test
-    @DisplayName("스레드 열기가 버즈를 공유 락으로 읽은 뒤 삭제가 들어오면 삭제가 기다렸다가 새 스레드까지 지운다")
-    void openLocksBuzzFirst_DeletionRemovesThread() throws InterruptedException {
+    @DisplayName("스레드 생성이 버즈를 공유 락으로 읽은 뒤 삭제가 들어오면 삭제가 기다렸다가 새 스레드까지 지운다")
+    void creationLocksBuzzFirst_DeletionRemovesThread() throws InterruptedException {
         // given
         Buzz buzz = saveBuzz();
         CountDownLatch buzzLocked = new CountDownLatch(1);
-        CountDownLatch continueOpen = new CountDownLatch(1);
-        CountDownLatch openFinished = new CountDownLatch(1);
+        CountDownLatch continueCreation = new CountDownLatch(1);
+        CountDownLatch creationFinished = new CountDownLatch(1);
         CountDownLatch deletionFinished = new CountDownLatch(1);
-        AtomicReference<Throwable> openFailure = new AtomicReference<>();
+        AtomicReference<Throwable> creationFailure = new AtomicReference<>();
         AtomicReference<Throwable> deletionFailure = new AtomicReference<>();
         AtomicBoolean blockOnce = new AtomicBoolean(true);
         doAnswer(invocation -> {
             Object locked = invocation.callRealMethod();
             if (blockOnce.compareAndSet(true, false)) {
                 buzzLocked.countDown();
-                await(continueOpen, "스레드 열기 재개");
+                await(continueCreation, "스레드 생성 재개");
             }
             return locked;
         }).when(buzzRepositoryAdapter).findByIdForShare(buzz.getId());
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        submit(executor, () -> buzzThreadService.openThread(command(buzz, ThreadVisibility.PUBLIC)), openFailure, openFinished);
+        submit(executor, () -> buzzThreadService.createThread(command(buzz, ThreadVisibility.PUBLIC)), creationFailure, creationFinished);
 
         try {
             // when
@@ -156,34 +156,34 @@ class BuzzThreadOpenConcurrencyTest {
             submit(executor, () -> buzzService.deleteBuzz(creatorId, buzz.getId()), deletionFailure, deletionFinished);
             awaitFinishedOrLockWait(deletionFinished, "버즈 삭제");
             assertThat(deletionFinished.getCount())
-                    .as("삭제가 스레드 열기의 커밋 전에 끝났다. 삭제 실패: %s, 열기 실패: %s",
-                            deletionFailure.get(), openFailure.get())
+                    .as("삭제가 스레드 생성의 커밋 전에 끝났다. 삭제 실패: %s, 생성 실패: %s",
+                            deletionFailure.get(), creationFailure.get())
                     .isEqualTo(1);
-            continueOpen.countDown();
-            assertThat(openFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            continueCreation.countDown();
+            assertThat(creationFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
             assertThat(deletionFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
 
             // then
-            assertThat(openFailure.get()).isNull();
+            assertThat(creationFailure.get()).isNull();
             assertThat(deletionFailure.get()).isNull();
             assertThat(countRows("buzz_threads", "buzz_id", buzz.getId())).isZero();
         } finally {
-            continueOpen.countDown();
+            continueCreation.countDown();
             executor.shutdownNow();
         }
     }
 
     @Test
-    @DisplayName("삭제가 버즈 행을 먼저 지우면 스레드 열기는 기다렸다가 버즈를 찾지 못하고 스레드를 남기지 않는다")
-    void deletionRemovesBuzzFirst_OpenFailsWithNotFound() throws InterruptedException {
+    @DisplayName("삭제가 버즈 행을 먼저 지우면 스레드 생성은 기다렸다가 버즈를 찾지 못하고 스레드를 남기지 않는다")
+    void deletionRemovesBuzzFirst_CreationFailsWithNotFound() throws InterruptedException {
         // given
         Buzz buzz = saveBuzz();
         CountDownLatch buzzDeleted = new CountDownLatch(1);
         CountDownLatch continueDeletion = new CountDownLatch(1);
         CountDownLatch deletionFinished = new CountDownLatch(1);
-        CountDownLatch openFinished = new CountDownLatch(1);
+        CountDownLatch creationFinished = new CountDownLatch(1);
         AtomicReference<Throwable> deletionFailure = new AtomicReference<>();
-        AtomicReference<Throwable> openFailure = new AtomicReference<>();
+        AtomicReference<Throwable> creationFailure = new AtomicReference<>();
         doAnswer(invocation -> {
             invocation.callRealMethod();
             buzzDeleted.countDown();
@@ -197,15 +197,15 @@ class BuzzThreadOpenConcurrencyTest {
         try {
             // when
             assertThat(buzzDeleted.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-            submit(executor, () -> buzzThreadService.openThread(command(buzz, ThreadVisibility.PUBLIC)), openFailure, openFinished);
-            awaitFinishedOrLockWait(openFinished, "스레드 열기");
+            submit(executor, () -> buzzThreadService.createThread(command(buzz, ThreadVisibility.PUBLIC)), creationFailure, creationFinished);
+            awaitFinishedOrLockWait(creationFinished, "스레드 생성");
             continueDeletion.countDown();
             assertThat(deletionFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-            assertThat(openFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            assertThat(creationFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
 
             // then
             assertThat(deletionFailure.get()).isNull();
-            assertThat(openFailure.get()).isInstanceOf(BuzzNotFoundException.class);
+            assertThat(creationFailure.get()).isInstanceOf(BuzzNotFoundException.class);
             assertThat(countRows("buzz_threads", "buzz_id", buzz.getId())).isZero();
         } finally {
             continueDeletion.countDown();
@@ -223,8 +223,8 @@ class BuzzThreadOpenConcurrencyTest {
         return buzz;
     }
 
-    private OpenBuzzThreadCommand command(Buzz buzz, ThreadVisibility visibility) {
-        return new OpenBuzzThreadCommand(starterId, buzz.getId(), visibility, "첫 글", List.of());
+    private CreateBuzzThreadCommand command(Buzz buzz, ThreadVisibility visibility) {
+        return new CreateBuzzThreadCommand(starterId, buzz.getId(), visibility, "첫 글", List.of());
     }
 
     private long countRows(String table, String column, String buzzId) {

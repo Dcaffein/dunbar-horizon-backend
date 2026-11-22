@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.domain.event;
 
-public record BuzzThreadOpenedEvent(
+public record BuzzThreadCreatedEvent(
         String buzzId,
         Long threadId,
         Long creatorId,

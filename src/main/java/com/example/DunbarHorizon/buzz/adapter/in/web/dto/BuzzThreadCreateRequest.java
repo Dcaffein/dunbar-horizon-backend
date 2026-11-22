@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web.dto;
 
-import com.example.DunbarHorizon.buzz.application.dto.command.OpenBuzzThreadCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzThreadCommand;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import jakarta.validation.constraints.NotBlank;
@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
-public record BuzzThreadOpenRequest(
+public record BuzzThreadCreateRequest(
         @NotBlank(message = BuzzThread.TEXT_LENGTH_MESSAGE)
         @Size(max = BuzzThread.TEXT_MAX_LENGTH, message = BuzzThread.TEXT_LENGTH_MESSAGE)
         String text,
@@ -19,8 +19,8 @@ public record BuzzThreadOpenRequest(
 
         List<String> imageKeys
 ) {
-    public OpenBuzzThreadCommand toCommand(Long starterId, String buzzId) {
-        return new OpenBuzzThreadCommand(starterId, buzzId, visibility, text,
+    public CreateBuzzThreadCommand toCommand(Long starterId, String buzzId) {
+        return new CreateBuzzThreadCommand(starterId, buzzId, visibility, text,
                 imageKeys != null ? imageKeys : List.of());
     }
 }

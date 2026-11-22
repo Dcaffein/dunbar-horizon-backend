@@ -29,7 +29,7 @@ class BuzzCommentPersistenceAdapterTest {
 
     private BuzzThread thread(String buzzId, Long starterId) {
         return buzzThreadRepositoryAdapter.save(
-                BuzzThread.open(buzzId, starterId, ThreadVisibility.PUBLIC, "첫 글", List.of(), NOW));
+                BuzzThread.create(buzzId, starterId, ThreadVisibility.PUBLIC, "첫 글", List.of(), NOW));
     }
 
     private BuzzComment comment(Long threadId, Long authorId, String text) {

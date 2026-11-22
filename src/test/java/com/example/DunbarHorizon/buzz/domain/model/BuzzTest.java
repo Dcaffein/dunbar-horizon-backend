@@ -129,13 +129,6 @@ class BuzzTest {
         }
 
         @Test
-        @DisplayName("만료된 버즈는 수정할 수 없다")
-        void update_Expired_Rejected() {
-            assertThatThrownBy(() -> buzz().update(creatorId, "고친 본문", List.of(), NOW.plusHours(6)))
-                    .isInstanceOf(BuzzInvalidStateException.class);
-        }
-
-        @Test
         @DisplayName("고친 본문도 길이 규칙을 지켜야 한다")
         void update_InvalidText_Rejected() {
             assertThatThrownBy(() -> buzz().update(creatorId, " ", List.of(), NOW.plusHours(1)))
@@ -163,33 +156,33 @@ class BuzzTest {
     }
 
     @Nested
-    @DisplayName("스레드 열기 자격")
-    class ThreadOpeningTest {
+    @DisplayName("스레드 생성 자격")
+    class ThreadCreationTest {
 
         @Test
-        @DisplayName("공개 대상 멤버는 만료 전에 스레드를 열 수 있다")
-        void validateThreadOpening_Success_AudienceMember() {
-            buzz().validateThreadOpening(recipientId, true, NOW.plusHours(1));
+        @DisplayName("공개 대상 멤버는 만료 전에 스레드를 생성할 수 있다")
+        void validateThreadCreation_Success_AudienceMember() {
+            buzz().validateThreadCreation(recipientId, true, NOW.plusHours(1));
         }
 
         @Test
-        @DisplayName("게시자는 스레드를 열 수 없다")
-        void validateThreadOpening_Fail_Creator() {
-            assertThatThrownBy(() -> buzz().validateThreadOpening(creatorId, false, NOW.plusHours(1)))
+        @DisplayName("게시자는 스레드를 생성할 수 없다")
+        void validateThreadCreation_Fail_Creator() {
+            assertThatThrownBy(() -> buzz().validateThreadCreation(creatorId, false, NOW.plusHours(1)))
                     .isInstanceOf(BuzzAccessDeniedException.class);
         }
 
         @Test
-        @DisplayName("공개 대상이 아니면 스레드를 열 수 없다")
-        void validateThreadOpening_Fail_Stranger() {
-            assertThatThrownBy(() -> buzz().validateThreadOpening(strangerId, false, NOW.plusHours(1)))
+        @DisplayName("공개 대상이 아니면 스레드를 생성할 수 없다")
+        void validateThreadCreation_Fail_Stranger() {
+            assertThatThrownBy(() -> buzz().validateThreadCreation(strangerId, false, NOW.plusHours(1)))
                     .isInstanceOf(BuzzAccessDeniedException.class);
         }
 
         @Test
-        @DisplayName("만료된 버즈에는 스레드를 열 수 없다")
-        void validateThreadOpening_Fail_Expired() {
-            assertThatThrownBy(() -> buzz().validateThreadOpening(recipientId, true, NOW.plusHours(6)))
+        @DisplayName("만료된 버즈에는 스레드를 생성할 수 없다")
+        void validateThreadCreation_Fail_Expired() {
+            assertThatThrownBy(() -> buzz().validateThreadCreation(recipientId, true, NOW.plusHours(6)))
                     .isInstanceOf(BuzzInvalidStateException.class);
         }
     }
