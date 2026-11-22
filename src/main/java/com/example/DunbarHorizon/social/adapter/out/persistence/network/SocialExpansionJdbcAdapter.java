@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.network;
 
-import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.network.dto.IntermediaryExpansionResult;
 import com.example.DunbarHorizon.social.application.network.port.SocialExpansionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -79,21 +79,21 @@ public class SocialExpansionJdbcAdapter implements SocialExpansionRepository {
     private final NamedParameterJdbcTemplate jdbc;
 
     @Override
-    public List<AnchorExpansionResult> getRecommendedNetworkByAnchor(Long meId, Long seedId,
+    public List<IntermediaryExpansionResult> getRecommendedNetworkByIntermediary(Long meId, Long seedId,
                                                                     int threshold, int limitCount) {
         return query(RECOMMENDED_QUERY, meId, seedId, threshold, limitCount);
     }
 
     @Override
-    public List<AnchorExpansionResult> getRelatedNetworkByAnchor(Long meId, Long seedId,
+    public List<IntermediaryExpansionResult> getRelatedNetworkByIntermediary(Long meId, Long seedId,
                                                                 int threshold, int limitCount) {
         return query(RELATED_QUERY, meId, seedId, threshold, limitCount);
     }
 
-    private List<AnchorExpansionResult> query(String sql, Long meId, Long seedId, int threshold, int limitCount) {
+    private List<IntermediaryExpansionResult> query(String sql, Long meId, Long seedId, int threshold, int limitCount) {
         return jdbc.query(sql, Map.of("meId", meId, "seedId", seedId,
                         "threshold", threshold, "limitCount", limitCount),
-                (row, index) -> new AnchorExpansionResult(row.getLong("id"), row.getString("nickname")));
+                (row, index) -> new IntermediaryExpansionResult(row.getLong("id"), row.getString("nickname")));
     }
 
     @Override

@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.in.web;
 
-import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.network.dto.IntermediaryExpansionResult;
 import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.network.dto.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeEdgeResult;
@@ -62,26 +62,26 @@ class SocialNetworkControllerTest extends BaseControllerTest {
     }
 
     @Test
-    @DisplayName("앵커의 intimacy 기반으로 동적 파라미터를 적용한 추천 목록을 조회한다")
-    void getAnchorRecommendation_Success() throws Exception {
-        Long anchorId = 2L;
-        given(socialExpansionQueryService.getRecommendationsByAnchor(eq(1L), eq(anchorId))).willReturn(List.of());
+    @DisplayName("중개 친구의 intimacy 기반으로 동적 파라미터를 적용한 추천 목록을 조회한다")
+    void getIntermediaryRecommendation_Success() throws Exception {
+        Long intermediaryId = 2L;
+        given(socialExpansionQueryService.getRecommendationsByIntermediary(eq(1L), eq(intermediaryId))).willReturn(List.of());
 
         mockMvc.perform(get("/api/v1/network/recommendations")
-                        .param("anchorId", String.valueOf(anchorId)))
+                        .param("intermediaryId", String.valueOf(intermediaryId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
     }
 
     @Test
     @DisplayName("추천 결과는 사용자 식별 및 프로필 정보만 반환한다")
-    void getAnchorRecommendation_ResponseShape() throws Exception {
-        Long anchorId = 2L;
-        given(socialExpansionQueryService.getRecommendationsByAnchor(eq(1L), eq(anchorId)))
-                .willReturn(List.of(new AnchorExpansionResult(3L, "추천 사용자")));
+    void getIntermediaryRecommendation_ResponseShape() throws Exception {
+        Long intermediaryId = 2L;
+        given(socialExpansionQueryService.getRecommendationsByIntermediary(eq(1L), eq(intermediaryId)))
+                .willReturn(List.of(new IntermediaryExpansionResult(3L, "추천 사용자")));
 
         mockMvc.perform(get("/api/v1/network/recommendations")
-                        .param("anchorId", String.valueOf(anchorId)))
+                        .param("intermediaryId", String.valueOf(intermediaryId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(3))
                 .andExpect(jsonPath("$[0].nickname").value("추천 사용자"))
