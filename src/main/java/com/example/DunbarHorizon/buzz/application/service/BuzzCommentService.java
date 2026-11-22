@@ -38,7 +38,7 @@ public class BuzzCommentService {
         BuzzComment comment = buzzCommentRepository.save(BuzzComment.write(
                 context.buzz(), context.thread(), command.authorId(), command.text(), command.imageKeys(),
                 LocalDateTime.now()));
-        context.member().ifPresent(BuzzAudienceMember::markAsRead);
+        context.member().ifPresent(BuzzAudienceMember::read);
 
         applicationEventPublisher.publishEvent(new BuzzCommentedEvent(
                 context.buzz().getId(), context.thread().getId(), context.buzz().getCreatorId(),

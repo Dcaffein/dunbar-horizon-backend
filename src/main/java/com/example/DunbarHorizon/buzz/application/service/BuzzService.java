@@ -51,15 +51,15 @@ public class BuzzService {
         buzz.update(command.requesterId(), command.text(), command.imageKeys(), LocalDateTime.now());
     }
 
-    public void markAsRead(Long userId, Long buzzId) {
+    public void readBuzz(Long readerId, Long buzzId) {
         Buzz buzz = buzzRepository.findByIdForShare(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
-        Optional<BuzzAudienceMember> member = buzz.isCreator(userId)
+        Optional<BuzzAudienceMember> member = buzz.isCreator(readerId)
                 ? Optional.empty()
-                : buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzzId, userId);
-        buzz.validateAccess(userId, member.isPresent());
+                : buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzzId, readerId);
+        buzz.validateAccess(readerId, member.isPresent());
 
-        member.ifPresent(BuzzAudienceMember::markAsRead);
+        member.ifPresent(BuzzAudienceMember::read);
     }
 
     public void deleteBuzz(Long requesterId, Long buzzId) {

@@ -160,8 +160,8 @@ class BuzzServiceTest {
     }
 
     @Nested
-    @DisplayName("읽음 처리")
-    class MarkAsRead {
+    @DisplayName("버즈 읽기")
+    class ReadBuzz {
 
         private Buzz buzz;
 
@@ -172,47 +172,47 @@ class BuzzServiceTest {
         }
 
         @Test
-        @DisplayName("공개 대상 멤버가 읽음 처리하면 그 멤버가 읽음으로 바뀐다")
-        void markAsRead_Member_MarksRead() {
+        @DisplayName("공개 대상 멤버가 버즈를 읽으면 그 멤버가 읽음으로 바뀐다")
+        void readBuzz_Member_Reads() {
             // given
             BuzzAudienceMember member = BuzzAudienceMember.create(buzz.getId(), recipientId);
             given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), recipientId))
                     .willReturn(Optional.of(member));
 
             // when
-            buzzService.markAsRead(recipientId, buzz.getId());
+            buzzService.readBuzz(recipientId, buzz.getId());
 
             // then
             assertThat(member.isUnread()).isFalse();
         }
 
         @Test
-        @DisplayName("게시자가 읽음 처리하면 멤버를 찾지 않고 아무것도 바꾸지 않는다")
-        void markAsRead_Creator_NoOp() {
+        @DisplayName("게시자가 읽으면 멤버를 찾지 않고 아무것도 바꾸지 않는다")
+        void readBuzz_Creator_NoOp() {
             // when
-            buzzService.markAsRead(creatorId, buzz.getId());
+            buzzService.readBuzz(creatorId, buzz.getId());
 
             // then
             verify(buzzAudienceMemberRepository, never()).findByBuzzIdAndUserId(any(), any());
         }
 
         @Test
-        @DisplayName("게시자도 공개 대상 멤버도 아니면 읽음 처리가 거절된다")
-        void markAsRead_Stranger_Denied() {
+        @DisplayName("게시자도 공개 대상 멤버도 아니면 읽기가 거절된다")
+        void readBuzz_Stranger_Denied() {
             given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), strangerId))
                     .willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> buzzService.markAsRead(strangerId, buzz.getId()))
+            assertThatThrownBy(() -> buzzService.readBuzz(strangerId, buzz.getId()))
                     .isInstanceOf(BuzzAccessDeniedException.class);
         }
     }
 
     @Test
-    @DisplayName("없거나 삭제된 버즈는 읽음 처리할 수 없다")
-    void markAsRead_Missing_NotFound() {
+    @DisplayName("없거나 삭제된 버즈는 읽을 수 없다")
+    void readBuzz_Missing_NotFound() {
         given(buzzRepository.findByIdForShare(999L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> buzzService.markAsRead(recipientId, 999L))
+        assertThatThrownBy(() -> buzzService.readBuzz(recipientId, 999L))
                 .isInstanceOf(BuzzNotFoundException.class);
     }
 

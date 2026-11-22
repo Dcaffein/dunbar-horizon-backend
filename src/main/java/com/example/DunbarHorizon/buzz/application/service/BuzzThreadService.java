@@ -40,7 +40,7 @@ public class BuzzThreadService {
         BuzzThread thread = buzzThreadRepository.save(BuzzThread.create(
                 buzz, command.starterId(), member.isPresent(), command.visibility(), command.text(),
                 command.imageKeys(), LocalDateTime.now()));
-        member.ifPresent(BuzzAudienceMember::markAsRead);
+        member.ifPresent(BuzzAudienceMember::read);
 
         applicationEventPublisher.publishEvent(new BuzzThreadCreatedEvent(
                 buzz.getId(), thread.getId(), buzz.getCreatorId(), command.starterId()));
