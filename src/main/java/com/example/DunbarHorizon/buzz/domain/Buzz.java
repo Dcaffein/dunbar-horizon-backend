@@ -95,9 +95,13 @@ public class Buzz {
     }
 
     public void validateAccess(Long userId, boolean isAudienceMember) {
-        if (!isCreator(userId) && !isAudienceMember) {
+        validateAccess(id, creatorId, userId, isAudienceMember);
+    }
+
+    public static void validateAccess(Long buzzId, Long creatorId, Long userId, boolean isAudienceMember) {
+        if (!creatorId.equals(userId) && !isAudienceMember) {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_NOT_RECIPIENT,
-                    ErrorContext.of("buzzId", id).and("userId", userId));
+                    ErrorContext.of("buzzId", buzzId).and("userId", userId));
         }
     }
 

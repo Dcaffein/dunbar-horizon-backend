@@ -93,14 +93,24 @@ public class BuzzThread {
     }
 
     public boolean isAccessibleBy(Long viewerId, Buzz buzz, boolean isFriendOfStarter) {
-        if (isStarter(viewerId) || buzz.isCreator(viewerId)) {
+        return isAccessibleBy(visibility, starterId, buzz.getCreatorId(), viewerId, isFriendOfStarter);
+    }
+
+    public static boolean isAccessibleBy(ThreadVisibility visibility, Long starterId, Long creatorId,
+                                         Long viewerId, boolean isFriendOfStarter) {
+        if (starterId.equals(viewerId) || creatorId.equals(viewerId)) {
             return true;
         }
-        return isPublic() && isFriendOfStarter;
+        return visibility == ThreadVisibility.PUBLIC && isFriendOfStarter;
     }
 
     public boolean needsFriendshipToAccess(Long viewerId, Buzz buzz) {
-        return isPublic() && !isStarter(viewerId) && !buzz.isCreator(viewerId);
+        return needsFriendshipToAccess(visibility, starterId, buzz.getCreatorId(), viewerId);
+    }
+
+    public static boolean needsFriendshipToAccess(ThreadVisibility visibility, Long starterId, Long creatorId,
+                                                  Long viewerId) {
+        return visibility == ThreadVisibility.PUBLIC && !starterId.equals(viewerId) && !creatorId.equals(viewerId);
     }
 
     public void update(Long requesterId, String text, List<String> imageKeys) {
