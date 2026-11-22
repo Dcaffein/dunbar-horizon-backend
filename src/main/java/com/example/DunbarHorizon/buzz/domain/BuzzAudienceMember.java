@@ -48,10 +48,6 @@ public class BuzzAudienceMember {
         return !isRead;
     }
 
-    public Key getId() {
-        return new Key(buzzId, userId);
-    }
-
     @NoArgsConstructor
     @AllArgsConstructor
     @EqualsAndHashCode

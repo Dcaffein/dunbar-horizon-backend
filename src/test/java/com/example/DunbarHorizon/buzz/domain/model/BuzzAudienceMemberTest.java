@@ -29,12 +29,4 @@ class BuzzAudienceMemberTest {
         // then
         assertThat(member.isUnread()).isFalse();
     }
-
-    @Test
-    @DisplayName("식별자는 버즈 ID와 사용자 ID의 조합이다")
-    void getId_BuzzIdAndUserId() {
-        BuzzAudienceMember member = BuzzAudienceMember.create("buzz-1", 2L);
-
-        assertThat(member.getId()).isEqualTo(new BuzzAudienceMember.Key("buzz-1", 2L));
-    }
 }
