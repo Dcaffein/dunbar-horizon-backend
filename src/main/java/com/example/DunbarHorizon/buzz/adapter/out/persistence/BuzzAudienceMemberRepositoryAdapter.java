@@ -19,6 +19,11 @@ public class BuzzAudienceMemberRepositoryAdapter implements BuzzAudienceMemberRe
     private final EntityManager entityManager;
 
     @Override
+    public BuzzAudienceMember save(BuzzAudienceMember buzzAudienceMember) {
+        return buzzAudienceMemberJpaRepository.save(buzzAudienceMember);
+    }
+
+    @Override
     public List<BuzzAudienceMember> saveAll(List<BuzzAudienceMember> buzzAudienceMembers) {
         buzzAudienceMembers.forEach(entityManager::persist);
         return buzzAudienceMembers;

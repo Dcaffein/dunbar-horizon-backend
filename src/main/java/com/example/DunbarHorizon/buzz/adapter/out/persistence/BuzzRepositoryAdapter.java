@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 import com.example.DunbarHorizon.buzz.adapter.out.persistence.jpa.BuzzJpaRepository;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -19,12 +18,10 @@ import java.util.Set;
 public class BuzzRepositoryAdapter implements BuzzRepository {
 
     private final BuzzJpaRepository buzzJpaRepository;
-    private final EntityManager entityManager;
 
     @Override
     public Buzz save(Buzz buzz) {
-        entityManager.persist(buzz);
-        return buzz;
+        return buzzJpaRepository.save(buzz);
     }
 
     @Override

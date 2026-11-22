@@ -237,6 +237,7 @@ class BuzzPersistenceAdapterTest {
 
         // when
         loaded.update(creatorId, "고친 본문", List.of("buzz/b"), NOW.plusMinutes(10));
+        buzzRepositoryAdapter.save(loaded);
         entityManager.flush();
         entityManager.clear();
 
@@ -259,7 +260,10 @@ class BuzzPersistenceAdapterTest {
     }
 
     private void readBuzz(Long buzzId, Long userId) {
-        buzzAudienceMemberRepositoryAdapter.findByBuzzIdAndUserId(buzzId, userId).orElseThrow().read();
+        BuzzAudienceMember member = buzzAudienceMemberRepositoryAdapter.findByBuzzIdAndUserId(buzzId, userId)
+                .orElseThrow();
+        member.read();
+        buzzAudienceMemberRepositoryAdapter.save(member);
         entityManager.flush();
         entityManager.clear();
     }
