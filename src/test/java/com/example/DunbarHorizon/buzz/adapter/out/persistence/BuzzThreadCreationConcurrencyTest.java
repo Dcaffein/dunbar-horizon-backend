@@ -125,8 +125,8 @@ class BuzzThreadCreationConcurrencyTest {
     }
 
     @Test
-    @DisplayName("스레드 생성이 버즈를 공유 락으로 읽은 뒤 삭제가 들어오면 삭제가 기다렸다가 새 스레드까지 지운다")
-    void creationLocksBuzzFirst_DeletionRemovesThread() throws InterruptedException {
+    @DisplayName("스레드 생성이 버즈를 공유 락으로 읽은 뒤 삭제가 들어오면 삭제가 기다렸다가 삭제 표시를 남기고 정리가 새 스레드까지 지운다")
+    void creationLocksBuzzFirst_DeletionWaitsThenPurgeRemovesThread() throws InterruptedException {
         // given
         Buzz buzz = saveBuzz();
         CountDownLatch buzzLocked = new CountDownLatch(1);
@@ -164,6 +164,9 @@ class BuzzThreadCreationConcurrencyTest {
             // then
             assertThat(creationFailure.get()).isNull();
             assertThat(deletionFailure.get()).isNull();
+            assertThat(countRows("buzz_threads", "buzz_id", buzz.getId())).isEqualTo(1);
+
+            buzzService.purgeExpiredAndDeletedBuzzes(LocalDateTime.now());
             assertThat(countRows("buzz_threads", "buzz_id", buzz.getId())).isZero();
         } finally {
             continueCreation.countDown();
@@ -172,8 +175,8 @@ class BuzzThreadCreationConcurrencyTest {
     }
 
     @Test
-    @DisplayName("삭제가 버즈 행을 먼저 지우면 스레드 생성은 기다렸다가 버즈를 찾지 못하고 스레드를 남기지 않는다")
-    void deletionRemovesBuzzFirst_CreationFailsWithNotFound() throws InterruptedException {
+    @DisplayName("삭제가 버즈를 배타 락으로 먼저 읽으면 스레드 생성은 기다렸다가 버즈를 찾지 못하고 스레드를 남기지 않는다")
+    void deletionLocksBuzzFirst_CreationFailsWithNotFound() throws InterruptedException {
         // given
         Buzz buzz = saveBuzz();
         CountDownLatch buzzDeleted = new CountDownLatch(1);
@@ -182,12 +185,15 @@ class BuzzThreadCreationConcurrencyTest {
         CountDownLatch creationFinished = new CountDownLatch(1);
         AtomicReference<Throwable> deletionFailure = new AtomicReference<>();
         AtomicReference<Throwable> creationFailure = new AtomicReference<>();
+        AtomicBoolean blockOnce = new AtomicBoolean(true);
         doAnswer(invocation -> {
-            invocation.callRealMethod();
-            buzzDeleted.countDown();
-            await(continueDeletion, "삭제 재개");
-            return null;
-        }).when(buzzRepositoryAdapter).deleteById(buzz.getId());
+            Object locked = invocation.callRealMethod();
+            if (blockOnce.compareAndSet(true, false)) {
+                buzzDeleted.countDown();
+                await(continueDeletion, "삭제 재개");
+            }
+            return locked;
+        }).when(buzzRepositoryAdapter).findByIdForUpdate(buzz.getId());
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
         submit(executor, () -> buzzService.deleteBuzz(creatorId, buzz.getId()), deletionFailure, deletionFinished);

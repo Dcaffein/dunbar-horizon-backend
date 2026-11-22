@@ -66,7 +66,7 @@ class BuzzPersistenceAdapterTest {
 
     @Test
     @DisplayName("받은 목록은 만료되지 않았고 제외 대상이 아닌 게시자의 버즈만 최신순으로 읽음 상태와 함께 준다")
-    void findUnexpiredReceived_FiltersExpiredAndExcluded() {
+    void findReceived_FiltersExpiredAndExcluded() {
         // given
         Buzz older = saveBuzz(creatorId, NOW.minusHours(2), recipientId);
         Buzz newer = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
@@ -76,7 +76,7 @@ class BuzzPersistenceAdapterTest {
         markAsRead(older.getId(), recipientId);
 
         // when
-        Slice<ReceivedBuzz> result = buzzQueryRepositoryAdapter.findUnexpiredReceived(
+        Slice<ReceivedBuzz> result = buzzQueryRepositoryAdapter.findReceived(
                 recipientId, Set.of(otherCreatorId), NOW, PageRequest.of(0, 20));
 
         // then
@@ -87,12 +87,12 @@ class BuzzPersistenceAdapterTest {
 
     @Test
     @DisplayName("제외할 게시자가 없어도 받은 목록을 조회한다")
-    void findUnexpiredReceived_NoExcludedCreators() {
+    void findReceived_NoExcludedCreators() {
         // given
         saveBuzz(creatorId, NOW.minusHours(1), recipientId);
 
         // when
-        Slice<ReceivedBuzz> result = buzzQueryRepositoryAdapter.findUnexpiredReceived(
+        Slice<ReceivedBuzz> result = buzzQueryRepositoryAdapter.findReceived(
                 recipientId, Set.of(), NOW, PageRequest.of(0, 20));
 
         // then
@@ -101,12 +101,12 @@ class BuzzPersistenceAdapterTest {
 
     @Test
     @DisplayName("만료 시각이 기준 시각과 같은 버즈는 받은 목록에서 빠진다")
-    void findUnexpiredReceived_ExcludesExpiresAtEqualToNow() {
+    void findReceived_ExcludesExpiresAtEqualToNow() {
         // given
         saveBuzz(creatorId, NOW.minusHours(6), recipientId);
 
         // when
-        Slice<ReceivedBuzz> result = buzzQueryRepositoryAdapter.findUnexpiredReceived(
+        Slice<ReceivedBuzz> result = buzzQueryRepositoryAdapter.findReceived(
                 recipientId, Set.of(), NOW, PageRequest.of(0, 20));
 
         // then
@@ -115,14 +115,14 @@ class BuzzPersistenceAdapterTest {
 
     @Test
     @DisplayName("보낸 목록은 만료되지 않은 자기 버즈만 준다")
-    void findUnexpiredSent_FiltersExpired() {
+    void findSent_FiltersExpired() {
         // given
         Buzz live = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
         saveBuzz(creatorId, NOW.minusHours(7), recipientId);
         saveBuzz(otherCreatorId, NOW.minusHours(1), recipientId);
 
         // when
-        Slice<Buzz> result = buzzQueryRepositoryAdapter.findUnexpiredSent(creatorId, NOW, PageRequest.of(0, 20));
+        Slice<Buzz> result = buzzQueryRepositoryAdapter.findSent(creatorId, NOW, PageRequest.of(0, 20));
 
         // then
         assertThat(result.getContent()).extracting(Buzz::getId).containsExactly(live.getId());
@@ -130,7 +130,7 @@ class BuzzPersistenceAdapterTest {
 
     @Test
     @DisplayName("미확인 작성자는 읽지 않았고 만료되지 않았으며 제외 대상이 아닌 버즈의 게시자다")
-    void findUnexpiredUnreadCreatorIds_Filters() {
+    void findUnreadCreatorIds_Filters() {
         // given
         saveBuzz(creatorId, NOW.minusHours(1), recipientId);
         Buzz read = saveBuzz(10L, NOW.minusHours(1), recipientId);
@@ -139,7 +139,7 @@ class BuzzPersistenceAdapterTest {
         saveBuzz(otherCreatorId, NOW.minusHours(1), recipientId);
 
         // when
-        List<Long> result = buzzQueryRepositoryAdapter.findUnexpiredUnreadCreatorIds(
+        List<Long> result = buzzQueryRepositoryAdapter.findUnreadCreatorIds(
                 recipientId, Set.of(otherCreatorId), NOW);
 
         // then
@@ -160,20 +160,72 @@ class BuzzPersistenceAdapterTest {
     }
 
     @Test
-    @DisplayName("버즈를 지우고 멤버를 지우면 그 버즈의 행만 남지 않는다")
-    void delete_RemovesBuzzAndMembers() {
+    @DisplayName("버즈들과 그 멤버를 지우면 다른 버즈의 행은 남는다")
+    void deleteAllByIds_RemovesOnlyTargets() {
         // given
         Buzz target = saveBuzz(creatorId, NOW, recipientId, 3L);
         Buzz other = saveBuzz(creatorId, NOW, recipientId);
 
         // when
-        buzzRepositoryAdapter.deleteById(target.getId());
-        buzzAudienceMemberRepositoryAdapter.deleteAllByBuzzId(target.getId());
+        buzzRepositoryAdapter.deleteAllByIds(List.of(target.getId()));
+        buzzAudienceMemberRepositoryAdapter.deleteAllByBuzzIds(List.of(target.getId()));
 
         // then
-        assertThat(buzzRepositoryAdapter.findById(target.getId())).isEmpty();
+        assertThat(count("SELECT COUNT(*) FROM buzzes WHERE id = ?", target.getId())).isZero();
         assertThat(buzzAudienceMemberRepositoryAdapter.findUserIdsByBuzzId(target.getId())).isEmpty();
         assertThat(buzzAudienceMemberRepositoryAdapter.findUserIdsByBuzzId(other.getId())).containsExactly(recipientId);
+    }
+
+    @Test
+    @DisplayName("삭제 표시된 버즈는 단건·잠금 조회와 받은 목록·보낸 목록·미확인 작성자에서 빠진다")
+    void deletedBuzz_ExcludedFromAllReads() {
+        // given
+        Buzz deleted = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
+        markDeleted(deleted.getId());
+
+        // when & then
+        assertThat(buzzRepositoryAdapter.findById(deleted.getId())).isEmpty();
+        assertThat(buzzRepositoryAdapter.findByIdForShare(deleted.getId())).isEmpty();
+        assertThat(buzzRepositoryAdapter.findByIdForUpdate(deleted.getId())).isEmpty();
+        assertThat(buzzQueryRepositoryAdapter.findReceived(recipientId, Set.of(), NOW, PageRequest.of(0, 20))
+                .getContent()).isEmpty();
+        assertThat(buzzQueryRepositoryAdapter.findSent(creatorId, NOW, PageRequest.of(0, 20)).getContent()).isEmpty();
+        assertThat(buzzQueryRepositoryAdapter.findUnreadCreatorIds(recipientId, Set.of(), NOW)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("정리 대상은 만료 시각이 기준 시각 이전이거나 같은 버즈와 삭제 표시된 버즈다")
+    void findPurgeableIds_ExpiredOrDeleted() {
+        // given
+        Buzz expired = saveBuzz(creatorId, NOW.minusHours(6), recipientId);
+        Buzz deleted = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
+        markDeleted(deleted.getId());
+        Buzz live = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
+
+        // when
+        List<Long> purgeable = buzzRepositoryAdapter.findPurgeableIds(NOW);
+
+        // then
+        assertThat(purgeable).contains(expired.getId(), deleted.getId()).doesNotContain(live.getId());
+    }
+
+    @Test
+    @DisplayName("삭제는 삭제 시각만 쓰고 본문은 그대로 둔다")
+    void delete_WritesOnlyDeletedAt() {
+        // given
+        Buzz saved = saveBuzz(creatorId, NOW, recipientId);
+        Buzz loaded = buzzRepositoryAdapter.findByIdForUpdate(saved.getId()).orElseThrow();
+
+        // when
+        loaded.delete(creatorId, NOW.plusMinutes(5));
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        assertThat(jdbcTemplate.queryForObject("SELECT text FROM buzzes WHERE id = ?", String.class, saved.getId()))
+                .isEqualTo("본문");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT deleted_at IS NOT NULL FROM buzzes WHERE id = ?", Boolean.class, saved.getId())).isTrue();
     }
 
     @Test
@@ -194,6 +246,16 @@ class BuzzPersistenceAdapterTest {
         assertThat(reloaded.getImageKeys()).containsExactly("buzz/b");
         assertThat(reloaded.getEditedAt()).isEqualTo(NOW.plusMinutes(10));
         assertThat(reloaded.getCreatedAt()).isEqualTo(NOW);
+    }
+
+    private void markDeleted(Long buzzId) {
+        jdbcTemplate.update("UPDATE buzzes SET deleted_at = ? WHERE id = ?", NOW, buzzId);
+        entityManager.clear();
+    }
+
+    private long count(String sql, Long buzzId) {
+        Long count = jdbcTemplate.queryForObject(sql, Long.class, buzzId);
+        return count == null ? 0 : count;
     }
 
     private void markAsRead(Long buzzId, Long userId) {

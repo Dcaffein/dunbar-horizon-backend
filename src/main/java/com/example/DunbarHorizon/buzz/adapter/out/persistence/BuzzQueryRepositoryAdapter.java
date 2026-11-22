@@ -23,20 +23,20 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
     private final BuzzJpaRepository buzzJpaRepository;
 
     @Override
-    public Slice<ReceivedBuzz> findUnexpiredReceived(Long userId, Set<Long> excludedCreatorIds,
+    public Slice<ReceivedBuzz> findReceived(Long userId, Set<Long> excludedCreatorIds,
                                                      LocalDateTime now, Pageable pageable) {
-        return buzzJpaRepository.findAllWithReadByMemberUserIdAndExpiresAtAfterAndCreatorIdNotIn(
+        return buzzJpaRepository.findAllWithReadByMemberUserIdAndExpiresAtAfterAndDeletedAtIsNullAndCreatorIdNotIn(
                 userId, now, nonEmpty(excludedCreatorIds), unsorted(pageable));
     }
 
     @Override
-    public Slice<Buzz> findUnexpiredSent(Long creatorId, LocalDateTime now, Pageable pageable) {
-        return buzzJpaRepository.findAllByCreatorIdAndExpiresAtAfter(creatorId, now, unsorted(pageable));
+    public Slice<Buzz> findSent(Long creatorId, LocalDateTime now, Pageable pageable) {
+        return buzzJpaRepository.findAllByCreatorIdAndExpiresAtAfterAndDeletedAtIsNull(creatorId, now, unsorted(pageable));
     }
 
     @Override
-    public List<Long> findUnexpiredUnreadCreatorIds(Long userId, Set<Long> excludedCreatorIds, LocalDateTime now) {
-        return buzzJpaRepository.findCreatorIdsByMemberUserIdAndMemberIsReadFalseAndExpiresAtAfterAndCreatorIdNotIn(
+    public List<Long> findUnreadCreatorIds(Long userId, Set<Long> excludedCreatorIds, LocalDateTime now) {
+        return buzzJpaRepository.findCreatorIdsByMemberUserIdAndMemberIsReadFalseAndExpiresAtAfterAndDeletedAtIsNullAndCreatorIdNotIn(
                 userId, now, nonEmpty(excludedCreatorIds));
     }
 

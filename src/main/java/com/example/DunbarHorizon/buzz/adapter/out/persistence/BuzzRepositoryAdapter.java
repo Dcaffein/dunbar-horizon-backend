@@ -9,8 +9,10 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 @RequiredArgsConstructor
@@ -27,22 +29,24 @@ public class BuzzRepositoryAdapter implements BuzzRepository {
 
     @Override
     public Optional<Buzz> findById(Long buzzId) {
-        return buzzJpaRepository.findById(buzzId);
+        return buzzJpaRepository.findByIdAndDeletedAtIsNull(buzzId);
     }
 
     @Override
     public Optional<Buzz> findByIdForShare(Long buzzId) {
-        return buzzJpaRepository.findByIdForShare(buzzId);
+        return buzzJpaRepository.findByIdAndDeletedAtIsNullForShare(buzzId);
     }
 
     @Override
-    public void deleteById(Long buzzId) {
-        buzzJpaRepository.deleteById(buzzId);
+    public Optional<Buzz> findByIdForUpdate(Long buzzId) {
+        return buzzJpaRepository.findByIdAndDeletedAtIsNullForUpdate(buzzId);
     }
 
     @Override
-    public List<Long> findExpiredIds(LocalDateTime now) {
-        return buzzJpaRepository.findIdsByExpiresAtAtOrBefore(now);
+    public List<Long> findPurgeableIds(LocalDateTime now) {
+        Set<Long> buzzIds = new LinkedHashSet<>(buzzJpaRepository.findIdsByExpiresAtAtOrBefore(now));
+        buzzIds.addAll(buzzJpaRepository.findIdsByDeletedAtIsNotNull());
+        return List.copyOf(buzzIds);
     }
 
     @Override

@@ -67,8 +67,8 @@ class BuzzReadDeletionConcurrencyTest {
     }
 
     @Test
-    @DisplayName("멤버의 열람이 버즈를 공유 락으로 읽은 뒤 삭제가 들어오면 삭제가 열람 커밋을 기다렸다가 멤버까지 지운다")
-    void readLocksBuzzFirst_DeletionWaitsAndRemovesMembers() throws InterruptedException {
+    @DisplayName("멤버의 열람이 버즈를 공유 락으로 읽은 뒤 삭제가 들어오면 삭제가 열람 커밋을 기다렸다가 삭제 표시를 남기고 정리가 멤버를 지운다")
+    void readLocksBuzzFirst_DeletionWaitsThenPurgeRemovesMembers() throws InterruptedException {
         // given
         Buzz buzz = saveBuzz();
         CountDownLatch buzzLocked = new CountDownLatch(1);
@@ -103,6 +103,10 @@ class BuzzReadDeletionConcurrencyTest {
             // then
             assertThat(readFailure.get()).isNull();
             assertThat(deletionFailure.get()).isNull();
+            assertThat(isDeleted(buzz.getId())).isTrue();
+            assertThat(isRead(buzz.getId())).isTrue();
+
+            buzzService.purgeExpiredAndDeletedBuzzes(LocalDateTime.now());
             assertThat(countRows("buzzes", "id", buzz.getId())).isZero();
             assertThat(countRows("buzz_audience_members", "buzz_id", buzz.getId())).isZero();
         } finally {
@@ -112,8 +116,8 @@ class BuzzReadDeletionConcurrencyTest {
     }
 
     @Test
-    @DisplayName("삭제가 버즈 행을 먼저 지우면 열람은 삭제 커밋을 기다렸다가 버즈를 찾지 못하고 멤버를 되살리지 않는다")
-    void deletionRemovesBuzzFirst_ReadFailsWithNotFound() throws InterruptedException {
+    @DisplayName("삭제가 버즈를 배타 락으로 먼저 읽으면 열람은 삭제 커밋을 기다렸다가 버즈를 찾지 못하고 읽음을 남기지 않는다")
+    void deletionLocksBuzzFirst_ReadFailsWithNotFound() throws InterruptedException {
         // given
         Buzz buzz = saveBuzz();
         CountDownLatch buzzDeleted = new CountDownLatch(1);
@@ -122,12 +126,15 @@ class BuzzReadDeletionConcurrencyTest {
         CountDownLatch readFinished = new CountDownLatch(1);
         AtomicReference<Throwable> deletionFailure = new AtomicReference<>();
         AtomicReference<Throwable> readFailure = new AtomicReference<>();
+        AtomicBoolean blockOnce = new AtomicBoolean(true);
         doAnswer(invocation -> {
-            invocation.callRealMethod();
-            buzzDeleted.countDown();
-            await(continueDeletion, "삭제 재개");
-            return null;
-        }).when(buzzRepositoryAdapter).deleteById(buzz.getId());
+            Object locked = invocation.callRealMethod();
+            if (blockOnce.compareAndSet(true, false)) {
+                buzzDeleted.countDown();
+                await(continueDeletion, "삭제 재개");
+            }
+            return locked;
+        }).when(buzzRepositoryAdapter).findByIdForUpdate(buzz.getId());
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
         submit(executor, () -> buzzService.deleteBuzz(creatorId, buzz.getId()), deletionFailure, deletionFinished);
@@ -144,7 +151,8 @@ class BuzzReadDeletionConcurrencyTest {
             // then
             assertThat(deletionFailure.get()).isNull();
             assertThat(readFailure.get()).isInstanceOf(BuzzNotFoundException.class);
-            assertThat(countRows("buzz_audience_members", "buzz_id", buzz.getId())).isZero();
+            assertThat(isDeleted(buzz.getId())).isTrue();
+            assertThat(isRead(buzz.getId())).isFalse();
         } finally {
             continueDeletion.countDown();
             executor.shutdownNow();
@@ -152,8 +160,8 @@ class BuzzReadDeletionConcurrencyTest {
     }
 
     @Test
-    @DisplayName("수정이 버즈를 읽은 뒤 삭제가 커밋되면 수정은 동시 수정 실패로 끝나고 버즈를 되살리지 않는다")
-    void updateAfterDeletionCommitted_FailsWithoutResurrecting() {
+    @DisplayName("수정이 버즈를 읽은 뒤 정리가 버즈 행을 지우면 수정은 동시 수정 실패로 끝나고 버즈를 되살리지 않는다")
+    void updateAfterPurgeCommitted_FailsWithoutResurrecting() {
         // given
         Buzz buzz = saveBuzz();
         AtomicBoolean deleteOnce = new AtomicBoolean(true);
@@ -175,6 +183,41 @@ class BuzzReadDeletionConcurrencyTest {
         // then
         assertThat(failure).isInstanceOf(OptimisticLockingFailureException.class);
         assertThat(countRows("buzzes", "id", buzz.getId())).isZero();
+    }
+
+    @Test
+    @DisplayName("수정이 버즈를 읽은 뒤 게시자 삭제가 커밋되어도 수정은 삭제 표시를 되돌리지 않는다")
+    void updateAfterSoftDeletionCommitted_KeepsDeleted() {
+        // given
+        Buzz buzz = saveBuzz();
+        AtomicBoolean deleteOnce = new AtomicBoolean(true);
+        doAnswer(invocation -> {
+            Object loaded = invocation.callRealMethod();
+            if (deleteOnce.compareAndSet(true, false)) {
+                try (var otherTransaction = Executors.newSingleThreadExecutor()) {
+                    otherTransaction.submit(() -> buzzService.deleteBuzz(creatorId, buzz.getId()))
+                            .get(WAIT_SECONDS, TimeUnit.SECONDS);
+                }
+            }
+            return loaded;
+        }).when(buzzRepositoryAdapter).findById(buzz.getId());
+
+        // when
+        buzzService.updateBuzz(new UpdateBuzzCommand(creatorId, buzz.getId(), "고친 본문", List.of()));
+
+        // then
+        assertThat(isDeleted(buzz.getId())).isTrue();
+    }
+
+    private boolean isDeleted(Long buzzId) {
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(
+                "SELECT deleted_at IS NOT NULL FROM buzzes WHERE id = ?", Boolean.class, buzzId));
+    }
+
+    private boolean isRead(Long buzzId) {
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(
+                "SELECT is_read FROM buzz_audience_members WHERE buzz_id = ? AND user_id = ?",
+                Boolean.class, buzzId, recipientId));
     }
 
     private Buzz saveBuzz() {

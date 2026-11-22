@@ -54,8 +54,8 @@ public class BuzzThreadRepositoryAdapter implements BuzzThreadRepository {
     }
 
     @Override
-    public void deleteAllByBuzzId(Long buzzId) {
-        buzzThreadJpaRepository.deleteAllByBuzzId(buzzId);
+    public List<Long> findIdsByBuzzIds(Collection<Long> buzzIds) {
+        return buzzThreadJpaRepository.findIdsByBuzzIdIn(buzzIds);
     }
 
     @Override

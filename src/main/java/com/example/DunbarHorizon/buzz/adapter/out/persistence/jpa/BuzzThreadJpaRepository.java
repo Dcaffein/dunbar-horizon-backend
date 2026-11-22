@@ -24,9 +24,8 @@ public interface BuzzThreadJpaRepository extends JpaRepository<BuzzThread, Long>
     @Query("DELETE FROM BuzzThread t WHERE t.id = :id")
     void deleteById(@Param("id") Long id);
 
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("DELETE FROM BuzzThread t WHERE t.buzzId = :buzzId")
-    int deleteAllByBuzzId(@Param("buzzId") Long buzzId);
+    @Query("SELECT t.id FROM BuzzThread t WHERE t.buzzId IN :buzzIds")
+    List<Long> findIdsByBuzzIdIn(@Param("buzzIds") Collection<Long> buzzIds);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM BuzzThread t WHERE t.buzzId IN :buzzIds")

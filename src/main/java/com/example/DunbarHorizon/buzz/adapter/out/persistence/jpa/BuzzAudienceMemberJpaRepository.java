@@ -18,10 +18,6 @@ public interface BuzzAudienceMemberJpaRepository extends JpaRepository<BuzzAudie
     List<Long> findUserIdsByBuzzId(@Param("buzzId") Long buzzId);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("DELETE FROM BuzzAudienceMember m WHERE m.buzzId = :buzzId")
-    int deleteAllByBuzzId(@Param("buzzId") Long buzzId);
-
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM BuzzAudienceMember m WHERE m.buzzId IN :buzzIds")
     int deleteAllByBuzzIdIn(@Param("buzzIds") Collection<Long> buzzIds);
 }

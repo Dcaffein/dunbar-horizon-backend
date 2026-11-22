@@ -42,24 +42,26 @@ class BuzzPurgeIntegrationTest {
     @MockitoBean private ImageStoragePort imageStoragePort;
 
     @Test
-    @DisplayName("만료 시각이 기준 시각 이전이거나 같은 버즈만 멤버·스레드·답글과 함께 지운다")
-    void purgeExpiredBuzzes_RemovesExpiredWithChildren() {
+    @DisplayName("만료 시각이 기준 시각 이전이거나 같은 버즈와 삭제 표시된 버즈만 멤버·스레드·답글과 함께 지운다")
+    void purgeExpiredAndDeletedBuzzes_RemovesExpiredAndDeletedWithChildren() {
         // given
         Buzz expired = saveBuzzWithThreadAndComment(NOW.minusHours(7));
         Buzz expiresNow = saveBuzzWithThreadAndComment(NOW.minusHours(6));
+        Buzz deleted = saveBuzzWithThreadAndComment(NOW.minusHours(1));
         Buzz live = saveBuzzWithThreadAndComment(NOW.minusHours(6).plusSeconds(1));
         entityManager.flush();
+        jdbcTemplate.update("UPDATE buzzes SET deleted_at = ? WHERE id = ?", NOW.minusMinutes(30), deleted.getId());
         entityManager.clear();
 
         // when
-        int purged = buzzService.purgeExpiredBuzzes(NOW);
+        int purged = buzzService.purgeExpiredAndDeletedBuzzes(NOW);
 
         // then
-        assertThat(purged).isEqualTo(2);
+        assertThat(purged).isEqualTo(3);
         assertThat(expired.isExpired(NOW)).isTrue();
         assertThat(expiresNow.isExpired(NOW)).isTrue();
         assertThat(live.isExpired(NOW)).isFalse();
-        for (Buzz removed : List.of(expired, expiresNow)) {
+        for (Buzz removed : List.of(expired, expiresNow, deleted)) {
             assertThat(count("SELECT COUNT(*) FROM buzzes WHERE id = ?", removed.getId())).isZero();
             assertThat(count("SELECT COUNT(*) FROM buzz_audience_members WHERE buzz_id = ?", removed.getId())).isZero();
             assertThat(count("SELECT COUNT(*) FROM buzz_threads WHERE buzz_id = ?", removed.getId())).isZero();

@@ -15,6 +15,6 @@ public class BuzzPurgeScheduler {
 
     @Scheduled(cron = "0 0 * * * *")
     public void runPurge() {
-        buzzService.purgeExpiredBuzzes(LocalDateTime.now());
+        buzzService.purgeExpiredAndDeletedBuzzes(LocalDateTime.now());
     }
 }

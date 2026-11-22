@@ -74,14 +74,18 @@ class BuzzThreadPersistenceAdapterTest {
     }
 
     @Test
-    @DisplayName("버즈 단위로 스레드를 지우면 다른 버즈의 스레드는 남는다")
-    void deleteAllByBuzzId_KeepsOtherBuzz() {
+    @DisplayName("버즈들의 스레드 ID를 조회하고 버즈 단위로 지우면 다른 버즈의 스레드는 남는다")
+    void deleteAllByBuzzIds_KeepsOtherBuzz() {
         // given
-        create(firstBuzz, 2L, ThreadVisibility.PUBLIC, NOW);
+        BuzzThread target = create(firstBuzz, 2L, ThreadVisibility.PUBLIC, NOW);
         create(secondBuzz, 2L, ThreadVisibility.PUBLIC, NOW);
 
         // when
-        buzzThreadRepositoryAdapter.deleteAllByBuzzId(firstBuzz.getId());
+        List<Long> threadIds = buzzThreadRepositoryAdapter.findIdsByBuzzIds(List.of(firstBuzz.getId()));
+        buzzThreadRepositoryAdapter.deleteAllByBuzzIds(List.of(firstBuzz.getId()));
+
+        // then
+        assertThat(threadIds).containsExactly(target.getId());
 
         // then
         assertThat(buzzThreadRepositoryAdapter.findAllByBuzzId(firstBuzz.getId())).isEmpty();
