@@ -169,7 +169,7 @@ public class BuzzService {
     private List<BuzzThread> accessibleThreads(Buzz buzz, Long userId) {
         List<BuzzThread> threads = buzzThreadRepository.findAllByBuzzId(buzz.getId());
         Set<Long> startersToCheck = threads.stream()
-                .filter(thread -> thread.needsFriendshipToAccess(userId, buzz.getCreatorId()))
+                .filter(thread -> thread.needsFriendshipToAccess(userId, buzz))
                 .map(BuzzThread::getStarterId)
                 .collect(Collectors.toSet());
         Set<Long> friendStarterIds = startersToCheck.isEmpty()
@@ -178,7 +178,7 @@ public class BuzzService {
 
         return threads.stream()
                 .filter(thread -> thread.isAccessibleBy(
-                        userId, buzz.getCreatorId(), friendStarterIds.contains(thread.getStarterId())))
+                        userId, buzz, friendStarterIds.contains(thread.getStarterId())))
                 .toList();
     }
 }

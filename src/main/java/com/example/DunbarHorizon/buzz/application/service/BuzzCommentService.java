@@ -58,7 +58,7 @@ public class BuzzCommentService {
         Buzz buzz = buzzOf(buzzId);
         BuzzThread thread = threadOf(buzz, threadId);
         BuzzComment comment = commentOf(thread, commentId);
-        comment.validateDeletion(requesterId, buzz.getCreatorId());
+        comment.validateDeletion(requesterId, buzz);
 
         buzzCommentRepository.deleteById(commentId);
     }

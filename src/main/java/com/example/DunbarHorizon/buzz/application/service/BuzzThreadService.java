@@ -100,7 +100,7 @@ public class BuzzThreadService {
         Buzz buzz = buzzRepository.findByIdForShare(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
         BuzzThread thread = threadOf(buzz, threadId);
-        thread.validateDeletion(requesterId, buzz.getCreatorId());
+        thread.validateDeletion(requesterId, buzz);
 
         buzzThreadRepository.deleteById(threadId);
         buzzCommentRepository.deleteAllByThreadId(threadId);

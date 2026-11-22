@@ -33,7 +33,7 @@ public class BuzzThreadAccess {
         buzz.validateAccess(viewerId, member.isPresent());
 
         BuzzThread thread = threadOf(buzzThreadRepository.findById(threadId), buzzId, threadId);
-        thread.validateAccess(viewerId, buzz.getCreatorId(), isFriendOfStarter(viewerId, buzz, thread));
+        thread.validateAccess(viewerId, buzz, isFriendOfStarter(viewerId, buzz, thread));
         return new ThreadContext(buzz, thread, member);
     }
 
@@ -44,7 +44,7 @@ public class BuzzThreadAccess {
         buzz.validateAccess(writerId, member.isPresent());
 
         BuzzThread thread = threadOf(buzzThreadRepository.findByIdForShare(threadId), buzzId, threadId);
-        thread.validateAccess(writerId, buzz.getCreatorId(), isFriendOfStarter(writerId, buzz, thread));
+        thread.validateAccess(writerId, buzz, isFriendOfStarter(writerId, buzz, thread));
         return new ThreadContext(buzz, thread, member);
     }
 
@@ -60,7 +60,7 @@ public class BuzzThreadAccess {
     }
 
     private boolean isFriendOfStarter(Long userId, Buzz buzz, BuzzThread thread) {
-        if (!thread.needsFriendshipToAccess(userId, buzz.getCreatorId())) {
+        if (!thread.needsFriendshipToAccess(userId, buzz)) {
             return false;
         }
         return buzzSocialPort.getFriendIdsIn(userId, List.of(thread.getStarterId()))
