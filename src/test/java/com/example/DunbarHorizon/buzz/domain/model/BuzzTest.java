@@ -113,13 +113,12 @@ class BuzzTest {
             assertThat(buzz.getText()).isEqualTo("고친 본문");
             assertThat(buzz.getImageKeys()).containsExactly("buzz/b");
             assertThat(buzz.getEditedAt()).isEqualTo(editedAt);
-            assertThat(buzz.isEdited()).isTrue();
         }
 
         @Test
-        @DisplayName("새로 만든 버즈는 수정되지 않은 상태다")
-        void create_NotEdited() {
-            assertThat(buzz().isEdited()).isFalse();
+        @DisplayName("새로 만든 버즈는 수정 시각이 없다")
+        void create_NoEditedAt() {
+            assertThat(buzz().getEditedAt()).isNull();
         }
 
         @Test

@@ -83,10 +83,6 @@ public class Buzz {
         this.editedAt = now;
     }
 
-    public boolean isEdited() {
-        return editedAt != null;
-    }
-
     public boolean isExpired(LocalDateTime now) {
         return !expiresAt.isAfter(now);
     }
