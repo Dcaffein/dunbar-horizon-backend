@@ -1,9 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.network;
 
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.buzz.adapter.out.social.AnchorRecipientStrategyAdapter;
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.AnchorRecipientSpec;
-import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.network.dto.IntermediaryExpansionResult;
 import com.example.DunbarHorizon.social.application.network.SocialExpansionQueryService;
 import com.example.DunbarHorizon.social.domain.friendship.FriendRecognition;
 import com.example.DunbarHorizon.social.domain.friendship.exception.FriendshipNotFoundException;
@@ -20,22 +18,21 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
 @JpaRepositoryTest
-@Import({SocialExpansionJdbcAdapter.class, SocialExpansionQueryService.class, AnchorRecipientStrategyAdapter.class})
+@Import({SocialExpansionJdbcAdapter.class, SocialExpansionQueryService.class})
 class SocialExpansionJdbcAdapterTest {
 
     @Autowired private SocialExpansionJdbcAdapter socialExpansionJdbcAdapter;
     @Autowired private SocialExpansionQueryService socialExpansionQueryService;
-    @Autowired private AnchorRecipientStrategyAdapter anchorRecipientStrategyAdapter;
     @Autowired private TestEntityManager em;
     @Autowired private JdbcTemplate jdbc;
 
     @Test
     @DisplayName("추천은 활성 외부 후보의 공개 설정과 공통 친구·공유 라벨 점수를 적용하고 친밀도순으로 제한한다")
-    void getRecommendedNetworkByAnchor_OrdersQualifiedCandidates_OutsideMyFriends() {
+    void getRecommendedNetworkByIntermediary_OrdersQualifiedCandidates_OutsideMyFriends() {
         // given
         User lowCandidate = user("low-candidate");
         User me = user("me");
-        User anchor = user("anchor");
+        User intermediary = user("intermediary");
         User highCandidate = user("high-candidate");
         User hidden = user("hidden");
         User inactive = user("inactive");
@@ -45,80 +42,78 @@ class SocialExpansionJdbcAdapterTest {
         inactive.deactivate();
         em.flush();
 
-        connect(me, anchor, 0.8, true, true);
+        connect(me, intermediary, 0.8, true, true);
         connect(me, mutualOne, 0.5, true, true);
         connect(me, mutualTwo, 0.5, true, true);
-        connect(anchor, lowCandidate, 0.9, false, true);
-        connect(anchor, highCandidate, 0.7, false, true);
-        connect(anchor, hidden, 0.99, true, false);
-        connect(anchor, inactive, 0.98, false, true);
-        connect(anchor, insufficient, 0.97, false, true);
+        connect(intermediary, lowCandidate, 0.9, false, true);
+        connect(intermediary, highCandidate, 0.7, false, true);
+        connect(intermediary, hidden, 0.99, true, false);
+        connect(intermediary, inactive, 0.98, false, true);
+        connect(intermediary, insufficient, 0.97, false, true);
         for (User candidate : new User[]{highCandidate, hidden, inactive}) {
             connect(candidate, mutualOne, 0.5, false, false);
             connect(candidate, mutualTwo, 0.5, false, false);
         }
         connect(lowCandidate, mutualOne, 0.5, false, false);
         connect(insufficient, mutualTwo, 0.5, false, false);
-        label("shared", anchor, me, lowCandidate);
+        label("shared", intermediary, me, lowCandidate);
         label("different-owner", mutualOne, me, insufficient);
-        label("no-viewer", anchor, insufficient);
+        label("no-viewer", intermediary, insufficient);
 
         // when & then
-        assertThat(socialExpansionQueryService.getRecommendationsByAnchor(me.getId(), anchor.getId()))
+        assertThat(socialExpansionQueryService.getRecommendationsByIntermediary(me.getId(), intermediary.getId()))
                 .containsExactly(result(lowCandidate), result(highCandidate));
-        assertThat(socialExpansionJdbcAdapter.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 2, 1))
+        assertThat(socialExpansionJdbcAdapter.getRecommendedNetworkByIntermediary(me.getId(), intermediary.getId(), 2, 1))
                 .containsExactly(result(lowCandidate));
-        assertThat(socialExpansionJdbcAdapter.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 3, 10)).isEmpty();
+        assertThat(socialExpansionJdbcAdapter.getRecommendedNetworkByIntermediary(me.getId(), intermediary.getId(), 3, 10)).isEmpty();
     }
 
     @Test
-    @DisplayName("기준 친구 확장과 Buzz는 외부 후보와 비공개 친구를 제외한 같은 친구 목록을 사용한다")
-    void getAnchorExpansion_MatchesBuzzRecipients_InsideMyFriends() {
+    @DisplayName("중개 친구 확장과 Buzz는 외부 후보와 비공개 친구를 제외한 같은 친구 목록을 사용한다")
+    void getIntermediaryExpansion_MatchesBuzzRecipients_InsideMyFriends() {
         // given
         User me = user("me");
         User eligible = user("eligible");
-        User anchor = user("anchor");
+        User intermediary = user("intermediary");
         User hidden = user("hidden");
         User outside = user("outside");
-        connect(me, anchor, 0.8, true, true);
+        connect(me, intermediary, 0.8, true, true);
         connect(me, eligible, 0.5, false, false);
         connect(me, hidden, 0.5, false, false);
-        connect(anchor, eligible, 0.7, false, true);
-        connect(anchor, hidden, 0.9, true, false);
-        connect(anchor, outside, 0.99, false, true);
-        label("shared", anchor, me, eligible, hidden, outside);
+        connect(intermediary, eligible, 0.7, false, true);
+        connect(intermediary, hidden, 0.9, true, false);
+        connect(intermediary, outside, 0.99, false, true);
+        label("shared", intermediary, me, eligible, hidden, outside);
 
         // when
-        var expansion = socialExpansionQueryService.getAnchorExpansion(me.getId(), anchor.getId(), 1.0);
-        var recipients = anchorRecipientStrategyAdapter.fetchRecipientIds(me.getId(), new AnchorRecipientSpec(anchor.getId(), 1.0));
+        var expansion = socialExpansionQueryService.getIntermediaryExpansion(me.getId(), intermediary.getId(), 1.0);
 
         // then
         assertThat(expansion).containsExactly(result(eligible));
-        assertThat(recipients).containsExactly(eligible.getId());
-        assertThat(socialExpansionJdbcAdapter.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 1, 10))
+        assertThat(socialExpansionJdbcAdapter.getRecommendedNetworkByIntermediary(me.getId(), intermediary.getId(), 1, 10))
                 .containsExactly(result(outside));
     }
 
     @Test
-    @DisplayName("기준 친구 외에 활성 친구가 없으면 빈 결과이며 친구가 아닌 기준 사용자는 거절한다")
-    void getRecommendationsByAnchor_HandlesMissingRelationships() {
+    @DisplayName("중개 친구 외에 활성 친구가 없으면 빈 결과이며 친구가 아닌 기준 사용자는 거절한다")
+    void getRecommendationsByIntermediary_HandlesMissingRelationships() {
         // given
         User me = user("me");
-        User anchor = user("anchor");
+        User intermediary = user("intermediary");
         User outside = user("outside");
         User inactive = user("inactive");
         inactive.deactivate();
         em.flush();
-        connect(me, anchor, 0.9, true, true);
+        connect(me, intermediary, 0.9, true, true);
         connect(me, inactive, 0.7, true, true);
-        connect(anchor, outside, 0.8, true, true);
+        connect(intermediary, outside, 0.8, true, true);
         connect(outside, inactive, 0.8, true, true);
-        label("shared", anchor, me, outside);
+        label("shared", intermediary, me, outside);
 
         // when & then
-        assertThat(socialExpansionJdbcAdapter.getRecommendedNetworkByAnchor(me.getId(), anchor.getId(), 1, 10)).isEmpty();
-        assertThat(socialExpansionQueryService.getAnchorExpansion(me.getId(), anchor.getId(), 1.0)).isEmpty();
-        assertThatThrownBy(() -> socialExpansionQueryService.getRecommendationsByAnchor(me.getId(), outside.getId()))
+        assertThat(socialExpansionJdbcAdapter.getRecommendedNetworkByIntermediary(me.getId(), intermediary.getId(), 1, 10)).isEmpty();
+        assertThat(socialExpansionQueryService.getIntermediaryExpansion(me.getId(), intermediary.getId(), 1.0)).isEmpty();
+        assertThatThrownBy(() -> socialExpansionQueryService.getRecommendationsByIntermediary(me.getId(), outside.getId()))
                 .isInstanceOf(FriendshipNotFoundException.class);
     }
 
@@ -146,7 +141,7 @@ class SocialExpansionJdbcAdapterTest {
     }
 
     private User user(String nickname) {
-        return em.persistAndFlush(User.builder().email(nickname + "@mysql-anchor.test").nickname(nickname).build());
+        return em.persistAndFlush(User.builder().email(nickname + "@mysql-intermediary.test").nickname(nickname).build());
     }
 
     private void connect(User from, User to, double intimacy, boolean fromRoutable, boolean toRoutable) {
@@ -172,7 +167,7 @@ class SocialExpansionJdbcAdapterTest {
         }
     }
 
-    private static AnchorExpansionResult result(User user) {
-        return new AnchorExpansionResult(user.getId(), user.getNickname());
+    private static IntermediaryExpansionResult result(User user) {
+        return new IntermediaryExpansionResult(user.getId(), user.getNickname());
     }
 }

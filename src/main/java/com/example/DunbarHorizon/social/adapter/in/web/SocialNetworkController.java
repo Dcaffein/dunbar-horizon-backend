@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.social.adapter.in.web;
 
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
-import com.example.DunbarHorizon.social.application.network.dto.AnchorExpansionResult;
+import com.example.DunbarHorizon.social.application.network.dto.IntermediaryExpansionResult;
 import com.example.DunbarHorizon.social.application.network.dto.ConnectionPathResult;
 import com.example.DunbarHorizon.social.application.network.dto.MutualFriendEdgeResult;
 import com.example.DunbarHorizon.social.application.network.dto.NodeGraphResult;
@@ -66,11 +66,11 @@ public class SocialNetworkController {
      * 클라이언트가 현재 화면의 skeleton ID 목록을 전달하여 동적 컨텍스트 반영 및 보안 검증
      */
     @GetMapping("/recommendations")
-    public ResponseEntity<List<AnchorExpansionResult>> getTwoHopRecommendation(
+    public ResponseEntity<List<IntermediaryExpansionResult>> getTwoHopRecommendation(
             @CurrentUserId Long currentUserId,
-            @RequestParam Long anchorId
+            @RequestParam Long intermediaryId
     ) {
-        return ResponseEntity.ok(socialExpansionQueryService.getRecommendationsByAnchor(currentUserId, anchorId));
+        return ResponseEntity.ok(socialExpansionQueryService.getRecommendationsByIntermediary(currentUserId, intermediaryId));
     }
 
     @GetMapping("/path")

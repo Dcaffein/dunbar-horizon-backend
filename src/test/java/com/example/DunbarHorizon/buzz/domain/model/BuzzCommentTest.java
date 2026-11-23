@@ -1,110 +1,94 @@
 package com.example.DunbarHorizon.buzz.domain.model;
 
+import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
+import com.example.DunbarHorizon.buzz.domain.BuzzThread;
+import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class BuzzCommentTest {
 
-    @Test
-    @DisplayName("댓글 생성 시 모든 필드가 정상 주입된다")
-    void of_Success() {
-        BuzzComment comment = BuzzComment.of(
-                "com-1", 1L, "닉네임", "profile.jpg", "내용", null, true);
+    private static final LocalDateTime NOW = LocalDateTime.of(2026, 11, 22, 12, 0);
 
-        assertThat(comment.getCommenterNickname()).isEqualTo("닉네임");
-        assertThat(comment.getText()).isEqualTo("내용");
+    private final Long creatorId = 1L;
+    private final Long authorId = 2L;
+    private final Long otherId = 3L;
+
+    private final Buzz buzz = withId(Buzz.create(creatorId, "본문", List.of(), Set.of(authorId, otherId), NOW), 1L);
+    private final BuzzThread thread = thread();
+
+    private BuzzThread thread() {
+        BuzzThread created = BuzzThread.create(buzz, authorId, true, ThreadVisibility.PUBLIC, "첫 글", List.of(), NOW);
+        ReflectionTestUtils.setField(created, "id", 10L);
+        return created;
+    }
+
+    private BuzzComment comment() {
+        return BuzzComment.write(thread, authorId, "답글", List.of("buzz/a"), NOW);
     }
 
     @Test
-    @DisplayName("댓글 내용을 비워서 수정하면 예외가 발생한다")
-    void update_Fail_EmptyText() {
-        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "Old", null, true);
+    @DisplayName("답글은 스레드, 작성자, 본문, 이미지 키를 가진다")
+    void write_Success() {
+        BuzzComment comment = comment();
 
-        assertThatThrownBy(() -> comment.update(1L, "", null))
+        assertThat(comment.getThreadId()).isEqualTo(10L);
+        assertThat(comment.isAuthor(authorId)).isTrue();
+        assertThat(comment.getImageKeys()).containsExactly("buzz/a");
+    }
+
+    @Test
+    @DisplayName("답글이 비어 있거나 300자를 넘으면 쓸 수 없다")
+    void write_Fail_InvalidText() {
+        assertThatThrownBy(() -> BuzzComment.write(thread, authorId, " ", List.of(), NOW))
+                .isInstanceOf(BuzzInvalidStateException.class);
+        assertThatThrownBy(() -> BuzzComment.write(thread, authorId, "가".repeat(BuzzComment.TEXT_MAX_LENGTH + 1),
+                List.of(), NOW))
                 .isInstanceOf(BuzzInvalidStateException.class);
     }
 
     @Test
-    @DisplayName("300자를 초과하는 내용으로 댓글을 생성하면 예외가 발생한다")
-    void of_Fail_TooLongText() {
-        String tooLong = "가".repeat(BuzzComment.TEXT_MAX_LENGTH + 1);
+    @DisplayName("작성자는 답글을 수정할 수 있다")
+    void update_ByAuthor() {
+        BuzzComment comment = comment();
 
-        assertThatThrownBy(() -> BuzzComment.of("com-1", 1L, "닉", "p.jpg", tooLong, null, true))
-                .isInstanceOf(BuzzInvalidStateException.class);
+        comment.update(authorId, "수정", null);
+
+        assertThat(comment.getText()).isEqualTo("수정");
+        assertThat(comment.getImageKeys()).isEmpty();
     }
 
     @Test
-    @DisplayName("300자를 초과하는 내용으로 댓글을 수정하면 예외가 발생한다")
-    void update_Fail_TooLongText() {
-        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "Old", null, true);
-        String tooLong = "가".repeat(BuzzComment.TEXT_MAX_LENGTH + 1);
-
-        assertThatThrownBy(() -> comment.update(1L, tooLong, null))
-                .isInstanceOf(BuzzInvalidStateException.class);
-    }
-
-    @Test
-    @DisplayName("commenterId와 같은 userId이면 isCommenter가 true이다")
-    void isCommenter_WithCommenterId_ReturnsTrue() {
-        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "내용", null, true);
-
-        assertThat(comment.isCommenter(1L)).isTrue();
-    }
-
-    @Test
-    @DisplayName("commenterId와 다른 userId이면 isCommenter가 false이다")
-    void isCommenter_WithOtherId_ReturnsFalse() {
-        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "내용", null, true);
-
-        assertThat(comment.isCommenter(99L)).isFalse();
-    }
-
-    @Test
-    @DisplayName("작성자가 아닌 사람이 수정하면 예외가 발생한다")
-    void update_Fail_NotCommenter() {
-        // given
-        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "Old", null, true);
-
-        // when & then
-        assertThatThrownBy(() -> comment.update(99L, "New", null))
+    @DisplayName("게시자도 답글을 수정할 수 없다")
+    void update_ByCreator_Denied() {
+        assertThatThrownBy(() -> comment().update(creatorId, "수정", List.of()))
                 .isInstanceOf(BuzzAccessDeniedException.class);
-        assertThat(comment.getText()).isEqualTo("Old");
     }
 
     @Test
-    @DisplayName("댓글 삭제는 작성자 본인이 할 수 있다")
-    void validateDeletionAuthority_Success_ByCommenter() {
-        // given
-        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "내용", null, true);
+    @DisplayName("작성자와 게시자는 답글을 삭제할 수 있고 다른 사람은 거절된다")
+    void validateDeletion() {
+        BuzzComment comment = comment();
 
-        // when & then
-        comment.validateDeletionAuthority(1L, 50L);
-    }
-
-    @Test
-    @DisplayName("댓글 삭제는 버즈 생성자도 할 수 있다")
-    void validateDeletionAuthority_Success_ByBuzzCreator() {
-        // given
-        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "내용", null, true);
-
-        // when & then
-        comment.validateDeletionAuthority(50L, 50L);
-    }
-
-    @Test
-    @DisplayName("작성자도 버즈 생성자도 아니면 댓글 삭제 시 예외가 발생한다")
-    void validateDeletionAuthority_Fail_ByStranger() {
-        // given
-        BuzzComment comment = BuzzComment.of("com-1", 1L, "닉", "p.jpg", "내용", null, true);
-
-        // when & then
-        assertThatThrownBy(() -> comment.validateDeletionAuthority(99L, 50L))
+        comment.validateDeletion(authorId, buzz);
+        comment.validateDeletion(creatorId, buzz);
+        assertThatThrownBy(() -> comment.validateDeletion(otherId, buzz))
                 .isInstanceOf(BuzzAccessDeniedException.class);
+    }
+
+    private static Buzz withId(Buzz buzz, long id) {
+        org.springframework.test.util.ReflectionTestUtils.setField(buzz, "id", id);
+        return buzz;
     }
 }

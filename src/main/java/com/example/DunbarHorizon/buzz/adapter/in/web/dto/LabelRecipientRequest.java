@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web.dto;
 
-import com.example.DunbarHorizon.buzz.application.dto.info.RecipientSpec;
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.command.recipient.RecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.command.recipient.LabelRecipientSpec;
 import jakarta.validation.constraints.NotEmpty;
 
 import java.util.List;

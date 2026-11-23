@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.buzz.application.eventListener;
 
-
-import java.util.Map;import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
+import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
+import com.example.DunbarHorizon.buzz.domain.event.BuzzThreadCreatedEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationEvent;
 import com.example.DunbarHorizon.global.event.notification.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -12,10 +12,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
 public class BuzzNotificationDispatcher {
+
     private final ApplicationEventPublisher eventPublisher;
 
     @Async
@@ -23,7 +26,7 @@ public class BuzzNotificationDispatcher {
     public void dispatch(BuzzCreatedEvent event) {
         event.recipientIds().forEach(receiverId -> {
             NotificationEvent notification = new NotificationEvent(
-                    receiverId,"새로운 Buzz","응답해보세요",NotificationType.BUZZ_ARRIVAL,
+                    receiverId, "새로운 Buzz", "응답해보세요", NotificationType.BUZZ_ARRIVAL,
                     Map.of(
                             "buzzId", event.buzzId(),
                             "creatorId", event.creatorId()
@@ -36,19 +39,30 @@ public class BuzzNotificationDispatcher {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void dispatch(BuzzCommentedEvent event) {
-        if (event.creatorId().equals(event.commenterId())) return;
-        NotificationEvent notification = NotificationEvent.builder()
-                .receiverId(event.creatorId())
-                .title("Buzz 댓글")
-                .content("누군가 내 Buzz에 댓글을 남겼습니다")
-                .type(NotificationType.BUZZ_RESPONSE)
-                .metadata(Map.of(
+    public void dispatch(BuzzThreadCreatedEvent event) {
+        eventPublisher.publishEvent(new NotificationEvent(
+                event.notificationReceiverId(), "Buzz 응답", "누군가 내 Buzz에 응답했습니다",
+                NotificationType.BUZZ_RESPONSE,
+                Map.of(
                         "buzzId", event.buzzId(),
-                        "commenterId", event.commenterId()
-                ))
-                .build();
+                        "threadId", event.threadId(),
+                        "authorId", event.starterId()
+                )
+        ));
+    }
 
-        eventPublisher.publishEvent(notification);
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void dispatch(BuzzCommentedEvent event) {
+        eventPublisher.publishEvent(new NotificationEvent(
+                List.copyOf(event.notificationReceiverIds()), "Buzz 답글", "스레드에 새 답글이 달렸습니다",
+                NotificationType.BUZZ_RESPONSE,
+                Map.of(
+                        "buzzId", event.buzzId(),
+                        "threadId", event.threadId(),
+                        "authorId", event.authorId()
+                ),
+                null
+        ));
     }
 }

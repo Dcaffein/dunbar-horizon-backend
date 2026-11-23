@@ -1,31 +1,29 @@
 package com.example.DunbarHorizon.buzz.application.dto.result;
 
-import com.example.DunbarHorizon.buzz.domain.Buzz;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzSummaryView;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public record BuzzSummaryResult(
-        String buzzId,
+        Long buzzId,
         BuzzProfileResult author,
         String text,
         List<String> imageUrls,
-        int commentCount,
-        long remainingMinutes,
+        LocalDateTime editedAt,
         boolean isUnread,
         boolean isCreator
 ) {
-    public static BuzzSummaryResult from(Buzz buzz, Long currentUserId) {
+    public static BuzzSummaryResult of(BuzzSummaryView buzz, BuzzProfileResult author, List<String> imageUrls,
+                                       boolean isUnread, boolean isCreator) {
         return new BuzzSummaryResult(
-                buzz.getId(),
-                new BuzzProfileResult(buzz.getCreatorId(), buzz.getCreatorNickname(), buzz.getCreatorProfileImageUrl()),
-                buzz.getText(),
-                buzz.getImageUrls(),
-                buzz.getComments().size(),
-                Math.max(0L, Duration.between(LocalDateTime.now(), buzz.getExpiresAt()).toMinutes()),
-                buzz.isUnreadBy(currentUserId),
-                buzz.isCreator(currentUserId)
+                buzz.buzzId(),
+                author,
+                buzz.text(),
+                imageUrls,
+                buzz.editedAt(),
+                isUnread,
+                isCreator
         );
     }
 }

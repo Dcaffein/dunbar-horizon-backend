@@ -1,11 +1,12 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web;
 
-import com.example.DunbarHorizon.buzz.application.dto.result.BuzzCommentResult;
+import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzProfileResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
+import com.example.DunbarHorizon.buzz.application.dto.result.BuzzThreadSummaryResult;
+import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.support.BaseControllerTest;
 import com.example.DunbarHorizon.support.WithMockCustomUser;
 import org.junit.jupiter.api.DisplayName;
@@ -23,8 +24,11 @@ import java.util.stream.LongStream;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -41,16 +45,21 @@ class BuzzControllerTest extends BaseControllerTest {
         @DisplayName("작성자가 상세 조회하면 응답에 isCreator=true가 포함된다")
         void getBuzzDetail_ByCreator_ResponseContainsIsCreatorTrue() throws Exception {
             BuzzDetailResult detail = new BuzzDetailResult(
-                    "buzz-id",
+                    1L,
                     new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
-                    "테스트 버즈", List.of(), List.of(), 25L, false, true,
-                    List.of()
+                    "테스트 버즈", List.of(), LocalDateTime.of(2026, 11, 22, 12, 30), false, true,
+                    List.of(),
+                    List.of(new BuzzThreadSummaryResult(10L, new BuzzProfileResult(2L, "시작자", null),
+                            ThreadVisibility.PRIVATE, LocalDateTime.of(2026, 11, 22, 12, 0)))
             );
-            given(buzzService.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
+            given(buzzQueryService.getBuzzDetail(CURRENT_USER_ID, 1L)).willReturn(detail);
 
-            mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
+            mockMvc.perform(get("/api/v1/buzzes/1"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.isCreator").value(true));
+                    .andExpect(jsonPath("$.isCreator").value(true))
+                    .andExpect(jsonPath("$.editedAt").exists())
+                    .andExpect(jsonPath("$.threads[0].threadId").value(10))
+                    .andExpect(jsonPath("$.threads[0].visibility").value("PRIVATE"));
         }
 
         @Test
@@ -58,37 +67,17 @@ class BuzzControllerTest extends BaseControllerTest {
         @DisplayName("수신자가 상세 조회하면 응답에 isCreator=false가 포함된다")
         void getBuzzDetail_ByRecipient_ResponseContainsIsCreatorFalse() throws Exception {
             BuzzDetailResult detail = new BuzzDetailResult(
-                    "buzz-id",
+                    1L,
                     new BuzzProfileResult(2L, "작성자", null),
-                    "테스트 버즈", List.of(), List.of(), 25L, true, false,
-                    List.of(new BuzzProfileResult(CURRENT_USER_ID, "나", null))
+                    "테스트 버즈", List.of(), null, true, false,
+                    List.of(new BuzzProfileResult(CURRENT_USER_ID, "나", null)),
+                    List.of()
             );
-            given(buzzService.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
+            given(buzzQueryService.getBuzzDetail(CURRENT_USER_ID, 1L)).willReturn(detail);
 
-            mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
+            mockMvc.perform(get("/api/v1/buzzes/1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.isCreator").value(false));
-        }
-
-        @Test
-        @WithMockCustomUser
-        @DisplayName("본인 댓글이면 comments[0].isMine이 true로 내려온다")
-        void getBuzzDetail_OwnComment_IsMineTrue() throws Exception {
-            BuzzCommentResult comment = new BuzzCommentResult(
-                    "c1", new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
-                    "댓글", List.of(), LocalDateTime.now(), true
-            );
-            BuzzDetailResult detail = new BuzzDetailResult(
-                    "buzz-id",
-                    new BuzzProfileResult(2L, "버즈작성자", null),
-                    "테스트 버즈", List.of(), List.of(comment), 25L, true, false,
-                    List.of(new BuzzProfileResult(CURRENT_USER_ID, "나", null))
-            );
-            given(buzzService.getBuzzDetail(CURRENT_USER_ID, "buzz-id")).willReturn(detail);
-
-            mockMvc.perform(get("/api/v1/buzzes/buzz-id"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.comments[0].isMine").value(true));
         }
     }
 
@@ -103,16 +92,16 @@ class BuzzControllerTest extends BaseControllerTest {
         @DisplayName("GET /api/v1/buzzes/sent 는 작성한 버즈 목록을 반환한다")
         void getSentBuzzes_ReturnsSlice() throws Exception {
             BuzzSummaryResult summary = new BuzzSummaryResult(
-                    "buzz-1",
+                    1L,
                     new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
-                    "내가 보낸 버즈", List.of(), 0, 10L, false, true
+                    "내가 보낸 버즈", List.of(), null, false, true
             );
-            given(buzzService.getSentBuzzes(eq(CURRENT_USER_ID), any()))
+            given(buzzQueryService.getSentBuzzes(eq(CURRENT_USER_ID), any()))
                     .willReturn(new SliceImpl<>(List.of(summary), PageRequest.of(0, 20), false));
 
             mockMvc.perform(get("/api/v1/buzzes/sent"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.content[0].buzzId").value("buzz-1"))
+                    .andExpect(jsonPath("$.content[0].buzzId").value(1L))
                     .andExpect(jsonPath("$.content[0].isCreator").value(true));
         }
     }
@@ -123,34 +112,9 @@ class BuzzControllerTest extends BaseControllerTest {
 
         @Test
         @WithMockCustomUser
-        @DisplayName("수신자가 151명이면 400을 반환한다")
-        void createBuzz_Fail_RecipientOverLimit() throws Exception {
+        @DisplayName("수신자가 151명이어도 인원수 상한 없이 요청이 서비스까지 전달된다")
+        void createBuzz_Success_RecipientsOver150() throws Exception {
             String memberIds = LongStream.rangeClosed(1, 151)
-                    .mapToObj(String::valueOf)
-                    .collect(Collectors.joining(","));
-
-            String body = """
-                    {
-                      "text": "안녕하세요",
-                      "recipient": {
-                        "type": "MANUAL",
-                        "memberIds": [%s]
-                      }
-                    }
-                    """.formatted(memberIds);
-
-            mockMvc.perform(post("/api/v1/buzzes")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.validation['recipient.memberIds']").exists());
-        }
-
-        @Test
-        @WithMockCustomUser
-        @DisplayName("수신자가 정확히 150명이면 요청이 서비스까지 전달된다")
-        void createBuzz_Success_MaxRecipients() throws Exception {
-            String memberIds = LongStream.rangeClosed(1, 150)
                     .mapToObj(String::valueOf)
                     .collect(Collectors.joining(","));
 
@@ -188,24 +152,49 @@ class BuzzControllerTest extends BaseControllerTest {
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.validation.text").value(Buzz.TEXT_LENGTH_MESSAGE));
         }
+    }
+
+    @Test
+    @WithMockCustomUser
+    @DisplayName("PUT /api/v1/buzzes/{buzzId}/readers/me 는 현재 사용자가 버즈를 읽은 것으로 남기고 204를 반환한다")
+    void readBuzz_Returns204() throws Exception {
+        mockMvc.perform(put("/api/v1/buzzes/1/readers/me"))
+                .andExpect(status().isNoContent());
+
+        verify(buzzCommandService).readBuzz(1L, 1L);
+    }
+
+    @Nested
+    @DisplayName("버즈 수정 요청")
+    class UpdateBuzz {
+
+        private static final Long CURRENT_USER_ID = 1L;
 
         @Test
         @WithMockCustomUser
-        @DisplayName("댓글이 300자를 초과하면 400과 validation.text를 반환한다")
-        void comment_Fail_TextOverLimit() throws Exception {
-            String longText = "가".repeat(BuzzComment.TEXT_MAX_LENGTH + 1);
-            String body = """
-                    {
-                      "text": "%s",
-                      "isPublic": true
-                    }
-                    """.formatted(longText);
+        @DisplayName("본문과 이미지 키를 받아 204를 반환한다")
+        void updateBuzz_Returns204() throws Exception {
+            mockMvc.perform(patch("/api/v1/buzzes/1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{ \"text\": \"고친 본문\", \"imageKeys\": [\"buzz/b\"] }"))
+                    .andExpect(status().isNoContent());
 
-            mockMvc.perform(post("/api/v1/buzzes/buzz-1/comments")
+            verify(buzzCommandService).updateBuzz(new UpdateBuzzCommand(CURRENT_USER_ID, 1L, "고친 본문", List.of("buzz/b")));
+        }
+
+        @Test
+        @WithMockCustomUser
+        @DisplayName("본문이 1000자를 넘으면 400과 validation.text를 반환한다")
+        void updateBuzz_TextOverLimit_Returns400() throws Exception {
+            String body = """
+                    { "text": "%s" }
+                    """.formatted("가".repeat(Buzz.TEXT_MAX_LENGTH + 1));
+
+            mockMvc.perform(patch("/api/v1/buzzes/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.validation.text").value(BuzzComment.TEXT_LENGTH_MESSAGE));
+                    .andExpect(jsonPath("$.validation.text").value(Buzz.TEXT_LENGTH_MESSAGE));
         }
     }
 }

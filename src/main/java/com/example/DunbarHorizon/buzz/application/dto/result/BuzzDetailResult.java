@@ -1,33 +1,35 @@
 package com.example.DunbarHorizon.buzz.application.dto.result;
 
-import com.example.DunbarHorizon.buzz.domain.Buzz;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzDetailView;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public record BuzzDetailResult(
-        String buzzId,
+        Long buzzId,
         BuzzProfileResult author,
         String text,
         List<String> imageUrls,
-        List<BuzzCommentResult> comments,
-        long remainingMinutes,
+        LocalDateTime editedAt,
         boolean isUnread,
         boolean isCreator,
-        List<BuzzProfileResult> recipients
+        List<BuzzProfileResult> recipients,
+        List<BuzzThreadSummaryResult> threads
 ) {
-    public static BuzzDetailResult from(Buzz buzz, Long currentUserId, List<BuzzProfileResult> recipients) {
+    public static BuzzDetailResult of(BuzzDetailView buzz, BuzzProfileResult author, List<String> imageUrls,
+                                      boolean isUnread, boolean isCreator,
+                                      List<BuzzProfileResult> recipients,
+                                      List<BuzzThreadSummaryResult> threads) {
         return new BuzzDetailResult(
-                buzz.getId(),
-                new BuzzProfileResult(buzz.getCreatorId(), buzz.getCreatorNickname(), buzz.getCreatorProfileImageUrl()),
-                buzz.getText(),
-                buzz.getImageUrls(),
-                buzz.getVisibleComments(currentUserId).stream().map(c -> BuzzCommentResult.from(c, currentUserId)).toList(),
-                Math.max(0L, Duration.between(LocalDateTime.now(), buzz.getExpiresAt()).toMinutes()),
-                buzz.isUnreadBy(currentUserId),
-                buzz.isCreator(currentUserId),
-                recipients
+                buzz.buzzId(),
+                author,
+                buzz.text(),
+                imageUrls,
+                buzz.editedAt(),
+                isUnread,
+                isCreator,
+                recipients,
+                threads
         );
     }
 }

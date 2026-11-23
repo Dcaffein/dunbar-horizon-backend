@@ -1,8 +1,6 @@
 package com.example.DunbarHorizon.social.adapter.out.persistence.label;
 
 import com.example.DunbarHorizon.account.domain.User;
-import com.example.DunbarHorizon.buzz.adapter.out.social.LabelRecipientStrategyAdapter;
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
 import com.example.DunbarHorizon.social.adapter.out.persistence.friendship.FriendshipPersistenceAdapter;
 import com.example.DunbarHorizon.social.application.label.dto.LabelMemberResult;
 import com.example.DunbarHorizon.social.application.label.dto.LabelResult;
@@ -200,10 +198,9 @@ class LabelPersistenceAdapterTest {
     }
 
     @Test
-    @DisplayName("Buzz는 본인 라벨의 활성 멤버만 중복 없이 받는다")
-    void fetchRecipientIds_FiltersForeignLabelsAndInactiveMembers() {
+    @DisplayName("라벨 멤버 조회는 본인 라벨의 활성 멤버만 중복 없이 준다")
+    void getMemberIdsInOwnedLabels_FiltersForeignLabelsAndInactiveMembers() {
         // given
-        var buzz = new LabelRecipientStrategyAdapter(labelQueryService);
         Label firstLabel = labelCommandService.createLabel(owner.getId(), "첫 라벨");
         Label secondLabel = labelCommandService.createLabel(owner.getId(), "둘째 라벨");
         Label foreignLabel = labelCommandService.createLabel(first.getId(), "다른 사람의 라벨");
@@ -216,8 +213,8 @@ class LabelPersistenceAdapterTest {
         em.flush();
 
         // when
-        var recipients = buzz.fetchRecipientIds(owner.getId(),
-                new LabelRecipientSpec(List.of(firstLabel.getId(), secondLabel.getId(), foreignLabel.getId())));
+        var recipients = labelQueryService.getMemberIdsInOwnedLabels(owner.getId(),
+                List.of(firstLabel.getId(), secondLabel.getId(), foreignLabel.getId()));
 
         // then
         assertThat(recipients).containsExactly(first.getId());

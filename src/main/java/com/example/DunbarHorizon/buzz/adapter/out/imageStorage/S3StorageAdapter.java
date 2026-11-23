@@ -51,4 +51,9 @@ public class S3StorageAdapter implements ImageStoragePort {
     public List<String> resolveUrls(List<String> keys) {
         return s3ImageUrlResolver.resolveUrls(keys);
     }
+
+    @Override
+    public String resolveUrl(String key) {
+        return s3ImageUrlResolver.resolveUrl(key);
+    }
 }

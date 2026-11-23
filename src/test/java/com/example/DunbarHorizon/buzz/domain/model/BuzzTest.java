@@ -1,17 +1,16 @@
 package com.example.DunbarHorizon.buzz.domain.model;
 
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,330 +18,178 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class BuzzTest {
 
+    private static final LocalDateTime NOW = LocalDateTime.of(2026, 11, 22, 12, 0);
+
     private final Long creatorId = 1L;
-    private final String creatorNickname = "방장";
-    private final String creatorProfile = "boss.png";
-
     private final Long recipientId = 2L;
-
     private final Long strangerId = 99L;
 
+    private Buzz buzz() {
+        return Buzz.create(creatorId, "Hello", List.of(), Set.of(recipientId), NOW);
+    }
+
     @Nested
-    @DisplayName("버즈 생성 및 초기화 테스트")
+    @DisplayName("버즈 생성")
     class CreationTest {
+
         @Test
-        @DisplayName("수신자가 한 명도 없으면 생성에 실패한다")
-        void createBuzz_Fail_NoRecipients() {
-            assertThatThrownBy(() -> Buzz.builder()
-                    .creatorId(creatorId)
-                    .creatorNickname(creatorNickname)
-                    .creatorProfileImageUrl(creatorProfile)
-                    .text("Hello")
-                    .recipientIds(List.of())
-                    .build())
+        @DisplayName("공개 대상이 한 명도 없으면 생성에 실패한다")
+        void create_Fail_NoAudience() {
+            assertThatThrownBy(() -> Buzz.create(creatorId, "Hello", List.of(), Set.of(), NOW))
                     .isInstanceOf(BuzzInvalidStateException.class);
         }
 
         @Test
-        @DisplayName("수신자가 150명을 초과하면 생성에 실패한다")
-        void createBuzz_Fail_TooManyRecipients() {
+        @DisplayName("공개 대상이 151명이어도 인원수 상한 없이 생성된다")
+        void create_Success_AudienceOver150() {
             // given
-            List<Long> recipients = LongStream.rangeClosed(1, 151).boxed().toList();
+            Set<Long> audienceIds = LongStream.rangeClosed(2, 152).boxed().collect(Collectors.toSet());
 
             // when & then
-            assertThatThrownBy(() -> Buzz.builder()
-                    .creatorId(creatorId)
-                    .creatorNickname(creatorNickname)
-                    .creatorProfileImageUrl(creatorProfile)
-                    .text("Hello")
-                    .recipientIds(recipients)
-                    .build())
-                    .isInstanceOf(BuzzInvalidStateException.class);
+            Buzz buzz = Buzz.create(creatorId, "Hello", List.of(), audienceIds, NOW);
+            assertThat(buzz.getCreatorId()).isEqualTo(creatorId);
         }
 
         @Test
-        @DisplayName("수신자가 정확히 150명이면 생성에 성공한다")
-        void createBuzz_Success_MaxRecipients() {
-            // given
-            List<Long> recipients = LongStream.rangeClosed(1, 150).boxed().toList();
-
-            // when & then
-            Buzz buzz = Buzz.builder()
-                    .creatorId(creatorId)
-                    .creatorNickname(creatorNickname)
-                    .creatorProfileImageUrl(creatorProfile)
-                    .text("Hello")
-                    .recipientIds(recipients)
-                    .build();
-
-            assertThat(buzz.getRecipientIds()).hasSize(150);
-        }
-
-        @Test
-        @DisplayName("본문이 비어있으면 생성에 실패한다")
-        void createBuzz_Fail_BlankText() {
-            assertThatThrownBy(() -> Buzz.builder()
-                    .creatorId(creatorId).creatorNickname(creatorNickname).creatorProfileImageUrl(creatorProfile)
-                    .text("  ").recipientIds(List.of(recipientId)).build())
+        @DisplayName("본문이 비어 있으면 생성에 실패한다")
+        void create_Fail_BlankText() {
+            assertThatThrownBy(() -> Buzz.create(creatorId, "  ", List.of(), Set.of(recipientId), NOW))
                     .isInstanceOf(BuzzInvalidStateException.class);
         }
 
         @Test
         @DisplayName("본문이 1000자를 초과하면 생성에 실패한다")
-        void createBuzz_Fail_TooLongText() {
+        void create_Fail_TooLongText() {
             String tooLong = "가".repeat(Buzz.TEXT_MAX_LENGTH + 1);
 
-            assertThatThrownBy(() -> Buzz.builder()
-                    .creatorId(creatorId).creatorNickname(creatorNickname).creatorProfileImageUrl(creatorProfile)
-                    .text(tooLong).recipientIds(List.of(recipientId)).build())
+            assertThatThrownBy(() -> Buzz.create(creatorId, tooLong, List.of(), Set.of(recipientId), NOW))
                     .isInstanceOf(BuzzInvalidStateException.class);
         }
 
         @Test
         @DisplayName("본문이 정확히 1000자이면 생성에 성공한다")
-        void createBuzz_Success_MaxLengthText() {
+        void create_Success_MaxLengthText() {
             String boundary = "가".repeat(Buzz.TEXT_MAX_LENGTH);
 
-            Buzz buzz = Buzz.builder()
-                    .creatorId(creatorId).creatorNickname(creatorNickname).creatorProfileImageUrl(creatorProfile)
-                    .text(boundary).recipientIds(List.of(recipientId)).build();
+            Buzz buzz = Buzz.create(creatorId, boundary, List.of(), Set.of(recipientId), NOW);
 
             assertThat(buzz.getText()).hasSize(Buzz.TEXT_MAX_LENGTH);
         }
 
         @Test
-        @DisplayName("생성 시 필드들이 정상적으로 초기화된다")
-        void createBuzz_Success() {
-            Buzz buzz = Buzz.builder()
-                    .creatorId(creatorId)
-                    .creatorNickname(creatorNickname)
-                    .creatorProfileImageUrl(creatorProfile)
-                    .text("Hello")
-                    .recipientIds(List.of(recipientId))
-                    .build();
+        @DisplayName("생성 시각과 이미지 키를 그대로 가진다")
+        void create_Success_FieldsInitialized() {
+            Buzz buzz = Buzz.create(creatorId, "Hello", List.of("buzz/a"), Set.of(recipientId), NOW);
 
-            assertThat(buzz.getCreatorNickname()).isEqualTo(creatorNickname);
-            assertThat(buzz.getExpiresAt()).isAfter(buzz.getCreatedAt());
+            assertThat(buzz.getCreatedAt()).isEqualTo(NOW);
+            assertThat(buzz.getImageKeys()).containsExactly("buzz/a");
+        }
+
+        @Test
+        @DisplayName("이미지 키가 null이면 빈 목록으로 생성된다")
+        void create_Success_NullImageKeys() {
+            Buzz buzz = Buzz.create(creatorId, "Hello", null, Set.of(recipientId), NOW);
+
+            assertThat(buzz.getImageKeys()).isEmpty();
         }
     }
 
     @Nested
-    @DisplayName("댓글 작성 자격 검증 테스트")
-    class CommentCreationTest {
-        private Buzz buzz;
+    @DisplayName("버즈 수정")
+    class UpdateTest {
 
-        @BeforeEach
-        void setUp() {
-            buzz = Buzz.builder()
-                    .creatorId(creatorId)
-                    .creatorNickname(creatorNickname)
-                    .creatorProfileImageUrl(creatorProfile)
-                    .text("Test Buzz")
-                    .recipientIds(List.of(recipientId))
-                    .build();
+        @Test
+        @DisplayName("게시자는 만료 전에 본문과 이미지 키를 고치고 수정 시각이 남는다")
+        void update_ByCreator() {
+            // given
+            Buzz buzz = buzz();
+            LocalDateTime editedAt = NOW.plusHours(1);
+
+            // when
+            buzz.update(creatorId, "고친 본문", List.of("buzz/b"), editedAt);
+
+            // then
+            assertThat(buzz.getText()).isEqualTo("고친 본문");
+            assertThat(buzz.getImageKeys()).containsExactly("buzz/b");
+            assertThat(buzz.getEditedAt()).isEqualTo(editedAt);
         }
 
         @Test
-        @DisplayName("수신자는 댓글을 작성할 수 있다")
-        void validateCommentCreation_Success_ByRecipient() {
-            // when & then
-            buzz.validateCommentCreation(recipientId);
+        @DisplayName("새로 만든 버즈는 수정 시각이 없다")
+        void create_NoEditedAt() {
+            assertThat(buzz().getEditedAt()).isNull();
         }
 
         @Test
-        @DisplayName("버즈 작성자 본인도 댓글을 작성할 수 있다")
-        void validateCommentCreation_Success_ByCreator() {
-            // when & then
-            buzz.validateCommentCreation(creatorId);
-        }
-
-        @Test
-        @DisplayName("수신자도 작성자도 아닌 제3자가 댓글을 시도하면 예외가 발생한다")
-        void validateCommentCreation_Fail_ByStranger() {
-            // when & then
-            assertThatThrownBy(() -> buzz.validateCommentCreation(strangerId))
+        @DisplayName("게시자가 아니면 수정할 수 없다")
+        void update_ByNonCreator_Denied() {
+            assertThatThrownBy(() -> buzz().update(recipientId, "고친 본문", List.of(), NOW.plusHours(1)))
                     .isInstanceOf(BuzzAccessDeniedException.class);
         }
 
         @Test
-        @DisplayName("만료된 버즈에 댓글을 시도하면 예외가 발생한다")
-        void validateCommentCreation_Fail_Expired() {
-            // given
-            ReflectionTestUtils.setField(buzz, "expiresAt", buzz.getCreatedAt().minusMinutes(1));
-
-            // when & then
-            assertThatThrownBy(() -> buzz.validateCommentCreation(recipientId))
+        @DisplayName("고친 본문도 길이 규칙을 지켜야 한다")
+        void update_InvalidText_Rejected() {
+            assertThatThrownBy(() -> buzz().update(creatorId, " ", List.of(), NOW.plusHours(1)))
+                    .isInstanceOf(BuzzInvalidStateException.class);
+            assertThatThrownBy(() -> buzz().update(creatorId, "가".repeat(Buzz.TEXT_MAX_LENGTH + 1), List.of(), NOW.plusHours(1)))
                     .isInstanceOf(BuzzInvalidStateException.class);
         }
     }
 
     @Nested
-    @DisplayName("만료 검증 테스트")
-    class ExpiryValidationTest {
-        private Buzz buzz;
-
-        @BeforeEach
-        void setUp() {
-            buzz = Buzz.builder()
-                    .creatorId(creatorId)
-                    .creatorNickname(creatorNickname)
-                    .creatorProfileImageUrl(creatorProfile)
-                    .text("Original Text")
-                    .recipientIds(List.of(recipientId))
-                    .build();
-        }
-
-        @Test
-        @DisplayName("만료되지 않은 버즈는 통과한다")
-        void validateNotExpired_Success() {
-            // when & then
-            buzz.validateNotExpired();
-        }
-
-        @Test
-        @DisplayName("만료된 버즈는 예외가 발생한다")
-        void validateNotExpired_Fail_Expired() {
-            // given
-            ReflectionTestUtils.setField(buzz, "expiresAt", buzz.getCreatedAt().minusMinutes(1));
-
-            // when & then
-            assertThatThrownBy(() -> buzz.validateNotExpired())
-                    .isInstanceOf(BuzzInvalidStateException.class);
-        }
-    }
-
-    @Nested
-    @DisplayName("접근 및 삭제 권한 검증")
+    @DisplayName("접근 및 삭제 권한")
     class AccessValidationTest {
-        private Buzz buzz;
 
-        @BeforeEach
-        void setUp() {
-            buzz = Buzz.builder()
-                    .creatorId(creatorId)
-                    .creatorNickname(creatorNickname)
-                    .creatorProfileImageUrl(creatorProfile)
-                    .text("Test")
-                    .recipientIds(List.of(recipientId))
-                    .build();
+        @Test
+        @DisplayName("공개 대상 멤버는 버즈에 접근할 수 있다")
+        void validateAccess_Success_AudienceMember() {
+            buzz().validateAccess(recipientId, true);
         }
 
         @Test
-        @DisplayName("수신자는 버즈에 접근할 수 있다")
-        void validateAccess_Success_Recipient() {
-            buzz.validateAccess(recipientId);
-        }
-
-        @Test
-        @DisplayName("작성자는 버즈에 접근할 수 있다")
+        @DisplayName("게시자는 공개 대상이 아니어도 접근할 수 있다")
         void validateAccess_Success_Creator() {
-            buzz.validateAccess(creatorId);
+            buzz().validateAccess(creatorId, false);
         }
 
         @Test
-        @DisplayName("제3자가 접근하면 예외가 발생한다")
+        @DisplayName("게시자도 공개 대상 멤버도 아니면 예외가 발생한다")
         void validateAccess_Fail_Stranger() {
-            assertThatThrownBy(() -> buzz.validateAccess(strangerId))
+            assertThatThrownBy(() -> buzz().validateAccess(strangerId, false))
                     .isInstanceOf(BuzzAccessDeniedException.class);
         }
 
         @Test
-        @DisplayName("작성자는 버즈를 삭제할 수 있다")
-        void validateDeletion_Success_Creator() {
-            buzz.validateDeletion(creatorId);
+        @DisplayName("게시자가 삭제하면 삭제 시각이 남는다")
+        void delete_ByCreator_MarksDeleted() {
+            // given
+            Buzz buzz = buzz();
+
+            // when
+            buzz.delete(creatorId, NOW.plusHours(1));
+
+            // then
+            assertThat(buzz.getDeletedAt()).isEqualTo(NOW.plusHours(1));
         }
 
         @Test
-        @DisplayName("작성자가 아닌 사람이 삭제하려 하면 예외가 발생한다")
-        void validateDeletion_Fail_NonCreator() {
-            assertThatThrownBy(() -> buzz.validateDeletion(recipientId))
+        @DisplayName("게시자가 아닌 사람이 삭제하려 하면 예외가 발생하고 삭제 표시가 남지 않는다")
+        void delete_ByNonCreator_Denied() {
+            // given
+            Buzz buzz = buzz();
+
+            // when & then
+            assertThatThrownBy(() -> buzz.delete(recipientId, NOW.plusHours(1)))
                     .isInstanceOf(BuzzAccessDeniedException.class);
-        }
-    }
-
-    @Nested
-    @DisplayName("isCreator 테스트")
-    class IsCreatorTest {
-        private Buzz buzz;
-
-        @BeforeEach
-        void setUp() {
-            buzz = Buzz.builder()
-                    .creatorId(creatorId)
-                    .creatorNickname(creatorNickname)
-                    .creatorProfileImageUrl(creatorProfile)
-                    .text("Test")
-                    .recipientIds(List.of(recipientId))
-                    .build();
+            assertThat(buzz.getDeletedAt()).isNull();
         }
 
         @Test
-        @DisplayName("creatorId와 같은 userId이면 isCreator가 true이다")
-        void isCreator_WithCreatorId_ReturnsTrue() {
-            assertThat(buzz.isCreator(creatorId)).isTrue();
-        }
-
-        @Test
-        @DisplayName("creatorId와 다른 userId이면 isCreator가 false이다")
-        void isCreator_WithOtherId_ReturnsFalse() {
-            assertThat(buzz.isCreator(recipientId)).isFalse();
-        }
-    }
-
-    @Nested
-    @DisplayName("isPublic 댓글 필터링 테스트")
-    class VisibleCommentsTest {
-        private Buzz buzz;
-        private final Long otherRecipientId = 3L;
-
-        @BeforeEach
-        void setUp() {
-            buzz = Buzz.builder()
-                    .creatorId(creatorId)
-                    .creatorNickname(creatorNickname)
-                    .creatorProfileImageUrl(creatorProfile)
-                    .text("Test")
-                    .recipientIds(List.of(recipientId, otherRecipientId))
-                    .build();
-
-            List<BuzzComment> comments = new ArrayList<>();
-            comments.add(BuzzComment.builder()
-                    .commentId("c1").commenterId(recipientId).commenterNickname("수신자")
-                    .commenterProfileImageUrl("u.png").text("공개댓글").imageUrls(List.of())
-                    .isPublic(true).build());
-            comments.add(BuzzComment.builder()
-                    .commentId("c2").commenterId(recipientId).commenterNickname("수신자")
-                    .commenterProfileImageUrl("u.png").text("비공개댓글").imageUrls(List.of())
-                    .isPublic(false).build());
-            ReflectionTestUtils.setField(buzz, "comments", comments);
-        }
-
-        @Test
-        @DisplayName("공개 댓글은 모든 접근자에게 보인다")
-        void getVisibleComments_Public_VisibleToAll() {
-            assertThat(buzz.getVisibleComments(otherRecipientId))
-                    .anyMatch(c -> c.getCommentId().equals("c1"));
-        }
-
-        @Test
-        @DisplayName("비공개 댓글은 댓글 작성자 본인에게 보인다")
-        void getVisibleComments_Private_VisibleToCommenter() {
-            assertThat(buzz.getVisibleComments(recipientId))
-                    .anyMatch(c -> c.getCommentId().equals("c2"));
-        }
-
-        @Test
-        @DisplayName("비공개 댓글은 버즈 작성자에게 보인다")
-        void getVisibleComments_Private_VisibleToCreator() {
-            assertThat(buzz.getVisibleComments(creatorId))
-                    .anyMatch(c -> c.getCommentId().equals("c2"));
-        }
-
-        @Test
-        @DisplayName("비공개 댓글은 다른 수신자에게 보이지 않는다")
-        void getVisibleComments_Private_HiddenFromOtherRecipient() {
-            assertThat(buzz.getVisibleComments(otherRecipientId))
-                    .noneMatch(c -> c.getCommentId().equals("c2"));
+        @DisplayName("isCreator는 게시자 ID에만 true다")
+        void isCreator_OnlyCreator() {
+            assertThat(buzz().isCreator(creatorId)).isTrue();
+            assertThat(buzz().isCreator(recipientId)).isFalse();
         }
     }
 }

@@ -37,7 +37,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 도메인 모듈:
 - `account/` — 가입, 로그인, 이메일 인증, OAuth2 Google
-- `buzz/` — 콘텐츠 캐스팅(핵심 소셜 기능), MongoDB
+- `buzz/` — 콘텐츠 캐스팅(핵심 소셜 기능), 공개 대상·스레드·답글 (MySQL)
 - `flag/` — Flag, FlagComment, Memorial
 - `social/` — Friendship, 친구 요청, Label, 관계망 분석 (MySQL)
 - `notification/` — Firebase FCM 푸시, MongoDB
@@ -49,7 +49,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Database | Config | Base packages |
 |----------|--------|---------------|
 | MySQL (JPA/Hibernate) | `global/config/database/JpaConfig.java` | `account`, `buzz`, `trace`, `flag`, `notification.adapter.out.persistence.jpa`, `social.adapter.out.persistence` |
-| MongoDB | `global/config/database/MongoConfig.java` | `notification.adapter.out.persistence.mongo`, `buzz.adapter.out.persistence.mongo` |
+| MongoDB | `global/config/database/MongoConfig.java` | 저장소 없음. 쓰는 곳이 없고 인프라 제거만 남았다 |
 
 로컬 기본값:
 - MySQL: `localhost:3306/dunbar_horizon`
@@ -87,14 +87,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `friendships`는 낮은 사용자 ID와 높은 사용자 ID를 복합 키로 사용한다. 친밀도와 생성일은 공유하고, 관심도·별명·공개 설정은 사용자별 열에 둔다.
 - `friend_requests`는 복합 키에 요청 발신자와 수신자를 별도로 기록한다. 라벨 소유자는 `labels`, 멤버십은 `label_members`에 저장한다.
 - 조회용 프로필과 계정 상태는 MySQL `users`에서 읽는다. `DunbarCircle`은 관계망 조회 상한 5·15·50·150명을 정한다.
-- 기준 친구 추천과 공통 친구 중개인 조회는 각 SQL에서 해당 사용자의 `isRoutable`을 적용한다.
+- 중개 친구를 통한 추천과 공통 친구 중개인 조회는 각 SQL에서 해당 사용자의 `isRoutable`을 적용한다.
 
 ### Buzz Recipients
 
-수신자 지정 방식 셋 (`RecipientType`: `MANUAL`, `LABEL`, `ANCHOR`):
+수신자 지정 방식 셋 (`RecipientType`: `MANUAL`, `LABEL`, `INTERMEDIARY`):
 - `ManualRecipientSpec` — 사용자 ID 목록을 직접 지정
 - `LabelRecipientSpec` — 라벨 구성원 전체
-- `AnchorRecipientSpec` — 앵커 사용자를 통한 친구의 친구
+- `IntermediaryRecipientSpec` — 중개 친구를 통한 친구의 친구
 
 ### Domain Events
 

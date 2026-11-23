@@ -1,0 +1,88 @@
+package com.example.DunbarHorizon.buzz.application.service;
+
+import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
+import com.example.DunbarHorizon.buzz.application.dto.command.recipient.IntermediaryRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.command.recipient.LabelRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.command.recipient.ManualRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.command.recipient.RecipientSpec;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
+import com.example.DunbarHorizon.buzz.domain.Buzz;
+import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
+import com.example.DunbarHorizon.buzz.domain.event.BuzzCreatedEvent;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzAudienceMemberRepository;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class BuzzCommandService {
+
+    private final BuzzRepository buzzRepository;
+    private final BuzzAudienceMemberRepository buzzAudienceMemberRepository;
+    private final BuzzSocialPort buzzSocialPort;
+    private final ApplicationEventPublisher applicationEventPublisher;
+
+    public void createBuzz(CreateBuzzCommand command, List<String> imageKeys) {
+        Set<Long> audienceIds = audienceIdsOf(command.creatorId(), command.spec());
+
+        Buzz buzz = Buzz.create(command.creatorId(), command.text(), imageKeys, audienceIds, LocalDateTime.now());
+        buzzRepository.save(buzz);
+        buzzAudienceMemberRepository.saveAll(audienceIds.stream()
+                .map(userId -> BuzzAudienceMember.create(buzz.getId(), userId))
+                .toList());
+
+        applicationEventPublisher.publishEvent(new BuzzCreatedEvent(buzz.getId(), command.creatorId(), audienceIds));
+    }
+
+    public void updateBuzz(UpdateBuzzCommand command) {
+        Buzz buzz = buzzRepository.findById(command.buzzId())
+                .orElseThrow(() -> new BuzzNotFoundException(command.buzzId()));
+        buzz.update(command.requesterId(), command.text(), command.imageKeys(), LocalDateTime.now());
+        buzzRepository.save(buzz);
+    }
+
+    public void readBuzz(Long readerId, Long buzzId) {
+        Buzz buzz = buzzRepository.findByIdForShare(buzzId)
+                .orElseThrow(() -> new BuzzNotFoundException(buzzId));
+        Optional<BuzzAudienceMember> member = buzz.isCreator(readerId)
+                ? Optional.empty()
+                : buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzzId, readerId);
+        boolean isAudienceMember = member.isPresent();
+        buzz.validateAccess(readerId, isAudienceMember);
+
+        member.ifPresent(this::read);
+    }
+
+    public void deleteBuzz(Long requesterId, Long buzzId) {
+        Buzz buzz = buzzRepository.findById(buzzId)
+                .orElseThrow(() -> new BuzzNotFoundException(buzzId));
+        buzz.delete(requesterId, LocalDateTime.now());
+        buzzRepository.save(buzz);
+    }
+
+    private void read(BuzzAudienceMember member) {
+        member.read();
+        buzzAudienceMemberRepository.save(member);
+    }
+
+    private Set<Long> audienceIdsOf(Long creatorId, RecipientSpec spec) {
+        return switch (spec) {
+            case ManualRecipientSpec(List<Long> memberIds) -> buzzSocialPort.getFriendIdsIn(creatorId,
+                    memberIds.stream().filter(memberId -> !memberId.equals(creatorId)).toList());
+            case LabelRecipientSpec(List<String> labelIds) -> buzzSocialPort.getLabelMemberIds(creatorId, labelIds);
+            case IntermediaryRecipientSpec(Long intermediaryFriendId, Double expansionValue) ->
+                    buzzSocialPort.getIntermediaryExpansionIds(creatorId, intermediaryFriendId, expansionValue);
+        };
+    }
+}
