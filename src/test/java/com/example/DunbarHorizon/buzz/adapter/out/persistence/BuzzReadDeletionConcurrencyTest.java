@@ -41,7 +41,7 @@ import static org.mockito.Mockito.doAnswer;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class,
         BuzzQueryRepositoryAdapter.class, BuzzThreadRepositoryAdapter.class, BuzzCommentRepositoryAdapter.class, BuzzProfileAssembler.class,
-        BuzzCommandService.class, BuzzPurgeService.class})
+        BuzzCommandService.class, BuzzPurgeService.class, BuzzPurgeRepositoryAdapter.class})
 class BuzzReadDeletionConcurrencyTest {
 
     private static final long WAIT_SECONDS = 5;

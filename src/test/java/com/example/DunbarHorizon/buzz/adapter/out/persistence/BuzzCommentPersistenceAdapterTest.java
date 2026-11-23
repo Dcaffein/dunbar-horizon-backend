@@ -60,23 +60,6 @@ class BuzzCommentPersistenceAdapterTest {
     }
 
     @Test
-    @DisplayName("스레드 ID 목록으로 답글을 지우면 그 스레드들의 답글만 지운다")
-    void deleteAllByThreadIds_OnlyThoseThreads() {
-        // given
-        BuzzThread target = thread(firstBuzz);
-        BuzzThread other = thread(secondBuzz);
-        comment(firstBuzz, target, 3L, "지울 답글");
-        comment(secondBuzz, other, 3L, "남을 답글");
-
-        // when
-        buzzCommentRepositoryAdapter.deleteAllByThreadIds(List.of(target.getId()));
-
-        // then
-        assertThat(commentIds(target.getId())).isEmpty();
-        assertThat(commentIds(other.getId())).hasSize(1);
-    }
-
-    @Test
     @DisplayName("스레드 단위로 답글을 지우거나 답글 하나를 지운다")
     void deleteByThreadAndById() {
         // given

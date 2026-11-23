@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,6 +25,7 @@ class BuzzThreadPersistenceAdapterTest {
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 11, 22, 12, 0);
 
     @Autowired private BuzzThreadRepositoryAdapter buzzThreadRepositoryAdapter;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     private final Buzz firstBuzz = withId(Buzz.create(1L, "본문", List.of(), Set.of(2L, 3L), NOW), 900_001L);
     private final Buzz secondBuzz = withId(Buzz.create(1L, "본문", List.of(), Set.of(2L, 3L), NOW), 900_002L);
@@ -41,7 +43,8 @@ class BuzzThreadPersistenceAdapterTest {
         create(firstBuzz, 2L, ThreadVisibility.PRIVATE, NOW);
 
         // then
-        assertThat(buzzThreadRepositoryAdapter.findIdsByBuzzIds(List.of(firstBuzz.getId()))).hasSize(2);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM buzz_threads WHERE buzz_id = ?", Long.class, firstBuzz.getId())).isEqualTo(2);
     }
 
     @Test
@@ -53,23 +56,6 @@ class BuzzThreadPersistenceAdapterTest {
         // when & then
         assertThatThrownBy(() -> create(firstBuzz, 2L, ThreadVisibility.PUBLIC, NOW))
                 .isInstanceOf(BuzzThreadAlreadyExistsException.class);
-    }
-
-    @Test
-    @DisplayName("버즈들의 스레드 ID를 조회하고 버즈 단위로 지우면 다른 버즈의 스레드는 남는다")
-    void deleteAllByBuzzIds_KeepsOtherBuzz() {
-        // given
-        BuzzThread target = create(firstBuzz, 2L, ThreadVisibility.PUBLIC, NOW);
-        create(secondBuzz, 2L, ThreadVisibility.PUBLIC, NOW);
-
-        // when
-        List<Long> threadIds = buzzThreadRepositoryAdapter.findIdsByBuzzIds(List.of(firstBuzz.getId()));
-        buzzThreadRepositoryAdapter.deleteAllByBuzzIds(List.of(firstBuzz.getId()));
-
-        // then
-        assertThat(threadIds).containsExactly(target.getId());
-        assertThat(buzzThreadRepositoryAdapter.findIdsByBuzzIds(List.of(firstBuzz.getId()))).isEmpty();
-        assertThat(buzzThreadRepositoryAdapter.findIdsByBuzzIds(List.of(secondBuzz.getId()))).hasSize(1);
     }
 
     private static Buzz withId(Buzz buzz, long id) {

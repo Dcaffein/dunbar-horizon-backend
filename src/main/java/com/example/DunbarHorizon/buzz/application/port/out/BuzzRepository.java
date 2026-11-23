@@ -2,9 +2,6 @@ package com.example.DunbarHorizon.buzz.application.port.out;
 
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 
-import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 
 public interface BuzzRepository {
@@ -12,6 +9,4 @@ public interface BuzzRepository {
     Optional<Buzz> findById(Long buzzId);
     Optional<Buzz> findByIdForShare(Long buzzId);
     Optional<Buzz> findByIdForUpdate(Long buzzId);
-    List<Long> findPurgeableIds(LocalDateTime createdAtOrBefore);
-    void deleteAllByIds(Collection<Long> buzzIds);
 }

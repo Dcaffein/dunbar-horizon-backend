@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class BuzzCommandServiceTest {
@@ -280,8 +281,7 @@ class BuzzCommandServiceTest {
             // then
             assertThat(buzz.getDeletedAt()).isNotNull();
             verify(buzzRepository).save(buzz);
-            verify(buzzRepository, never()).deleteAllByIds(any());
-            verify(buzzAudienceMemberRepository, never()).deleteAllByBuzzIds(any());
+            verifyNoInteractions(buzzAudienceMemberRepository);
         }
 
         @Test

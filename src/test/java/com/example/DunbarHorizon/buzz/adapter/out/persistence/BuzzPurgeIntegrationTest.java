@@ -21,12 +21,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @JpaRepositoryTest
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class, BuzzQueryRepositoryAdapter.class,
-        BuzzThreadRepositoryAdapter.class, BuzzCommentRepositoryAdapter.class, BuzzPurgeService.class})
+        BuzzThreadRepositoryAdapter.class, BuzzCommentRepositoryAdapter.class, BuzzPurgeRepositoryAdapter.class,
+        BuzzPurgeService.class})
 class BuzzPurgeIntegrationTest {
 
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 11, 22, 12, 0);
 
     @Autowired private BuzzPurgeService buzzPurgeService;
+    @Autowired private BuzzPurgeRepositoryAdapter buzzPurgeRepositoryAdapter;
     @Autowired private BuzzRepositoryAdapter buzzRepositoryAdapter;
     @Autowired private BuzzAudienceMemberRepositoryAdapter buzzAudienceMemberRepositoryAdapter;
     @Autowired private BuzzThreadRepositoryAdapter buzzThreadRepositoryAdapter;
@@ -62,6 +64,23 @@ class BuzzPurgeIntegrationTest {
                 + "WHERE t.buzz_id = ?", live.getId())).isEqualTo(1);
         assertThat(count("SELECT COUNT(*) FROM buzz_comments WHERE thread_id NOT IN (SELECT id FROM buzz_threads)",
                 null)).isZero();
+    }
+
+    @Test
+    @DisplayName("정리 대상은 생성 시각이 기준 시각 이전이거나 같은 버즈와 삭제 표시된 버즈다")
+    void findPurgeableIds_CreatedAtOrBeforeOrDeleted() {
+        // given
+        Buzz expired = saveBuzzWithThreadAndComment(NOW.minusHours(6));
+        Buzz deleted = saveBuzzWithThreadAndComment(NOW.minusHours(1));
+        Buzz live = saveBuzzWithThreadAndComment(NOW.minusHours(6).plusSeconds(1));
+        entityManager.flush();
+        jdbcTemplate.update("UPDATE buzzes SET deleted_at = ? WHERE id = ?", NOW.minusMinutes(30), deleted.getId());
+
+        // when
+        List<Long> purgeable = buzzPurgeRepositoryAdapter.findPurgeableIds(NOW.minusHours(6));
+
+        // then
+        assertThat(purgeable).containsExactlyInAnyOrder(expired.getId(), deleted.getId()).doesNotContain(live.getId());
     }
 
     private Buzz saveBuzzWithThreadAndComment(LocalDateTime createdAt) {

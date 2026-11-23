@@ -358,24 +358,6 @@ class BuzzPersistenceAdapterTest {
     }
 
     @Test
-    @DisplayName("버즈들과 그 멤버를 지우면 다른 버즈의 행은 남는다")
-    void deleteAllByIds_RemovesOnlyTargets() {
-        // given
-        Buzz target = saveBuzz(creatorId, NOW, recipientId, 3L);
-        Buzz other = saveBuzz(creatorId, NOW, recipientId);
-
-        // when
-        buzzRepositoryAdapter.deleteAllByIds(List.of(target.getId()));
-        buzzAudienceMemberRepositoryAdapter.deleteAllByBuzzIds(List.of(target.getId()));
-
-        // then
-        assertThat(count("SELECT COUNT(*) FROM buzzes WHERE id = ?", target.getId())).isZero();
-        assertThat(buzzQueryRepositoryAdapter.findAudience(target.getId())).isEmpty();
-        assertThat(buzzQueryRepositoryAdapter.findAudience(other.getId()))
-                .extracting(BuzzAudienceView::userId).containsExactly(recipientId);
-    }
-
-    @Test
     @DisplayName("삭제 표시된 버즈는 단건·잠금 조회와 상세·받은 목록·보낸 목록·미확인 작성자에서 빠진다")
     void deletedBuzz_ExcludedFromAllReads() {
         // given
@@ -391,22 +373,6 @@ class BuzzPersistenceAdapterTest {
                 .getContent()).isEmpty();
         assertThat(buzzQueryRepositoryAdapter.findSent(creatorId, PageRequest.of(0, 20)).getContent()).isEmpty();
         assertThat(buzzQueryRepositoryAdapter.findUnreadCreatorIds(recipientId, Set.of())).isEmpty();
-    }
-
-    @Test
-    @DisplayName("정리 대상은 생성 시각이 기준 시각 이전이거나 같은 버즈와 삭제 표시된 버즈다")
-    void findPurgeableIds_CreatedAtOrBeforeOrDeleted() {
-        // given
-        Buzz expired = saveBuzz(creatorId, NOW.minusHours(6), recipientId);
-        Buzz deleted = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
-        markDeleted(deleted.getId());
-        Buzz live = saveBuzz(creatorId, NOW.minusHours(6).plusSeconds(1), recipientId);
-
-        // when
-        List<Long> purgeable = buzzRepositoryAdapter.findPurgeableIds(NOW.minusHours(6));
-
-        // then
-        assertThat(purgeable).contains(expired.getId(), deleted.getId()).doesNotContain(live.getId());
     }
 
     @Test
