@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.application.dto.result;
 
-import com.example.DunbarHorizon.buzz.domain.BuzzThread;
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadDetailInfo.ThreadContent;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 
 import java.time.LocalDateTime;
@@ -18,18 +18,18 @@ public record BuzzThreadDetailResult(
         List<BuzzProfileResult> viewers,
         List<BuzzCommentResult> comments
 ) {
-    public static BuzzThreadDetailResult of(BuzzThread thread, BuzzProfileResult starter, List<String> imageUrls,
-                                            Long viewerId, List<BuzzProfileResult> viewers,
-                                            List<BuzzCommentResult> comments) {
+    public static BuzzThreadDetailResult of(Long buzzId, ThreadContent thread, BuzzProfileResult starter,
+                                            List<String> imageUrls, Long viewerId,
+                                            List<BuzzProfileResult> viewers, List<BuzzCommentResult> comments) {
         return new BuzzThreadDetailResult(
-                thread.getId(),
-                thread.getBuzzId(),
+                thread.threadId(),
+                buzzId,
                 starter,
-                thread.getVisibility(),
-                thread.getText(),
+                thread.visibility(),
+                thread.text(),
                 imageUrls,
-                thread.getCreatedAt(),
-                thread.isStarter(viewerId),
+                thread.createdAt(),
+                thread.starterId().equals(viewerId),
                 viewers,
                 comments
         );

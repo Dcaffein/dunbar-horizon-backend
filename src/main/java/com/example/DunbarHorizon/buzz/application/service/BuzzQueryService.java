@@ -3,9 +3,7 @@ package com.example.DunbarHorizon.buzz.application.service;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzAudienceInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzDetailInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzUserProfileInfo;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
-import com.example.DunbarHorizon.buzz.application.dto.result.BuzzProfileResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzThreadSummaryResult;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzQueryRepository;
@@ -33,6 +31,7 @@ public class BuzzQueryService {
 
     private final BuzzQueryRepository buzzQueryRepository;
     private final BuzzSocialPort buzzSocialPort;
+    private final BuzzProfileAssembler buzzProfileAssembler;
     private final ImageStoragePort imageStoragePort;
 
     public BuzzDetailResult getBuzzDetail(Long userId, Long buzzId) {
@@ -49,17 +48,17 @@ public class BuzzQueryService {
 
         return BuzzDetailResult.of(
                 buzz,
-                profileOf(buzz.creatorId(), buzz.creatorProfile()),
+                buzzProfileAssembler.profileOf(buzz.creatorId(), buzz.creatorProfile()),
                 imageStoragePort.resolveUrls(buzz.imageKeys()),
                 member.map(audienceMember -> !audienceMember.isRead()).orElse(false),
                 isCreator,
                 audience.stream()
                         .filter(audienceMember -> audienceMember.profile() != null)
-                        .map(audienceMember -> profileOf(audienceMember.userId(), audienceMember.profile()))
+                        .map(audienceMember -> buzzProfileAssembler.profileOf(audienceMember.userId(), audienceMember.profile()))
                         .toList(),
                 accessibleThreads(buzz, userId).stream()
                         .map(thread -> BuzzThreadSummaryResult.of(
-                                thread, profileOf(thread.starterId(), thread.starterProfile())))
+                                thread, buzzProfileAssembler.profileOf(thread.starterId(), thread.starterProfile())))
                         .toList(),
                 now);
     }
@@ -70,7 +69,7 @@ public class BuzzQueryService {
         return buzzQueryRepository.findReceived(userId, excludedCreatorIds, now, pageable)
                 .map(buzz -> BuzzSummaryResult.of(
                         buzz,
-                        profileOf(buzz.creatorId(), buzz.creatorProfile()),
+                        buzzProfileAssembler.profileOf(buzz.creatorId(), buzz.creatorProfile()),
                         imageStoragePort.resolveUrls(buzz.imageKeys()),
                         !buzz.isRead(),
                         false,
@@ -82,7 +81,7 @@ public class BuzzQueryService {
         return buzzQueryRepository.findSent(userId, now, pageable)
                 .map(buzz -> BuzzSummaryResult.of(
                         buzz,
-                        profileOf(buzz.creatorId(), buzz.creatorProfile()),
+                        buzzProfileAssembler.profileOf(buzz.creatorId(), buzz.creatorProfile()),
                         imageStoragePort.resolveUrls(buzz.imageKeys()),
                         false,
                         true,
@@ -92,13 +91,6 @@ public class BuzzQueryService {
     public List<Long> getUnreadSenderIds(Long userId) {
         Set<Long> excludedCreatorIds = buzzSocialPort.getNonReceivableFriendIds(userId);
         return buzzQueryRepository.findUnreadCreatorIds(userId, excludedCreatorIds, LocalDateTime.now());
-    }
-
-    private BuzzProfileResult profileOf(Long userId, BuzzUserProfileInfo profile) {
-        if (profile == null) {
-            return new BuzzProfileResult(userId, null, null);
-        }
-        return new BuzzProfileResult(userId, profile.nickname(), imageStoragePort.resolveUrl(profile.profileImageKey()));
     }
 
     private List<BuzzThreadInfo> accessibleThreads(BuzzDetailInfo buzz, Long userId) {

@@ -12,7 +12,6 @@ import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,18 +23,6 @@ public class BuzzThreadAccess {
     private final BuzzAudienceMemberRepository buzzAudienceMemberRepository;
     private final BuzzThreadRepository buzzThreadRepository;
     private final BuzzSocialPort buzzSocialPort;
-
-    public ThreadContext forReading(Long viewerId, Long buzzId, Long threadId, LocalDateTime now) {
-        Buzz buzz = buzzRepository.findById(buzzId)
-                .filter(found -> !found.isExpired(now))
-                .orElseThrow(() -> new BuzzNotFoundException(buzzId));
-        Optional<BuzzAudienceMember> member = memberOf(buzz, viewerId);
-        buzz.validateAccess(viewerId, member.isPresent());
-
-        BuzzThread thread = threadOf(buzzThreadRepository.findById(threadId), buzzId, threadId);
-        thread.validateAccess(viewerId, buzz, isFriendOfStarter(viewerId, buzz, thread));
-        return new ThreadContext(buzz, thread, member);
-    }
 
     public ThreadContext forWriting(Long writerId, Long buzzId, Long threadId) {
         Buzz buzz = buzzRepository.findByIdForShare(buzzId)

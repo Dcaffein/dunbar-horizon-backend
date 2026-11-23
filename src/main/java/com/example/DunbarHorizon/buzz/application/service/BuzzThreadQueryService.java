@@ -1,72 +1,92 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzAudienceInfo;
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadDetailInfo;
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadDetailInfo.ThreadContent;
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzUserProfileInfo;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzCommentResult;
+import com.example.DunbarHorizon.buzz.application.dto.result.BuzzProfileResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzThreadDetailResult;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzQueryRepository;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
-import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler.Profiles;
-import com.example.DunbarHorizon.buzz.application.service.BuzzThreadAccess.ThreadContext;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class BuzzThreadQueryService {
 
-    private final BuzzAudienceMemberRepository buzzAudienceMemberRepository;
-    private final BuzzCommentRepository buzzCommentRepository;
-    private final BuzzThreadAccess buzzThreadAccess;
+    private final BuzzQueryRepository buzzQueryRepository;
     private final BuzzSocialPort buzzSocialPort;
     private final BuzzProfileAssembler buzzProfileAssembler;
     private final ImageStoragePort imageStoragePort;
 
     public BuzzThreadDetailResult getThread(Long viewerId, Long buzzId, Long threadId) {
-        ThreadContext context = buzzThreadAccess.forReading(viewerId, buzzId, threadId, LocalDateTime.now());
-        Buzz buzz = context.buzz();
-        BuzzThread thread = context.thread();
-        List<BuzzComment> comments = buzzCommentRepository.findAllByThreadId(threadId);
+        BuzzThreadDetailInfo buzz = buzzQueryRepository.findThreadDetail(buzzId, threadId, LocalDateTime.now())
+                .orElseThrow(() -> new BuzzNotFoundException(buzzId));
+        List<BuzzAudienceInfo> audience = buzzQueryRepository.findAudience(buzzId);
+        boolean isAudienceMember = audience.stream().anyMatch(member -> member.userId().equals(viewerId));
+        Buzz.validateAccess(buzzId, buzz.creatorId(), viewerId, isAudienceMember);
 
-        Set<Long> viewerIds = viewerIdsOf(buzz, thread);
-        Set<Long> profileIds = new LinkedHashSet<>(viewerIds);
-        comments.forEach(comment -> profileIds.add(comment.getAuthorId()));
-        Profiles profiles = buzzProfileAssembler.profilesOf(profileIds);
+        ThreadContent thread = Optional.ofNullable(buzz.thread())
+                .orElseThrow(() -> new BuzzThreadNotFoundException(buzzId, threadId));
+        Set<Long> starterFriendIds = starterFriendIdsAmong(buzz, thread, audience);
+        BuzzThread.validateAccess(threadId, thread.visibility(), thread.starterId(), buzz.creatorId(),
+                viewerId, starterFriendIds.contains(viewerId));
 
         return BuzzThreadDetailResult.of(
+                buzzId,
                 thread,
-                profiles.of(thread.getStarterId()),
-                imageStoragePort.resolveUrls(thread.getImageKeys()),
+                buzzProfileAssembler.profileOf(thread.starterId(), thread.starterProfile()),
+                imageStoragePort.resolveUrls(thread.imageKeys()),
                 viewerId,
-                profiles.foundOf(viewerIds),
-                comments.stream()
+                viewersOf(buzz, thread, audience, starterFriendIds),
+                buzzQueryRepository.findComments(threadId).stream()
                         .map(comment -> BuzzCommentResult.of(
                                 comment,
-                                profiles.of(comment.getAuthorId()),
-                                imageStoragePort.resolveUrls(comment.getImageKeys()),
+                                buzzProfileAssembler.profileOf(comment.authorId(), comment.authorProfile()),
+                                imageStoragePort.resolveUrls(comment.imageKeys()),
                                 viewerId))
                         .toList());
     }
 
-    private Set<Long> viewerIdsOf(Buzz buzz, BuzzThread thread) {
-        Set<Long> viewerIds = new LinkedHashSet<>();
-        viewerIds.add(buzz.getCreatorId());
-        viewerIds.add(thread.getStarterId());
-        if (thread.isPublic()) {
-            List<Long> audienceIds = buzzAudienceMemberRepository.findUserIdsByBuzzId(buzz.getId());
-            Set<Long> starterFriendIds = buzzSocialPort.getFriendIdsIn(thread.getStarterId(), audienceIds);
-            audienceIds.stream().filter(starterFriendIds::contains).forEach(viewerIds::add);
-        }
-        return viewerIds;
+    private Set<Long> starterFriendIdsAmong(BuzzThreadDetailInfo buzz, ThreadContent thread,
+                                            List<BuzzAudienceInfo> audience) {
+        Set<Long> candidateIds = audience.stream()
+                .map(BuzzAudienceInfo::userId)
+                .filter(userId -> BuzzThread.needsFriendshipToAccess(
+                        thread.visibility(), thread.starterId(), buzz.creatorId(), userId))
+                .collect(Collectors.toSet());
+        return candidateIds.isEmpty() ? Set.of() : buzzSocialPort.getFriendIdsIn(thread.starterId(), candidateIds);
+    }
+
+    private List<BuzzProfileResult> viewersOf(BuzzThreadDetailInfo buzz, ThreadContent thread,
+                                              List<BuzzAudienceInfo> audience, Set<Long> starterFriendIds) {
+        Map<Long, BuzzUserProfileInfo> candidates = new LinkedHashMap<>();
+        candidates.put(buzz.creatorId(), buzz.creatorProfile());
+        candidates.put(thread.starterId(), thread.starterProfile());
+        audience.forEach(member -> candidates.putIfAbsent(member.userId(), member.profile()));
+
+        return candidates.entrySet().stream()
+                .filter(candidate -> candidate.getValue() != null)
+                .filter(candidate -> BuzzThread.isAccessibleBy(thread.visibility(), thread.starterId(),
+                        buzz.creatorId(), candidate.getKey(), starterFriendIds.contains(candidate.getKey())))
+                .map(candidate -> buzzProfileAssembler.profileOf(candidate.getKey(), candidate.getValue()))
+                .toList();
     }
 }

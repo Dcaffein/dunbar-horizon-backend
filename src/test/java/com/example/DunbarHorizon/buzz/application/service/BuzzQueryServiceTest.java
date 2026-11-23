@@ -54,7 +54,8 @@ class BuzzQueryServiceTest {
 
     @BeforeEach
     void setUp() {
-        buzzQueryService = new BuzzQueryService(buzzQueryRepository, buzzSocialPort, imageStoragePort);
+        buzzQueryService = new BuzzQueryService(
+                buzzQueryRepository, buzzSocialPort, new BuzzProfileAssembler(imageStoragePort), imageStoragePort);
     }
 
     @Nested

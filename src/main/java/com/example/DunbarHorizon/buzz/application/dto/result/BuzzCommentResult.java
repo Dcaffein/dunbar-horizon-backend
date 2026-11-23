@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.application.dto.result;
 
-import com.example.DunbarHorizon.buzz.domain.BuzzComment;
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCommentInfo;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,15 +13,15 @@ public record BuzzCommentResult(
         LocalDateTime createdAt,
         boolean isMine
 ) {
-    public static BuzzCommentResult of(BuzzComment comment, BuzzProfileResult author, List<String> imageUrls,
+    public static BuzzCommentResult of(BuzzCommentInfo comment, BuzzProfileResult author, List<String> imageUrls,
                                        Long viewerId) {
         return new BuzzCommentResult(
-                comment.getId(),
+                comment.commentId(),
                 author,
-                comment.getText(),
+                comment.text(),
                 imageUrls,
-                comment.getCreatedAt(),
-                comment.isAuthor(viewerId)
+                comment.createdAt(),
+                comment.authorId().equals(viewerId)
         );
     }
 }
