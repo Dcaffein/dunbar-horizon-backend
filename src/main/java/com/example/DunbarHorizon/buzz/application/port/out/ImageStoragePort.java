@@ -8,4 +8,5 @@ import java.util.List;
 public interface ImageStoragePort {
     List<PresignedUploadResult> presignUploads(List<PresignRequest> requests);
     List<String> resolveUrls(List<String> keys);
+    String resolveUrl(String key);
 }

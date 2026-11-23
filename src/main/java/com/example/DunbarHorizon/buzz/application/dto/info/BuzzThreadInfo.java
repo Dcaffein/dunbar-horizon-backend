@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 public record BuzzThreadInfo(
         Long threadId,
         Long starterId,
+        BuzzUserProfileInfo starterProfile,
         ThreadVisibility visibility,
         LocalDateTime createdAt
 ) {}

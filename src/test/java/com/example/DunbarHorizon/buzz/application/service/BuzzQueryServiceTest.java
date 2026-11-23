@@ -1,23 +1,21 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
-import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
-import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
-import org.junit.jupiter.api.Nested;
-import java.util.Optional;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzAudienceInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzDetailInfo;
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzSummaryInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.ReceivedBuzz;
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzUserProfileInfo;
+import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzQueryRepository;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
-import com.example.DunbarHorizon.buzz.domain.Buzz;
+import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -28,16 +26,16 @@ import org.springframework.data.domain.SliceImpl;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class BuzzQueryServiceTest {
@@ -52,15 +50,11 @@ class BuzzQueryServiceTest {
     private final Long recipientId = 2L;
     private final Long strangerId = 99L;
     private final Long buzzId = 1L;
+    private final BuzzUserProfileInfo creatorProfile = new BuzzUserProfileInfo("작성자", "profiles/creator");
 
     @BeforeEach
     void setUp() {
-        buzzQueryService = new BuzzQueryService(
-                buzzQueryRepository, buzzSocialPort, new BuzzProfileAssembler(buzzSocialPort), imageStoragePort);
-    }
-
-    private Buzz buzz() {
-        return withId(Buzz.create(creatorId, "본문", List.of(), Set.of(recipientId), LocalDateTime.now()), buzzId);
+        buzzQueryService = new BuzzQueryService(buzzQueryRepository, buzzSocialPort, imageStoragePort);
     }
 
     @Nested
@@ -69,23 +63,25 @@ class BuzzQueryServiceTest {
 
         private void givenDetail(BuzzThreadInfo... threads) {
             given(buzzQueryRepository.findDetail(eq(buzzId), any())).willReturn(Optional.of(new BuzzDetailInfo(
-                    buzzId, creatorId, "본문", List.of("buzz/photo"), null, LocalDateTime.now().plusHours(1),
-                    List.of(threads))));
+                    buzzId, creatorId, creatorProfile, "본문", List.of("buzz/photo"), null,
+                    LocalDateTime.now().plusHours(1), List.of(threads))));
         }
 
         private void givenAudience(BuzzAudienceInfo... audience) {
             given(buzzQueryRepository.findAudience(buzzId)).willReturn(List.of(audience));
         }
 
+        private BuzzAudienceInfo member(Long userId, boolean isRead) {
+            return new BuzzAudienceInfo(userId, new BuzzUserProfileInfo("멤버" + userId, null), isRead);
+        }
+
         @Test
-        @DisplayName("미읽음 멤버가 조회하면 미읽음으로 응답한다")
+        @DisplayName("미읽음 멤버가 조회하면 미읽음으로 응답하고 작성자 프로필 이미지를 서명한다")
         void getBuzzDetail_UnreadMember_RespondsUnread() {
             // given
             givenDetail();
-            givenAudience(new BuzzAudienceInfo(recipientId, false));
-            given(buzzSocialPort.getCreatorProfiles(anyList())).willReturn(List.of(
-                    new BuzzCreatorInfo(creatorId, "작성자", "signed-creator"),
-                    new BuzzCreatorInfo(recipientId, "수신자", "signed-recipient")));
+            givenAudience(member(recipientId, false));
+            given(imageStoragePort.resolveUrl("profiles/creator")).willReturn("signed-creator");
 
             // when
             BuzzDetailResult result = buzzQueryService.getBuzzDetail(recipientId, buzzId);
@@ -93,6 +89,7 @@ class BuzzQueryServiceTest {
             // then
             assertThat(result.isUnread()).isTrue();
             assertThat(result.isCreator()).isFalse();
+            assertThat(result.author().nickname()).isEqualTo("작성자");
             assertThat(result.author().profileImageUrl()).isEqualTo("signed-creator");
             assertThat(result.recipients()).extracting("userId").containsExactly(recipientId);
         }
@@ -102,7 +99,7 @@ class BuzzQueryServiceTest {
         void getBuzzDetail_Creator_ResolvesImageKeys() {
             // given
             givenDetail();
-            givenAudience(new BuzzAudienceInfo(recipientId, false));
+            givenAudience(member(recipientId, false));
             given(imageStoragePort.resolveUrls(List.of("buzz/photo"))).willReturn(List.of("signed-photo"));
 
             // when
@@ -115,10 +112,25 @@ class BuzzQueryServiceTest {
         }
 
         @Test
+        @DisplayName("프로필이 없는 공개 대상은 수신자 목록에서 빠지지만 접근 확인에는 쓰인다")
+        void getBuzzDetail_MemberWithoutProfile_ExcludedFromRecipients() {
+            // given
+            givenDetail();
+            givenAudience(member(recipientId, true), new BuzzAudienceInfo(3L, null, false));
+
+            // when
+            BuzzDetailResult result = buzzQueryService.getBuzzDetail(3L, buzzId);
+
+            // then
+            assertThat(result.isUnread()).isTrue();
+            assertThat(result.recipients()).extracting("userId").containsExactly(recipientId);
+        }
+
+        @Test
         @DisplayName("게시자도 공개 대상 멤버도 아니면 접근이 거절된다")
         void getBuzzDetail_Stranger_Denied() {
             givenDetail();
-            givenAudience(new BuzzAudienceInfo(recipientId, false));
+            givenAudience(member(recipientId, false));
 
             assertThatThrownBy(() -> buzzQueryService.getBuzzDetail(strangerId, buzzId))
                     .isInstanceOf(BuzzAccessDeniedException.class);
@@ -135,7 +147,7 @@ class BuzzQueryServiceTest {
                     thread(2L, friendStarterId, ThreadVisibility.PUBLIC),
                     thread(3L, friendStarterId, ThreadVisibility.PRIVATE),
                     thread(4L, strangerStarterId, ThreadVisibility.PUBLIC));
-            givenAudience(new BuzzAudienceInfo(recipientId, true));
+            givenAudience(member(recipientId, true));
             given(buzzSocialPort.getFriendIdsIn(recipientId, Set.of(friendStarterId, strangerStarterId)))
                     .willReturn(Set.of(friendStarterId));
 
@@ -153,7 +165,7 @@ class BuzzQueryServiceTest {
             givenDetail(
                     thread(1L, recipientId, ThreadVisibility.PUBLIC),
                     thread(2L, recipientId, ThreadVisibility.PRIVATE));
-            givenAudience(new BuzzAudienceInfo(recipientId, true));
+            givenAudience(member(recipientId, true));
 
             // when
             BuzzDetailResult result = buzzQueryService.getBuzzDetail(creatorId, buzzId);
@@ -174,42 +186,55 @@ class BuzzQueryServiceTest {
         }
 
         private BuzzThreadInfo thread(Long threadId, Long starterId, ThreadVisibility visibility) {
-            return new BuzzThreadInfo(threadId, starterId, visibility, LocalDateTime.now());
+            return new BuzzThreadInfo(threadId, starterId, null, visibility, LocalDateTime.now());
         }
     }
 
     @Test
-    @DisplayName("받은 목록은 멤버의 읽음 상태와 응답 시점의 작성자 프로필로 만든다")
+    @DisplayName("받은 목록은 멤버의 읽음 상태와 조회한 작성자 프로필로 만든다")
     void getReceivedBuzzes_MapsReadStateAndProfile() {
         // given
-        Buzz buzz = buzz();
         PageRequest pageable = PageRequest.of(0, 20);
-        given(buzzSocialPort.getNonReceivableFriendIds(recipientId)).willReturn(Set.of());
-        given(buzzQueryRepository.findReceived(eq(recipientId), eq(Set.of()), any(), eq(pageable)))
-                .willReturn(new SliceImpl<>(List.of(new ReceivedBuzz(buzz, false)), pageable, false));
-        given(buzzSocialPort.getCreatorProfiles(List.of(creatorId)))
-                .willReturn(List.of(new BuzzCreatorInfo(creatorId, "작성자", "signed-creator")));
+        given(buzzSocialPort.getNonReceivableFriendIds(recipientId)).willReturn(Set.of(7L));
+        given(buzzQueryRepository.findReceived(eq(recipientId), eq(Set.of(7L)), any(), eq(pageable)))
+                .willReturn(new SliceImpl<>(List.of(summary(creatorProfile, false)), pageable, false));
+        given(imageStoragePort.resolveUrl("profiles/creator")).willReturn("signed-creator");
 
         // when
         Slice<BuzzSummaryResult> result = buzzQueryService.getReceivedBuzzes(recipientId, pageable);
 
         // then
-        BuzzSummaryResult summary = result.getContent().get(0);
-        assertThat(summary.isUnread()).isTrue();
-        assertThat(summary.isCreator()).isFalse();
-        assertThat(summary.author().nickname()).isEqualTo("작성자");
+        BuzzSummaryResult received = result.getContent().get(0);
+        assertThat(received.isUnread()).isTrue();
+        assertThat(received.isCreator()).isFalse();
+        assertThat(received.author().nickname()).isEqualTo("작성자");
+        assertThat(received.author().profileImageUrl()).isEqualTo("signed-creator");
     }
 
     @Test
-    @DisplayName("보낸 목록은 게시자 본인 기준으로 읽음 여부 없이 만든다")
-    void getSentBuzzes_ReturnsCreatorView() {
+    @DisplayName("작성자 프로필이 없으면 받은 목록에 사용자 ID만 담는다")
+    void getReceivedBuzzes_WithoutProfile_KeepsUserIdOnly() {
         // given
-        Buzz buzz = buzz();
+        PageRequest pageable = PageRequest.of(0, 20);
+        given(buzzSocialPort.getNonReceivableFriendIds(recipientId)).willReturn(Set.of());
+        given(buzzQueryRepository.findReceived(eq(recipientId), eq(Set.of()), any(), eq(pageable)))
+                .willReturn(new SliceImpl<>(List.of(summary(null, true)), pageable, false));
+
+        // when
+        Slice<BuzzSummaryResult> result = buzzQueryService.getReceivedBuzzes(recipientId, pageable);
+
+        // then
+        assertThat(result.getContent().get(0).author().userId()).isEqualTo(creatorId);
+        assertThat(result.getContent().get(0).author().nickname()).isNull();
+    }
+
+    @Test
+    @DisplayName("보낸 목록은 자기 버즈를 게시자 표시와 함께 준다")
+    void getSentBuzzes_MarksCreator() {
+        // given
         PageRequest pageable = PageRequest.of(0, 20);
         given(buzzQueryRepository.findSent(eq(creatorId), any(), eq(pageable)))
-                .willReturn(new SliceImpl<>(List.of(buzz), pageable, false));
-        given(buzzSocialPort.getCreatorProfiles(List.of(creatorId)))
-                .willReturn(List.of(new BuzzCreatorInfo(creatorId, "작성자", null)));
+                .willReturn(new SliceImpl<>(List.of(summary(creatorProfile, false)), pageable, false));
 
         // when
         Slice<BuzzSummaryResult> result = buzzQueryService.getSentBuzzes(creatorId, pageable);
@@ -219,8 +244,8 @@ class BuzzQueryServiceTest {
         assertThat(result.getContent().get(0).isUnread()).isFalse();
     }
 
-    private static Buzz withId(Buzz buzz, long id) {
-        org.springframework.test.util.ReflectionTestUtils.setField(buzz, "id", id);
-        return buzz;
+    private BuzzSummaryInfo summary(BuzzUserProfileInfo profile, boolean isRead) {
+        return new BuzzSummaryInfo(buzzId, creatorId, profile, "본문", List.of(), null,
+                LocalDateTime.now().plusHours(1), isRead);
     }
 }

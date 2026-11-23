@@ -6,6 +6,7 @@ import java.util.List;
 public record BuzzDetailInfo(
         Long buzzId,
         Long creatorId,
+        BuzzUserProfileInfo creatorProfile,
         String text,
         List<String> imageKeys,
         LocalDateTime editedAt,
