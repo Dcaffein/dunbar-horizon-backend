@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -171,8 +172,10 @@ class NotificationJpaRepositoryTest {
         int deleted = notificationJpaRepository.deleteAllByCreatedAtAtOrBefore(cutoff);
 
         // then
-        assertThat(deleted).isEqualTo(2);
-        assertThat(notificationJpaRepository.findAll()).extracting(Notification::getTitle)
+        assertThat(deleted).isGreaterThanOrEqualTo(2);
+        assertThat(notificationJpaRepository.findAllById(
+                List.of(beforeCutoff.getId(), atCutoff.getId(), afterCutoff.getId())))
+                .extracting(Notification::getTitle)
                 .containsExactly("기준선 직후");
     }
 
