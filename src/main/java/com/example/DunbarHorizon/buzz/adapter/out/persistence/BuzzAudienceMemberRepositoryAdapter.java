@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 
 import com.example.DunbarHorizon.buzz.adapter.out.persistence.jpa.BuzzAudienceMemberJpaRepository;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzAudienceMemberRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

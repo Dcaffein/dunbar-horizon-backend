@@ -1,4 +1,4 @@
-package com.example.DunbarHorizon.buzz.domain.repository;
+package com.example.DunbarHorizon.buzz.application.port.out;
 
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 

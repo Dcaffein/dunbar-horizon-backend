@@ -1,10 +1,10 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzAudienceMemberRepository;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzCommentRepository;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzRepository;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzThreadRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

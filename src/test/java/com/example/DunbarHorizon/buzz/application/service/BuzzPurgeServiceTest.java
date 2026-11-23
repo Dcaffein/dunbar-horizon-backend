@@ -1,9 +1,9 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzAudienceMemberRepository;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzCommentRepository;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzRepository;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzThreadRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

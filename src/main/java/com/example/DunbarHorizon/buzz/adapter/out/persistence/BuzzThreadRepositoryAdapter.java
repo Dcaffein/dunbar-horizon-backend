@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 import com.example.DunbarHorizon.buzz.adapter.out.persistence.jpa.BuzzThreadJpaRepository;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyExistsException;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
+import com.example.DunbarHorizon.buzz.application.port.out.BuzzThreadRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
