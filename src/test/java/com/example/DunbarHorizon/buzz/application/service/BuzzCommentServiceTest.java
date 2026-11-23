@@ -59,9 +59,8 @@ class BuzzCommentServiceTest {
 
     @BeforeEach
     void setUp() {
-        buzzCommentService = new BuzzCommentService(buzzRepository, buzzThreadRepository, buzzCommentRepository,
-                new BuzzThreadAccess(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository, buzzSocialPort),
-                applicationEventPublisher);
+        buzzCommentService = new BuzzCommentService(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository,
+                buzzCommentRepository, buzzSocialPort, applicationEventPublisher);
         buzz = withId(Buzz.create(creatorId, "본문", List.of(),
                 Set.of(starterId, friendMemberId, otherMemberId), LocalDateTime.now()), 1L);
         thread = BuzzThread.create(buzz, starterId, true, ThreadVisibility.PUBLIC, "첫 글", List.of(), LocalDateTime.now());
