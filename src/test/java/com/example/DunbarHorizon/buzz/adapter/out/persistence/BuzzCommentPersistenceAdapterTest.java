@@ -43,8 +43,8 @@ class BuzzCommentPersistenceAdapterTest {
     }
 
     @Test
-    @DisplayName("스레드의 답글은 쓴 순서대로 조회되고 이미지는 키로 저장된다")
-    void findAllByThreadId_OrderedAndStoresKeys() {
+    @DisplayName("답글은 스레드에 쓴 순서대로 저장되고 이미지는 키로 저장된다")
+    void save_StoresKeys() {
         // given
         BuzzThread thread = thread(firstBuzz);
         comment(firstBuzz, thread, 3L, "첫 답글");
@@ -52,11 +52,8 @@ class BuzzCommentPersistenceAdapterTest {
         entityManager.flush();
         entityManager.clear();
 
-        // when
-        List<BuzzComment> comments = buzzCommentRepositoryAdapter.findAllByThreadId(thread.getId());
-
         // then
-        assertThat(comments).extracting(BuzzComment::getText).containsExactly("첫 답글", "둘째 답글");
+        assertThat(texts(thread.getId())).containsExactly("첫 답글", "둘째 답글");
         assertThat(jdbcTemplate.queryForList(
                 "SELECT CAST(image_keys AS CHAR) FROM buzz_comments WHERE thread_id = ?", String.class, thread.getId()))
                 .allSatisfy(keys -> assertThat(keys).contains("buzz/a").doesNotContain("X-Amz-"));
@@ -75,8 +72,8 @@ class BuzzCommentPersistenceAdapterTest {
         buzzCommentRepositoryAdapter.deleteAllByThreadIds(List.of(target.getId()));
 
         // then
-        assertThat(buzzCommentRepositoryAdapter.findAllByThreadId(target.getId())).isEmpty();
-        assertThat(buzzCommentRepositoryAdapter.findAllByThreadId(other.getId())).hasSize(1);
+        assertThat(commentIds(target.getId())).isEmpty();
+        assertThat(commentIds(other.getId())).hasSize(1);
     }
 
     @Test
@@ -91,14 +88,25 @@ class BuzzCommentPersistenceAdapterTest {
         buzzCommentRepositoryAdapter.deleteById(removed.getId());
 
         // then
-        assertThat(buzzCommentRepositoryAdapter.findAllByThreadId(thread.getId()))
-                .extracting(BuzzComment::getId).containsExactly(kept.getId());
+        assertThat(commentIds(thread.getId())).containsExactly(kept.getId());
 
         // when
         buzzCommentRepositoryAdapter.deleteAllByThreadId(thread.getId());
 
         // then
-        assertThat(buzzCommentRepositoryAdapter.findAllByThreadId(thread.getId())).isEmpty();
+        assertThat(commentIds(thread.getId())).isEmpty();
+    }
+
+    private List<String> texts(Long threadId) {
+        entityManager.flush();
+        return jdbcTemplate.queryForList(
+                "SELECT text FROM buzz_comments WHERE thread_id = ? ORDER BY id", String.class, threadId);
+    }
+
+    private List<Long> commentIds(Long threadId) {
+        entityManager.flush();
+        return jdbcTemplate.queryForList(
+                "SELECT id FROM buzz_comments WHERE thread_id = ? ORDER BY id", Long.class, threadId);
     }
 
     private static Buzz withId(Buzz buzz, long id) {

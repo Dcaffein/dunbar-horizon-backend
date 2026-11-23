@@ -1,7 +1,5 @@
 package com.example.DunbarHorizon.buzz.adapter.out.social;
 
-import com.example.DunbarHorizon.account.application.port.in.UserQueryUseCase;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCreatorInfo;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.social.application.friendship.port.FriendshipQueryUseCase;
 import com.example.DunbarHorizon.social.application.label.port.LabelQueryUseCase;
@@ -19,17 +17,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BuzzSocialAdapter implements BuzzSocialPort {
 
-    private final UserQueryUseCase userQueryUseCase;
     private final FriendshipQueryUseCase friendshipQueryUseCase;
     private final LabelQueryUseCase labelQueryUseCase;
     private final SocialExpansionQueryUseCase socialExpansionQueryUseCase;
-
-    @Override
-    public List<BuzzCreatorInfo> getCreatorProfiles(List<Long> userIds) {
-        return userQueryUseCase.getUserProfiles(userIds).stream()
-                .map(user -> new BuzzCreatorInfo(user.id(), user.nickname(), user.profileImage()))
-                .toList();
-    }
 
     @Override
     public Set<Long> getNonReceivableFriendIds(Long memberId) {

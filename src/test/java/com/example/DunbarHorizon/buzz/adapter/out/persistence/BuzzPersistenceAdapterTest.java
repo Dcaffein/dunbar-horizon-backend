@@ -1,12 +1,15 @@
 package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzAudienceInfo;
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCommentInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzDetailInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzSummaryInfo;
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadDetailInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzUserProfileInfo;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
+import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
@@ -238,6 +241,81 @@ class BuzzPersistenceAdapterTest {
     }
 
     @Test
+    @DisplayName("스레드 상세는 버즈의 게시자와 그 버즈에 속한 스레드를 활성 사용자 프로필과 함께 준다")
+    void findThreadDetail_WithProfiles() {
+        // given
+        insertUser(creatorId, "작성자", null, "ACTIVE");
+        insertUser(recipientId, "떠난 시작자", null, "DELETED");
+        Buzz buzz = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
+        BuzzThread thread = saveThread(buzz, recipientId, NOW.minusMinutes(10));
+
+        // when
+        BuzzThreadDetailInfo detail = buzzQueryRepositoryAdapter.findThreadDetail(buzz.getId(), thread.getId(), NOW)
+                .orElseThrow();
+
+        // then
+        assertThat(detail.creatorProfile()).isEqualTo(new BuzzUserProfileInfo("작성자", null));
+        assertThat(detail.thread().threadId()).isEqualTo(thread.getId());
+        assertThat(detail.thread().starterId()).isEqualTo(recipientId);
+        assertThat(detail.thread().starterProfile()).isNull();
+        assertThat(detail.thread().text()).isEqualTo("첫 글");
+    }
+
+    @Test
+    @DisplayName("다른 버즈의 스레드 ID로 조회하면 버즈만 주고 스레드는 비운다")
+    void findThreadDetail_OtherBuzzThread_EmptyThread() {
+        // given
+        Buzz buzz = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
+        Buzz other = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
+        BuzzThread otherThread = saveThread(other, recipientId, NOW.minusMinutes(10));
+
+        // when
+        BuzzThreadDetailInfo detail = buzzQueryRepositoryAdapter
+                .findThreadDetail(buzz.getId(), otherThread.getId(), NOW).orElseThrow();
+
+        // then
+        assertThat(detail.buzzId()).isEqualTo(buzz.getId());
+        assertThat(detail.thread()).isNull();
+    }
+
+    @Test
+    @DisplayName("만료되었거나 삭제 표시된 버즈는 스레드 상세에서 빠진다")
+    void findThreadDetail_ExcludesExpiredAndDeleted() {
+        // given
+        Buzz expired = saveBuzz(creatorId, NOW.minusHours(6), recipientId);
+        BuzzThread expiredThread = saveThread(expired, recipientId, NOW.minusHours(5));
+        Buzz deleted = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
+        BuzzThread deletedThread = saveThread(deleted, recipientId, NOW.minusMinutes(10));
+        markDeleted(deleted.getId());
+
+        // when & then
+        assertThat(buzzQueryRepositoryAdapter.findThreadDetail(expired.getId(), expiredThread.getId(), NOW)).isEmpty();
+        assertThat(buzzQueryRepositoryAdapter.findThreadDetail(deleted.getId(), deletedThread.getId(), NOW)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("답글은 그 스레드의 것만 쓴 순서대로 작성자 프로필과 함께 준다")
+    void findComments_InOrderWithProfiles() {
+        // given
+        insertUser(3L, "답글러", "profiles/replier", "ACTIVE");
+        Buzz buzz = saveBuzz(creatorId, NOW.minusHours(1), recipientId, 3L);
+        BuzzThread thread = saveThread(buzz, recipientId, NOW.minusMinutes(30));
+        BuzzThread otherThread = saveThread(buzz, 3L, NOW.minusMinutes(20));
+        BuzzComment first = saveComment(buzz, thread, 3L, "첫 답글");
+        BuzzComment second = saveComment(buzz, thread, recipientId, "둘째 답글");
+        saveComment(buzz, otherThread, 3L, "다른 스레드 답글");
+
+        // when
+        List<BuzzCommentInfo> comments = buzzQueryRepositoryAdapter.findComments(thread.getId());
+
+        // then
+        assertThat(comments).extracting(BuzzCommentInfo::commentId).containsExactly(first.getId(), second.getId());
+        assertThat(comments).extracting(BuzzCommentInfo::authorProfile)
+                .containsExactly(new BuzzUserProfileInfo("답글러", "profiles/replier"), null);
+        assertThat(comments.get(0).imageKeys()).containsExactly("buzz/c");
+    }
+
+    @Test
     @DisplayName("만료 시각이 기준 시각과 같은 버즈는 받은 목록에서 빠진다")
     void findReceived_ExcludesExpiresAtEqualToNow() {
         // given
@@ -310,8 +388,9 @@ class BuzzPersistenceAdapterTest {
 
         // then
         assertThat(count("SELECT COUNT(*) FROM buzzes WHERE id = ?", target.getId())).isZero();
-        assertThat(buzzAudienceMemberRepositoryAdapter.findUserIdsByBuzzId(target.getId())).isEmpty();
-        assertThat(buzzAudienceMemberRepositoryAdapter.findUserIdsByBuzzId(other.getId())).containsExactly(recipientId);
+        assertThat(buzzQueryRepositoryAdapter.findAudience(target.getId())).isEmpty();
+        assertThat(buzzQueryRepositoryAdapter.findAudience(other.getId()))
+                .extracting(BuzzAudienceInfo::userId).containsExactly(recipientId);
     }
 
     @Test
@@ -395,6 +474,14 @@ class BuzzPersistenceAdapterTest {
         entityManager.flush();
         entityManager.clear();
         return thread;
+    }
+
+    private BuzzComment saveComment(Buzz buzz, BuzzThread thread, Long authorId, String text) {
+        BuzzComment comment = BuzzComment.write(buzz, thread, authorId, text, List.of("buzz/c"), NOW);
+        entityManager.persist(comment);
+        entityManager.flush();
+        entityManager.clear();
+        return comment;
     }
 
     private void insertUser(Long userId, String nickname, String profileImage, String status) {

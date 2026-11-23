@@ -1,8 +1,11 @@
 package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzAudienceInfo;
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCommentInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzDetailInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzSummaryInfo;
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadDetailInfo;
+import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadDetailInfo.ThreadContent;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadInfo;
 import com.example.DunbarHorizon.buzz.application.dto.info.BuzzUserProfileInfo;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzQueryRepository;
@@ -61,6 +64,33 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
             ORDER BY m.user_id
             """;
 
+    private static final String THREAD_DETAIL = """
+            SELECT b.id, b.creator_id,
+                   cu.user_id AS creator_profile_id, cu.nickname AS creator_nickname,
+                   cu.profile_image AS creator_profile_image,
+                   t.id AS thread_id, t.starter_id, t.visibility, t.text AS thread_text,
+                   t.image_keys AS thread_image_keys, t.created_at AS thread_created_at,
+                   su.user_id AS starter_profile_id, su.nickname AS starter_nickname,
+                   su.profile_image AS starter_profile_image
+            FROM buzzes b
+            LEFT JOIN active_users cu ON cu.user_id = b.creator_id
+            LEFT JOIN buzz_threads t ON t.id = :threadId AND t.buzz_id = b.id
+            LEFT JOIN active_users su ON su.user_id = t.starter_id
+            WHERE b.id = :buzzId
+              AND b.expires_at > :now
+              AND b.deleted_at IS NULL
+            """;
+
+    private static final String COMMENTS = """
+            SELECT c.id, c.author_id, c.text, c.image_keys, c.created_at,
+                   u.user_id AS author_profile_id, u.nickname AS author_nickname,
+                   u.profile_image AS author_profile_image
+            FROM buzz_comments c
+            LEFT JOIN active_users u ON u.user_id = c.author_id
+            WHERE c.thread_id = :threadId
+            ORDER BY c.id
+            """;
+
     private static final String RECEIVED = """
             SELECT b.id, b.creator_id, b.text, b.image_keys, b.edited_at, b.expires_at, m.is_read,
                    cu.user_id AS creator_profile_id, cu.nickname AS creator_nickname,
@@ -111,7 +141,7 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
             Long creatorId = rows.getLong("creator_id");
             BuzzUserProfileInfo creatorProfile = profile(rows, "creator_profile_id", "creator_nickname", "creator_profile_image");
             String text = rows.getString("text");
-            List<String> imageKeys = imageKeys(rows);
+            List<String> imageKeys = imageKeys(rows, "image_keys");
             LocalDateTime editedAt = rows.getObject("edited_at", LocalDateTime.class);
             LocalDateTime expiresAt = rows.getObject("expires_at", LocalDateTime.class);
             List<BuzzThreadInfo> threads = new ArrayList<>();
@@ -137,6 +167,27 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
                 row.getLong("user_id"),
                 profile(row, "profile_id", "nickname", "profile_image"),
                 row.getBoolean("is_read")));
+    }
+
+    @Override
+    public Optional<BuzzThreadDetailInfo> findThreadDetail(Long buzzId, Long threadId, LocalDateTime now) {
+        return jdbc.query(THREAD_DETAIL, Map.of("buzzId", buzzId, "threadId", threadId, "now", now),
+                (row, index) -> new BuzzThreadDetailInfo(
+                        row.getLong("id"),
+                        row.getLong("creator_id"),
+                        profile(row, "creator_profile_id", "creator_nickname", "creator_profile_image"),
+                        threadContent(row))).stream().findFirst();
+    }
+
+    @Override
+    public List<BuzzCommentInfo> findComments(Long threadId) {
+        return jdbc.query(COMMENTS, Map.of("threadId", threadId), (row, index) -> new BuzzCommentInfo(
+                row.getLong("id"),
+                row.getLong("author_id"),
+                profile(row, "author_profile_id", "author_nickname", "author_profile_image"),
+                row.getString("text"),
+                imageKeys(row, "image_keys"),
+                row.getObject("created_at", LocalDateTime.class)));
     }
 
     @Override
@@ -170,7 +221,7 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
                 row.getLong("creator_id"),
                 profile(row, "creator_profile_id", "creator_nickname", "creator_profile_image"),
                 row.getString("text"),
-                imageKeys(row),
+                imageKeys(row, "image_keys"),
                 row.getObject("edited_at", LocalDateTime.class),
                 row.getObject("expires_at", LocalDateTime.class),
                 row.getBoolean("is_read")));
@@ -187,9 +238,24 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
         return new BuzzUserProfileInfo(row.getString(nicknameColumn), row.getString(imageColumn));
     }
 
-    private static List<String> imageKeys(ResultSet row) throws SQLException {
+    private static ThreadContent threadContent(ResultSet row) throws SQLException {
+        long threadId = row.getLong("thread_id");
+        if (row.wasNull()) {
+            return null;
+        }
+        return new ThreadContent(
+                threadId,
+                row.getLong("starter_id"),
+                profile(row, "starter_profile_id", "starter_nickname", "starter_profile_image"),
+                ThreadVisibility.valueOf(row.getString("visibility")),
+                row.getString("thread_text"),
+                imageKeys(row, "thread_image_keys"),
+                row.getObject("thread_created_at", LocalDateTime.class));
+    }
+
+    private static List<String> imageKeys(ResultSet row, String column) throws SQLException {
         try {
-            return OBJECT_MAPPER.readValue(row.getString("image_keys"), STRING_LIST);
+            return OBJECT_MAPPER.readValue(row.getString(column), STRING_LIST);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("버즈 이미지 키를 읽을 수 없습니다.", e);
         }

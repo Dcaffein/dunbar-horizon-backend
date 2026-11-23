@@ -14,9 +14,6 @@ public interface BuzzAudienceMemberJpaRepository extends JpaRepository<BuzzAudie
 
     Optional<BuzzAudienceMember> findByBuzzIdAndUserId(Long buzzId, Long userId);
 
-    @Query("SELECT m.userId FROM BuzzAudienceMember m WHERE m.buzzId = :buzzId ORDER BY m.userId")
-    List<Long> findUserIdsByBuzzId(@Param("buzzId") Long buzzId);
-
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM BuzzAudienceMember m WHERE m.buzzId IN :buzzIds")
     int deleteAllByBuzzIdIn(@Param("buzzIds") Collection<Long> buzzIds);

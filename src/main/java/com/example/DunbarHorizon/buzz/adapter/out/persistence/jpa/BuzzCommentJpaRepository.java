@@ -11,7 +11,6 @@ import java.util.List;
 
 public interface BuzzCommentJpaRepository extends JpaRepository<BuzzComment, Long> {
 
-    List<BuzzComment> findAllByThreadIdOrderByIdAsc(Long threadId);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM BuzzComment c WHERE c.id = :id")

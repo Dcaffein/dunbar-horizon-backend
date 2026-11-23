@@ -35,11 +35,6 @@ public class BuzzAudienceMemberRepositoryAdapter implements BuzzAudienceMemberRe
     }
 
     @Override
-    public List<Long> findUserIdsByBuzzId(Long buzzId) {
-        return buzzAudienceMemberJpaRepository.findUserIdsByBuzzId(buzzId);
-    }
-
-    @Override
     public void deleteAllByBuzzIds(Collection<Long> buzzIds) {
         buzzAudienceMemberJpaRepository.deleteAllByBuzzIdIn(buzzIds);
     }

@@ -27,11 +27,6 @@ public class BuzzCommentRepositoryAdapter implements BuzzCommentRepository {
     }
 
     @Override
-    public List<BuzzComment> findAllByThreadId(Long threadId) {
-        return buzzCommentJpaRepository.findAllByThreadIdOrderByIdAsc(threadId);
-    }
-
-    @Override
     public void deleteById(Long commentId) {
         buzzCommentJpaRepository.deleteById(commentId);
     }
