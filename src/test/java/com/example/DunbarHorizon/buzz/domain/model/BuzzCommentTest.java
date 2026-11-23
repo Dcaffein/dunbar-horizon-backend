@@ -35,7 +35,7 @@ class BuzzCommentTest {
     }
 
     private BuzzComment comment() {
-        return BuzzComment.write(buzz, thread, authorId, "답글", List.of("buzz/a"), NOW);
+        return BuzzComment.write(thread, authorId, "답글", List.of("buzz/a"), NOW);
     }
 
     @Test
@@ -49,18 +49,11 @@ class BuzzCommentTest {
     }
 
     @Test
-    @DisplayName("만료된 버즈의 스레드에는 답글을 쓸 수 없다")
-    void write_Fail_Expired() {
-        assertThatThrownBy(() -> BuzzComment.write(buzz, thread, authorId, "답글", List.of(), NOW.plusHours(6)))
-                .isInstanceOf(BuzzInvalidStateException.class);
-    }
-
-    @Test
     @DisplayName("답글이 비어 있거나 300자를 넘으면 쓸 수 없다")
     void write_Fail_InvalidText() {
-        assertThatThrownBy(() -> BuzzComment.write(buzz, thread, authorId, " ", List.of(), NOW))
+        assertThatThrownBy(() -> BuzzComment.write(thread, authorId, " ", List.of(), NOW))
                 .isInstanceOf(BuzzInvalidStateException.class);
-        assertThatThrownBy(() -> BuzzComment.write(buzz, thread, authorId, "가".repeat(BuzzComment.TEXT_MAX_LENGTH + 1),
+        assertThatThrownBy(() -> BuzzComment.write(thread, authorId, "가".repeat(BuzzComment.TEXT_MAX_LENGTH + 1),
                 List.of(), NOW))
                 .isInstanceOf(BuzzInvalidStateException.class);
     }

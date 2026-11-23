@@ -62,14 +62,6 @@ class BuzzThreadTest {
         }
 
         @Test
-        @DisplayName("만료된 버즈에는 스레드를 생성할 수 없다")
-        void create_Fail_Expired() {
-            assertThatThrownBy(() -> BuzzThread.create(buzz, starterId, true, ThreadVisibility.PUBLIC, "첫 글", List.of(),
-                    NOW.plusHours(6)))
-                    .isInstanceOf(BuzzInvalidStateException.class);
-        }
-
-        @Test
         @DisplayName("첫 글이 비어 있으면 생성할 수 없다")
         void create_Fail_BlankText() {
             assertThatThrownBy(() -> BuzzThread.create(buzz, starterId, true, ThreadVisibility.PUBLIC, " ", List.of(), NOW))

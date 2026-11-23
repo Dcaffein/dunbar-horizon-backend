@@ -32,7 +32,7 @@ public class Buzz {
     public static final int TEXT_MAX_LENGTH = 1000;
     public static final String TEXT_LENGTH_MESSAGE = "본문은 1자 이상 1000자 이하로 입력해주세요.";
 
-    private static final Duration LIFETIME = Duration.ofHours(6);
+    public static final Duration LIFETIME = Duration.ofHours(6);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -51,9 +51,6 @@ public class Buzz {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime expiresAt;
-
     private LocalDateTime editedAt;
 
     private LocalDateTime deletedAt;
@@ -63,7 +60,6 @@ public class Buzz {
         this.text = text;
         this.imageKeys = imageKeys;
         this.createdAt = createdAt;
-        this.expiresAt = createdAt.plus(LIFETIME);
     }
 
     public static Buzz create(Long creatorId, String text, List<String> imageKeys,
@@ -84,10 +80,6 @@ public class Buzz {
         this.text = text;
         this.imageKeys = copyOf(imageKeys);
         this.editedAt = now;
-    }
-
-    public boolean isExpired(LocalDateTime now) {
-        return !expiresAt.isAfter(now);
     }
 
     public boolean isCreator(Long userId) {

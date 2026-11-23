@@ -2,7 +2,7 @@ package com.example.DunbarHorizon.global.exception;
 
 import com.example.DunbarHorizon.account.domain.exception.InvalidCredentialsException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzErrorCode;
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
+import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.flag.domain.exception.FlagErrorCode;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagFullCapacityException;
 import com.example.DunbarHorizon.flag.domain.flag.exception.FlagInvalidStatusException;
@@ -117,13 +117,13 @@ class ErrorMessageSeparationTest {
     @Test
     @DisplayName("같은 사실을 말하는 서로 다른 동작은 한 코드로 모인다")
     void sameFact_SharesOneCode() {
-        // given - 만료된 버즈에 댓글을 달거나 수정하거나 삭제하는 것은 사용자에게 한 가지 사실이다
-        BuzzInvalidStateException expired =
-                new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", "abc"));
+        // given - 수신자가 아닌 사람이 버즈 상세·스레드·답글에 접근하는 것은 사용자에게 한 가지 사실이다
+        BuzzAccessDeniedException notRecipient =
+                new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_NOT_RECIPIENT, ErrorContext.of("buzzId", "abc"));
 
         // when & then
-        assertThat(expired.getCode()).isEqualTo("BUZZ_EXPIRED");
-        assertThat(expired.getUserMessage()).isEqualTo("만료된 버즈입니다.");
-        assertThat(expired.getMessage()).isEqualTo("BUZZ_EXPIRED {buzzId=abc}");
+        assertThat(notRecipient.getCode()).isEqualTo("BUZZ_NOT_RECIPIENT");
+        assertThat(notRecipient.getUserMessage()).isEqualTo("이 버즈의 수신자가 아닙니다.");
+        assertThat(notRecipient.getMessage()).isEqualTo("BUZZ_NOT_RECIPIENT {buzzId=abc}");
     }
 }

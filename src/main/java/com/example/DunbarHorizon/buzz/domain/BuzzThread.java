@@ -66,9 +66,6 @@ public class BuzzThread {
 
     public static BuzzThread create(Buzz buzz, Long starterId, boolean isAudienceMember, ThreadVisibility visibility,
                                     String text, List<String> imageKeys, LocalDateTime now) {
-        if (buzz.isExpired(now)) {
-            throw new BuzzInvalidStateException(BuzzErrorCode.BUZZ_EXPIRED, ErrorContext.of("buzzId", buzz.getId()));
-        }
         if (buzz.isCreator(starterId)) {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_CREATOR_CANNOT_CREATE_THREAD,
                     ErrorContext.of("buzzId", buzz.getId()).and("userId", starterId));

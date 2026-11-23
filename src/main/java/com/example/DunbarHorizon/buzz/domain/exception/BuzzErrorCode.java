@@ -14,7 +14,6 @@ public enum BuzzErrorCode implements ErrorCode {
     BUZZ_THREAD_NOT_FOUND(HttpStatus.NOT_FOUND, "스레드를 찾을 수 없습니다."),
     BUZZ_COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "답글을 찾을 수 없습니다."),
 
-    BUZZ_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 버즈입니다."),
     BUZZ_INVALID_TEXT(HttpStatus.BAD_REQUEST, Buzz.TEXT_LENGTH_MESSAGE),
     BUZZ_RECIPIENTS_REQUIRED(HttpStatus.BAD_REQUEST, "수신자를 한 명 이상 지정해주세요."),
     BUZZ_THREAD_INVALID_TEXT(HttpStatus.BAD_REQUEST, BuzzThread.TEXT_LENGTH_MESSAGE),

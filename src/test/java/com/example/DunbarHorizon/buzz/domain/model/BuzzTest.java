@@ -77,12 +77,11 @@ class BuzzTest {
         }
 
         @Test
-        @DisplayName("생성 시각에서 6시간 뒤에 만료되고 이미지 키를 그대로 가진다")
+        @DisplayName("생성 시각과 이미지 키를 그대로 가진다")
         void create_Success_FieldsInitialized() {
             Buzz buzz = Buzz.create(creatorId, "Hello", List.of("buzz/a"), Set.of(recipientId), NOW);
 
             assertThat(buzz.getCreatedAt()).isEqualTo(NOW);
-            assertThat(buzz.getExpiresAt()).isEqualTo(NOW.plusHours(6));
             assertThat(buzz.getImageKeys()).containsExactly("buzz/a");
         }
 
@@ -135,23 +134,6 @@ class BuzzTest {
                     .isInstanceOf(BuzzInvalidStateException.class);
             assertThatThrownBy(() -> buzz().update(creatorId, "가".repeat(Buzz.TEXT_MAX_LENGTH + 1), List.of(), NOW.plusHours(1)))
                     .isInstanceOf(BuzzInvalidStateException.class);
-        }
-    }
-
-    @Nested
-    @DisplayName("만료 판단")
-    class ExpiryTest {
-
-        @Test
-        @DisplayName("만료 시각 이전이면 만료되지 않았다")
-        void isExpired_False_BeforeExpiresAt() {
-            assertThat(buzz().isExpired(NOW.plusHours(6).minusNanos(1))).isFalse();
-        }
-
-        @Test
-        @DisplayName("만료 시각과 같으면 만료됐다")
-        void isExpired_True_AtExpiresAt() {
-            assertThat(buzz().isExpired(NOW.plusHours(6))).isTrue();
         }
     }
 
