@@ -10,6 +10,5 @@ public interface BuzzAudienceMemberRepository {
     BuzzAudienceMember save(BuzzAudienceMember buzzAudienceMember);
     List<BuzzAudienceMember> saveAll(List<BuzzAudienceMember> buzzAudienceMembers);
     Optional<BuzzAudienceMember> findByBuzzIdAndUserId(Long buzzId, Long userId);
-    List<Long> findUserIdsByBuzzId(Long buzzId);
     void deleteAllByBuzzIds(Collection<Long> buzzIds);
 }
