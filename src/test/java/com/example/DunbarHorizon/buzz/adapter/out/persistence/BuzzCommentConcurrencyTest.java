@@ -14,6 +14,7 @@ import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -59,6 +60,7 @@ class BuzzCommentConcurrencyTest {
     @Autowired private BuzzRepositoryAdapter buzzRepositoryAdapter;
     @Autowired private BuzzAudienceMemberRepositoryAdapter buzzAudienceMemberRepositoryAdapter;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private EntityManager entityManager;
     @Autowired private PlatformTransactionManager transactionManager;
     @MockitoSpyBean private BuzzThreadRepositoryAdapter buzzThreadRepositoryAdapter;
     @MockitoSpyBean private BuzzCommentRepositoryAdapter buzzCommentRepositoryAdapter;
@@ -139,6 +141,7 @@ class BuzzCommentConcurrencyTest {
         AtomicReference<Throwable> commentFailure = new AtomicReference<>();
         doAnswer(invocation -> {
             invocation.callRealMethod();
+            entityManager.flush();
             threadDeleted.countDown();
             await(continueDeletion, "스레드 삭제 재개");
             return null;
@@ -183,6 +186,7 @@ class BuzzCommentConcurrencyTest {
         AtomicReference<Throwable> purgeFailure = new AtomicReference<>();
         doAnswer(invocation -> {
             invocation.callRealMethod();
+            entityManager.flush();
             threadDeleted.countDown();
             await(continueDeletion, "스레드 삭제 재개");
             return null;
