@@ -18,7 +18,6 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -35,8 +34,7 @@ public class BuzzQueryService {
     private final ImageStoragePort imageStoragePort;
 
     public BuzzDetailResult getBuzzDetail(Long userId, Long buzzId) {
-        LocalDateTime now = LocalDateTime.now();
-        BuzzDetailInfo buzz = buzzQueryRepository.findDetail(buzzId, now)
+        BuzzDetailInfo buzz = buzzQueryRepository.findDetail(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
         List<BuzzAudienceInfo> audience = buzzQueryRepository.findAudience(buzzId);
 
@@ -60,38 +58,33 @@ public class BuzzQueryService {
                 accessibleThreads(buzz, userId).stream()
                         .map(thread -> BuzzThreadSummaryResult.of(
                                 thread, buzzProfileAssembler.profileOf(thread.starterId(), thread.starterProfile())))
-                        .toList(),
-                now);
+                        .toList());
     }
 
     public Slice<BuzzSummaryResult> getReceivedBuzzes(Long userId, Pageable pageable) {
-        LocalDateTime now = LocalDateTime.now();
         Set<Long> excludedCreatorIds = buzzSocialPort.getNonReceivableFriendIds(userId);
-        return buzzQueryRepository.findReceived(userId, excludedCreatorIds, now, pageable)
+        return buzzQueryRepository.findReceived(userId, excludedCreatorIds, pageable)
                 .map(buzz -> BuzzSummaryResult.of(
                         buzz,
                         buzzProfileAssembler.profileOf(buzz.creatorId(), buzz.creatorProfile()),
                         imageStoragePort.resolveUrls(buzz.imageKeys()),
                         !buzz.isRead(),
-                        false,
-                        now));
+                        false));
     }
 
     public Slice<BuzzSummaryResult> getSentBuzzes(Long userId, Pageable pageable) {
-        LocalDateTime now = LocalDateTime.now();
-        return buzzQueryRepository.findSent(userId, now, pageable)
+        return buzzQueryRepository.findSent(userId, pageable)
                 .map(buzz -> BuzzSummaryResult.of(
                         buzz,
                         buzzProfileAssembler.profileOf(buzz.creatorId(), buzz.creatorProfile()),
                         imageStoragePort.resolveUrls(buzz.imageKeys()),
                         false,
-                        true,
-                        now));
+                        true));
     }
 
     public List<Long> getUnreadSenderIds(Long userId) {
         Set<Long> excludedCreatorIds = buzzSocialPort.getNonReceivableFriendIds(userId);
-        return buzzQueryRepository.findUnreadCreatorIds(userId, excludedCreatorIds, LocalDateTime.now());
+        return buzzQueryRepository.findUnreadCreatorIds(userId, excludedCreatorIds);
     }
 
     private List<BuzzThreadInfo> accessibleThreads(BuzzDetailInfo buzz, Long userId) {

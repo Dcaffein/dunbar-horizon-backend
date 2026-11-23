@@ -11,7 +11,6 @@ import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzCommentNotFoundException;
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
@@ -139,26 +138,6 @@ class BuzzCommentServiceTest {
         }
     }
 
-    @Test
-    @DisplayName("만료된 버즈의 스레드에는 답글을 쓸 수 없다")
-    void writeComment_Expired_Rejected() {
-        // given
-        LocalDateTime createdAt = LocalDateTime.now().minusHours(7);
-        Buzz expired = withId(Buzz.create(creatorId, "본문", List.of(), Set.of(starterId), createdAt), 2L);
-        BuzzThread expiredBuzzThread = BuzzThread.create(expired, starterId, true, ThreadVisibility.PUBLIC, "첫 글",
-                List.of(), createdAt);
-        ReflectionTestUtils.setField(expiredBuzzThread, "id", 10L);
-        given(buzzRepository.findByIdForShare(expired.getId())).willReturn(Optional.of(expired));
-        given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(expired.getId(), starterId))
-                .willReturn(Optional.of(BuzzAudienceMember.create(expired.getId(), starterId)));
-        given(buzzThreadRepository.findByIdForShare(10L)).willReturn(Optional.of(expiredBuzzThread));
-
-        // when & then
-        assertThatThrownBy(() -> buzzCommentService.writeComment(
-                new WriteBuzzCommentCommand(starterId, expired.getId(), 10L, "답글", List.of())))
-                .isInstanceOf(BuzzInvalidStateException.class);
-    }
-
     @Nested
     @DisplayName("답글 수정과 삭제")
     class Modification {
@@ -167,7 +146,7 @@ class BuzzCommentServiceTest {
 
         @BeforeEach
         void setUp() {
-            comment = BuzzComment.write(buzz, thread, friendMemberId, "답글", List.of(), LocalDateTime.now());
+            comment = BuzzComment.write(thread, friendMemberId, "답글", List.of(), LocalDateTime.now());
             ReflectionTestUtils.setField(comment, "id", 100L);
             given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
             given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(thread));
@@ -219,7 +198,7 @@ class BuzzCommentServiceTest {
             BuzzThread otherThread = BuzzThread.create(buzz, friendMemberId, true, ThreadVisibility.PUBLIC, "다른 스레드",
                     List.of(), LocalDateTime.now());
             ReflectionTestUtils.setField(otherThread, "id", 99L);
-            BuzzComment otherThreadComment = BuzzComment.write(buzz, otherThread, friendMemberId, "답글", List.of(),
+            BuzzComment otherThreadComment = BuzzComment.write(otherThread, friendMemberId, "답글", List.of(),
                     LocalDateTime.now());
             given(buzzCommentRepository.findById(100L)).willReturn(Optional.of(otherThreadComment));
 

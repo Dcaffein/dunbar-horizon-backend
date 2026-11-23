@@ -10,6 +10,5 @@ public record BuzzSummaryInfo(
         String text,
         List<String> imageKeys,
         LocalDateTime editedAt,
-        LocalDateTime expiresAt,
         boolean isRead
 ) {}

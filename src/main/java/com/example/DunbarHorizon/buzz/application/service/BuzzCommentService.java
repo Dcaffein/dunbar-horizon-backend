@@ -35,7 +35,7 @@ public class BuzzCommentService {
         ThreadContext context = buzzThreadAccess.forWriting(command.authorId(), command.buzzId(), command.threadId());
 
         BuzzComment comment = buzzCommentRepository.save(BuzzComment.write(
-                context.buzz(), context.thread(), command.authorId(), command.text(), command.imageKeys(),
+                context.thread(), command.authorId(), command.text(), command.imageKeys(),
                 LocalDateTime.now()));
 
         applicationEventPublisher.publishEvent(new BuzzCommentedEvent(

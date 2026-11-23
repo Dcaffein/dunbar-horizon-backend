@@ -1,5 +1,6 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
+import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
@@ -22,7 +23,7 @@ public class BuzzPurgeService {
     private final BuzzCommentRepository buzzCommentRepository;
 
     public int purgeExpiredAndDeletedBuzzes(LocalDateTime now) {
-        List<Long> buzzIds = buzzRepository.findPurgeableIds(now);
+        List<Long> buzzIds = buzzRepository.findPurgeableIds(now.minus(Buzz.LIFETIME));
         if (buzzIds.isEmpty()) {
             return 0;
         }

@@ -18,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +36,7 @@ public class BuzzThreadQueryService {
     private final ImageStoragePort imageStoragePort;
 
     public BuzzThreadDetailResult getThread(Long viewerId, Long buzzId, Long threadId) {
-        BuzzThreadDetailInfo buzz = buzzQueryRepository.findThreadDetail(buzzId, threadId, LocalDateTime.now())
+        BuzzThreadDetailInfo buzz = buzzQueryRepository.findThreadDetail(buzzId, threadId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
         List<BuzzAudienceInfo> audience = buzzQueryRepository.findAudience(buzzId);
         boolean isAudienceMember = audience.stream().anyMatch(member -> member.userId().equals(viewerId));

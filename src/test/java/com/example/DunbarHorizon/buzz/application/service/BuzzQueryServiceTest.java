@@ -32,7 +32,6 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -63,9 +62,9 @@ class BuzzQueryServiceTest {
     class GetBuzzDetail {
 
         private void givenDetail(BuzzThreadInfo... threads) {
-            given(buzzQueryRepository.findDetail(eq(buzzId), any())).willReturn(Optional.of(new BuzzDetailInfo(
+            given(buzzQueryRepository.findDetail(buzzId)).willReturn(Optional.of(new BuzzDetailInfo(
                     buzzId, creatorId, creatorProfile, "본문", List.of("buzz/photo"), null,
-                    LocalDateTime.now().plusHours(1), List.of(threads))));
+                    List.of(threads))));
         }
 
         private void givenAudience(BuzzAudienceInfo... audience) {
@@ -179,7 +178,7 @@ class BuzzQueryServiceTest {
         @Test
         @DisplayName("조회 가능한 버즈가 없으면 찾을 수 없다")
         void getBuzzDetail_Missing_NotFound() {
-            given(buzzQueryRepository.findDetail(eq(buzzId), any())).willReturn(Optional.empty());
+            given(buzzQueryRepository.findDetail(buzzId)).willReturn(Optional.empty());
 
             assertThatThrownBy(() -> buzzQueryService.getBuzzDetail(creatorId, buzzId))
                     .isInstanceOf(BuzzNotFoundException.class);
@@ -197,7 +196,7 @@ class BuzzQueryServiceTest {
         // given
         PageRequest pageable = PageRequest.of(0, 20);
         given(buzzSocialPort.getNonReceivableFriendIds(recipientId)).willReturn(Set.of(7L));
-        given(buzzQueryRepository.findReceived(eq(recipientId), eq(Set.of(7L)), any(), eq(pageable)))
+        given(buzzQueryRepository.findReceived(recipientId, Set.of(7L), pageable))
                 .willReturn(new SliceImpl<>(List.of(summary(creatorProfile, false)), pageable, false));
         given(imageStoragePort.resolveUrl("profiles/creator")).willReturn("signed-creator");
 
@@ -218,7 +217,7 @@ class BuzzQueryServiceTest {
         // given
         PageRequest pageable = PageRequest.of(0, 20);
         given(buzzSocialPort.getNonReceivableFriendIds(recipientId)).willReturn(Set.of());
-        given(buzzQueryRepository.findReceived(eq(recipientId), eq(Set.of()), any(), eq(pageable)))
+        given(buzzQueryRepository.findReceived(recipientId, Set.of(), pageable))
                 .willReturn(new SliceImpl<>(List.of(summary(null, true)), pageable, false));
 
         // when
@@ -234,7 +233,7 @@ class BuzzQueryServiceTest {
     void getSentBuzzes_MarksCreator() {
         // given
         PageRequest pageable = PageRequest.of(0, 20);
-        given(buzzQueryRepository.findSent(eq(creatorId), any(), eq(pageable)))
+        given(buzzQueryRepository.findSent(creatorId, pageable))
                 .willReturn(new SliceImpl<>(List.of(summary(creatorProfile, false)), pageable, false));
 
         // when
@@ -246,7 +245,6 @@ class BuzzQueryServiceTest {
     }
 
     private BuzzSummaryInfo summary(BuzzUserProfileInfo profile, boolean isRead) {
-        return new BuzzSummaryInfo(buzzId, creatorId, profile, "본문", List.of(), null,
-                LocalDateTime.now().plusHours(1), isRead);
+        return new BuzzSummaryInfo(buzzId, creatorId, profile, "본문", List.of(), null, isRead);
     }
 }

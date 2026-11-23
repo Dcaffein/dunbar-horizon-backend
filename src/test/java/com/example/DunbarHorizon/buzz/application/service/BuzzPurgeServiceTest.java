@@ -38,7 +38,7 @@ class BuzzPurgeServiceTest {
         // given
         LocalDateTime now = LocalDateTime.now();
         List<Long> buzzIds = List.of(1L, 2L);
-        given(buzzRepository.findPurgeableIds(now)).willReturn(buzzIds);
+        given(buzzRepository.findPurgeableIds(now.minusHours(6))).willReturn(buzzIds);
         given(buzzThreadRepository.findIdsByBuzzIds(buzzIds)).willReturn(List.of(10L, 11L));
 
         // when
@@ -59,7 +59,7 @@ class BuzzPurgeServiceTest {
     void purge_NoThreads_SkipsComments() {
         // given
         LocalDateTime now = LocalDateTime.now();
-        given(buzzRepository.findPurgeableIds(now)).willReturn(List.of(1L));
+        given(buzzRepository.findPurgeableIds(now.minusHours(6))).willReturn(List.of(1L));
         given(buzzThreadRepository.findIdsByBuzzIds(List.of(1L))).willReturn(List.of());
 
         // when
@@ -74,7 +74,7 @@ class BuzzPurgeServiceTest {
     void purge_Nothing() {
         // given
         LocalDateTime now = LocalDateTime.now();
-        given(buzzRepository.findPurgeableIds(now)).willReturn(List.of());
+        given(buzzRepository.findPurgeableIds(now.minusHours(6))).willReturn(List.of());
 
         // when
         int purged = buzzPurgeService.purgeExpiredAndDeletedBuzzes(now);

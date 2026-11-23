@@ -10,6 +10,5 @@ public record BuzzDetailInfo(
         String text,
         List<String> imageKeys,
         LocalDateTime editedAt,
-        LocalDateTime expiresAt,
         List<BuzzThreadInfo> threads
 ) {}

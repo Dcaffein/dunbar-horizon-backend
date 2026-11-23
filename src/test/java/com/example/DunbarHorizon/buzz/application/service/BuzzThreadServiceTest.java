@@ -7,7 +7,6 @@ import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzAccessDeniedException;
-import com.example.DunbarHorizon.buzz.domain.exception.BuzzInvalidStateException;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzThreadCreatedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyExistsException;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
@@ -116,21 +115,6 @@ class BuzzThreadServiceTest {
             assertThatThrownBy(() -> buzzThreadService.createThread(command(creatorId, ThreadVisibility.PUBLIC)))
                     .isInstanceOf(BuzzAccessDeniedException.class);
             verify(buzzThreadRepository, never()).save(any());
-        }
-
-        @Test
-        @DisplayName("만료된 버즈에는 스레드를 생성할 수 없다")
-        void createThread_Expired_Rejected() {
-            // given
-            Buzz expired = withId(Buzz.create(creatorId, "본문", List.of(), Set.of(starterId), LocalDateTime.now().minusHours(7)), 2L);
-            given(buzzRepository.findByIdForShare(expired.getId())).willReturn(Optional.of(expired));
-            given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(expired.getId(), starterId))
-                    .willReturn(Optional.of(BuzzAudienceMember.create(expired.getId(), starterId)));
-
-            // when & then
-            assertThatThrownBy(() -> buzzThreadService.createThread(new CreateBuzzThreadCommand(
-                    starterId, expired.getId(), ThreadVisibility.PUBLIC, "첫 글", List.of())))
-                    .isInstanceOf(BuzzInvalidStateException.class);
         }
 
         private CreateBuzzThreadCommand command(Long userId, ThreadVisibility visibility) {
