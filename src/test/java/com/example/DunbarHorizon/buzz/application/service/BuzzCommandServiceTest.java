@@ -269,11 +269,11 @@ class BuzzCommandServiceTest {
     class DeleteBuzz {
 
         @Test
-        @DisplayName("게시자가 삭제하면 버즈를 배타 락으로 읽어 삭제 표시만 남기고 자식은 지우지 않는다")
+        @DisplayName("게시자가 삭제하면 삭제 표시만 남기고 자식은 지우지 않는다")
         void deleteBuzz_ByCreator_MarksDeletedOnly() {
             // given
             Buzz buzz = buzz(List.of());
-            given(buzzRepository.findByIdForUpdate(buzz.getId())).willReturn(Optional.of(buzz));
+            given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
 
             // when
             buzzCommandService.deleteBuzz(creatorId, buzz.getId());
@@ -289,7 +289,7 @@ class BuzzCommandServiceTest {
         void deleteBuzz_ByNonCreator_Denied() {
             // given
             Buzz buzz = buzz(List.of());
-            given(buzzRepository.findByIdForUpdate(buzz.getId())).willReturn(Optional.of(buzz));
+            given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
 
             // when & then
             assertThatThrownBy(() -> buzzCommandService.deleteBuzz(recipientId, buzz.getId()))
@@ -300,7 +300,7 @@ class BuzzCommandServiceTest {
         @Test
         @DisplayName("없거나 이미 삭제된 버즈는 찾을 수 없다")
         void deleteBuzz_Missing_NotFound() {
-            given(buzzRepository.findByIdForUpdate(999L)).willReturn(Optional.empty());
+            given(buzzRepository.findById(999L)).willReturn(Optional.empty());
 
             assertThatThrownBy(() -> buzzCommandService.deleteBuzz(creatorId, 999L))
                     .isInstanceOf(BuzzNotFoundException.class);

@@ -65,7 +65,7 @@ public class BuzzCommandService {
     }
 
     public void deleteBuzz(Long requesterId, Long buzzId) {
-        Buzz buzz = buzzRepository.findByIdForUpdate(buzzId)
+        Buzz buzz = buzzRepository.findById(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
         buzz.delete(requesterId, LocalDateTime.now());
         buzzRepository.save(buzz);
