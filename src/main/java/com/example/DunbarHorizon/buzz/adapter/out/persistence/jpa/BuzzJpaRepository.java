@@ -16,8 +16,4 @@ public interface BuzzJpaRepository extends JpaRepository<Buzz, Long> {
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("SELECT b FROM Buzz b WHERE b.id = :id AND b.deletedAt IS NULL")
     Optional<Buzz> findByIdAndDeletedAtIsNullForShare(@Param("id") Long id);
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT b FROM Buzz b WHERE b.id = :id AND b.deletedAt IS NULL")
-    Optional<Buzz> findByIdAndDeletedAtIsNullForUpdate(@Param("id") Long id);
 }

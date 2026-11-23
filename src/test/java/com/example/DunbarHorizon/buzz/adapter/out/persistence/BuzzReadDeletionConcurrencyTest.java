@@ -10,6 +10,7 @@ import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
 @JpaRepositoryTest
@@ -50,6 +52,7 @@ class BuzzReadDeletionConcurrencyTest {
     @Autowired private BuzzPurgeService buzzPurgeService;
     @Autowired private BuzzAudienceMemberRepositoryAdapter buzzAudienceMemberRepositoryAdapter;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private EntityManager entityManager;
     @Autowired private PlatformTransactionManager transactionManager;
     @MockitoSpyBean private BuzzRepositoryAdapter buzzRepositoryAdapter;
     @MockitoBean private BuzzSocialPort buzzSocialPort;
@@ -118,8 +121,8 @@ class BuzzReadDeletionConcurrencyTest {
     }
 
     @Test
-    @DisplayName("삭제가 버즈를 배타 락으로 먼저 읽으면 버즈 읽기는 삭제 커밋을 기다렸다가 버즈를 찾지 못하고 읽음을 남기지 않는다")
-    void deletionLocksBuzzFirst_ReadFailsWithNotFound() throws InterruptedException {
+    @DisplayName("삭제가 삭제 표시를 먼저 쓰면 버즈 읽기는 삭제 커밋을 기다렸다가 버즈를 찾지 못하고 읽음을 남기지 않는다")
+    void deletionMarksBuzzFirst_ReadFailsWithNotFound() throws InterruptedException {
         // given
         Buzz buzz = saveBuzz();
         CountDownLatch buzzDeleted = new CountDownLatch(1);
@@ -130,13 +133,14 @@ class BuzzReadDeletionConcurrencyTest {
         AtomicReference<Throwable> readFailure = new AtomicReference<>();
         AtomicBoolean blockOnce = new AtomicBoolean(true);
         doAnswer(invocation -> {
-            Object locked = invocation.callRealMethod();
+            Object saved = invocation.callRealMethod();
             if (blockOnce.compareAndSet(true, false)) {
+                entityManager.flush();
                 buzzDeleted.countDown();
                 await(continueDeletion, "삭제 재개");
             }
-            return locked;
-        }).when(buzzRepositoryAdapter).findByIdForUpdate(buzz.getId());
+            return saved;
+        }).when(buzzRepositoryAdapter).save(any(Buzz.class));
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
         submit(executor, () -> buzzCommandService.deleteBuzz(creatorId, buzz.getId()), deletionFailure, deletionFinished);

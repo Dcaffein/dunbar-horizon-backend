@@ -28,11 +28,4 @@ public class BuzzRepositoryAdapter implements BuzzRepository {
     public Optional<Buzz> findByIdForShare(Long buzzId) {
         return buzzJpaRepository.findByIdAndDeletedAtIsNullForShare(buzzId);
     }
-
-    @Override
-    public Optional<Buzz> findByIdForUpdate(Long buzzId) {
-        return buzzJpaRepository.findByIdAndDeletedAtIsNullForUpdate(buzzId);
-    }
-
-
 }

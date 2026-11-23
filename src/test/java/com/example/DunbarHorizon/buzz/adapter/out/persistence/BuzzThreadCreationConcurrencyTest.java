@@ -14,6 +14,7 @@ import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadAlreadyExistsException;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
 @JpaRepositoryTest
@@ -56,6 +58,7 @@ class BuzzThreadCreationConcurrencyTest {
     @Autowired private BuzzThreadCommandService buzzThreadCommandService;
     @Autowired private BuzzThreadRepositoryAdapter buzzThreadRepositoryAdapter;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private EntityManager entityManager;
     @Autowired private PlatformTransactionManager transactionManager;
     @MockitoSpyBean private BuzzRepositoryAdapter buzzRepositoryAdapter;
     @MockitoSpyBean private BuzzAudienceMemberRepositoryAdapter buzzAudienceMemberRepositoryAdapter;
@@ -176,8 +179,8 @@ class BuzzThreadCreationConcurrencyTest {
     }
 
     @Test
-    @DisplayName("삭제가 버즈를 배타 락으로 먼저 읽으면 스레드 생성은 기다렸다가 버즈를 찾지 못하고 스레드를 남기지 않는다")
-    void deletionLocksBuzzFirst_CreationFailsWithNotFound() throws InterruptedException {
+    @DisplayName("삭제가 삭제 표시를 먼저 쓰면 스레드 생성은 기다렸다가 버즈를 찾지 못하고 스레드를 남기지 않는다")
+    void deletionMarksBuzzFirst_CreationFailsWithNotFound() throws InterruptedException {
         // given
         Buzz buzz = saveBuzz();
         CountDownLatch buzzDeleted = new CountDownLatch(1);
@@ -188,13 +191,14 @@ class BuzzThreadCreationConcurrencyTest {
         AtomicReference<Throwable> creationFailure = new AtomicReference<>();
         AtomicBoolean blockOnce = new AtomicBoolean(true);
         doAnswer(invocation -> {
-            Object locked = invocation.callRealMethod();
+            Object saved = invocation.callRealMethod();
             if (blockOnce.compareAndSet(true, false)) {
+                entityManager.flush();
                 buzzDeleted.countDown();
                 await(continueDeletion, "삭제 재개");
             }
-            return locked;
-        }).when(buzzRepositoryAdapter).findByIdForUpdate(buzz.getId());
+            return saved;
+        }).when(buzzRepositoryAdapter).save(any(Buzz.class));
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
         submit(executor, () -> buzzCommandService.deleteBuzz(creatorId, buzz.getId()), deletionFailure, deletionFinished);

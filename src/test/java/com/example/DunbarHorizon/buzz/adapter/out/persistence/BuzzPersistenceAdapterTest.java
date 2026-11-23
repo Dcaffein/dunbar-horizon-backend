@@ -358,7 +358,7 @@ class BuzzPersistenceAdapterTest {
     }
 
     @Test
-    @DisplayName("삭제 표시된 버즈는 단건·잠금 조회와 상세·받은 목록·보낸 목록·미확인 작성자에서 빠진다")
+    @DisplayName("삭제 표시된 버즈는 단건·공유 락 조회와 상세·받은 목록·보낸 목록·미확인 작성자에서 빠진다")
     void deletedBuzz_ExcludedFromAllReads() {
         // given
         Buzz deleted = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
@@ -367,7 +367,6 @@ class BuzzPersistenceAdapterTest {
         // when & then
         assertThat(buzzRepositoryAdapter.findById(deleted.getId())).isEmpty();
         assertThat(buzzRepositoryAdapter.findByIdForShare(deleted.getId())).isEmpty();
-        assertThat(buzzRepositoryAdapter.findByIdForUpdate(deleted.getId())).isEmpty();
         assertThat(buzzQueryRepositoryAdapter.findDetail(deleted.getId())).isEmpty();
         assertThat(buzzQueryRepositoryAdapter.findReceived(recipientId, Set.of(), PageRequest.of(0, 20))
                 .getContent()).isEmpty();
@@ -380,7 +379,7 @@ class BuzzPersistenceAdapterTest {
     void delete_WritesOnlyDeletedAt() {
         // given
         Buzz saved = saveBuzz(creatorId, NOW, recipientId);
-        Buzz loaded = buzzRepositoryAdapter.findByIdForUpdate(saved.getId()).orElseThrow();
+        Buzz loaded = buzzRepositoryAdapter.findById(saved.getId()).orElseThrow();
 
         // when
         loaded.delete(creatorId, NOW.plusMinutes(5));

@@ -8,5 +8,4 @@ public interface BuzzRepository {
     Buzz save(Buzz buzz);
     Optional<Buzz> findById(Long buzzId);
     Optional<Buzz> findByIdForShare(Long buzzId);
-    Optional<Buzz> findByIdForUpdate(Long buzzId);
 }
