@@ -39,6 +39,9 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${DB_USERNAME:root}
     password: ${MYSQL_PASSWORD}
+    hikari:
+      data-source-properties:
+        rewriteBatchedStatements: true
 
   flyway:
     enabled: true
