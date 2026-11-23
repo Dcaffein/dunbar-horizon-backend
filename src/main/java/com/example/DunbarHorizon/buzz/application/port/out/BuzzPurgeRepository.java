@@ -5,6 +5,6 @@ import java.util.Collection;
 import java.util.List;
 
 public interface BuzzPurgeRepository {
-    List<Long> findPurgeableIds(LocalDateTime createdAtOrBefore);
+    List<Long> findPurgeableIds(LocalDateTime createdAtOrBefore, int limit);
     void purge(Collection<Long> buzzIds);
 }
