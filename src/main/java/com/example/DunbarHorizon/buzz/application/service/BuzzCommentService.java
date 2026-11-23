@@ -4,14 +4,12 @@ import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommentC
 import com.example.DunbarHorizon.buzz.application.dto.command.WriteBuzzCommentCommand;
 import com.example.DunbarHorizon.buzz.application.service.BuzzThreadAccess.ThreadContext;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzCommentedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzCommentNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadNotFoundException;
-import com.example.DunbarHorizon.buzz.domain.repository.BuzzAudienceMemberRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzCommentRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzRepository;
 import com.example.DunbarHorizon.buzz.domain.repository.BuzzThreadRepository;
@@ -28,7 +26,6 @@ import java.time.LocalDateTime;
 public class BuzzCommentService {
 
     private final BuzzRepository buzzRepository;
-    private final BuzzAudienceMemberRepository buzzAudienceMemberRepository;
     private final BuzzThreadRepository buzzThreadRepository;
     private final BuzzCommentRepository buzzCommentRepository;
     private final BuzzThreadAccess buzzThreadAccess;
@@ -40,7 +37,6 @@ public class BuzzCommentService {
         BuzzComment comment = buzzCommentRepository.save(BuzzComment.write(
                 context.buzz(), context.thread(), command.authorId(), command.text(), command.imageKeys(),
                 LocalDateTime.now()));
-        context.member().ifPresent(this::read);
 
         applicationEventPublisher.publishEvent(new BuzzCommentedEvent(
                 context.buzz().getId(), context.thread().getId(), context.buzz().getCreatorId(),
@@ -64,11 +60,6 @@ public class BuzzCommentService {
         comment.validateDeletion(requesterId, buzz);
 
         buzzCommentRepository.deleteById(commentId);
-    }
-
-    private void read(BuzzAudienceMember member) {
-        member.read();
-        buzzAudienceMemberRepository.save(member);
     }
 
     private Buzz buzzOf(Long buzzId) {

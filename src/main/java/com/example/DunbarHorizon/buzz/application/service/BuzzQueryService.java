@@ -44,7 +44,8 @@ public class BuzzQueryService {
         Optional<BuzzAudienceInfo> member = isCreator
                 ? Optional.empty()
                 : audience.stream().filter(audienceMember -> audienceMember.userId().equals(userId)).findFirst();
-        Buzz.validateAccess(buzzId, buzz.creatorId(), userId, member.isPresent());
+        boolean isAudienceMember = member.isPresent();
+        Buzz.validateAccess(buzzId, buzz.creatorId(), userId, isAudienceMember);
 
         return BuzzDetailResult.of(
                 buzz,

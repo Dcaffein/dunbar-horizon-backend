@@ -60,7 +60,7 @@ class BuzzCommentServiceTest {
 
     @BeforeEach
     void setUp() {
-        buzzCommentService = new BuzzCommentService(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository, buzzCommentRepository,
+        buzzCommentService = new BuzzCommentService(buzzRepository, buzzThreadRepository, buzzCommentRepository,
                 new BuzzThreadAccess(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository, buzzSocialPort),
                 applicationEventPublisher);
         buzz = withId(Buzz.create(creatorId, "본문", List.of(),
@@ -79,8 +79,8 @@ class BuzzCommentServiceTest {
         }
 
         @Test
-        @DisplayName("시작자의 친구인 멤버가 공개 스레드에 답글을 쓰면 저장되고 그 멤버는 읽음이 된다")
-        void writeComment_ByFriendMember_SavesAndMarksRead() {
+        @DisplayName("시작자의 친구인 멤버가 공개 스레드에 답글을 쓰면 저장하고 읽음 상태는 바꾸지 않는다")
+        void writeComment_ByFriendMember_SavesWithoutChangingReadState() {
             // given
             BuzzAudienceMember member = BuzzAudienceMember.create(buzz.getId(), friendMemberId);
             given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), friendMemberId))
@@ -97,8 +97,8 @@ class BuzzCommentServiceTest {
             verify(buzzCommentRepository).save(commentCaptor.capture());
             assertThat(commentCaptor.getValue().getThreadId()).isEqualTo(10L);
             assertThat(commentCaptor.getValue().getAuthorId()).isEqualTo(friendMemberId);
-            assertThat(member.isUnread()).isFalse();
-            verify(buzzAudienceMemberRepository).save(member);
+            assertThat(member.isUnread()).isTrue();
+            verify(buzzAudienceMemberRepository, never()).save(any());
             verify(applicationEventPublisher).publishEvent(
                     new BuzzCommentedEvent(buzz.getId(), 10L, creatorId, starterId, friendMemberId));
         }

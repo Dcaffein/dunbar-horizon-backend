@@ -2,7 +2,6 @@ package com.example.DunbarHorizon.buzz.application.service;
 
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadNotFoundException;
@@ -27,18 +26,17 @@ public class BuzzThreadAccess {
     public ThreadContext forWriting(Long writerId, Long buzzId, Long threadId) {
         Buzz buzz = buzzRepository.findByIdForShare(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
-        Optional<BuzzAudienceMember> member = memberOf(buzz, writerId);
-        buzz.validateAccess(writerId, member.isPresent());
+        boolean isAudienceMember = isAudienceMember(buzz, writerId);
+        buzz.validateAccess(writerId, isAudienceMember);
 
         BuzzThread thread = threadOf(buzzThreadRepository.findByIdForShare(threadId), buzzId, threadId);
         thread.validateAccess(writerId, buzz, isFriendOfStarter(writerId, buzz, thread));
-        return new ThreadContext(buzz, thread, member);
+        return new ThreadContext(buzz, thread);
     }
 
-    private Optional<BuzzAudienceMember> memberOf(Buzz buzz, Long userId) {
-        return buzz.isCreator(userId)
-                ? Optional.empty()
-                : buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), userId);
+    private boolean isAudienceMember(Buzz buzz, Long userId) {
+        return !buzz.isCreator(userId)
+                && buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), userId).isPresent();
     }
 
     private static BuzzThread threadOf(Optional<BuzzThread> found, Long buzzId, Long threadId) {
@@ -54,6 +52,6 @@ public class BuzzThreadAccess {
                 .contains(thread.getStarterId());
     }
 
-    public record ThreadContext(Buzz buzz, BuzzThread thread, Optional<BuzzAudienceMember> member) {
+    public record ThreadContext(Buzz buzz, BuzzThread thread) {
     }
 }

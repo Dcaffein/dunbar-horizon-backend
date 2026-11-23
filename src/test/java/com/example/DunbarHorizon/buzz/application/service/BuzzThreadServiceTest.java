@@ -69,8 +69,8 @@ class BuzzThreadServiceTest {
     class CreateThread {
 
         @Test
-        @DisplayName("공개 대상 멤버가 스레드를 생성하면 저장하고 그 멤버를 읽음으로 바꾼다")
-        void createThread_ByMember_SavesAndMarksRead() {
+        @DisplayName("공개 대상 멤버가 스레드를 생성하면 저장하고 읽음 상태는 바꾸지 않는다")
+        void createThread_ByMember_SavesWithoutChangingReadState() {
             // given
             BuzzAudienceMember member = BuzzAudienceMember.create(buzz.getId(), starterId);
             given(buzzRepository.findByIdForShare(buzz.getId())).willReturn(Optional.of(buzz));
@@ -86,8 +86,8 @@ class BuzzThreadServiceTest {
             verify(buzzThreadRepository).save(threadCaptor.capture());
             assertThat(threadCaptor.getValue().getVisibility()).isEqualTo(ThreadVisibility.PRIVATE);
             assertThat(threadCaptor.getValue().getImageKeys()).containsExactly("buzz/a");
-            assertThat(member.isUnread()).isFalse();
-            verify(buzzAudienceMemberRepository).save(member);
+            assertThat(member.isUnread()).isTrue();
+            verify(buzzAudienceMemberRepository, never()).save(any());
             verify(applicationEventPublisher).publishEvent(
                     new BuzzThreadCreatedEvent(buzz.getId(), null, creatorId, starterId));
         }

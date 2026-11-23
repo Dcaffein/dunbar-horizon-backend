@@ -58,7 +58,8 @@ public class BuzzService {
         Optional<BuzzAudienceMember> member = buzz.isCreator(readerId)
                 ? Optional.empty()
                 : buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzzId, readerId);
-        buzz.validateAccess(readerId, member.isPresent());
+        boolean isAudienceMember = member.isPresent();
+        buzz.validateAccess(readerId, isAudienceMember);
 
         member.ifPresent(this::read);
     }

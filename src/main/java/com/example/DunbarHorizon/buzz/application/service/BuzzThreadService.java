@@ -3,7 +3,6 @@ package com.example.DunbarHorizon.buzz.application.service;
 import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzThreadCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzThreadCommand;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
-import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.event.BuzzThreadCreatedEvent;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,13 +32,12 @@ public class BuzzThreadService {
     public Long createThread(CreateBuzzThreadCommand command) {
         Buzz buzz = buzzRepository.findByIdForShare(command.buzzId())
                 .orElseThrow(() -> new BuzzNotFoundException(command.buzzId()));
-        Optional<BuzzAudienceMember> member =
-                buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), command.starterId());
+        boolean isAudienceMember =
+                buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), command.starterId()).isPresent();
 
         BuzzThread thread = buzzThreadRepository.save(BuzzThread.create(
-                buzz, command.starterId(), member.isPresent(), command.visibility(), command.text(),
+                buzz, command.starterId(), isAudienceMember, command.visibility(), command.text(),
                 command.imageKeys(), LocalDateTime.now()));
-        member.ifPresent(this::read);
 
         applicationEventPublisher.publishEvent(new BuzzThreadCreatedEvent(
                 buzz.getId(), thread.getId(), buzz.getCreatorId(), command.starterId()));
@@ -64,11 +61,6 @@ public class BuzzThreadService {
 
         buzzThreadRepository.deleteById(threadId);
         buzzCommentRepository.deleteAllByThreadId(threadId);
-    }
-
-    private void read(BuzzAudienceMember member) {
-        member.read();
-        buzzAudienceMemberRepository.save(member);
     }
 
     private BuzzThread threadOf(Buzz buzz, Long threadId) {
