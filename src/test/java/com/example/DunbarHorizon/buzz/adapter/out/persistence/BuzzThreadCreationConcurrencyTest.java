@@ -5,8 +5,8 @@ import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
 import com.example.DunbarHorizon.buzz.application.service.BuzzPurgeService;
-import com.example.DunbarHorizon.buzz.application.service.BuzzService;
-import com.example.DunbarHorizon.buzz.application.service.BuzzThreadService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzCommandService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzThreadCommandService;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
@@ -46,14 +46,14 @@ import static org.mockito.Mockito.doAnswer;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class, BuzzQueryRepositoryAdapter.class,
         BuzzThreadRepositoryAdapter.class, BuzzCommentRepositoryAdapter.class, BuzzProfileAssembler.class,
-        BuzzService.class, BuzzPurgeService.class, BuzzThreadService.class})
+        BuzzCommandService.class, BuzzPurgeService.class, BuzzThreadCommandService.class})
 class BuzzThreadCreationConcurrencyTest {
 
     private static final long WAIT_SECONDS = 5;
 
-    @Autowired private BuzzService buzzService;
+    @Autowired private BuzzCommandService buzzCommandService;
     @Autowired private BuzzPurgeService buzzPurgeService;
-    @Autowired private BuzzThreadService buzzThreadService;
+    @Autowired private BuzzThreadCommandService buzzThreadCommandService;
     @Autowired private BuzzThreadRepositoryAdapter buzzThreadRepositoryAdapter;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private PlatformTransactionManager transactionManager;
@@ -94,8 +94,8 @@ class BuzzThreadCreationConcurrencyTest {
         // when
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
-            submit(executor, () -> buzzThreadService.createThread(command(buzz, ThreadVisibility.PUBLIC)), firstFailure, finished);
-            submit(executor, () -> buzzThreadService.createThread(command(buzz, ThreadVisibility.PUBLIC)), secondFailure, finished);
+            submit(executor, () -> buzzThreadCommandService.createThread(command(buzz, ThreadVisibility.PUBLIC)), firstFailure, finished);
+            submit(executor, () -> buzzThreadCommandService.createThread(command(buzz, ThreadVisibility.PUBLIC)), secondFailure, finished);
             assertThat(finished.await(WAIT_SECONDS * 2, TimeUnit.SECONDS)).isTrue();
         } finally {
             executor.shutdownNow();
@@ -118,7 +118,7 @@ class BuzzThreadCreationConcurrencyTest {
                 buzz, starterId, true, ThreadVisibility.PRIVATE, "먼저 생성한 글", List.of(), LocalDateTime.now()));
 
         // when & then
-        assertThatThrownBy(() -> buzzThreadService.createThread(command(buzz, ThreadVisibility.PRIVATE)))
+        assertThatThrownBy(() -> buzzThreadCommandService.createThread(command(buzz, ThreadVisibility.PRIVATE)))
                 .isInstanceOf(BuzzThreadAlreadyExistsException.class);
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT is_read FROM buzz_audience_members WHERE buzz_id = ? AND user_id = ?",
@@ -147,12 +147,12 @@ class BuzzThreadCreationConcurrencyTest {
         }).when(buzzRepositoryAdapter).findByIdForShare(buzz.getId());
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        submit(executor, () -> buzzThreadService.createThread(command(buzz, ThreadVisibility.PUBLIC)), creationFailure, creationFinished);
+        submit(executor, () -> buzzThreadCommandService.createThread(command(buzz, ThreadVisibility.PUBLIC)), creationFailure, creationFinished);
 
         try {
             // when
             assertThat(buzzLocked.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-            submit(executor, () -> buzzService.deleteBuzz(creatorId, buzz.getId()), deletionFailure, deletionFinished);
+            submit(executor, () -> buzzCommandService.deleteBuzz(creatorId, buzz.getId()), deletionFailure, deletionFinished);
             awaitFinishedOrLockWait(deletionFinished, "버즈 삭제");
             assertThat(deletionFinished.getCount())
                     .as("삭제가 스레드 생성의 커밋 전에 끝났다. 삭제 실패: %s, 생성 실패: %s",
@@ -197,12 +197,12 @@ class BuzzThreadCreationConcurrencyTest {
         }).when(buzzRepositoryAdapter).findByIdForUpdate(buzz.getId());
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        submit(executor, () -> buzzService.deleteBuzz(creatorId, buzz.getId()), deletionFailure, deletionFinished);
+        submit(executor, () -> buzzCommandService.deleteBuzz(creatorId, buzz.getId()), deletionFailure, deletionFinished);
 
         try {
             // when
             assertThat(buzzDeleted.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-            submit(executor, () -> buzzThreadService.createThread(command(buzz, ThreadVisibility.PUBLIC)), creationFailure, creationFinished);
+            submit(executor, () -> buzzThreadCommandService.createThread(command(buzz, ThreadVisibility.PUBLIC)), creationFailure, creationFinished);
             awaitFinishedOrLockWait(creationFinished, "스레드 생성");
             continueDeletion.countDown();
             assertThat(deletionFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();

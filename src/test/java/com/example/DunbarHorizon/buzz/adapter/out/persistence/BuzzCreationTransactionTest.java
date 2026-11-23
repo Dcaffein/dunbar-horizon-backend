@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.buzz.application.dto.info.recipient.ManualRecip
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
-import com.example.DunbarHorizon.buzz.application.service.BuzzService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzCommandService;
 import com.example.DunbarHorizon.support.JpaRepositoryTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,10 +34,10 @@ import static org.mockito.Mockito.doThrow;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class,
         BuzzQueryRepositoryAdapter.class, BuzzThreadRepositoryAdapter.class, BuzzCommentRepositoryAdapter.class, BuzzProfileAssembler.class,
-        BuzzService.class})
+        BuzzCommandService.class})
 class BuzzCreationTransactionTest {
 
-    @Autowired private BuzzService buzzService;
+    @Autowired private BuzzCommandService buzzCommandService;
     @Autowired private JdbcTemplate jdbcTemplate;
     @MockitoSpyBean private BuzzAudienceMemberRepositoryAdapter buzzAudienceMemberRepositoryAdapter;
     @MockitoBean private BuzzSocialPort buzzSocialPort;
@@ -64,7 +64,7 @@ class BuzzCreationTransactionTest {
         doThrow(new IllegalStateException("멤버 저장 실패")).when(buzzAudienceMemberRepositoryAdapter).saveAll(anyList());
 
         // when & then
-        assertThatThrownBy(() -> buzzService.createBuzz(command(), List.of()))
+        assertThatThrownBy(() -> buzzCommandService.createBuzz(command(), List.of()))
                 .isInstanceOf(IllegalStateException.class);
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM buzzes WHERE creator_id = ?", Long.class, creatorId)).isZero();
@@ -74,7 +74,7 @@ class BuzzCreationTransactionTest {
     @DisplayName("생성이 성공하면 버즈와 미읽음 공개 대상 멤버가 함께 저장된다")
     void createBuzz_SavesBuzzAndUnreadMembers() {
         // when
-        buzzService.createBuzz(command(), List.of());
+        buzzCommandService.createBuzz(command(), List.of());
 
         // then
         assertThat(jdbcTemplate.queryForObject(

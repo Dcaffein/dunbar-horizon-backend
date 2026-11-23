@@ -37,14 +37,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class BuzzServiceTest {
+class BuzzCommandServiceTest {
 
     @Mock private BuzzRepository buzzRepository;
     @Mock private BuzzAudienceMemberRepository buzzAudienceMemberRepository;
     @Mock private BuzzSocialPort buzzSocialPort;
     @Mock private ApplicationEventPublisher applicationEventPublisher;
 
-    private BuzzService buzzService;
+    private BuzzCommandService buzzCommandService;
 
     private final Long creatorId = 1L;
     private final Long recipientId = 2L;
@@ -52,7 +52,7 @@ class BuzzServiceTest {
 
     @BeforeEach
     void setUp() {
-        buzzService = new BuzzService(buzzRepository, buzzAudienceMemberRepository, buzzSocialPort,
+        buzzCommandService = new BuzzCommandService(buzzRepository, buzzAudienceMemberRepository, buzzSocialPort,
                 applicationEventPublisher);
     }
 
@@ -73,7 +73,7 @@ class BuzzServiceTest {
         @DisplayName("이미지 키를 서명하지 않고 그대로 저장한다")
         void createBuzz_SavesImageKeys() {
             // when
-            buzzService.createBuzz(command(), List.of("buzz/photo"));
+            buzzCommandService.createBuzz(command(), List.of("buzz/photo"));
 
             // then
             ArgumentCaptor<Buzz> buzzCaptor = ArgumentCaptor.forClass(Buzz.class);
@@ -86,7 +86,7 @@ class BuzzServiceTest {
         @SuppressWarnings("unchecked")
         void createBuzz_SavesAudienceMembersAndPublishesEvent() {
             // when
-            buzzService.createBuzz(command(), List.of());
+            buzzCommandService.createBuzz(command(), List.of());
 
             // then
             ArgumentCaptor<Buzz> buzzCaptor = ArgumentCaptor.forClass(Buzz.class);
@@ -118,7 +118,7 @@ class BuzzServiceTest {
             given(buzzSocialPort.getFriendIdsIn(creatorId, List.of(recipientId, 5L))).willReturn(Set.of(recipientId));
 
             // when
-            buzzService.createBuzz(new CreateBuzzCommand(creatorId, "텍스트",
+            buzzCommandService.createBuzz(new CreateBuzzCommand(creatorId, "텍스트",
                     new ManualRecipientSpec(List.of(creatorId, recipientId, 5L))), List.of());
 
             // then
@@ -133,7 +133,7 @@ class BuzzServiceTest {
             given(buzzSocialPort.getLabelMemberIds(creatorId, List.of("label-1"))).willReturn(Set.of(recipientId));
 
             // when
-            buzzService.createBuzz(new CreateBuzzCommand(creatorId, "텍스트",
+            buzzCommandService.createBuzz(new CreateBuzzCommand(creatorId, "텍스트",
                     new LabelRecipientSpec(List.of("label-1"))), List.of());
 
             // then
@@ -149,7 +149,7 @@ class BuzzServiceTest {
             given(buzzSocialPort.getIntermediaryExpansionIds(creatorId, 7L, 0.5)).willReturn(Set.of(recipientId, 8L));
 
             // when
-            buzzService.createBuzz(new CreateBuzzCommand(creatorId, "텍스트",
+            buzzCommandService.createBuzz(new CreateBuzzCommand(creatorId, "텍스트",
                     new IntermediaryRecipientSpec(7L, 0.5)), List.of());
 
             // then
@@ -180,7 +180,7 @@ class BuzzServiceTest {
                     .willReturn(Optional.of(member));
 
             // when
-            buzzService.readBuzz(recipientId, buzz.getId());
+            buzzCommandService.readBuzz(recipientId, buzz.getId());
 
             // then
             assertThat(member.isUnread()).isFalse();
@@ -191,7 +191,7 @@ class BuzzServiceTest {
         @DisplayName("게시자가 읽으면 멤버를 찾지 않고 아무것도 바꾸지 않는다")
         void readBuzz_Creator_NoOp() {
             // when
-            buzzService.readBuzz(creatorId, buzz.getId());
+            buzzCommandService.readBuzz(creatorId, buzz.getId());
 
             // then
             verify(buzzAudienceMemberRepository, never()).findByBuzzIdAndUserId(any(), any());
@@ -203,7 +203,7 @@ class BuzzServiceTest {
             given(buzzAudienceMemberRepository.findByBuzzIdAndUserId(buzz.getId(), strangerId))
                     .willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> buzzService.readBuzz(strangerId, buzz.getId()))
+            assertThatThrownBy(() -> buzzCommandService.readBuzz(strangerId, buzz.getId()))
                     .isInstanceOf(BuzzAccessDeniedException.class);
         }
     }
@@ -213,7 +213,7 @@ class BuzzServiceTest {
     void readBuzz_Missing_NotFound() {
         given(buzzRepository.findByIdForShare(999L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> buzzService.readBuzz(recipientId, 999L))
+        assertThatThrownBy(() -> buzzCommandService.readBuzz(recipientId, 999L))
                 .isInstanceOf(BuzzNotFoundException.class);
     }
 
@@ -229,7 +229,7 @@ class BuzzServiceTest {
             given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
 
             // when
-            buzzService.updateBuzz(new UpdateBuzzCommand(creatorId, buzz.getId(), "고친 본문", List.of("buzz/b")));
+            buzzCommandService.updateBuzz(new UpdateBuzzCommand(creatorId, buzz.getId(), "고친 본문", List.of("buzz/b")));
 
             // then
             assertThat(buzz.getText()).isEqualTo("고친 본문");
@@ -246,7 +246,7 @@ class BuzzServiceTest {
             given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
 
             // when & then
-            assertThatThrownBy(() -> buzzService.updateBuzz(
+            assertThatThrownBy(() -> buzzCommandService.updateBuzz(
                     new UpdateBuzzCommand(recipientId, buzz.getId(), "고친 본문", List.of())))
                     .isInstanceOf(BuzzAccessDeniedException.class);
             assertThat(buzz.getText()).isEqualTo("본문");
@@ -257,7 +257,7 @@ class BuzzServiceTest {
         void updateBuzz_Missing_NotFound() {
             given(buzzRepository.findById(999L)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> buzzService.updateBuzz(
+            assertThatThrownBy(() -> buzzCommandService.updateBuzz(
                     new UpdateBuzzCommand(creatorId, 999L, "고친 본문", List.of())))
                     .isInstanceOf(BuzzNotFoundException.class);
         }
@@ -275,7 +275,7 @@ class BuzzServiceTest {
             given(buzzRepository.findByIdForUpdate(buzz.getId())).willReturn(Optional.of(buzz));
 
             // when
-            buzzService.deleteBuzz(creatorId, buzz.getId());
+            buzzCommandService.deleteBuzz(creatorId, buzz.getId());
 
             // then
             assertThat(buzz.getDeletedAt()).isNotNull();
@@ -292,7 +292,7 @@ class BuzzServiceTest {
             given(buzzRepository.findByIdForUpdate(buzz.getId())).willReturn(Optional.of(buzz));
 
             // when & then
-            assertThatThrownBy(() -> buzzService.deleteBuzz(recipientId, buzz.getId()))
+            assertThatThrownBy(() -> buzzCommandService.deleteBuzz(recipientId, buzz.getId()))
                     .isInstanceOf(BuzzAccessDeniedException.class);
             assertThat(buzz.getDeletedAt()).isNull();
         }
@@ -302,7 +302,7 @@ class BuzzServiceTest {
         void deleteBuzz_Missing_NotFound() {
             given(buzzRepository.findByIdForUpdate(999L)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> buzzService.deleteBuzz(creatorId, 999L))
+            assertThatThrownBy(() -> buzzCommandService.deleteBuzz(creatorId, 999L))
                     .isInstanceOf(BuzzNotFoundException.class);
         }
     }

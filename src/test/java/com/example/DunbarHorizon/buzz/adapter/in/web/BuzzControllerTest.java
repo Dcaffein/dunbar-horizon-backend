@@ -161,7 +161,7 @@ class BuzzControllerTest extends BaseControllerTest {
         mockMvc.perform(put("/api/v1/buzzes/1/readers/me"))
                 .andExpect(status().isNoContent());
 
-        verify(buzzService).readBuzz(1L, 1L);
+        verify(buzzCommandService).readBuzz(1L, 1L);
     }
 
     @Nested
@@ -179,7 +179,7 @@ class BuzzControllerTest extends BaseControllerTest {
                             .content("{ \"text\": \"고친 본문\", \"imageKeys\": [\"buzz/b\"] }"))
                     .andExpect(status().isNoContent());
 
-            verify(buzzService).updateBuzz(new UpdateBuzzCommand(CURRENT_USER_ID, 1L, "고친 본문", List.of("buzz/b")));
+            verify(buzzCommandService).updateBuzz(new UpdateBuzzCommand(CURRENT_USER_ID, 1L, "고친 본문", List.of("buzz/b")));
         }
 
         @Test

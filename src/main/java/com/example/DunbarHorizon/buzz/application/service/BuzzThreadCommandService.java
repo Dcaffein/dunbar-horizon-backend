@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class BuzzThreadService {
+public class BuzzThreadCommandService {
 
     private final BuzzRepository buzzRepository;
     private final BuzzAudienceMemberRepository buzzAudienceMemberRepository;

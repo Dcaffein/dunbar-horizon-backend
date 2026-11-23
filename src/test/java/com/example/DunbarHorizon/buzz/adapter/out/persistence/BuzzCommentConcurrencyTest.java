@@ -3,10 +3,10 @@ package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 import com.example.DunbarHorizon.buzz.application.dto.command.WriteBuzzCommentCommand;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
-import com.example.DunbarHorizon.buzz.application.service.BuzzCommentService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzCommentCommandService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
 import com.example.DunbarHorizon.buzz.application.service.BuzzPurgeService;
-import com.example.DunbarHorizon.buzz.application.service.BuzzThreadService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzThreadCommandService;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
@@ -48,13 +48,13 @@ import static org.mockito.Mockito.doThrow;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class, BuzzThreadRepositoryAdapter.class,
         BuzzCommentRepositoryAdapter.class, BuzzProfileAssembler.class,
-        BuzzThreadService.class, BuzzCommentService.class, BuzzPurgeService.class})
+        BuzzThreadCommandService.class, BuzzCommentCommandService.class, BuzzPurgeService.class})
 class BuzzCommentConcurrencyTest {
 
     private static final long WAIT_SECONDS = 5;
 
-    @Autowired private BuzzThreadService buzzThreadService;
-    @Autowired private BuzzCommentService buzzCommentService;
+    @Autowired private BuzzThreadCommandService buzzThreadCommandService;
+    @Autowired private BuzzCommentCommandService buzzCommentCommandService;
     @Autowired private BuzzPurgeService buzzPurgeService;
     @Autowired private BuzzRepositoryAdapter buzzRepositoryAdapter;
     @Autowired private BuzzAudienceMemberRepositoryAdapter buzzAudienceMemberRepositoryAdapter;
@@ -103,12 +103,12 @@ class BuzzCommentConcurrencyTest {
         }).when(buzzThreadRepositoryAdapter).findByIdForShare(thread.getId());
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        submit(executor, () -> buzzCommentService.writeComment(command(thread)), commentFailure, commentFinished);
+        submit(executor, () -> buzzCommentCommandService.writeComment(command(thread)), commentFailure, commentFinished);
 
         try {
             // when
             assertThat(threadLocked.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-            submit(executor, () -> buzzThreadService.deleteThread(starterId, thread.getBuzzId(), thread.getId()),
+            submit(executor, () -> buzzThreadCommandService.deleteThread(starterId, thread.getBuzzId(), thread.getId()),
                     deletionFailure, deletionFinished);
             awaitFinishedOrLockWait(deletionFinished, "스레드 삭제");
             assertThat(deletionFinished.getCount()).isEqualTo(1);
@@ -145,13 +145,13 @@ class BuzzCommentConcurrencyTest {
         }).when(buzzThreadRepositoryAdapter).deleteById(thread.getId());
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        submit(executor, () -> buzzThreadService.deleteThread(starterId, thread.getBuzzId(), thread.getId()),
+        submit(executor, () -> buzzThreadCommandService.deleteThread(starterId, thread.getBuzzId(), thread.getId()),
                 deletionFailure, deletionFinished);
 
         try {
             // when
             assertThat(threadDeleted.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-            submit(executor, () -> buzzCommentService.writeComment(command(thread)), commentFailure, commentFinished);
+            submit(executor, () -> buzzCommentCommandService.writeComment(command(thread)), commentFailure, commentFinished);
             awaitFinishedOrLockWait(commentFinished, "답글 쓰기");
             continueDeletion.countDown();
             assertThat(deletionFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
@@ -189,7 +189,7 @@ class BuzzCommentConcurrencyTest {
         }).when(buzzThreadRepositoryAdapter).deleteById(thread.getId());
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        submit(executor, () -> buzzThreadService.deleteThread(starterId, thread.getBuzzId(), thread.getId()),
+        submit(executor, () -> buzzThreadCommandService.deleteThread(starterId, thread.getBuzzId(), thread.getId()),
                 deletionFailure, deletionFinished);
 
         try {
@@ -231,8 +231,8 @@ class BuzzCommentConcurrencyTest {
         // when
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
-            submit(executor, () -> buzzCommentService.writeComment(command(thread)), starterFailure, finished);
-            submit(executor, () -> buzzCommentService.writeComment(new WriteBuzzCommentCommand(
+            submit(executor, () -> buzzCommentCommandService.writeComment(command(thread)), starterFailure, finished);
+            submit(executor, () -> buzzCommentCommandService.writeComment(new WriteBuzzCommentCommand(
                     creatorId, thread.getBuzzId(), thread.getId(), "게시자 답글", List.of())), creatorFailure, finished);
             assertThat(finished.await(WAIT_SECONDS * 2, TimeUnit.SECONDS)).isTrue();
         } finally {
@@ -253,7 +253,7 @@ class BuzzCommentConcurrencyTest {
         doThrow(new IllegalStateException("답글 저장 실패")).when(buzzCommentRepositoryAdapter).save(any());
 
         // when & then
-        assertThatThrownBy(() -> buzzCommentService.writeComment(command(thread)))
+        assertThatThrownBy(() -> buzzCommentCommandService.writeComment(command(thread)))
                 .isInstanceOf(IllegalStateException.class);
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT is_read FROM buzz_audience_members WHERE buzz_id = ? AND user_id = ?",

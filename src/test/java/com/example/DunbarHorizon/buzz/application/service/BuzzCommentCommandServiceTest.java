@@ -39,7 +39,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class BuzzCommentServiceTest {
+class BuzzCommentCommandServiceTest {
 
     @Mock private BuzzRepository buzzRepository;
     @Mock private BuzzAudienceMemberRepository buzzAudienceMemberRepository;
@@ -48,7 +48,7 @@ class BuzzCommentServiceTest {
     @Mock private BuzzSocialPort buzzSocialPort;
     @Mock private ApplicationEventPublisher applicationEventPublisher;
 
-    private BuzzCommentService buzzCommentService;
+    private BuzzCommentCommandService buzzCommentCommandService;
 
     private final Long creatorId = 1L;
     private final Long starterId = 2L;
@@ -59,7 +59,7 @@ class BuzzCommentServiceTest {
 
     @BeforeEach
     void setUp() {
-        buzzCommentService = new BuzzCommentService(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository,
+        buzzCommentCommandService = new BuzzCommentCommandService(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository,
                 buzzCommentRepository, buzzSocialPort, applicationEventPublisher);
         buzz = withId(Buzz.create(creatorId, "본문", List.of(),
                 Set.of(starterId, friendMemberId, otherMemberId), LocalDateTime.now()), 1L);
@@ -88,7 +88,7 @@ class BuzzCommentServiceTest {
             given(buzzCommentRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
             // when
-            buzzCommentService.writeComment(command(friendMemberId));
+            buzzCommentCommandService.writeComment(command(friendMemberId));
 
             // then
             ArgumentCaptor<BuzzComment> commentCaptor = ArgumentCaptor.forClass(BuzzComment.class);
@@ -111,7 +111,7 @@ class BuzzCommentServiceTest {
             given(buzzSocialPort.getFriendIdsIn(otherMemberId, List.of(starterId))).willReturn(Set.of());
 
             // when & then
-            assertThatThrownBy(() -> buzzCommentService.writeComment(command(otherMemberId)))
+            assertThatThrownBy(() -> buzzCommentCommandService.writeComment(command(otherMemberId)))
                     .isInstanceOf(BuzzAccessDeniedException.class);
             verify(buzzCommentRepository, never()).save(any());
             verify(applicationEventPublisher, never()).publishEvent(any());
@@ -125,7 +125,7 @@ class BuzzCommentServiceTest {
             given(buzzCommentRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
             // when
-            buzzCommentService.writeComment(command(creatorId));
+            buzzCommentCommandService.writeComment(command(creatorId));
 
             // then
             verify(buzzCommentRepository).save(any());
@@ -158,7 +158,7 @@ class BuzzCommentServiceTest {
             given(buzzCommentRepository.findById(100L)).willReturn(Optional.of(comment));
 
             // when
-            buzzCommentService.updateComment(new UpdateBuzzCommentCommand(
+            buzzCommentCommandService.updateComment(new UpdateBuzzCommentCommand(
                     friendMemberId, buzz.getId(), 10L, 100L, "수정", List.of()));
 
             // then
@@ -173,7 +173,7 @@ class BuzzCommentServiceTest {
             given(buzzCommentRepository.findById(100L)).willReturn(Optional.of(comment));
 
             // when
-            buzzCommentService.deleteComment(creatorId, buzz.getId(), 10L, 100L);
+            buzzCommentCommandService.deleteComment(creatorId, buzz.getId(), 10L, 100L);
 
             // then
             verify(buzzCommentRepository).deleteById(100L);
@@ -186,7 +186,7 @@ class BuzzCommentServiceTest {
             given(buzzCommentRepository.findById(100L)).willReturn(Optional.of(comment));
 
             // when & then
-            assertThatThrownBy(() -> buzzCommentService.deleteComment(starterId, buzz.getId(), 10L, 100L))
+            assertThatThrownBy(() -> buzzCommentCommandService.deleteComment(starterId, buzz.getId(), 10L, 100L))
                     .isInstanceOf(BuzzAccessDeniedException.class);
         }
 
@@ -202,7 +202,7 @@ class BuzzCommentServiceTest {
             given(buzzCommentRepository.findById(100L)).willReturn(Optional.of(otherThreadComment));
 
             // when & then
-            assertThatThrownBy(() -> buzzCommentService.updateComment(new UpdateBuzzCommentCommand(
+            assertThatThrownBy(() -> buzzCommentCommandService.updateComment(new UpdateBuzzCommentCommand(
                     friendMemberId, buzz.getId(), 10L, 100L, "수정", List.of())))
                     .isInstanceOf(BuzzCommentNotFoundException.class);
         }

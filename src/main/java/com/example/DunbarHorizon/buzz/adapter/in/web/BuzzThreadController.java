@@ -6,9 +6,9 @@ import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommentC
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzThreadCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.WriteBuzzCommentCommand;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzThreadDetailResult;
-import com.example.DunbarHorizon.buzz.application.service.BuzzCommentService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzCommentCommandService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzThreadQueryService;
-import com.example.DunbarHorizon.buzz.application.service.BuzzThreadService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzThreadCommandService;
 import com.example.DunbarHorizon.global.annotation.CurrentUserId;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,16 +28,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class BuzzThreadController {
 
-    private final BuzzThreadService buzzThreadService;
+    private final BuzzThreadCommandService buzzThreadCommandService;
     private final BuzzThreadQueryService buzzThreadQueryService;
-    private final BuzzCommentService buzzCommentService;
+    private final BuzzCommentCommandService buzzCommentCommandService;
 
     @PostMapping
     public ResponseEntity<Void> createThread(
             @CurrentUserId Long currentUserId,
             @PathVariable Long buzzId,
             @RequestBody @Valid BuzzThreadCreateRequest request) {
-        buzzThreadService.createThread(request.toCommand(currentUserId, buzzId));
+        buzzThreadCommandService.createThread(request.toCommand(currentUserId, buzzId));
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -55,7 +55,7 @@ public class BuzzThreadController {
             @PathVariable Long buzzId,
             @PathVariable Long threadId,
             @RequestBody @Valid BuzzPostRequest request) {
-        buzzThreadService.updateThread(new UpdateBuzzThreadCommand(
+        buzzThreadCommandService.updateThread(new UpdateBuzzThreadCommand(
                 currentUserId, buzzId, threadId, request.text(), request.imageKeysOrEmpty()));
         return ResponseEntity.noContent().build();
     }
@@ -65,7 +65,7 @@ public class BuzzThreadController {
             @CurrentUserId Long currentUserId,
             @PathVariable Long buzzId,
             @PathVariable Long threadId) {
-        buzzThreadService.deleteThread(currentUserId, buzzId, threadId);
+        buzzThreadCommandService.deleteThread(currentUserId, buzzId, threadId);
         return ResponseEntity.noContent().build();
     }
 
@@ -75,7 +75,7 @@ public class BuzzThreadController {
             @PathVariable Long buzzId,
             @PathVariable Long threadId,
             @RequestBody @Valid BuzzPostRequest request) {
-        buzzCommentService.writeComment(new WriteBuzzCommentCommand(
+        buzzCommentCommandService.writeComment(new WriteBuzzCommentCommand(
                 currentUserId, buzzId, threadId, request.text(), request.imageKeysOrEmpty()));
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -87,7 +87,7 @@ public class BuzzThreadController {
             @PathVariable Long threadId,
             @PathVariable Long commentId,
             @RequestBody @Valid BuzzPostRequest request) {
-        buzzCommentService.updateComment(new UpdateBuzzCommentCommand(
+        buzzCommentCommandService.updateComment(new UpdateBuzzCommentCommand(
                 currentUserId, buzzId, threadId, commentId, request.text(), request.imageKeysOrEmpty()));
         return ResponseEntity.noContent().build();
     }
@@ -98,7 +98,7 @@ public class BuzzThreadController {
             @PathVariable Long buzzId,
             @PathVariable Long threadId,
             @PathVariable Long commentId) {
-        buzzCommentService.deleteComment(currentUserId, buzzId, threadId, commentId);
+        buzzCommentCommandService.deleteComment(currentUserId, buzzId, threadId, commentId);
         return ResponseEntity.noContent().build();
     }
 }

@@ -37,14 +37,14 @@ class BuzzThreadControllerTest extends BaseControllerTest {
         String body = """
                 { "text": "첫 글", "visibility": "PRIVATE", "imageKeys": ["buzz/a"] }
                 """;
-        given(buzzThreadService.createThread(any())).willReturn(10L);
+        given(buzzThreadCommandService.createThread(any())).willReturn(10L);
 
         mockMvc.perform(post("/api/v1/buzzes/1/threads")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isCreated());
 
-        verify(buzzThreadService).createThread(new CreateBuzzThreadCommand(
+        verify(buzzThreadCommandService).createThread(new CreateBuzzThreadCommand(
                 CURRENT_USER_ID, 1L, ThreadVisibility.PRIVATE, "첫 글", List.of("buzz/a")));
     }
 
@@ -83,7 +83,7 @@ class BuzzThreadControllerTest extends BaseControllerTest {
                         .content("{ \"text\": \"답글\" }"))
                 .andExpect(status().isCreated());
 
-        verify(buzzCommentService).writeComment(new WriteBuzzCommentCommand(
+        verify(buzzCommentCommandService).writeComment(new WriteBuzzCommentCommand(
                 CURRENT_USER_ID, 1L, 10L, "답글", List.of()));
     }
 
@@ -115,9 +115,9 @@ class BuzzThreadControllerTest extends BaseControllerTest {
                         .content("{ \"text\": \"수정한 답글\" }"))
                 .andExpect(status().isNoContent());
 
-        verify(buzzThreadService).updateThread(new UpdateBuzzThreadCommand(
+        verify(buzzThreadCommandService).updateThread(new UpdateBuzzThreadCommand(
                 CURRENT_USER_ID, 1L, 10L, "수정한 글", List.of("buzz/b")));
-        verify(buzzCommentService).updateComment(new UpdateBuzzCommentCommand(
+        verify(buzzCommentCommandService).updateComment(new UpdateBuzzCommentCommand(
                 CURRENT_USER_ID, 1L, 10L, 100L, "수정한 답글", List.of()));
     }
 
@@ -130,8 +130,8 @@ class BuzzThreadControllerTest extends BaseControllerTest {
         mockMvc.perform(delete("/api/v1/buzzes/1/threads/10/comments/100"))
                 .andExpect(status().isNoContent());
 
-        verify(buzzThreadService).deleteThread(CURRENT_USER_ID, 1L, 10L);
-        verify(buzzCommentService).deleteComment(CURRENT_USER_ID, 1L, 10L, 100L);
+        verify(buzzThreadCommandService).deleteThread(CURRENT_USER_ID, 1L, 10L);
+        verify(buzzCommentCommandService).deleteComment(CURRENT_USER_ID, 1L, 10L, 100L);
     }
 
     @Test
@@ -139,7 +139,7 @@ class BuzzThreadControllerTest extends BaseControllerTest {
     @DisplayName("같은 공개 범위의 스레드를 다시 생성하면 409를 반환한다")
     void createThread_Duplicate_Returns409() throws Exception {
         willThrow(new BuzzThreadAlreadyExistsException(1L, CURRENT_USER_ID, ThreadVisibility.PUBLIC))
-                .given(buzzThreadService).createThread(any());
+                .given(buzzThreadCommandService).createThread(any());
 
         mockMvc.perform(post("/api/v1/buzzes/1/threads")
                         .contentType(MediaType.APPLICATION_JSON)

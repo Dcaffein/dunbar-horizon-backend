@@ -26,7 +26,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class BuzzService {
+public class BuzzCommandService {
 
     private final BuzzRepository buzzRepository;
     private final BuzzAudienceMemberRepository buzzAudienceMemberRepository;

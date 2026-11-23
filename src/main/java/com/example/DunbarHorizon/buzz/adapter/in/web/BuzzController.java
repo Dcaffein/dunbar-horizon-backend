@@ -3,7 +3,7 @@ package com.example.DunbarHorizon.buzz.adapter.in.web;
 import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzCreateRequest;
 import com.example.DunbarHorizon.buzz.adapter.in.web.dto.BuzzUpdateRequest;
 import com.example.DunbarHorizon.buzz.application.service.BuzzQueryService;
-import com.example.DunbarHorizon.buzz.application.service.BuzzService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzCommandService;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
@@ -27,7 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BuzzController {
 
-    private final BuzzService buzzService;
+    private final BuzzCommandService buzzCommandService;
     private final BuzzQueryService buzzQueryService;
     private final ImageStoragePort imageStoragePort;
 
@@ -43,7 +43,7 @@ public class BuzzController {
             @CurrentUserId Long currentUserId,
             @RequestBody @Valid BuzzCreateRequest request) {
         List<String> imageKeys = request.imageKeys() != null ? request.imageKeys() : List.of();
-        buzzService.createBuzz(request.toCommand(currentUserId), imageKeys);
+        buzzCommandService.createBuzz(request.toCommand(currentUserId), imageKeys);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -72,7 +72,7 @@ public class BuzzController {
     public ResponseEntity<Void> readBuzz(
             @CurrentUserId Long currentUserId,
             @PathVariable Long buzzId) {
-        buzzService.readBuzz(currentUserId, buzzId);
+        buzzCommandService.readBuzz(currentUserId, buzzId);
         return ResponseEntity.noContent().build();
     }
 
@@ -86,7 +86,7 @@ public class BuzzController {
             @CurrentUserId Long currentUserId,
             @PathVariable Long buzzId,
             @RequestBody @Valid BuzzUpdateRequest request) {
-        buzzService.updateBuzz(request.toCommand(currentUserId, buzzId));
+        buzzCommandService.updateBuzz(request.toCommand(currentUserId, buzzId));
         return ResponseEntity.noContent().build();
     }
 
@@ -94,7 +94,7 @@ public class BuzzController {
     public ResponseEntity<Void> deleteBuzz(
             @CurrentUserId Long currentUserId,
             @PathVariable Long buzzId) {
-        buzzService.deleteBuzz(currentUserId, buzzId);
+        buzzCommandService.deleteBuzz(currentUserId, buzzId);
         return ResponseEntity.noContent().build();
     }
 }

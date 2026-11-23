@@ -25,7 +25,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class BuzzCommentService {
+public class BuzzCommentCommandService {
 
     private final BuzzRepository buzzRepository;
     private final BuzzAudienceMemberRepository buzzAudienceMemberRepository;

@@ -39,7 +39,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class BuzzThreadServiceTest {
+class BuzzThreadCommandServiceTest {
 
     @Mock private BuzzRepository buzzRepository;
     @Mock private BuzzAudienceMemberRepository buzzAudienceMemberRepository;
@@ -47,7 +47,7 @@ class BuzzThreadServiceTest {
     @Mock private BuzzCommentRepository buzzCommentRepository;
     @Mock private ApplicationEventPublisher applicationEventPublisher;
 
-    private BuzzThreadService buzzThreadService;
+    private BuzzThreadCommandService buzzThreadCommandService;
 
     private final Long creatorId = 1L;
     private final Long starterId = 2L;
@@ -57,7 +57,7 @@ class BuzzThreadServiceTest {
 
     @BeforeEach
     void setUp() {
-        buzzThreadService = new BuzzThreadService(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository,
+        buzzThreadCommandService = new BuzzThreadCommandService(buzzRepository, buzzAudienceMemberRepository, buzzThreadRepository,
                 buzzCommentRepository, applicationEventPublisher);
         buzz = withId(Buzz.create(creatorId, "본문", List.of(),
                 Set.of(starterId, friendMemberId, otherMemberId), LocalDateTime.now()), 1L);
@@ -78,7 +78,7 @@ class BuzzThreadServiceTest {
             given(buzzThreadRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
             // when
-            buzzThreadService.createThread(command(starterId, ThreadVisibility.PRIVATE));
+            buzzThreadCommandService.createThread(command(starterId, ThreadVisibility.PRIVATE));
 
             // then
             ArgumentCaptor<BuzzThread> threadCaptor = ArgumentCaptor.forClass(BuzzThread.class);
@@ -102,7 +102,7 @@ class BuzzThreadServiceTest {
                     .willThrow(new BuzzThreadAlreadyExistsException(buzz.getId(), starterId, ThreadVisibility.PUBLIC));
 
             // when & then
-            assertThatThrownBy(() -> buzzThreadService.createThread(command(starterId, ThreadVisibility.PUBLIC)))
+            assertThatThrownBy(() -> buzzThreadCommandService.createThread(command(starterId, ThreadVisibility.PUBLIC)))
                     .isInstanceOf(BuzzThreadAlreadyExistsException.class);
             verify(applicationEventPublisher, never()).publishEvent(any());
         }
@@ -112,7 +112,7 @@ class BuzzThreadServiceTest {
         void createThread_ByCreator_Denied() {
             given(buzzRepository.findByIdForShare(buzz.getId())).willReturn(Optional.of(buzz));
 
-            assertThatThrownBy(() -> buzzThreadService.createThread(command(creatorId, ThreadVisibility.PUBLIC)))
+            assertThatThrownBy(() -> buzzThreadCommandService.createThread(command(creatorId, ThreadVisibility.PUBLIC)))
                     .isInstanceOf(BuzzAccessDeniedException.class);
             verify(buzzThreadRepository, never()).save(any());
         }
@@ -135,7 +135,7 @@ class BuzzThreadServiceTest {
             given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(thread));
 
             // when
-            buzzThreadService.updateThread(new UpdateBuzzThreadCommand(
+            buzzThreadCommandService.updateThread(new UpdateBuzzThreadCommand(
                     starterId, buzz.getId(), 10L, "수정한 글", List.of("buzz/b")));
 
             // then
@@ -152,7 +152,7 @@ class BuzzThreadServiceTest {
             given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(thread(ThreadVisibility.PRIVATE)));
 
             // when
-            buzzThreadService.deleteThread(creatorId, buzz.getId(), 10L);
+            buzzThreadCommandService.deleteThread(creatorId, buzz.getId(), 10L);
 
             // then
             InOrder order = inOrder(buzzThreadRepository, buzzCommentRepository);
@@ -168,7 +168,7 @@ class BuzzThreadServiceTest {
             given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(thread(ThreadVisibility.PUBLIC)));
 
             // when & then
-            assertThatThrownBy(() -> buzzThreadService.deleteThread(friendMemberId, buzz.getId(), 10L))
+            assertThatThrownBy(() -> buzzThreadCommandService.deleteThread(friendMemberId, buzz.getId(), 10L))
                     .isInstanceOf(BuzzAccessDeniedException.class);
             verify(buzzThreadRepository, never()).deleteById(any());
         }

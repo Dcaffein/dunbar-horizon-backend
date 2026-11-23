@@ -9,11 +9,11 @@ import com.example.DunbarHorizon.account.application.port.out.ProfileImageStorag
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.notification.application.DeviceTokenService;
 import com.example.DunbarHorizon.notification.application.NotificationService;
-import com.example.DunbarHorizon.buzz.application.service.BuzzCommentService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzCommentCommandService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzQueryService;
-import com.example.DunbarHorizon.buzz.application.service.BuzzService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzCommandService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzThreadQueryService;
-import com.example.DunbarHorizon.buzz.application.service.BuzzThreadService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzThreadCommandService;
 import com.example.DunbarHorizon.flag.application.service.flag.FlagHostService;
 import com.example.DunbarHorizon.flag.application.service.flag.FlagModificationService;
 import com.example.DunbarHorizon.flag.application.service.flag.FlagParticipationService;
@@ -68,11 +68,11 @@ public abstract class BaseControllerTest {
     @MockitoBean protected ProfileImageStoragePort profileImageStoragePort;
     @MockitoBean protected ImageStoragePort imageStoragePort;
 
-    @MockitoBean protected BuzzService buzzService;
+    @MockitoBean protected BuzzCommandService buzzCommandService;
     @MockitoBean protected BuzzQueryService buzzQueryService;
-    @MockitoBean protected BuzzThreadService buzzThreadService;
+    @MockitoBean protected BuzzThreadCommandService buzzThreadCommandService;
     @MockitoBean protected BuzzThreadQueryService buzzThreadQueryService;
-    @MockitoBean protected BuzzCommentService buzzCommentService;
+    @MockitoBean protected BuzzCommentCommandService buzzCommentCommandService;
 
     @MockitoBean protected FlagHostService flagHostService;
     @MockitoBean protected FlagModificationService flagModificationService;

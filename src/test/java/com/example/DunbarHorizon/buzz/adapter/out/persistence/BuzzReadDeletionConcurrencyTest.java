@@ -5,7 +5,7 @@ import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
 import com.example.DunbarHorizon.buzz.application.service.BuzzPurgeService;
-import com.example.DunbarHorizon.buzz.application.service.BuzzService;
+import com.example.DunbarHorizon.buzz.application.service.BuzzCommandService;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzNotFoundException;
@@ -41,12 +41,12 @@ import static org.mockito.Mockito.doAnswer;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class,
         BuzzQueryRepositoryAdapter.class, BuzzThreadRepositoryAdapter.class, BuzzCommentRepositoryAdapter.class, BuzzProfileAssembler.class,
-        BuzzService.class, BuzzPurgeService.class})
+        BuzzCommandService.class, BuzzPurgeService.class})
 class BuzzReadDeletionConcurrencyTest {
 
     private static final long WAIT_SECONDS = 5;
 
-    @Autowired private BuzzService buzzService;
+    @Autowired private BuzzCommandService buzzCommandService;
     @Autowired private BuzzPurgeService buzzPurgeService;
     @Autowired private BuzzAudienceMemberRepositoryAdapter buzzAudienceMemberRepositoryAdapter;
     @Autowired private JdbcTemplate jdbcTemplate;
@@ -90,12 +90,12 @@ class BuzzReadDeletionConcurrencyTest {
         }).when(buzzRepositoryAdapter).findByIdForShare(buzz.getId());
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        submit(executor, () -> buzzService.readBuzz(recipientId, buzz.getId()), readFailure, readFinished);
+        submit(executor, () -> buzzCommandService.readBuzz(recipientId, buzz.getId()), readFailure, readFinished);
 
         try {
             // when
             assertThat(buzzLocked.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-            submit(executor, () -> buzzService.deleteBuzz(creatorId, buzz.getId()), deletionFailure, deletionFinished);
+            submit(executor, () -> buzzCommandService.deleteBuzz(creatorId, buzz.getId()), deletionFailure, deletionFinished);
             awaitFinishedOrLockWait(deletionFinished, "버즈 삭제");
             assertThat(deletionFinished.getCount()).isEqualTo(1);
             continueRead.countDown();
@@ -139,12 +139,12 @@ class BuzzReadDeletionConcurrencyTest {
         }).when(buzzRepositoryAdapter).findByIdForUpdate(buzz.getId());
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        submit(executor, () -> buzzService.deleteBuzz(creatorId, buzz.getId()), deletionFailure, deletionFinished);
+        submit(executor, () -> buzzCommandService.deleteBuzz(creatorId, buzz.getId()), deletionFailure, deletionFinished);
 
         try {
             // when
             assertThat(buzzDeleted.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-            submit(executor, () -> buzzService.readBuzz(recipientId, buzz.getId()), readFailure, readFinished);
+            submit(executor, () -> buzzCommandService.readBuzz(recipientId, buzz.getId()), readFailure, readFinished);
             awaitFinishedOrLockWait(readFinished, "버즈 열람");
             continueDeletion.countDown();
             assertThat(deletionFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
@@ -179,7 +179,7 @@ class BuzzReadDeletionConcurrencyTest {
         }).when(buzzRepositoryAdapter).findById(buzz.getId());
 
         // when
-        Throwable failure = org.assertj.core.api.Assertions.catchThrowable(() -> buzzService.updateBuzz(
+        Throwable failure = org.assertj.core.api.Assertions.catchThrowable(() -> buzzCommandService.updateBuzz(
                 new UpdateBuzzCommand(creatorId, buzz.getId(), "고친 본문", List.of())));
 
         // then
@@ -197,7 +197,7 @@ class BuzzReadDeletionConcurrencyTest {
             Object loaded = invocation.callRealMethod();
             if (deleteOnce.compareAndSet(true, false)) {
                 try (var otherTransaction = Executors.newSingleThreadExecutor()) {
-                    otherTransaction.submit(() -> buzzService.deleteBuzz(creatorId, buzz.getId()))
+                    otherTransaction.submit(() -> buzzCommandService.deleteBuzz(creatorId, buzz.getId()))
                             .get(WAIT_SECONDS, TimeUnit.SECONDS);
                 }
             }
@@ -205,7 +205,7 @@ class BuzzReadDeletionConcurrencyTest {
         }).when(buzzRepositoryAdapter).findById(buzz.getId());
 
         // when
-        buzzService.updateBuzz(new UpdateBuzzCommand(creatorId, buzz.getId(), "고친 본문", List.of()));
+        buzzCommandService.updateBuzz(new UpdateBuzzCommand(creatorId, buzz.getId(), "고친 본문", List.of()));
 
         // then
         assertThat(isDeleted(buzz.getId())).isTrue();
