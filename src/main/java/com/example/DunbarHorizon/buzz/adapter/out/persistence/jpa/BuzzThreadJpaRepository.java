@@ -8,12 +8,9 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 
 public interface BuzzThreadJpaRepository extends JpaRepository<BuzzThread, Long> {
-
 
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("SELECT t FROM BuzzThread t WHERE t.id = :id")
@@ -22,11 +19,4 @@ public interface BuzzThreadJpaRepository extends JpaRepository<BuzzThread, Long>
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("DELETE FROM BuzzThread t WHERE t.id = :id")
     void deleteById(@Param("id") Long id);
-
-    @Query("SELECT t.id FROM BuzzThread t WHERE t.buzzId IN :buzzIds")
-    List<Long> findIdsByBuzzIdIn(@Param("buzzIds") Collection<Long> buzzIds);
-
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("DELETE FROM BuzzThread t WHERE t.buzzId IN :buzzIds")
-    int deleteAllByBuzzIdIn(@Param("buzzIds") Collection<Long> buzzIds);
 }
