@@ -1,14 +1,14 @@
-package com.example.DunbarHorizon.buzz.application.dto.info;
+package com.example.DunbarHorizon.buzz.application.dto.view;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-public record BuzzDetailInfo(
+public record BuzzSummaryView(
         Long buzzId,
         Long creatorId,
-        BuzzUserProfileInfo creatorProfile,
+        BuzzUserProfileView creatorProfile,
         String text,
         List<String> imageKeys,
         LocalDateTime editedAt,
-        List<BuzzThreadInfo> threads
+        boolean isRead
 ) {}

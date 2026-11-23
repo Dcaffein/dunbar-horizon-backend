@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.application.dto.result;
 
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadDetailInfo.ThreadContent;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzThreadDetailView.ThreadContent;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 
 import java.time.LocalDateTime;

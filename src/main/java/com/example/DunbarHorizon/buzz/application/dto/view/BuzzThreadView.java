@@ -1,13 +1,13 @@
-package com.example.DunbarHorizon.buzz.application.dto.info;
+package com.example.DunbarHorizon.buzz.application.dto.view;
 
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 
 import java.time.LocalDateTime;
 
-public record BuzzThreadInfo(
+public record BuzzThreadView(
         Long threadId,
         Long starterId,
-        BuzzUserProfileInfo starterProfile,
+        BuzzUserProfileView starterProfile,
         ThreadVisibility visibility,
         LocalDateTime createdAt
 ) {}

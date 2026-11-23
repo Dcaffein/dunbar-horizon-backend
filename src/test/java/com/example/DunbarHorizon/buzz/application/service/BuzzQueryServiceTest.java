@@ -1,10 +1,10 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzAudienceInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzDetailInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzSummaryInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzUserProfileInfo;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzAudienceView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzDetailView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzSummaryView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzThreadView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzUserProfileView;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzQueryRepository;
@@ -49,7 +49,7 @@ class BuzzQueryServiceTest {
     private final Long recipientId = 2L;
     private final Long strangerId = 99L;
     private final Long buzzId = 1L;
-    private final BuzzUserProfileInfo creatorProfile = new BuzzUserProfileInfo("작성자", "profiles/creator");
+    private final BuzzUserProfileView creatorProfile = new BuzzUserProfileView("작성자", "profiles/creator");
 
     @BeforeEach
     void setUp() {
@@ -61,18 +61,18 @@ class BuzzQueryServiceTest {
     @DisplayName("버즈 상세 조회")
     class GetBuzzDetail {
 
-        private void givenDetail(BuzzThreadInfo... threads) {
-            given(buzzQueryRepository.findDetail(buzzId)).willReturn(Optional.of(new BuzzDetailInfo(
+        private void givenDetail(BuzzThreadView... threads) {
+            given(buzzQueryRepository.findDetail(buzzId)).willReturn(Optional.of(new BuzzDetailView(
                     buzzId, creatorId, creatorProfile, "본문", List.of("buzz/photo"), null,
                     List.of(threads))));
         }
 
-        private void givenAudience(BuzzAudienceInfo... audience) {
+        private void givenAudience(BuzzAudienceView... audience) {
             given(buzzQueryRepository.findAudience(buzzId)).willReturn(List.of(audience));
         }
 
-        private BuzzAudienceInfo member(Long userId, boolean isRead) {
-            return new BuzzAudienceInfo(userId, new BuzzUserProfileInfo("멤버" + userId, null), isRead);
+        private BuzzAudienceView member(Long userId, boolean isRead) {
+            return new BuzzAudienceView(userId, new BuzzUserProfileView("멤버" + userId, null), isRead);
         }
 
         @Test
@@ -116,7 +116,7 @@ class BuzzQueryServiceTest {
         void getBuzzDetail_MemberWithoutProfile_ExcludedFromRecipients() {
             // given
             givenDetail();
-            givenAudience(member(recipientId, true), new BuzzAudienceInfo(3L, null, false));
+            givenAudience(member(recipientId, true), new BuzzAudienceView(3L, null, false));
 
             // when
             BuzzDetailResult result = buzzQueryService.getBuzzDetail(3L, buzzId);
@@ -185,8 +185,8 @@ class BuzzQueryServiceTest {
             verify(buzzQueryRepository, never()).findAudience(any());
         }
 
-        private BuzzThreadInfo thread(Long threadId, Long starterId, ThreadVisibility visibility) {
-            return new BuzzThreadInfo(threadId, starterId, null, visibility, LocalDateTime.now());
+        private BuzzThreadView thread(Long threadId, Long starterId, ThreadVisibility visibility) {
+            return new BuzzThreadView(threadId, starterId, null, visibility, LocalDateTime.now());
         }
     }
 
@@ -244,7 +244,7 @@ class BuzzQueryServiceTest {
         assertThat(result.getContent().get(0).isUnread()).isFalse();
     }
 
-    private BuzzSummaryInfo summary(BuzzUserProfileInfo profile, boolean isRead) {
-        return new BuzzSummaryInfo(buzzId, creatorId, profile, "본문", List.of(), null, isRead);
+    private BuzzSummaryView summary(BuzzUserProfileView profile, boolean isRead) {
+        return new BuzzSummaryView(buzzId, creatorId, profile, "본문", List.of(), null, isRead);
     }
 }

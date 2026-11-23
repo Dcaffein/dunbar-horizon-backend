@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web.dto;
 
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.RecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.command.recipient.RecipientSpec;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 

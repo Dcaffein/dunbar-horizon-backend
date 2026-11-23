@@ -2,9 +2,9 @@ package com.example.DunbarHorizon.buzz.application.service;
 
 import com.example.DunbarHorizon.buzz.application.dto.command.CreateBuzzCommand;
 import com.example.DunbarHorizon.buzz.application.dto.command.UpdateBuzzCommand;
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.IntermediaryRecipientSpec;
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.LabelRecipientSpec;
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.ManualRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.command.recipient.IntermediaryRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.command.recipient.LabelRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.command.recipient.ManualRecipientSpec;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;

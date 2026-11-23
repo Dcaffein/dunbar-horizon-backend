@@ -1,7 +1,7 @@
 package com.example.DunbarHorizon.buzz.adapter.in.web.dto;
 
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.RecipientSpec;
-import com.example.DunbarHorizon.buzz.application.dto.info.recipient.IntermediaryRecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.command.recipient.RecipientSpec;
+import com.example.DunbarHorizon.buzz.application.dto.command.recipient.IntermediaryRecipientSpec;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;

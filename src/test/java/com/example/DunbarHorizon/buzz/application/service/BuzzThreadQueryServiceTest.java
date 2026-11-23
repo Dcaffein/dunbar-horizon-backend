@@ -1,10 +1,10 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzAudienceInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCommentInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadDetailInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadDetailInfo.ThreadContent;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzUserProfileInfo;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzAudienceView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzCommentView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzThreadDetailView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzThreadDetailView.ThreadContent;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzUserProfileView;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzThreadDetailResult;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzQueryRepository;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
@@ -62,18 +62,18 @@ class BuzzThreadQueryServiceTest {
 
     private void givenDetail(ThreadContent thread) {
         given(buzzQueryRepository.findThreadDetail(buzzId, threadId))
-                .willReturn(Optional.of(new BuzzThreadDetailInfo(buzzId, creatorId, profile("게시자"), thread)));
+                .willReturn(Optional.of(new BuzzThreadDetailView(buzzId, creatorId, profile("게시자"), thread)));
     }
 
     private void givenAudience() {
         given(buzzQueryRepository.findAudience(buzzId)).willReturn(List.of(
-                new BuzzAudienceInfo(starterId, profile("시작자"), true),
-                new BuzzAudienceInfo(friendMemberId, profile("친구"), true),
-                new BuzzAudienceInfo(otherMemberId, profile("다른 멤버"), true)));
+                new BuzzAudienceView(starterId, profile("시작자"), true),
+                new BuzzAudienceView(friendMemberId, profile("친구"), true),
+                new BuzzAudienceView(otherMemberId, profile("다른 멤버"), true)));
     }
 
-    private static BuzzUserProfileInfo profile(String nickname) {
-        return new BuzzUserProfileInfo(nickname, null);
+    private static BuzzUserProfileView profile(String nickname) {
+        return new BuzzUserProfileView(nickname, null);
     }
 
     @Nested
@@ -146,7 +146,7 @@ class BuzzThreadQueryServiceTest {
             givenDetail(new ThreadContent(threadId, starterId, null, ThreadVisibility.PRIVATE, "첫 글", List.of(),
                     LocalDateTime.now()));
             given(buzzQueryRepository.findAudience(buzzId))
-                    .willReturn(List.of(new BuzzAudienceInfo(starterId, null, true)));
+                    .willReturn(List.of(new BuzzAudienceView(starterId, null, true)));
 
             // when
             BuzzThreadDetailResult result = buzzThreadQueryService.getThread(creatorId, buzzId, threadId);
@@ -201,8 +201,8 @@ class BuzzThreadQueryServiceTest {
         givenThread(ThreadVisibility.PRIVATE);
         givenAudience();
         given(buzzQueryRepository.findComments(threadId)).willReturn(List.of(
-                new BuzzCommentInfo(100L, creatorId, profile("게시자"), "게시자 답글", List.of(), LocalDateTime.now()),
-                new BuzzCommentInfo(101L, starterId, profile("시작자"), "시작자 답글", List.of(), LocalDateTime.now())));
+                new BuzzCommentView(100L, creatorId, profile("게시자"), "게시자 답글", List.of(), LocalDateTime.now()),
+                new BuzzCommentView(101L, starterId, profile("시작자"), "시작자 답글", List.of(), LocalDateTime.now())));
 
         // when
         BuzzThreadDetailResult result = buzzThreadQueryService.getThread(creatorId, buzzId, threadId);

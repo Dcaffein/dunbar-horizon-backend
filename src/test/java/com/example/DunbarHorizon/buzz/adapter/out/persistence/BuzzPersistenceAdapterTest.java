@@ -1,12 +1,12 @@
 package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzAudienceInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCommentInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzDetailInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzSummaryInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadDetailInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzUserProfileInfo;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzAudienceView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzCommentView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzDetailView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzSummaryView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzThreadDetailView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzThreadView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzUserProfileView;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
 import com.example.DunbarHorizon.buzz.domain.BuzzComment;
@@ -84,13 +84,13 @@ class BuzzPersistenceAdapterTest {
         readBuzz(older.getId(), recipientId);
 
         // when
-        Slice<BuzzSummaryInfo> result = buzzQueryRepositoryAdapter.findReceived(
+        Slice<BuzzSummaryView> result = buzzQueryRepositoryAdapter.findReceived(
                 recipientId, Set.of(otherCreatorId), PageRequest.of(0, 20));
 
         // then
-        assertThat(result.getContent()).extracting(BuzzSummaryInfo::buzzId)
+        assertThat(result.getContent()).extracting(BuzzSummaryView::buzzId)
                 .containsExactly(newer.getId(), older.getId());
-        assertThat(result.getContent()).extracting(BuzzSummaryInfo::isRead).containsExactly(false, true);
+        assertThat(result.getContent()).extracting(BuzzSummaryView::isRead).containsExactly(false, true);
     }
 
     @Test
@@ -100,7 +100,7 @@ class BuzzPersistenceAdapterTest {
         saveBuzz(creatorId, NOW.minusHours(1), recipientId);
 
         // when
-        Slice<BuzzSummaryInfo> result = buzzQueryRepositoryAdapter.findReceived(
+        Slice<BuzzSummaryView> result = buzzQueryRepositoryAdapter.findReceived(
                 recipientId, Set.of(), PageRequest.of(0, 20));
 
         // then
@@ -118,12 +118,12 @@ class BuzzPersistenceAdapterTest {
         saveThread(other, recipientId, NOW.minusMinutes(10));
 
         // when
-        BuzzDetailInfo detail = buzzQueryRepositoryAdapter.findDetail(buzz.getId()).orElseThrow();
+        BuzzDetailView detail = buzzQueryRepositoryAdapter.findDetail(buzz.getId()).orElseThrow();
 
         // then
         assertThat(detail.creatorId()).isEqualTo(creatorId);
         assertThat(detail.imageKeys()).containsExactly("buzz/a");
-        assertThat(detail.threads()).extracting(BuzzThreadInfo::threadId)
+        assertThat(detail.threads()).extracting(BuzzThreadView::threadId)
                 .containsExactly(earlier.getId(), later.getId());
     }
 
@@ -146,9 +146,9 @@ class BuzzPersistenceAdapterTest {
         // when & then
         assertThat(buzzQueryRepositoryAdapter.findDetail(old.getId())).isPresent();
         assertThat(buzzQueryRepositoryAdapter.findReceived(recipientId, Set.of(), PageRequest.of(0, 20))
-                .getContent()).extracting(BuzzSummaryInfo::buzzId).containsExactly(old.getId());
+                .getContent()).extracting(BuzzSummaryView::buzzId).containsExactly(old.getId());
         assertThat(buzzQueryRepositoryAdapter.findSent(creatorId, PageRequest.of(0, 20)).getContent())
-                .extracting(BuzzSummaryInfo::buzzId).containsExactly(old.getId());
+                .extracting(BuzzSummaryView::buzzId).containsExactly(old.getId());
         assertThat(buzzQueryRepositoryAdapter.findUnreadCreatorIds(recipientId, Set.of())).containsExactly(creatorId);
     }
 
@@ -162,7 +162,7 @@ class BuzzPersistenceAdapterTest {
 
         // when & then
         assertThat(buzzQueryRepositoryAdapter.findAudience(buzz.getId()))
-                .containsExactly(new BuzzAudienceInfo(recipientId, null, true), new BuzzAudienceInfo(3L, null, false));
+                .containsExactly(new BuzzAudienceView(recipientId, null, true), new BuzzAudienceView(3L, null, false));
     }
 
     @Test
@@ -177,12 +177,12 @@ class BuzzPersistenceAdapterTest {
         saveThread(buzz, 3L, NOW.minusMinutes(10));
 
         // when
-        BuzzDetailInfo detail = buzzQueryRepositoryAdapter.findDetail(buzz.getId()).orElseThrow();
+        BuzzDetailView detail = buzzQueryRepositoryAdapter.findDetail(buzz.getId()).orElseThrow();
 
         // then
-        assertThat(detail.creatorProfile()).isEqualTo(new BuzzUserProfileInfo("작성자", "profiles/creator"));
-        assertThat(detail.threads()).extracting(BuzzThreadInfo::starterProfile)
-                .containsExactly(null, new BuzzUserProfileInfo("멤버", null));
+        assertThat(detail.creatorProfile()).isEqualTo(new BuzzUserProfileView("작성자", "profiles/creator"));
+        assertThat(detail.threads()).extracting(BuzzThreadView::starterProfile)
+                .containsExactly(null, new BuzzUserProfileView("멤버", null));
     }
 
     @Test
@@ -195,8 +195,8 @@ class BuzzPersistenceAdapterTest {
 
         // when & then
         assertThat(buzzQueryRepositoryAdapter.findAudience(buzz.getId())).containsExactly(
-                new BuzzAudienceInfo(recipientId, new BuzzUserProfileInfo("수신자", "profiles/recipient"), false),
-                new BuzzAudienceInfo(3L, null, false));
+                new BuzzAudienceView(recipientId, new BuzzUserProfileView("수신자", "profiles/recipient"), false),
+                new BuzzAudienceView(3L, null, false));
     }
 
     @Test
@@ -209,14 +209,14 @@ class BuzzPersistenceAdapterTest {
         Buzz inactive = saveBuzz(otherCreatorId, NOW.minusHours(1), recipientId);
 
         // when
-        Slice<BuzzSummaryInfo> result = buzzQueryRepositoryAdapter.findReceived(
+        Slice<BuzzSummaryView> result = buzzQueryRepositoryAdapter.findReceived(
                 recipientId, Set.of(), PageRequest.of(0, 20));
 
         // then
-        assertThat(result.getContent()).extracting(BuzzSummaryInfo::buzzId)
+        assertThat(result.getContent()).extracting(BuzzSummaryView::buzzId)
                 .containsExactly(inactive.getId(), active.getId());
-        assertThat(result.getContent()).extracting(BuzzSummaryInfo::creatorProfile)
-                .containsExactly(null, new BuzzUserProfileInfo("작성자", null));
+        assertThat(result.getContent()).extracting(BuzzSummaryView::creatorProfile)
+                .containsExactly(null, new BuzzUserProfileView("작성자", null));
     }
 
     @Test
@@ -228,16 +228,16 @@ class BuzzPersistenceAdapterTest {
         Buzz third = saveBuzz(creatorId, NOW.minusHours(3), recipientId);
 
         // when
-        Slice<BuzzSummaryInfo> firstPage = buzzQueryRepositoryAdapter.findReceived(
+        Slice<BuzzSummaryView> firstPage = buzzQueryRepositoryAdapter.findReceived(
                 recipientId, Set.of(), PageRequest.of(0, 2));
-        Slice<BuzzSummaryInfo> secondPage = buzzQueryRepositoryAdapter.findReceived(
+        Slice<BuzzSummaryView> secondPage = buzzQueryRepositoryAdapter.findReceived(
                 recipientId, Set.of(), PageRequest.of(1, 2));
 
         // then
-        assertThat(firstPage.getContent()).extracting(BuzzSummaryInfo::buzzId)
+        assertThat(firstPage.getContent()).extracting(BuzzSummaryView::buzzId)
                 .containsExactly(first.getId(), second.getId());
         assertThat(firstPage.hasNext()).isTrue();
-        assertThat(secondPage.getContent()).extracting(BuzzSummaryInfo::buzzId).containsExactly(third.getId());
+        assertThat(secondPage.getContent()).extracting(BuzzSummaryView::buzzId).containsExactly(third.getId());
         assertThat(secondPage.hasNext()).isFalse();
     }
 
@@ -251,11 +251,11 @@ class BuzzPersistenceAdapterTest {
         BuzzThread thread = saveThread(buzz, recipientId, NOW.minusMinutes(10));
 
         // when
-        BuzzThreadDetailInfo detail = buzzQueryRepositoryAdapter.findThreadDetail(buzz.getId(), thread.getId())
+        BuzzThreadDetailView detail = buzzQueryRepositoryAdapter.findThreadDetail(buzz.getId(), thread.getId())
                 .orElseThrow();
 
         // then
-        assertThat(detail.creatorProfile()).isEqualTo(new BuzzUserProfileInfo("작성자", null));
+        assertThat(detail.creatorProfile()).isEqualTo(new BuzzUserProfileView("작성자", null));
         assertThat(detail.thread().threadId()).isEqualTo(thread.getId());
         assertThat(detail.thread().starterId()).isEqualTo(recipientId);
         assertThat(detail.thread().starterProfile()).isNull();
@@ -271,7 +271,7 @@ class BuzzPersistenceAdapterTest {
         BuzzThread otherThread = saveThread(other, recipientId, NOW.minusMinutes(10));
 
         // when
-        BuzzThreadDetailInfo detail = buzzQueryRepositoryAdapter
+        BuzzThreadDetailView detail = buzzQueryRepositoryAdapter
                 .findThreadDetail(buzz.getId(), otherThread.getId()).orElseThrow();
 
         // then
@@ -304,12 +304,12 @@ class BuzzPersistenceAdapterTest {
         saveComment(buzz, otherThread, 3L, "다른 스레드 답글");
 
         // when
-        List<BuzzCommentInfo> comments = buzzQueryRepositoryAdapter.findComments(thread.getId());
+        List<BuzzCommentView> comments = buzzQueryRepositoryAdapter.findComments(thread.getId());
 
         // then
-        assertThat(comments).extracting(BuzzCommentInfo::commentId).containsExactly(first.getId(), second.getId());
-        assertThat(comments).extracting(BuzzCommentInfo::authorProfile)
-                .containsExactly(new BuzzUserProfileInfo("답글러", "profiles/replier"), null);
+        assertThat(comments).extracting(BuzzCommentView::commentId).containsExactly(first.getId(), second.getId());
+        assertThat(comments).extracting(BuzzCommentView::authorProfile)
+                .containsExactly(new BuzzUserProfileView("답글러", "profiles/replier"), null);
         assertThat(comments.get(0).imageKeys()).containsExactly("buzz/c");
     }
 
@@ -321,10 +321,10 @@ class BuzzPersistenceAdapterTest {
         saveBuzz(otherCreatorId, NOW.minusHours(1), recipientId);
 
         // when
-        Slice<BuzzSummaryInfo> result = buzzQueryRepositoryAdapter.findSent(creatorId, PageRequest.of(0, 20));
+        Slice<BuzzSummaryView> result = buzzQueryRepositoryAdapter.findSent(creatorId, PageRequest.of(0, 20));
 
         // then
-        assertThat(result.getContent()).extracting(BuzzSummaryInfo::buzzId).containsExactly(live.getId());
+        assertThat(result.getContent()).extracting(BuzzSummaryView::buzzId).containsExactly(live.getId());
     }
 
     @Test
@@ -372,7 +372,7 @@ class BuzzPersistenceAdapterTest {
         assertThat(count("SELECT COUNT(*) FROM buzzes WHERE id = ?", target.getId())).isZero();
         assertThat(buzzQueryRepositoryAdapter.findAudience(target.getId())).isEmpty();
         assertThat(buzzQueryRepositoryAdapter.findAudience(other.getId()))
-                .extracting(BuzzAudienceInfo::userId).containsExactly(recipientId);
+                .extracting(BuzzAudienceView::userId).containsExactly(recipientId);
     }
 
     @Test

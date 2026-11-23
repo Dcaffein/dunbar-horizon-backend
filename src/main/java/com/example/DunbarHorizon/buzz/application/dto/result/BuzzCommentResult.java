@@ -1,6 +1,6 @@
 package com.example.DunbarHorizon.buzz.application.dto.result;
 
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCommentInfo;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzCommentView;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,7 +13,7 @@ public record BuzzCommentResult(
         LocalDateTime createdAt,
         boolean isMine
 ) {
-    public static BuzzCommentResult of(BuzzCommentInfo comment, BuzzProfileResult author, List<String> imageUrls,
+    public static BuzzCommentResult of(BuzzCommentView comment, BuzzProfileResult author, List<String> imageUrls,
                                        Long viewerId) {
         return new BuzzCommentResult(
                 comment.commentId(),

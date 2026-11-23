@@ -1,8 +1,8 @@
 package com.example.DunbarHorizon.buzz.application.service;
 
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzAudienceInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzDetailInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadInfo;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzAudienceView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzDetailView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzThreadView;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzDetailResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzSummaryResult;
 import com.example.DunbarHorizon.buzz.application.dto.result.BuzzThreadSummaryResult;
@@ -34,12 +34,12 @@ public class BuzzQueryService {
     private final ImageStoragePort imageStoragePort;
 
     public BuzzDetailResult getBuzzDetail(Long userId, Long buzzId) {
-        BuzzDetailInfo buzz = buzzQueryRepository.findDetail(buzzId)
+        BuzzDetailView buzz = buzzQueryRepository.findDetail(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
-        List<BuzzAudienceInfo> audience = buzzQueryRepository.findAudience(buzzId);
+        List<BuzzAudienceView> audience = buzzQueryRepository.findAudience(buzzId);
 
         boolean isCreator = buzz.creatorId().equals(userId);
-        Optional<BuzzAudienceInfo> member = isCreator
+        Optional<BuzzAudienceView> member = isCreator
                 ? Optional.empty()
                 : audience.stream().filter(audienceMember -> audienceMember.userId().equals(userId)).findFirst();
         boolean isAudienceMember = member.isPresent();
@@ -87,11 +87,11 @@ public class BuzzQueryService {
         return buzzQueryRepository.findUnreadCreatorIds(userId, excludedCreatorIds);
     }
 
-    private List<BuzzThreadInfo> accessibleThreads(BuzzDetailInfo buzz, Long userId) {
+    private List<BuzzThreadView> accessibleThreads(BuzzDetailView buzz, Long userId) {
         Set<Long> startersToCheck = buzz.threads().stream()
                 .filter(thread -> BuzzThread.needsFriendshipToAccess(
                         thread.visibility(), thread.starterId(), buzz.creatorId(), userId))
-                .map(BuzzThreadInfo::starterId)
+                .map(BuzzThreadView::starterId)
                 .collect(Collectors.toSet());
         Set<Long> friendStarterIds = startersToCheck.isEmpty()
                 ? Set.of()

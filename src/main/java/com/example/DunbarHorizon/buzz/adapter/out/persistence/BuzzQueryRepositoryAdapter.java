@@ -1,13 +1,13 @@
 package com.example.DunbarHorizon.buzz.adapter.out.persistence;
 
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzAudienceInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzCommentInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzDetailInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzSummaryInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadDetailInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadDetailInfo.ThreadContent;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzThreadInfo;
-import com.example.DunbarHorizon.buzz.application.dto.info.BuzzUserProfileInfo;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzAudienceView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzCommentView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzDetailView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzSummaryView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzThreadDetailView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzThreadDetailView.ThreadContent;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzThreadView;
+import com.example.DunbarHorizon.buzz.application.dto.view.BuzzUserProfileView;
 import com.example.DunbarHorizon.buzz.application.port.out.BuzzQueryRepository;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -127,22 +127,22 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
     private final NamedParameterJdbcTemplate jdbc;
 
     @Override
-    public Optional<BuzzDetailInfo> findDetail(Long buzzId) {
+    public Optional<BuzzDetailView> findDetail(Long buzzId) {
         return jdbc.query(DETAIL, Map.of("buzzId", buzzId), rows -> {
             if (!rows.next()) {
                 return Optional.empty();
             }
             Long id = rows.getLong("id");
             Long creatorId = rows.getLong("creator_id");
-            BuzzUserProfileInfo creatorProfile = profile(rows, "creator_profile_id", "creator_nickname", "creator_profile_image");
+            BuzzUserProfileView creatorProfile = profile(rows, "creator_profile_id", "creator_nickname", "creator_profile_image");
             String text = rows.getString("text");
             List<String> imageKeys = imageKeys(rows, "image_keys");
             LocalDateTime editedAt = rows.getObject("edited_at", LocalDateTime.class);
-            List<BuzzThreadInfo> threads = new ArrayList<>();
+            List<BuzzThreadView> threads = new ArrayList<>();
             do {
                 long threadId = rows.getLong("thread_id");
                 if (!rows.wasNull()) {
-                    threads.add(new BuzzThreadInfo(
+                    threads.add(new BuzzThreadView(
                             threadId,
                             rows.getLong("starter_id"),
                             profile(rows, "starter_profile_id", "starter_nickname", "starter_profile_image"),
@@ -150,23 +150,23 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
                             rows.getObject("thread_created_at", LocalDateTime.class)));
                 }
             } while (rows.next());
-            return Optional.of(new BuzzDetailInfo(
+            return Optional.of(new BuzzDetailView(
                     id, creatorId, creatorProfile, text, imageKeys, editedAt, List.copyOf(threads)));
         });
     }
 
     @Override
-    public List<BuzzAudienceInfo> findAudience(Long buzzId) {
-        return jdbc.query(AUDIENCE, Map.of("buzzId", buzzId), (row, index) -> new BuzzAudienceInfo(
+    public List<BuzzAudienceView> findAudience(Long buzzId) {
+        return jdbc.query(AUDIENCE, Map.of("buzzId", buzzId), (row, index) -> new BuzzAudienceView(
                 row.getLong("user_id"),
                 profile(row, "profile_id", "nickname", "profile_image"),
                 row.getBoolean("is_read")));
     }
 
     @Override
-    public Optional<BuzzThreadDetailInfo> findThreadDetail(Long buzzId, Long threadId) {
+    public Optional<BuzzThreadDetailView> findThreadDetail(Long buzzId, Long threadId) {
         return jdbc.query(THREAD_DETAIL, Map.of("buzzId", buzzId, "threadId", threadId),
-                (row, index) -> new BuzzThreadDetailInfo(
+                (row, index) -> new BuzzThreadDetailView(
                         row.getLong("id"),
                         row.getLong("creator_id"),
                         profile(row, "creator_profile_id", "creator_nickname", "creator_profile_image"),
@@ -174,8 +174,8 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
     }
 
     @Override
-    public List<BuzzCommentInfo> findComments(Long threadId) {
-        return jdbc.query(COMMENTS, Map.of("threadId", threadId), (row, index) -> new BuzzCommentInfo(
+    public List<BuzzCommentView> findComments(Long threadId) {
+        return jdbc.query(COMMENTS, Map.of("threadId", threadId), (row, index) -> new BuzzCommentView(
                 row.getLong("id"),
                 row.getLong("author_id"),
                 profile(row, "author_profile_id", "author_nickname", "author_profile_image"),
@@ -185,14 +185,14 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
     }
 
     @Override
-    public Slice<BuzzSummaryInfo> findReceived(Long userId, Set<Long> excludedCreatorIds, Pageable pageable) {
+    public Slice<BuzzSummaryView> findReceived(Long userId, Set<Long> excludedCreatorIds, Pageable pageable) {
         return slice(RECEIVED, Map.of(
                 "userId", userId,
                 "excludedCreatorIds", nonEmpty(excludedCreatorIds)), pageable);
     }
 
     @Override
-    public Slice<BuzzSummaryInfo> findSent(Long creatorId, Pageable pageable) {
+    public Slice<BuzzSummaryView> findSent(Long creatorId, Pageable pageable) {
         return slice(SENT, Map.of("creatorId", creatorId), pageable);
     }
 
@@ -203,11 +203,11 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
                 "excludedCreatorIds", nonEmpty(excludedCreatorIds)), Long.class);
     }
 
-    private Slice<BuzzSummaryInfo> slice(String sql, Map<String, Object> params, Pageable pageable) {
+    private Slice<BuzzSummaryView> slice(String sql, Map<String, Object> params, Pageable pageable) {
         Map<String, Object> paged = new HashMap<>(params);
         paged.put("limit", pageable.getPageSize() + 1);
         paged.put("offset", pageable.getOffset());
-        List<BuzzSummaryInfo> rows = jdbc.query(sql, paged, (row, index) -> new BuzzSummaryInfo(
+        List<BuzzSummaryView> rows = jdbc.query(sql, paged, (row, index) -> new BuzzSummaryView(
                 row.getLong("id"),
                 row.getLong("creator_id"),
                 profile(row, "creator_profile_id", "creator_nickname", "creator_profile_image"),
@@ -219,13 +219,13 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
         return new SliceImpl<>(hasNext ? rows.subList(0, pageable.getPageSize()) : rows, pageable, hasNext);
     }
 
-    private static BuzzUserProfileInfo profile(ResultSet row, String idColumn, String nicknameColumn,
+    private static BuzzUserProfileView profile(ResultSet row, String idColumn, String nicknameColumn,
                                                String imageColumn) throws SQLException {
         row.getLong(idColumn);
         if (row.wasNull()) {
             return null;
         }
-        return new BuzzUserProfileInfo(row.getString(nicknameColumn), row.getString(imageColumn));
+        return new BuzzUserProfileView(row.getString(nicknameColumn), row.getString(imageColumn));
     }
 
     private static ThreadContent threadContent(ResultSet row) throws SQLException {
