@@ -39,7 +39,7 @@ class BuzzCommentPersistenceAdapterTest {
 
     private BuzzComment comment(Buzz buzz, BuzzThread thread, Long authorId, String text) {
         return buzzCommentRepositoryAdapter.save(
-                BuzzComment.write(buzz, thread, authorId, text, List.of("buzz/a"), NOW));
+                BuzzComment.write(thread, authorId, text, List.of("buzz/a"), NOW));
     }
 
     @Test

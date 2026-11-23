@@ -39,7 +39,7 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
     private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {};
 
     private static final String DETAIL = """
-            SELECT b.id, b.creator_id, b.text, b.image_keys, b.edited_at, b.expires_at,
+            SELECT b.id, b.creator_id, b.text, b.image_keys, b.edited_at,
                    cu.user_id AS creator_profile_id, cu.nickname AS creator_nickname,
                    cu.profile_image AS creator_profile_image,
                    t.id AS thread_id, t.starter_id, t.visibility, t.created_at AS thread_created_at,
@@ -50,7 +50,6 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
             LEFT JOIN buzz_threads t ON t.buzz_id = b.id
             LEFT JOIN active_users su ON su.user_id = t.starter_id
             WHERE b.id = :buzzId
-              AND b.expires_at > :now
               AND b.deleted_at IS NULL
             ORDER BY t.created_at, t.id
             """;
@@ -77,7 +76,6 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
             LEFT JOIN buzz_threads t ON t.id = :threadId AND t.buzz_id = b.id
             LEFT JOIN active_users su ON su.user_id = t.starter_id
             WHERE b.id = :buzzId
-              AND b.expires_at > :now
               AND b.deleted_at IS NULL
             """;
 
@@ -92,27 +90,25 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
             """;
 
     private static final String RECEIVED = """
-            SELECT b.id, b.creator_id, b.text, b.image_keys, b.edited_at, b.expires_at, m.is_read,
+            SELECT b.id, b.creator_id, b.text, b.image_keys, b.edited_at, m.is_read,
                    cu.user_id AS creator_profile_id, cu.nickname AS creator_nickname,
                    cu.profile_image AS creator_profile_image
             FROM buzzes b
             JOIN buzz_audience_members m ON m.buzz_id = b.id AND m.user_id = :userId
             LEFT JOIN active_users cu ON cu.user_id = b.creator_id
-            WHERE b.expires_at > :now
-              AND b.deleted_at IS NULL
+            WHERE b.deleted_at IS NULL
               AND b.creator_id NOT IN (:excludedCreatorIds)
             ORDER BY b.created_at DESC, b.id DESC
             LIMIT :limit OFFSET :offset
             """;
 
     private static final String SENT = """
-            SELECT b.id, b.creator_id, b.text, b.image_keys, b.edited_at, b.expires_at, FALSE AS is_read,
+            SELECT b.id, b.creator_id, b.text, b.image_keys, b.edited_at, FALSE AS is_read,
                    cu.user_id AS creator_profile_id, cu.nickname AS creator_nickname,
                    cu.profile_image AS creator_profile_image
             FROM buzzes b
             LEFT JOIN active_users cu ON cu.user_id = b.creator_id
             WHERE b.creator_id = :creatorId
-              AND b.expires_at > :now
               AND b.deleted_at IS NULL
             ORDER BY b.created_at DESC, b.id DESC
             LIMIT :limit OFFSET :offset
@@ -124,7 +120,6 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
             JOIN buzz_audience_members m ON m.buzz_id = b.id
             WHERE m.user_id = :userId
               AND m.is_read = FALSE
-              AND b.expires_at > :now
               AND b.deleted_at IS NULL
               AND b.creator_id NOT IN (:excludedCreatorIds)
             """;
@@ -132,8 +127,8 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
     private final NamedParameterJdbcTemplate jdbc;
 
     @Override
-    public Optional<BuzzDetailInfo> findDetail(Long buzzId, LocalDateTime now) {
-        return jdbc.query(DETAIL, Map.of("buzzId", buzzId, "now", now), rows -> {
+    public Optional<BuzzDetailInfo> findDetail(Long buzzId) {
+        return jdbc.query(DETAIL, Map.of("buzzId", buzzId), rows -> {
             if (!rows.next()) {
                 return Optional.empty();
             }
@@ -143,7 +138,6 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
             String text = rows.getString("text");
             List<String> imageKeys = imageKeys(rows, "image_keys");
             LocalDateTime editedAt = rows.getObject("edited_at", LocalDateTime.class);
-            LocalDateTime expiresAt = rows.getObject("expires_at", LocalDateTime.class);
             List<BuzzThreadInfo> threads = new ArrayList<>();
             do {
                 long threadId = rows.getLong("thread_id");
@@ -157,7 +151,7 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
                 }
             } while (rows.next());
             return Optional.of(new BuzzDetailInfo(
-                    id, creatorId, creatorProfile, text, imageKeys, editedAt, expiresAt, List.copyOf(threads)));
+                    id, creatorId, creatorProfile, text, imageKeys, editedAt, List.copyOf(threads)));
         });
     }
 
@@ -170,8 +164,8 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
     }
 
     @Override
-    public Optional<BuzzThreadDetailInfo> findThreadDetail(Long buzzId, Long threadId, LocalDateTime now) {
-        return jdbc.query(THREAD_DETAIL, Map.of("buzzId", buzzId, "threadId", threadId, "now", now),
+    public Optional<BuzzThreadDetailInfo> findThreadDetail(Long buzzId, Long threadId) {
+        return jdbc.query(THREAD_DETAIL, Map.of("buzzId", buzzId, "threadId", threadId),
                 (row, index) -> new BuzzThreadDetailInfo(
                         row.getLong("id"),
                         row.getLong("creator_id"),
@@ -191,24 +185,21 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
     }
 
     @Override
-    public Slice<BuzzSummaryInfo> findReceived(Long userId, Set<Long> excludedCreatorIds,
-                                               LocalDateTime now, Pageable pageable) {
+    public Slice<BuzzSummaryInfo> findReceived(Long userId, Set<Long> excludedCreatorIds, Pageable pageable) {
         return slice(RECEIVED, Map.of(
                 "userId", userId,
-                "now", now,
                 "excludedCreatorIds", nonEmpty(excludedCreatorIds)), pageable);
     }
 
     @Override
-    public Slice<BuzzSummaryInfo> findSent(Long creatorId, LocalDateTime now, Pageable pageable) {
-        return slice(SENT, Map.of("creatorId", creatorId, "now", now), pageable);
+    public Slice<BuzzSummaryInfo> findSent(Long creatorId, Pageable pageable) {
+        return slice(SENT, Map.of("creatorId", creatorId), pageable);
     }
 
     @Override
-    public List<Long> findUnreadCreatorIds(Long userId, Set<Long> excludedCreatorIds, LocalDateTime now) {
+    public List<Long> findUnreadCreatorIds(Long userId, Set<Long> excludedCreatorIds) {
         return jdbc.queryForList(UNREAD_CREATOR_IDS, Map.of(
                 "userId", userId,
-                "now", now,
                 "excludedCreatorIds", nonEmpty(excludedCreatorIds)), Long.class);
     }
 
@@ -223,7 +214,6 @@ public class BuzzQueryRepositoryAdapter implements BuzzQueryRepository {
                 row.getString("text"),
                 imageKeys(row, "image_keys"),
                 row.getObject("edited_at", LocalDateTime.class),
-                row.getObject("expires_at", LocalDateTime.class),
                 row.getBoolean("is_read")));
         boolean hasNext = rows.size() > pageable.getPageSize();
         return new SliceImpl<>(hasNext ? rows.subList(0, pageable.getPageSize()) : rows, pageable, hasNext);

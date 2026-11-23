@@ -25,8 +25,8 @@ public interface BuzzJpaRepository extends JpaRepository<Buzz, Long> {
     @Query("SELECT b FROM Buzz b WHERE b.id = :id AND b.deletedAt IS NULL")
     Optional<Buzz> findByIdAndDeletedAtIsNullForUpdate(@Param("id") Long id);
 
-    @Query("SELECT b.id FROM Buzz b WHERE b.expiresAt <= :now")
-    List<Long> findIdsByExpiresAtAtOrBefore(@Param("now") LocalDateTime now);
+    @Query("SELECT b.id FROM Buzz b WHERE b.createdAt <= :createdAt")
+    List<Long> findIdsByCreatedAtAtOrBefore(@Param("createdAt") LocalDateTime createdAt);
 
     @Query("SELECT b.id FROM Buzz b WHERE b.deletedAt IS NOT NULL")
     List<Long> findIdsByDeletedAtIsNotNull();

@@ -35,11 +35,11 @@ class BuzzPurgeIntegrationTest {
     @Autowired private JdbcTemplate jdbcTemplate;
 
     @Test
-    @DisplayName("만료 시각이 기준 시각 이전이거나 같은 버즈와 삭제 표시된 버즈만 멤버·스레드·답글과 함께 지운다")
+    @DisplayName("생성 후 6시간이 지난 버즈와 삭제 표시된 버즈만 멤버·스레드·답글과 함께 지운다")
     void purgeExpiredAndDeletedBuzzes_RemovesExpiredAndDeletedWithChildren() {
         // given
         Buzz expired = saveBuzzWithThreadAndComment(NOW.minusHours(7));
-        Buzz expiresNow = saveBuzzWithThreadAndComment(NOW.minusHours(6));
+        Buzz lifetimeEndsNow = saveBuzzWithThreadAndComment(NOW.minusHours(6));
         Buzz deleted = saveBuzzWithThreadAndComment(NOW.minusHours(1));
         Buzz live = saveBuzzWithThreadAndComment(NOW.minusHours(6).plusSeconds(1));
         entityManager.flush();
@@ -51,10 +51,7 @@ class BuzzPurgeIntegrationTest {
 
         // then
         assertThat(purged).isEqualTo(3);
-        assertThat(expired.isExpired(NOW)).isTrue();
-        assertThat(expiresNow.isExpired(NOW)).isTrue();
-        assertThat(live.isExpired(NOW)).isFalse();
-        for (Buzz removed : List.of(expired, expiresNow, deleted)) {
+        for (Buzz removed : List.of(expired, lifetimeEndsNow, deleted)) {
             assertThat(count("SELECT COUNT(*) FROM buzzes WHERE id = ?", removed.getId())).isZero();
             assertThat(count("SELECT COUNT(*) FROM buzz_audience_members WHERE buzz_id = ?", removed.getId())).isZero();
             assertThat(count("SELECT COUNT(*) FROM buzz_threads WHERE buzz_id = ?", removed.getId())).isZero();
@@ -73,7 +70,7 @@ class BuzzPurgeIntegrationTest {
         buzzAudienceMemberRepositoryAdapter.saveAll(List.of(BuzzAudienceMember.create(buzz.getId(), 2L)));
         BuzzThread thread = buzzThreadRepositoryAdapter.save(
                 BuzzThread.create(buzz, 2L, true, ThreadVisibility.PUBLIC, "첫 글", List.of(), createdAt));
-        buzzCommentRepositoryAdapter.save(BuzzComment.write(buzz, thread, 1L, "답글", List.of(), createdAt));
+        buzzCommentRepositoryAdapter.save(BuzzComment.write(thread, 1L, "답글", List.of(), createdAt));
         return buzz;
     }
 

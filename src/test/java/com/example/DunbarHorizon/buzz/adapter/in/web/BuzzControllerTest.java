@@ -47,7 +47,7 @@ class BuzzControllerTest extends BaseControllerTest {
             BuzzDetailResult detail = new BuzzDetailResult(
                     1L,
                     new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
-                    "테스트 버즈", List.of(), LocalDateTime.of(2026, 11, 22, 12, 30), 25L, false, true,
+                    "테스트 버즈", List.of(), LocalDateTime.of(2026, 11, 22, 12, 30), false, true,
                     List.of(),
                     List.of(new BuzzThreadSummaryResult(10L, new BuzzProfileResult(2L, "시작자", null),
                             ThreadVisibility.PRIVATE, LocalDateTime.of(2026, 11, 22, 12, 0)))
@@ -69,7 +69,7 @@ class BuzzControllerTest extends BaseControllerTest {
             BuzzDetailResult detail = new BuzzDetailResult(
                     1L,
                     new BuzzProfileResult(2L, "작성자", null),
-                    "테스트 버즈", List.of(), null, 25L, true, false,
+                    "테스트 버즈", List.of(), null, true, false,
                     List.of(new BuzzProfileResult(CURRENT_USER_ID, "나", null)),
                     List.of()
             );
@@ -94,7 +94,7 @@ class BuzzControllerTest extends BaseControllerTest {
             BuzzSummaryResult summary = new BuzzSummaryResult(
                     1L,
                     new BuzzProfileResult(CURRENT_USER_ID, "작성자", null),
-                    "내가 보낸 버즈", List.of(), null, 10L, false, true
+                    "내가 보낸 버즈", List.of(), null, false, true
             );
             given(buzzQueryService.getSentBuzzes(eq(CURRENT_USER_ID), any()))
                     .willReturn(new SliceImpl<>(List.of(summary), PageRequest.of(0, 20), false));

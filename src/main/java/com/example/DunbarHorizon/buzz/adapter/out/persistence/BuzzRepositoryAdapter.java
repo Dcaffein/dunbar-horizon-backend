@@ -40,8 +40,8 @@ public class BuzzRepositoryAdapter implements BuzzRepository {
     }
 
     @Override
-    public List<Long> findPurgeableIds(LocalDateTime now) {
-        Set<Long> buzzIds = new LinkedHashSet<>(buzzJpaRepository.findIdsByExpiresAtAtOrBefore(now));
+    public List<Long> findPurgeableIds(LocalDateTime createdAtOrBefore) {
+        Set<Long> buzzIds = new LinkedHashSet<>(buzzJpaRepository.findIdsByCreatedAtAtOrBefore(createdAtOrBefore));
         buzzIds.addAll(buzzJpaRepository.findIdsByDeletedAtIsNotNull());
         return List.copyOf(buzzIds);
     }

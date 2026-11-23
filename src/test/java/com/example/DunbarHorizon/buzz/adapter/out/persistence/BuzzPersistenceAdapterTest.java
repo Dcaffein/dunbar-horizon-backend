@@ -74,19 +74,18 @@ class BuzzPersistenceAdapterTest {
     }
 
     @Test
-    @DisplayName("받은 목록은 만료되지 않았고 제외 대상이 아닌 게시자의 버즈만 최신순으로 읽음 상태와 함께 준다")
-    void findReceived_FiltersExpiredAndExcluded() {
+    @DisplayName("받은 목록은 제외 대상이 아닌 게시자의 버즈만 최신순으로 읽음 상태와 함께 준다")
+    void findReceived_FiltersExcluded() {
         // given
         Buzz older = saveBuzz(creatorId, NOW.minusHours(2), recipientId);
         Buzz newer = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
-        saveBuzz(creatorId, NOW.minusHours(6), recipientId);
         saveBuzz(otherCreatorId, NOW.minusHours(1), recipientId);
         saveBuzz(creatorId, NOW.minusHours(1), 3L);
         readBuzz(older.getId(), recipientId);
 
         // when
         Slice<BuzzSummaryInfo> result = buzzQueryRepositoryAdapter.findReceived(
-                recipientId, Set.of(otherCreatorId), NOW, PageRequest.of(0, 20));
+                recipientId, Set.of(otherCreatorId), PageRequest.of(0, 20));
 
         // then
         assertThat(result.getContent()).extracting(BuzzSummaryInfo::buzzId)
@@ -102,7 +101,7 @@ class BuzzPersistenceAdapterTest {
 
         // when
         Slice<BuzzSummaryInfo> result = buzzQueryRepositoryAdapter.findReceived(
-                recipientId, Set.of(), NOW, PageRequest.of(0, 20));
+                recipientId, Set.of(), PageRequest.of(0, 20));
 
         // then
         assertThat(result.getContent()).hasSize(1);
@@ -119,12 +118,11 @@ class BuzzPersistenceAdapterTest {
         saveThread(other, recipientId, NOW.minusMinutes(10));
 
         // when
-        BuzzDetailInfo detail = buzzQueryRepositoryAdapter.findDetail(buzz.getId(), NOW).orElseThrow();
+        BuzzDetailInfo detail = buzzQueryRepositoryAdapter.findDetail(buzz.getId()).orElseThrow();
 
         // then
         assertThat(detail.creatorId()).isEqualTo(creatorId);
         assertThat(detail.imageKeys()).containsExactly("buzz/a");
-        assertThat(detail.expiresAt()).isEqualTo(NOW.plusHours(5));
         assertThat(detail.threads()).extracting(BuzzThreadInfo::threadId)
                 .containsExactly(earlier.getId(), later.getId());
     }
@@ -136,19 +134,22 @@ class BuzzPersistenceAdapterTest {
         Buzz buzz = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
 
         // when & then
-        assertThat(buzzQueryRepositoryAdapter.findDetail(buzz.getId(), NOW).orElseThrow().threads()).isEmpty();
+        assertThat(buzzQueryRepositoryAdapter.findDetail(buzz.getId()).orElseThrow().threads()).isEmpty();
     }
 
     @Test
-    @DisplayName("만료 시각이 기준 시각과 같거나 지난 버즈는 상세에서 빠진다")
-    void findDetail_ExcludesExpired() {
+    @DisplayName("수명이 지났어도 정리되기 전인 버즈는 상세와 목록에 남는다")
+    void lifetimeEndedButNotPurged_StillRead() {
         // given
-        Buzz expiresNow = saveBuzz(creatorId, NOW.minusHours(6), recipientId);
-        Buzz expired = saveBuzz(creatorId, NOW.minusHours(7), recipientId);
+        Buzz old = saveBuzz(creatorId, NOW.minusHours(7), recipientId);
 
         // when & then
-        assertThat(buzzQueryRepositoryAdapter.findDetail(expiresNow.getId(), NOW)).isEmpty();
-        assertThat(buzzQueryRepositoryAdapter.findDetail(expired.getId(), NOW)).isEmpty();
+        assertThat(buzzQueryRepositoryAdapter.findDetail(old.getId())).isPresent();
+        assertThat(buzzQueryRepositoryAdapter.findReceived(recipientId, Set.of(), PageRequest.of(0, 20))
+                .getContent()).extracting(BuzzSummaryInfo::buzzId).containsExactly(old.getId());
+        assertThat(buzzQueryRepositoryAdapter.findSent(creatorId, PageRequest.of(0, 20)).getContent())
+                .extracting(BuzzSummaryInfo::buzzId).containsExactly(old.getId());
+        assertThat(buzzQueryRepositoryAdapter.findUnreadCreatorIds(recipientId, Set.of())).containsExactly(creatorId);
     }
 
     @Test
@@ -176,7 +177,7 @@ class BuzzPersistenceAdapterTest {
         saveThread(buzz, 3L, NOW.minusMinutes(10));
 
         // when
-        BuzzDetailInfo detail = buzzQueryRepositoryAdapter.findDetail(buzz.getId(), NOW).orElseThrow();
+        BuzzDetailInfo detail = buzzQueryRepositoryAdapter.findDetail(buzz.getId()).orElseThrow();
 
         // then
         assertThat(detail.creatorProfile()).isEqualTo(new BuzzUserProfileInfo("작성자", "profiles/creator"));
@@ -209,7 +210,7 @@ class BuzzPersistenceAdapterTest {
 
         // when
         Slice<BuzzSummaryInfo> result = buzzQueryRepositoryAdapter.findReceived(
-                recipientId, Set.of(), NOW, PageRequest.of(0, 20));
+                recipientId, Set.of(), PageRequest.of(0, 20));
 
         // then
         assertThat(result.getContent()).extracting(BuzzSummaryInfo::buzzId)
@@ -228,9 +229,9 @@ class BuzzPersistenceAdapterTest {
 
         // when
         Slice<BuzzSummaryInfo> firstPage = buzzQueryRepositoryAdapter.findReceived(
-                recipientId, Set.of(), NOW, PageRequest.of(0, 2));
+                recipientId, Set.of(), PageRequest.of(0, 2));
         Slice<BuzzSummaryInfo> secondPage = buzzQueryRepositoryAdapter.findReceived(
-                recipientId, Set.of(), NOW, PageRequest.of(1, 2));
+                recipientId, Set.of(), PageRequest.of(1, 2));
 
         // then
         assertThat(firstPage.getContent()).extracting(BuzzSummaryInfo::buzzId)
@@ -250,7 +251,7 @@ class BuzzPersistenceAdapterTest {
         BuzzThread thread = saveThread(buzz, recipientId, NOW.minusMinutes(10));
 
         // when
-        BuzzThreadDetailInfo detail = buzzQueryRepositoryAdapter.findThreadDetail(buzz.getId(), thread.getId(), NOW)
+        BuzzThreadDetailInfo detail = buzzQueryRepositoryAdapter.findThreadDetail(buzz.getId(), thread.getId())
                 .orElseThrow();
 
         // then
@@ -271,7 +272,7 @@ class BuzzPersistenceAdapterTest {
 
         // when
         BuzzThreadDetailInfo detail = buzzQueryRepositoryAdapter
-                .findThreadDetail(buzz.getId(), otherThread.getId(), NOW).orElseThrow();
+                .findThreadDetail(buzz.getId(), otherThread.getId()).orElseThrow();
 
         // then
         assertThat(detail.buzzId()).isEqualTo(buzz.getId());
@@ -279,18 +280,15 @@ class BuzzPersistenceAdapterTest {
     }
 
     @Test
-    @DisplayName("만료되었거나 삭제 표시된 버즈는 스레드 상세에서 빠진다")
-    void findThreadDetail_ExcludesExpiredAndDeleted() {
+    @DisplayName("삭제 표시된 버즈는 스레드 상세에서 빠진다")
+    void findThreadDetail_ExcludesDeleted() {
         // given
-        Buzz expired = saveBuzz(creatorId, NOW.minusHours(6), recipientId);
-        BuzzThread expiredThread = saveThread(expired, recipientId, NOW.minusHours(5));
         Buzz deleted = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
         BuzzThread deletedThread = saveThread(deleted, recipientId, NOW.minusMinutes(10));
         markDeleted(deleted.getId());
 
         // when & then
-        assertThat(buzzQueryRepositoryAdapter.findThreadDetail(expired.getId(), expiredThread.getId(), NOW)).isEmpty();
-        assertThat(buzzQueryRepositoryAdapter.findThreadDetail(deleted.getId(), deletedThread.getId(), NOW)).isEmpty();
+        assertThat(buzzQueryRepositoryAdapter.findThreadDetail(deleted.getId(), deletedThread.getId())).isEmpty();
     }
 
     @Test
@@ -316,47 +314,31 @@ class BuzzPersistenceAdapterTest {
     }
 
     @Test
-    @DisplayName("만료 시각이 기준 시각과 같은 버즈는 받은 목록에서 빠진다")
-    void findReceived_ExcludesExpiresAtEqualToNow() {
-        // given
-        saveBuzz(creatorId, NOW.minusHours(6), recipientId);
-
-        // when
-        Slice<BuzzSummaryInfo> result = buzzQueryRepositoryAdapter.findReceived(
-                recipientId, Set.of(), NOW, PageRequest.of(0, 20));
-
-        // then
-        assertThat(result.getContent()).isEmpty();
-    }
-
-    @Test
-    @DisplayName("보낸 목록은 만료되지 않은 자기 버즈만 준다")
-    void findSent_FiltersExpired() {
+    @DisplayName("보낸 목록은 자기 버즈만 준다")
+    void findSent_OnlyOwn() {
         // given
         Buzz live = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
-        saveBuzz(creatorId, NOW.minusHours(7), recipientId);
         saveBuzz(otherCreatorId, NOW.minusHours(1), recipientId);
 
         // when
-        Slice<BuzzSummaryInfo> result = buzzQueryRepositoryAdapter.findSent(creatorId, NOW, PageRequest.of(0, 20));
+        Slice<BuzzSummaryInfo> result = buzzQueryRepositoryAdapter.findSent(creatorId, PageRequest.of(0, 20));
 
         // then
         assertThat(result.getContent()).extracting(BuzzSummaryInfo::buzzId).containsExactly(live.getId());
     }
 
     @Test
-    @DisplayName("미확인 작성자는 읽지 않았고 만료되지 않았으며 제외 대상이 아닌 버즈의 게시자다")
+    @DisplayName("미확인 작성자는 읽지 않았고 제외 대상이 아닌 버즈의 게시자다")
     void findUnreadCreatorIds_Filters() {
         // given
         saveBuzz(creatorId, NOW.minusHours(1), recipientId);
         Buzz read = saveBuzz(10L, NOW.minusHours(1), recipientId);
         readBuzz(read.getId(), recipientId);
-        saveBuzz(11L, NOW.minusHours(7), recipientId);
         saveBuzz(otherCreatorId, NOW.minusHours(1), recipientId);
 
         // when
         List<Long> result = buzzQueryRepositoryAdapter.findUnreadCreatorIds(
-                recipientId, Set.of(otherCreatorId), NOW);
+                recipientId, Set.of(otherCreatorId));
 
         // then
         assertThat(result).containsExactly(creatorId);
@@ -404,24 +386,24 @@ class BuzzPersistenceAdapterTest {
         assertThat(buzzRepositoryAdapter.findById(deleted.getId())).isEmpty();
         assertThat(buzzRepositoryAdapter.findByIdForShare(deleted.getId())).isEmpty();
         assertThat(buzzRepositoryAdapter.findByIdForUpdate(deleted.getId())).isEmpty();
-        assertThat(buzzQueryRepositoryAdapter.findDetail(deleted.getId(), NOW)).isEmpty();
-        assertThat(buzzQueryRepositoryAdapter.findReceived(recipientId, Set.of(), NOW, PageRequest.of(0, 20))
+        assertThat(buzzQueryRepositoryAdapter.findDetail(deleted.getId())).isEmpty();
+        assertThat(buzzQueryRepositoryAdapter.findReceived(recipientId, Set.of(), PageRequest.of(0, 20))
                 .getContent()).isEmpty();
-        assertThat(buzzQueryRepositoryAdapter.findSent(creatorId, NOW, PageRequest.of(0, 20)).getContent()).isEmpty();
-        assertThat(buzzQueryRepositoryAdapter.findUnreadCreatorIds(recipientId, Set.of(), NOW)).isEmpty();
+        assertThat(buzzQueryRepositoryAdapter.findSent(creatorId, PageRequest.of(0, 20)).getContent()).isEmpty();
+        assertThat(buzzQueryRepositoryAdapter.findUnreadCreatorIds(recipientId, Set.of())).isEmpty();
     }
 
     @Test
-    @DisplayName("정리 대상은 만료 시각이 기준 시각 이전이거나 같은 버즈와 삭제 표시된 버즈다")
-    void findPurgeableIds_ExpiredOrDeleted() {
+    @DisplayName("정리 대상은 생성 시각이 기준 시각 이전이거나 같은 버즈와 삭제 표시된 버즈다")
+    void findPurgeableIds_CreatedAtOrBeforeOrDeleted() {
         // given
         Buzz expired = saveBuzz(creatorId, NOW.minusHours(6), recipientId);
         Buzz deleted = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
         markDeleted(deleted.getId());
-        Buzz live = saveBuzz(creatorId, NOW.minusHours(1), recipientId);
+        Buzz live = saveBuzz(creatorId, NOW.minusHours(6).plusSeconds(1), recipientId);
 
         // when
-        List<Long> purgeable = buzzRepositoryAdapter.findPurgeableIds(NOW);
+        List<Long> purgeable = buzzRepositoryAdapter.findPurgeableIds(NOW.minusHours(6));
 
         // then
         assertThat(purgeable).contains(expired.getId(), deleted.getId()).doesNotContain(live.getId());
@@ -477,7 +459,7 @@ class BuzzPersistenceAdapterTest {
     }
 
     private BuzzComment saveComment(Buzz buzz, BuzzThread thread, Long authorId, String text) {
-        BuzzComment comment = BuzzComment.write(buzz, thread, authorId, text, List.of("buzz/c"), NOW);
+        BuzzComment comment = BuzzComment.write(thread, authorId, text, List.of("buzz/c"), NOW);
         entityManager.persist(comment);
         entityManager.flush();
         entityManager.clear();
