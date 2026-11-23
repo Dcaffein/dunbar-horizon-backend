@@ -15,9 +15,10 @@ import java.util.Map;
 public class BuzzPurgeRepositoryAdapter implements BuzzPurgeRepository {
 
     private static final String PURGEABLE_IDS = """
-            SELECT id FROM buzzes WHERE created_at <= :createdAtOrBefore
+            (SELECT id FROM buzzes WHERE created_at <= :createdAtOrBefore LIMIT :limit)
             UNION
-            SELECT id FROM buzzes WHERE deleted_at IS NOT NULL
+            (SELECT id FROM buzzes WHERE deleted_at IS NOT NULL LIMIT :limit)
+            LIMIT :limit
             """;
 
     private static final String DELETE_BUZZES = "DELETE FROM buzzes WHERE id IN (:buzzIds)";
@@ -29,8 +30,8 @@ public class BuzzPurgeRepositoryAdapter implements BuzzPurgeRepository {
     private final NamedParameterJdbcTemplate jdbc;
 
     @Override
-    public List<Long> findPurgeableIds(LocalDateTime createdAtOrBefore) {
-        return jdbc.queryForList(PURGEABLE_IDS, Map.of("createdAtOrBefore", createdAtOrBefore), Long.class);
+    public List<Long> findPurgeableIds(LocalDateTime createdAtOrBefore, int limit) {
+        return jdbc.queryForList(PURGEABLE_IDS, Map.of("createdAtOrBefore", createdAtOrBefore, "limit", limit), Long.class);
     }
 
     @Override

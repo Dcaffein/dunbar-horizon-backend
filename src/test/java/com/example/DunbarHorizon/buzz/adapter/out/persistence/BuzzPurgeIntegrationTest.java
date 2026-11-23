@@ -77,10 +77,25 @@ class BuzzPurgeIntegrationTest {
         jdbcTemplate.update("UPDATE buzzes SET deleted_at = ? WHERE id = ?", NOW.minusMinutes(30), deleted.getId());
 
         // when
-        List<Long> purgeable = buzzPurgeRepositoryAdapter.findPurgeableIds(NOW.minusHours(6));
+        List<Long> purgeable = buzzPurgeRepositoryAdapter.findPurgeableIds(NOW.minusHours(6), 10);
 
         // then
         assertThat(purgeable).containsExactlyInAnyOrder(expired.getId(), deleted.getId()).doesNotContain(live.getId());
+    }
+
+    @Test
+    @DisplayName("정리 대상은 상한 개수까지만 고른다")
+    void findPurgeableIds_UpToLimit() {
+        // given
+        saveBuzzWithThreadAndComment(NOW.minusHours(8));
+        saveBuzzWithThreadAndComment(NOW.minusHours(7));
+        Buzz deleted = saveBuzzWithThreadAndComment(NOW.minusHours(1));
+        entityManager.flush();
+        jdbcTemplate.update("UPDATE buzzes SET deleted_at = ? WHERE id = ?", NOW.minusMinutes(30), deleted.getId());
+
+        // when & then
+        assertThat(buzzPurgeRepositoryAdapter.findPurgeableIds(NOW.minusHours(6), 2)).hasSize(2);
+        assertThat(buzzPurgeRepositoryAdapter.findPurgeableIds(NOW.minusHours(6), 10)).hasSize(3);
     }
 
     private Buzz saveBuzzWithThreadAndComment(LocalDateTime createdAt) {
