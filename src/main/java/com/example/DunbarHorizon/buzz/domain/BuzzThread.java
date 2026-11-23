@@ -131,9 +131,14 @@ public class BuzzThread {
     }
 
     public void validateAccess(Long viewerId, Buzz buzz, boolean isFriendOfStarter) {
-        if (!isAccessibleBy(viewerId, buzz, isFriendOfStarter)) {
+        validateAccess(id, visibility, starterId, buzz.getCreatorId(), viewerId, isFriendOfStarter);
+    }
+
+    public static void validateAccess(Long threadId, ThreadVisibility visibility, Long starterId, Long creatorId,
+                                      Long viewerId, boolean isFriendOfStarter) {
+        if (!isAccessibleBy(visibility, starterId, creatorId, viewerId, isFriendOfStarter)) {
             throw new BuzzAccessDeniedException(BuzzErrorCode.BUZZ_THREAD_ACCESS_DENIED,
-                    ErrorContext.of("threadId", id).and("userId", viewerId));
+                    ErrorContext.of("threadId", threadId).and("userId", viewerId));
         }
     }
 
