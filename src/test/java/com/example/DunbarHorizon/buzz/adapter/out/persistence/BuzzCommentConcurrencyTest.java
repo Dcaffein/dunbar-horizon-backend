@@ -5,10 +5,12 @@ import com.example.DunbarHorizon.buzz.application.port.out.BuzzSocialPort;
 import com.example.DunbarHorizon.buzz.application.port.out.ImageStoragePort;
 import com.example.DunbarHorizon.buzz.application.service.BuzzCommentService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzProfileAssembler;
+import com.example.DunbarHorizon.buzz.application.service.BuzzPurgeService;
 import com.example.DunbarHorizon.buzz.application.service.BuzzThreadAccess;
 import com.example.DunbarHorizon.buzz.application.service.BuzzThreadService;
 import com.example.DunbarHorizon.buzz.domain.Buzz;
 import com.example.DunbarHorizon.buzz.domain.BuzzAudienceMember;
+import com.example.DunbarHorizon.buzz.domain.BuzzComment;
 import com.example.DunbarHorizon.buzz.domain.BuzzThread;
 import com.example.DunbarHorizon.buzz.domain.ThreadVisibility;
 import com.example.DunbarHorizon.buzz.domain.exception.BuzzThreadNotFoundException;
@@ -47,13 +49,14 @@ import static org.mockito.Mockito.doThrow;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({BuzzRepositoryAdapter.class, BuzzAudienceMemberRepositoryAdapter.class, BuzzThreadRepositoryAdapter.class,
         BuzzCommentRepositoryAdapter.class, BuzzProfileAssembler.class, BuzzThreadAccess.class,
-        BuzzThreadService.class, BuzzCommentService.class})
+        BuzzThreadService.class, BuzzCommentService.class, BuzzPurgeService.class})
 class BuzzCommentConcurrencyTest {
 
     private static final long WAIT_SECONDS = 5;
 
     @Autowired private BuzzThreadService buzzThreadService;
     @Autowired private BuzzCommentService buzzCommentService;
+    @Autowired private BuzzPurgeService buzzPurgeService;
     @Autowired private BuzzRepositoryAdapter buzzRepositoryAdapter;
     @Autowired private BuzzAudienceMemberRepositoryAdapter buzzAudienceMemberRepositoryAdapter;
     @Autowired private JdbcTemplate jdbcTemplate;
@@ -159,6 +162,52 @@ class BuzzCommentConcurrencyTest {
             assertThat(deletionFailure.get()).isNull();
             assertThat(commentFailure.get()).isInstanceOf(BuzzThreadNotFoundException.class);
             assertThat(countComments(thread.getId())).isZero();
+        } finally {
+            continueDeletion.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("스레드 삭제가 스레드 행을 지운 뒤 정리가 들어오면 정리가 기다렸다가 교착 없이 남은 행을 지운다")
+    void threadDeletionThenPurge_NoDeadlock() throws InterruptedException {
+        // given
+        BuzzThread thread = saveBuzzAndThread();
+        buzzCommentRepositoryAdapter.save(BuzzComment.write(thread, creatorId, "답글", List.of(), LocalDateTime.now()));
+        LocalDateTime now = LocalDateTime.now();
+        jdbcTemplate.update("UPDATE buzzes SET created_at = ? WHERE id = ?", now.minusHours(7), thread.getBuzzId());
+        CountDownLatch threadDeleted = new CountDownLatch(1);
+        CountDownLatch continueDeletion = new CountDownLatch(1);
+        CountDownLatch deletionFinished = new CountDownLatch(1);
+        CountDownLatch purgeFinished = new CountDownLatch(1);
+        AtomicReference<Throwable> deletionFailure = new AtomicReference<>();
+        AtomicReference<Throwable> purgeFailure = new AtomicReference<>();
+        doAnswer(invocation -> {
+            invocation.callRealMethod();
+            threadDeleted.countDown();
+            await(continueDeletion, "스레드 삭제 재개");
+            return null;
+        }).when(buzzThreadRepositoryAdapter).deleteById(thread.getId());
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        submit(executor, () -> buzzThreadService.deleteThread(starterId, thread.getBuzzId(), thread.getId()),
+                deletionFailure, deletionFinished);
+
+        try {
+            // when
+            assertThat(threadDeleted.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            submit(executor, () -> buzzPurgeService.purgeExpiredAndDeletedBuzzes(now), purgeFailure, purgeFinished);
+            awaitFinishedOrLockWait(purgeFinished, "정리");
+            continueDeletion.countDown();
+            assertThat(deletionFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            assertThat(purgeFinished.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+            // then
+            assertThat(deletionFailure.get()).isNull();
+            assertThat(purgeFailure.get()).isNull();
+            assertThat(countComments(thread.getId())).isZero();
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM buzzes WHERE id = ?", Long.class, thread.getBuzzId())).isZero();
         } finally {
             continueDeletion.countDown();
             executor.shutdownNow();

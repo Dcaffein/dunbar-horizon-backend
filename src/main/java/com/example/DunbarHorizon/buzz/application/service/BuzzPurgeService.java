@@ -30,10 +30,10 @@ public class BuzzPurgeService {
         buzzRepository.deleteAllByIds(buzzIds);
         List<Long> threadIds = buzzThreadRepository.findIdsByBuzzIds(buzzIds);
         buzzAudienceMemberRepository.deleteAllByBuzzIds(buzzIds);
+        buzzThreadRepository.deleteAllByBuzzIds(buzzIds);
         if (!threadIds.isEmpty()) {
             buzzCommentRepository.deleteAllByThreadIds(threadIds);
         }
-        buzzThreadRepository.deleteAllByBuzzIds(buzzIds);
         return buzzIds.size();
     }
 }

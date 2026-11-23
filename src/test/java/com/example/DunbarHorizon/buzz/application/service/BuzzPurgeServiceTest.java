@@ -33,7 +33,7 @@ class BuzzPurgeServiceTest {
     @InjectMocks private BuzzPurgeService buzzPurgeService;
 
     @Test
-    @DisplayName("버즈 행을 먼저 지운 뒤 그 버즈들의 스레드 ID로 답글을 지우고 멤버와 스레드를 지운다")
+    @DisplayName("버즈 행을 먼저 지우고 멤버와 스레드를 지운 뒤 미리 읽어 둔 스레드 ID로 답글을 지운다")
     void purge_DeletesBuzzesThenChildren() {
         // given
         LocalDateTime now = LocalDateTime.now();
@@ -50,8 +50,8 @@ class BuzzPurgeServiceTest {
         order.verify(buzzRepository).deleteAllByIds(buzzIds);
         order.verify(buzzThreadRepository).findIdsByBuzzIds(buzzIds);
         order.verify(buzzAudienceMemberRepository).deleteAllByBuzzIds(buzzIds);
-        order.verify(buzzCommentRepository).deleteAllByThreadIds(List.of(10L, 11L));
         order.verify(buzzThreadRepository).deleteAllByBuzzIds(buzzIds);
+        order.verify(buzzCommentRepository).deleteAllByThreadIds(List.of(10L, 11L));
     }
 
     @Test

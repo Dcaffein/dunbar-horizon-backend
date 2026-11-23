@@ -148,7 +148,7 @@ class BuzzThreadServiceTest {
         @DisplayName("게시자가 스레드를 삭제하면 스레드를 먼저 지운 뒤 답글을 지운다")
         void deleteThread_ByCreator_DeletesThreadThenComments() {
             // given
-            given(buzzRepository.findByIdForShare(buzz.getId())).willReturn(Optional.of(buzz));
+            given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
             given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(thread(ThreadVisibility.PRIVATE)));
 
             // when
@@ -164,7 +164,7 @@ class BuzzThreadServiceTest {
         @DisplayName("시작자도 게시자도 아닌 멤버는 스레드를 삭제할 수 없다")
         void deleteThread_ByOtherMember_Denied() {
             // given
-            given(buzzRepository.findByIdForShare(buzz.getId())).willReturn(Optional.of(buzz));
+            given(buzzRepository.findById(buzz.getId())).willReturn(Optional.of(buzz));
             given(buzzThreadRepository.findById(10L)).willReturn(Optional.of(thread(ThreadVisibility.PUBLIC)));
 
             // when & then

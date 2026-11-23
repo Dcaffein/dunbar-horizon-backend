@@ -54,7 +54,7 @@ public class BuzzThreadService {
     }
 
     public void deleteThread(Long requesterId, Long buzzId, Long threadId) {
-        Buzz buzz = buzzRepository.findByIdForShare(buzzId)
+        Buzz buzz = buzzRepository.findById(buzzId)
                 .orElseThrow(() -> new BuzzNotFoundException(buzzId));
         BuzzThread thread = threadOf(buzz, threadId);
         thread.validateDeletion(requesterId, buzz);
